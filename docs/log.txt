@@ -1,0 +1,2 @@
+ngày 1: tìm hiểu kiến trúc, đặt mục tiêu đủ mạnh làm game engine và game, xây dựng ngữ pháp, cú pháp, BNEF, LLVM, vẽ ra các kiến trúc, lựa chọn hướng đi gần giống rust cho phép ngôn ngữ kiểm soát bộ nhớ một cách mạnh mẽ, tìm hiểu các phương pháp parsing.
+cài đặt cmake, llvm
