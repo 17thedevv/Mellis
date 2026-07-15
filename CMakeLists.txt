@@ -9,18 +9,21 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ==========================================
-# PHẦN 1: TÌM VÀ LIÊN KẾT LLVM
+# PHẦN 1: TÌM VÀ CẤU HÌNH LLVM
 # ==========================================
-# Tìm gói LLVM đã cài trên máy tính
+# Thả CMake vào thư mục gốc của LLVM-DEV để nó tự tìm
+list(APPEND CMAKE_PREFIX_PATH "D:/Programs/LLVM-DEV")
 find_package(LLVM REQUIRED CONFIG)
 
-# Nạp các cờ (flags) và đường dẫn include của LLVM
+# Bơm các thông số của LLVM vào bộ nhớ của CMake
 include_directories(${LLVM_INCLUDE_DIRS})
-separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-add_definitions(${LLVM_DEFINITIONS_LIST})
+link_directories(${LLVM_LIBRARY_DIRS})      # Trỏ đường dẫn đến các file .lib
 
-# Yêu cầu LLVM cung cấp các module cốt lõi (Core, MC, JIT, v.v.)
-llvm_map_components_to_libnames(llvm_libs Core ExecutionEngine Interpreter Support Native)
+link_directories("C:/Program Files/Microsoft Visual Studio/18/Community/DIA SDK/lib/amd64")  # Trỏ đường dẫn đến các file .exe
+add_definitions(${LLVM_DEFINITIONS})
+
+# Yêu cầu LLVM tự động tìm tên file .lib chuẩn cho các module cần thiết
+llvm_map_components_to_libnames(LLVM_LIBS Core ExecutionEngine Interpreter Support native)
 
 # ==========================================
 # PHẦN 2: CẤU HÌNH DỰ ÁN FDLANG
@@ -31,8 +34,8 @@ include_directories(include)
 # Tự động gom tất cả các file .cpp trong thư mục src và thư mục con
 file(GLOB_RECURSE SRC_FILES "src/*.cpp")
 
-# Tạo file thực thi tên là 'fdlang' từ đống source code trên
+# BƯỚC QUAN TRỌNG: Tạo file thực thi tên là 'fdlang' trước
 add_executable(fdlang ${SRC_FILES})
 
-# Liên kết mã nguồn của ta với các thư viện LLVM đã tìm thấy ở Phần 1
-target_link_libraries(fdlang PRIVATE ${llvm_libs})
+# BƯỚC CUỐI CÙNG: Liên kết mã nguồn của ta với các thư viện LLVM đã chuẩn bị ở Phần 1
+target_link_libraries(fdlang PRIVATE ${LLVM_LIBS})

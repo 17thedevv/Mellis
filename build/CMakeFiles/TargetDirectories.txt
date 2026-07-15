@@ -1,0 +1,7 @@
+D:/fdlang/build/CMakeFiles/intrinsics_gen.dir
+D:/fdlang/build/CMakeFiles/omp_gen.dir
+D:/fdlang/build/CMakeFiles/acc_gen.dir
+D:/fdlang/build/CMakeFiles/RISCVTargetParserTableGen.dir
+D:/fdlang/build/CMakeFiles/fdlang.dir
+D:/fdlang/build/CMakeFiles/ALL_BUILD.dir
+D:/fdlang/build/CMakeFiles/ZERO_CHECK.dir

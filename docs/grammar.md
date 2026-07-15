@@ -13,42 +13,42 @@ digit      ::= "0" | "1" | ... | "9"
 IDENTIFIER ::= letter (letter | digit)*
 NUMBER     ::= digit+ ("." digit+)?
 STRING     ::= '"' (bất_kỳ_ký_tự_nào_trừ_dấu_ngoặc_kép)* '"'
+path       ::= IDENTIFIER ("::" IDENTIFIER)*
 
-KW_LET    ::= "let"
-KW_FN     ::= "fn"
-KW_IF     ::= "if"
-KW_ELSE   ::= "else"
-KW_RETURN ::= "return"
-KW_EXPORT ::= "export"
-KW_EXTERN ::= "extern"
-KW_CONST ::= "const"
+KW_DEC     ::= "dec"
+KW_FN      ::= "fn"
+KW_IF      ::= "if"
+KW_ELSE    ::= "else"
+KW_RETURN  ::= "return"
+KW_EXPORT  ::= "export"
+KW_EXTERN  ::= "extern"
+KW_CONST   ::= "const"
+KW_MOD     ::= "mod"
 
 // Toán tử số học
-PLUS      ::= "+"
-MINUS     ::= "-"
-STAR      ::= "*"
-SLASH     ::= "/"
+PLUS       ::= "+"
+MINUS      ::= "-"
+STAR       ::= "*"
+SLASH      ::= "/"
 
 // Toán tử gán & so sánh
-ASSIGN    ::= "="
-EQ_EQ     ::= "=="
-BANG_EQ   ::= "!="
-LESS      ::= "<"
-GREATER   ::= ">"
+ASSIGN     ::= "="
+EQ_EQ      ::= "=="
+BANG_EQ    ::= "!="
+LESS       ::= "<"
+GREATER    ::= ">"
 
 // Dấu câu cấu trúc
-COLON     ::= ":"
-SEMI      ::= ";"
-COMMA     ::= ","
-L_PAREN   ::= "("
-R_PAREN   ::= ")"
-L_BRACE   ::= "{"
-R_BRACE   ::= "}"
-
+COLON      ::= ":"
+SEMI       ::= ";"
+COMMA      ::= ","
+L_PAREN    ::= "("
+R_PAREN    ::= ")"
+L_BRACE    ::= "{"
+R_BRACE    ::= "}"
 
 WHITESPACE ::= " " | "\t" | "\n" | "\r"
 COMMENT    ::= "//" (bất_kỳ_ký_tự_nào_trừ_dấu_xuống_dòng)* "\n"
-
 
 program     ::= declaration* EOF
 
@@ -56,16 +56,19 @@ declaration ::= var_decl
               | func_decl 
               | statement
               | extern_decl
+              | mod_decl
+
+mod_decl    ::= "export"? "mod" IDENTIFIER "{" declaration* "}"
 
 extern_decl ::= "extern" "fn" IDENTIFIER "(" parameters? ")" ("->" type)? ";"
 
-var_decl ::= "export"? ("let" | "const") IDENTIFIER (":" type)? "=" expression ";"
+var_decl    ::= "export"? ("dec" | "const") IDENTIFIER (":" type)? "=" expression ";"
 
 func_decl   ::= "export"? "fn" IDENTIFIER "(" parameters? ")" ("->" type)? block_stmt
 
 parameters  ::= IDENTIFIER ":" type ("," IDENTIFIER ":" type)*
 
-type        ::= IDENTIFIER
+type        ::= path
 
 statement   ::= expr_stmt 
               | block_stmt 
@@ -74,7 +77,6 @@ statement   ::= expr_stmt
               | return_stmt
               | break_stmt
               | continue_stmt
-
 
 expr_stmt   ::= expression ";"
 
@@ -87,10 +89,10 @@ while_stmt  ::= "while" expression block_stmt
 return_stmt ::= "return" expression? ";"
 
 // 1. Phép gán (Ưu tiên thấp nhất)
-// Hỗ trợ: a = b = 5 hoặc a = 5
+// Hỗ trợ: a = b = 5 hoặc a = 5 hoặc Math::PI = 3.14
 expression  ::= assignment
 
-assignment  ::= IDENTIFIER "=" expression 
+assignment  ::= path "=" expression 
               | equality
 
 // 2. So sánh bằng (==, !=)
@@ -114,10 +116,10 @@ primary     ::= NUMBER
               | STRING 
               | "true" 
               | "false" 
-              | IDENTIFIER 
-              | call
+              | path 
+              | func_call
               | "(" expression ")"
 
-call        ::= IDENTIFIER "(" arguments? ")"
+func_call   ::= path "(" arguments? ")"
 
 arguments   ::= expression ("," expression)*
