@@ -1,22 +1,129 @@
-use "math.flh"
+// ==========================================
+// 1. IMPORT & EXTERN (use_decl, extern_decl)
+// ==========================================
+use math;
+use memory // Không có dấu ';' vẫn hợp lệ theo thiết kế
 
-mod {
-    export dec PI: float_4 = 3.14;
-    export fn add(a: int_128, b: int_128) -> int_128 {
-        print_str(to_str(a + b));
-        return a + b;
-    } 
-    fn print_str(s: str){
-        print(str);
+extern fn print_str(msg: str);
+extern fn random_int() -> int_32;
+
+// ==========================================
+// 2. KHAI BÁO BIẾN TOÀN CỤC (var_decl)
+// ==========================================
+const MAX_HEALTH: int_32 = 100;
+
+// ==========================================
+// 3. HỆ THỐNG MODULE (mod_decl)
+// ==========================================
+export mod GameSystem {
+    
+    // --- 4. STRUCT & ARRAY TYPES (struct_decl, type) ---
+    export struct Vector3 {
+        x: float_32;
+        y: float_32;
+        z: float_32;
+    }
+
+    export struct Player {
+        id: int_32;
+        pos: Vector3;
+        hp: int_32;
+        flags: [int_4, 4]; // Mảng tĩnh 1D (Array Type)
+    }
+
+    // --- 5. TRAIT (trait_decl) ---
+    export trait IDamageable {
+        fn take_damage(self: &rw Self, amount: int_32) -> bool;
+    }
+
+    // --- 6. INHERENT IMPL (Cài đặt hàm trực tiếp) ---
+    impl Player {
+        // Constructor, trả về giá trị thẳng trên Stack
+        export fn new(player_id: int_32) -> Player {
+            // Khởi tạo Struct dùng Named Arguments & Array Literal
+            return Player(
+                id: player_id,
+                pos: Vector3(x: 0.0, y: 0.0, z: 0.0), // Named args lồng nhau
+                hp: MAX_HEALTH,
+                flags: [1, 0, 0, 0] // Khởi tạo mảng (array_literal)
+            );
+        }
+    }
+
+    // --- 7. TRAIT IMPL (Thực thi Trait cho Struct) ---
+    impl IDamageable for Player {
+        fn take_damage(self: &rw Self, amount: int_32) -> bool {
+            // Toán tử gán (=), trừ (-) và truy cập thuộc tính lvalue (.)
+            self.hp = self.hp - amount;
+            
+            // Điều kiện if-else (if_stmt)
+            if self.hp < 0 {
+                self.hp = 0;
+                return true;  // Trả về bool
+            } else {
+                return false;
+            }
+        }
     }
 }
 
-struct Mob {
-    hp: int_4;
-    dmg: int_4;
-}
+// ==========================================
+// 8. HÀM CHÍNH & LUỒNG ĐIỀU KHIỂN (func_decl)
+// ==========================================
+fn main(args: [str]) -> int_32 { // Mảng động ([str])
+    
+    // Gọi hàm constructor với tham số có tên (Named Argument)
+    dec p1: GameSystem::Player = GameSystem::Player::new(player_id: 42);
+    
+    // Lấy tham chiếu độc quyền (&rw) - Toán tử một ngôi (unary)
+    dec p_ref: &rw GameSystem::Player = &rw p1;
+    
+    // Lời gọi hàm từ Trait qua tham chiếu
+    dec is_dead: bool = p_ref.take_damage(amount: 15);
 
+    // --- 9. BIỂU THỨC MATCH (match_expr gán vào biến) ---
+    dec status_msg: str = match p1.hp {
+        0   -> "Dead",
+        100 -> "Full Health",
+        _   -> "Injured" // Khớp pattern catch-all (_)
+    };
 
-fn main(args: str[]) -> int {
-    return 0;
+    // Match đóng vai trò như khối lệnh rẽ nhánh
+    match is_dead {
+        true  -> print_str("Game Over!"),
+        false -> {
+            print_str(status_msg);
+        }
+    }
+
+    // --- 10. VÒNG LẶP (while_stmt, break, continue) ---
+    dec counter: int_32 = 0;
+    while counter < 10 {
+        counter = counter + 1;
+        
+        if counter == 5 {
+            continue;
+        }
+        
+        if counter > 8 {
+            break;
+        }
+    }
+
+    // --- 11. KHỐI LỆNH UNSAFE VÀ RAW POINTERS (*rw) ---
+    // Lấy con trỏ thô từ thuộc tính của struct (an toàn ở vòng ngoài)
+    dec ptr: *rw GameSystem::Vector3 = &rw p1.pos;
+    
+    unsafe {
+        // Giải tham chiếu (*) kết hợp lvalue (.)
+        (*ptr).x = 50.5;
+        
+        // Phép tính toán học ưu tiên: +, -, *, / lồng nhau
+        (*ptr).y = ((*ptr).x * 2.0) / 4.0 - 5.0;
+    }
+
+    // Phép so sánh (equality, comparison)
+    dec final_check: bool = (p1.hp == 0) != false;
+
+    return 0; // Trả về thoát chương trình
 }

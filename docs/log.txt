@@ -2,4 +2,7 @@ ngày 1: tìm hiểu kiến trúc, đặt mục tiêu đủ mạnh làm game eng
 cài đặt cmake, llvm
 ngày 2: tiếp tục tìm hiểu, nghiên cứu các hướng đi, lựa chọn thiết kế flo, xác định được hướng đi không làm giảm sự
 phức tạp của fdlang chỉ vì mục tiêu làm game engine.
-ngày hoàn thành MVP (17/07/2026): Hoàn thành MVP tích hợp trọn vẹn FrontEnd, MiddleEnd (Resolver, TypeChecker, FLIR) và BackEnd (LLVM IR, Executable Gen). fdlang đã có thể dịch mã nguồn .fl ra .exe native.
+ngày hoàn thành MVP (17/07/2026): Hoàn thành MVP tích
+ hợp trọn vẹn FrontEnd, MiddleEnd (Resolver, TypeChecker, FLIR)
+  và BackEnd (LLVM IR, Executable Gen). \
+  fdlang đã có thể dịch mã nguồn .fl ra .exe native.
