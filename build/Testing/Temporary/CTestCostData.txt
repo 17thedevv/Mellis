@@ -1,5 +1,0 @@
-LexerTest 3 0.00271717
-ResolverTest 2 0.00650765
-DiagnosticTest 2 0.00500105
-TypeCheckerTest 1 0.0151836
----

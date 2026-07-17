@@ -5,11 +5,11 @@
 
 namespace fl {
 
-class DeclNode;
+class ItemNode;
 
 class ProgramNode : public ASTNode {
 public:
-    std::vector<std::unique_ptr<DeclNode>> decls;
+    std::vector<std::unique_ptr<ItemNode>> items;
     void accept(ASTVisitor& v) override;
 };
 

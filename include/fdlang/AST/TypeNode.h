@@ -11,8 +11,8 @@ class ExprNode;
 class TypeVisitor;
 
 enum class BuiltinKind : uint8_t {
-    I8, I16, I32, I64, I128,
-    U8, U16, U32, U64, U128,
+    I4, I8, I16, I32, I64, I128,
+    U4, U8, U16, U32, U64, U128,
     F32, F64,
     Bool, Char, Str,
     Void,

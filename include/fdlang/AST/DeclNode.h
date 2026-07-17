@@ -50,6 +50,7 @@ public:
     std::vector<std::unique_ptr<ParamDeclNode>>  params;
     std::unique_ptr<TypeNode>                    returnType;
     std::unique_ptr<BlockStmtNode>               body;
+    ScopeID                                      bodyScopeId = kInvalidSymbolID;
     bool isAsync    = false;
     bool isComptime = false;
     void accept(ASTVisitor& v) override;
@@ -59,6 +60,7 @@ class StructFieldNode : public ASTNode {
 public:
     std::string_view          name;
     std::unique_ptr<TypeNode> type;
+    SymbolID                  symbolId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 
@@ -67,6 +69,7 @@ public:
     std::string_view                              name;
     std::vector<GenericParamNode>                 genericParams;
     std::vector<std::unique_ptr<StructFieldNode>> fields;
+    ScopeID                                       bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 
@@ -74,6 +77,7 @@ class EnumVariantNode : public ASTNode {
 public:
     std::string_view                             name;
     std::vector<std::unique_ptr<ParamDeclNode>>  fields;
+    SymbolID                                     symbolId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 
@@ -82,6 +86,7 @@ public:
     std::string_view                               name;
     std::vector<GenericParamNode>                  genericParams;
     std::vector<std::unique_ptr<EnumVariantNode>>  variants;
+    ScopeID                                        bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 
@@ -90,6 +95,7 @@ public:
     std::string_view                               name;
     std::vector<GenericParamNode>                  genericParams;
     std::vector<std::unique_ptr<FunctionDeclNode>> methods;
+    ScopeID                                        bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 
@@ -99,6 +105,7 @@ public:
     std::unique_ptr<TypeNode>                      selfType;
     std::unique_ptr<TypeNode>                      traitType;
     std::vector<std::unique_ptr<FunctionDeclNode>> methods;
+    ScopeID                                        bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 
@@ -106,6 +113,7 @@ class ModDeclNode : public DeclNode {
 public:
     std::string_view                       name;
     std::vector<std::unique_ptr<DeclNode>> decls;
+    ScopeID                                bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 

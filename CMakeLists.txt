@@ -41,16 +41,15 @@ set(MIDDLEEND_SRC
     src/MiddleEnd/SymbolTable.cpp
     src/MiddleEnd/Resolver.cpp
     src/MiddleEnd/TypeChecker.cpp
-    src/MiddleEnd/FLIR.cpp
-    src/MiddleEnd/FLIRGenerator.cpp
-    # src/MiddleEnd/SemanticAnalyzer.cpp  <- DEPRECATED: replaced by Resolver + TypeChecker
-    # src/MiddleEnd/SymbolTable.cpp (old FrontEnd version) <- DEPRECATED
+    src/MiddleEnd/CFG.cpp
+    src/MiddleEnd/MatchAnalyzer.cpp
+    # src/MiddleEnd/FLIRGenerator.cpp
 )
 
 set(BACKEND_SRC
-    src/BackEnd/IRGenerator.cpp
-    src/BackEnd/LLVMIRGenerator.cpp
-    src/BackEnd/ExecutableGenerator.cpp
+    # src/BackEnd/IRGenerator.cpp
+    # src/BackEnd/LLVMIRGenerator.cpp
+    # src/BackEnd/ExecutableGenerator.cpp
 )
 
 set(SUPPORT_SRC
@@ -95,6 +94,17 @@ add_executable(test_lexer
 target_include_directories(test_lexer PRIVATE include)
 add_test(NAME LexerTest COMMAND test_lexer)
 
+# ── test_parser ───────────────────────────────────────────────────────────────
+add_executable(test_parser
+    tests/test_parser.cpp
+    src/FrontEnd/Lexer.cpp
+    src/FrontEnd/Parser.cpp
+    src/Support/Diagnostic.cpp
+    ${AST_SRC}
+)
+target_include_directories(test_parser PRIVATE include)
+add_test(NAME ParserTest COMMAND test_parser)
+
 # ── test_resolver ─────────────────────────────────────────────────────────────
 # Cần: Lexer, Parser, SymbolTable, Resolver
 add_executable(test_resolver
@@ -104,6 +114,7 @@ add_executable(test_resolver
     src/MiddleEnd/SymbolTable.cpp
     src/MiddleEnd/Resolver.cpp
     src/Support/Diagnostic.cpp
+    ${AST_SRC}
 )
 target_include_directories(test_resolver PRIVATE include)
 add_test(NAME ResolverTest COMMAND test_resolver)
@@ -125,58 +136,72 @@ add_executable(test_typechecker
     src/MiddleEnd/SymbolTable.cpp
     src/MiddleEnd/Resolver.cpp
     src/MiddleEnd/TypeChecker.cpp
+    src/MiddleEnd/MatchAnalyzer.cpp
     src/Support/Diagnostic.cpp
+    ${AST_SRC}
 )
 target_include_directories(test_typechecker PRIVATE include)
 add_test(NAME TypeCheckerTest COMMAND test_typechecker)
 
-# ── test_flir_generator ───────────────────────────────────────────────────────
-add_executable(test_flir_generator
-    tests/test_flir_generator.cpp
+# ── test_cfg ──────────────────────────────────────────────────────────
+add_executable(test_cfg
+    tests/test_cfg.cpp
     src/FrontEnd/Lexer.cpp
     src/FrontEnd/Parser.cpp
-    src/MiddleEnd/SymbolTable.cpp
-    src/MiddleEnd/Resolver.cpp
-    src/MiddleEnd/TypeChecker.cpp
-    src/MiddleEnd/FLIR.cpp
-    src/MiddleEnd/FLIRGenerator.cpp
+    src/MiddleEnd/CFG.cpp
     src/Support/Diagnostic.cpp
+    ${AST_SRC}
 )
-target_include_directories(test_flir_generator PRIVATE include)
-add_test(NAME FLIRGeneratorTest COMMAND test_flir_generator)
+target_include_directories(test_cfg PRIVATE include)
+add_test(NAME CFGTest COMMAND test_cfg)
+
+# ── test_flir_generator ───────────────────────────────────────────────────────
+# add_executable(test_flir_generator
+#     tests/test_flir_generator.cpp
+#     src/FrontEnd/Lexer.cpp
+#     src/FrontEnd/Parser.cpp
+#     src/MiddleEnd/SymbolTable.cpp
+#     src/MiddleEnd/Resolver.cpp
+#     src/MiddleEnd/TypeChecker.cpp
+#     src/MiddleEnd/FLIR.cpp
+#     src/MiddleEnd/FLIRGenerator.cpp
+#     src/Support/Diagnostic.cpp
+# )
+# target_include_directories(test_flir_generator PRIVATE include)
+# add_test(NAME FLIRGeneratorTest COMMAND test_flir_generator)
 
 # ── test_llvmir_generator ───────────────────────────────────────────────────────
-add_executable(test_llvmir_generator
-    tests/test_llvmir_generator.cpp
-    src/FrontEnd/Lexer.cpp
-    src/FrontEnd/Parser.cpp
-    src/MiddleEnd/SymbolTable.cpp
-    src/MiddleEnd/Resolver.cpp
-    src/MiddleEnd/TypeChecker.cpp
-    src/MiddleEnd/FLIR.cpp
-    src/MiddleEnd/FLIRGenerator.cpp
-    src/BackEnd/LLVMIRGenerator.cpp
-    src/Support/Diagnostic.cpp
-)
-target_include_directories(test_llvmir_generator PRIVATE include)
-target_link_libraries(test_llvmir_generator PRIVATE ${LLVM_LIBS})
-add_test(NAME LLVMIRGeneratorTest COMMAND test_llvmir_generator)
+# add_executable(test_llvmir_generator
+#     tests/test_llvmir_generator.cpp
+#     src/FrontEnd/Lexer.cpp
+#     src/FrontEnd/Parser.cpp
+#     src/MiddleEnd/SymbolTable.cpp
+#     src/MiddleEnd/Resolver.cpp
+#     src/MiddleEnd/TypeChecker.cpp
+#     src/MiddleEnd/FLIR.cpp
+#     src/MiddleEnd/FLIRGenerator.cpp
+#     src/BackEnd/LLVMIRGenerator.cpp
+#     src/Support/Diagnostic.cpp
+# )
+# target_include_directories(test_llvmir_generator PRIVATE include)
+# target_link_libraries(test_llvmir_generator PRIVATE ${LLVM_LIBS})
+# add_test(NAME LLVMIRGeneratorTest COMMAND test_llvmir_generator)
 
 # ── test_executable_generator ───────────────────────────────────────────────────
-add_executable(test_executable_generator
-    tests/test_executable_generator.cpp
-    src/FrontEnd/Lexer.cpp
-    src/FrontEnd/Parser.cpp
-    src/MiddleEnd/SymbolTable.cpp
-    src/MiddleEnd/Resolver.cpp
-    src/MiddleEnd/TypeChecker.cpp
-    src/MiddleEnd/FLIR.cpp
-    src/MiddleEnd/FLIRGenerator.cpp
-    src/BackEnd/LLVMIRGenerator.cpp
-    src/BackEnd/ExecutableGenerator.cpp
-    src/Support/ClangLinker.cpp
-    src/Support/Diagnostic.cpp
-)
-target_include_directories(test_executable_generator PRIVATE include)
-target_link_libraries(test_executable_generator PRIVATE ${LLVM_LIBS})
-add_test(NAME ExecutableGeneratorTest COMMAND test_executable_generator)
+# add_executable(test_executable_generator
+#     tests/test_executable_generator.cpp
+#     src/FrontEnd/Lexer.cpp
+#     src/FrontEnd/Parser.cpp
+#     src/MiddleEnd/SymbolTable.cpp
+#     src/MiddleEnd/Resolver.cpp
+#     src/MiddleEnd/TypeChecker.cpp
+#     src/MiddleEnd/FLIR.cpp
+#     src/MiddleEnd/FLIRGenerator.cpp
+#     src/BackEnd/LLVMIRGenerator.cpp
+#     src/BackEnd/ExecutableGenerator.cpp
+#     src/Support/ClangLinker.cpp
+#     src/Support/Diagnostic.cpp
+# )
+# target_include_directories(test_executable_generator PRIVATE include)
+# target_link_libraries(test_executable_generator PRIVATE ${LLVM_LIBS})
+# add_test(NAME ExecutableGeneratorTest COMMAND test_executable_generator)

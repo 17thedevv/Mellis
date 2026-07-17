@@ -10,7 +10,7 @@ void testValidVariableDeclarations() {
     std::string code = "dec a = 10; dec b = a;";
     
     Lexer lexer(code);
-    Parser parser(lexer);
+    DiagnosticEngine diag; Parser parser(lexer, diag);
     auto ast = parser.parse();
     
     SemanticAnalyzer semanticAnalyzer;

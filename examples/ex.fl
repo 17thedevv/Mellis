@@ -1,24 +1,192 @@
-// Test khai báo và gán giá trị
-dec x = 10;
-dec y = 20;
-dec z;
-z = x + y;
+/* =================================================================
+   FILE: engine_core.fd
+   Mô phỏng toàn bộ sức mạnh ngữ pháp của ngôn ngữ fdlang.
+   Tác giả: Sếp & Trợ lý
+================================================================= */
 
-// Test khối lệnh { } và in ra
-if (z > 20) {
-    print z;
+// --- 1. USE DECLARATIONS (Import, Alias, Selective) ---
+use "std::io" as IO;
+use "std::math" *;
+use "std::net" { Socket, http_get };
+
+// --- 2. EXTERN & ANNOTATIONS (Siêu dữ liệu) ---
+@[link(name = "c")]
+extern fn malloc(size: u64) -> *rw u8;
+
+// --- 3. TYPE ALIAS (Bí danh kiểu) ---
+export type EntityID = u64;
+
+// --- 4. COMPTIME FUNCTION (Chạy lúc biên dịch) ---
+comptime fn calc_max_entities() -> u32 {
+    return 1024 * 16;
 }
 
-// Test vòng lặp và gán giá trị thay đổi
-dec counter = 0;
-while (counter < 5) {
-    counter = counter + 1;
+// --- 5. CONSTANTS & LITERALS (Mọi loại số và chuỗi) ---
+const MAX_ENTITIES: u32 = calc_max_entities();
+const MAGIC_HEX: u32    = 0xDEAD_BEEF;
+const OCTAL_VAL: u16    = 0o775;
+const BINARY_VAL: u8    = 0b1010_0101;
+const PI_APPROX: f32    = 3.14159f32;
+const APP_NAME: str     = "Fdlang Engine\n";
+const RAW_PATH: str     = r#"C:\Game\Assets"#;
+const BYTE_TAG: u8      = b'X';
+const MAGIC_BYTES       = b"FDLG";
+
+// --- 6. ENUM & VARIANTS (Destructuring) ---
+@[repr(u8)]
+export enum EntityState {
+    Idle,
+    Moving(f32, f32), // Tuple variant
+    Dead
 }
 
-print counter;
+// --- 7. TRAIT DECLARATION (Giao diện) ---
+export trait Damageable {
+    // Sử dụng Self và self (Method)
+    fn take_damage(self: &rw Self, amount: f32) -> bool;
+    fn get_hp(self: &Self) -> f32;
+}
 
-// Test khai báo biến chưa khởi tạo (nếu bạn bỏ comment dòng dưới, Semantic sẽ báo lỗi)
-// dec a;
-// print a;
+// --- 8. STRUCT DECLARATION VÀ GENERICS (<T>) ---
+@[packed]
+export struct Player <T: Damageable> {
+    id: EntityID;
+    hp: f32;
+    state: EntityState;
+    custom_data: T;
+    // Mảng với kích thước là hằng số (const_expression)
+    inventory: [u32, 10]; 
+}
 
-print(x);
+// --- 9. IMPL KHỐI & METHODS ---
+impl <T: Damageable> Player@<T> { // Dùng @<T> cho generic_instantiation
+    
+    @[inline]
+    fn new(id: EntityID, data: T) -> Self {
+        // Struct Literal & Array Literal
+        return Player@<T> {
+            id: id,
+            hp: 100.0f32,
+            state: EntityState::Idle,
+            custom_data: data,
+            inventory: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        };
+    }
+}
+
+// --- 10. IMPL TRAIT FOR STRUCT ---
+impl <T: Damageable> Damageable for Player@<T> {
+    fn take_damage(self: &rw Self, amount: f32) -> bool {
+        // Toán tử gán phức hợp (Compound Assignment)
+        self.hp -= amount;
+        
+        if self.hp <= 0.0f32 {
+            self.state = EntityState::Dead;
+            return true;
+        }
+        return false;
+    }
+
+    fn get_hp(self: &Self) -> f32 {
+        return self.hp;
+    }
+}
+
+// --- 11. MOD DECLARATION (Không gian tên con) ---
+export mod System {
+    
+    // --- 12. HÀM BẤT ĐỒNG BỘ (async), KẾT QUẢ (Result), TOÁN TỬ (?) ---
+    export async fn fetch_remote_config() -> Result@<str, i32> {
+        // Gọi await và bắt lỗi ?
+        dec response = http_get("https://api.game.com/config").await?;
+        return Result::Ok(response);
+    }
+
+    // --- 13. THAM SỐ BIẾN SỐ (Variadic: ...any) ---
+    export fn log_event(level: u8, messages: ...str) {
+        IO::print("[LOG]: ");
+        for (msg in messages) { // For-each
+            IO::print(msg);
+        }
+    }
+
+    // --- 14. NEVER TYPE (!) VÀ LAMBDA (Closures) ---
+    export fn panic_handler() -> ! {
+        // Lambda Expression
+        dec logger = |err_code: i32| -> () {
+            log_event(2, "CRITICAL ERROR: ", err_code);
+        };
+        logger(0xDEAD);
+        
+        while true {
+            // Lặp vô tận (Vòng lặp không điều kiện)
+        }
+    }
+}
+
+// --- 15. HÀM CHÍNH (Thực thi logic phức tạp) ---
+async fn main() {
+    
+    // Khối lệnh Comptime (thực thi lúc biên dịch)
+    comptime {
+        dec check_size = sizeof(Player@<u32>) == alignof(Player@<u32>) * 8;
+        if !check_size {
+            // Báo lỗi lúc biên dịch
+        }
+    }
+
+    // --- 16. DYNAMIC DISPATCH (Trait Object: dyn) & CON TRỎ ---
+    // Mảng chứa các con trỏ mượn ghi (&rw) tới đối tượng đa hình (dyn Damageable)
+    dec active_entities: [&rw dyn Damageable, 5] = [ ... ];
+    
+    // --- 17. TOÁN TỬ ĐẠI CHIẾN (Bitwise, Range, Arithmetic, Logical) ---
+    dec flags: u32 = (1 << 3) | (0x0F & 0xA0) ^ (~0b1100);
+    dec is_active: bool = (flags != 0) && (PI_APPROX >= 3.0f32) || false;
+    
+    // Range expression: Duyệt từ 0 đến 4 (Bao gồm cả 4 nhờ ..=)
+    dec slice = 0..=4;
+
+    // --- 18. C-STYLE FOR LOOP & BREAK/CONTINUE ---
+    for (dec i = 0; i < 5; i++) {
+        
+        dec entity = active_entities[i];
+        
+        // Toán tử tiền tố (Prefix/Unary) và Truy cập mảng
+        if !is_active {
+            break;
+        }
+
+        // --- 19. MATCH STATEMENT (Khớp mẫu & Destructuring) ---
+        dec status_code = match entity.state {
+            EntityState::Idle -> {
+                entity.take_damage(5.5f32);
+                0 // Trả về expression từ block
+            },
+            EntityState::Moving(vx, vy) -> {
+                // Sử dụng tuple destructuring từ Enum
+                if (vx > 10.0f32) {
+                    continue;
+                }
+                1
+            },
+            EntityState::Dead -> -1,
+            _ -> 99 // Wildcard
+        };
+    }
+
+    // --- 20. KHỐI UNSAFE (Can thiệp bộ nhớ thấp) ---
+    unsafe {
+        // Cấp phát bộ nhớ thô và Ép kiểu (Cast: as)
+        dec raw_ptr: *rw u8 = malloc(1024) as *rw u8;
+        
+        // Gán qua con trỏ giải tham chiếu (Dereference LValue)
+        *raw_ptr = BYTE_TAG; 
+    }
+
+    // --- 21. TUPLE VÀ UNIT LITERAL ---
+    dec coordinates: (f32, f32, f32) = (10.5f32, -20.0f32, 0.0f32);
+    dec nothing: () = ();
+
+    // Gọi hàm async
+    dec config = System::fetch_remote_config().await;
+}

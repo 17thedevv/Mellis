@@ -1,7 +1,0 @@
-D:\fdlang\tests\test_typechecker.cpp;D:\fdlang\build\test_typechecker.dir\Debug\test_typechecker.obj
-D:\fdlang\src\FrontEnd\Lexer.cpp;D:\fdlang\build\test_typechecker.dir\Debug\Lexer.obj
-D:\fdlang\src\FrontEnd\Parser.cpp;D:\fdlang\build\test_typechecker.dir\Debug\Parser.obj
-D:\fdlang\src\MiddleEnd\SymbolTable.cpp;D:\fdlang\build\test_typechecker.dir\Debug\SymbolTable.obj
-D:\fdlang\src\MiddleEnd\Resolver.cpp;D:\fdlang\build\test_typechecker.dir\Debug\Resolver.obj
-D:\fdlang\src\MiddleEnd\TypeChecker.cpp;D:\fdlang\build\test_typechecker.dir\Debug\TypeChecker.obj
-D:\fdlang\src\Support\Diagnostic.cpp;D:\fdlang\build\test_typechecker.dir\Debug\Diagnostic.obj

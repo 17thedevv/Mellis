@@ -14,9 +14,17 @@ class ParamDeclNode;
 class StmtNode;
 class PatternNode;
 
+enum class ValueCategory : uint8_t {
+    RValue,
+    LValue,
+};
+
 class ExprNode : public ASTNode {
 public:
-    FLType inferredType = FLType::Unknown;
+    const Type* inferredType = nullptr;
+    SymbolID resolvedSymbol = kInvalidSymbolID;
+    ValueCategory valueCategory = ValueCategory::RValue;
+    bool isConstant = false;
 };
 
 enum class BinaryOp : uint8_t {
@@ -64,6 +72,7 @@ public:
 class IdentifierExpr : public ExprNode {
 public:
     std::vector<std::string_view> segments;
+    std::vector<std::unique_ptr<TypeNode>> genericArgs;
     SymbolID symbolId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
@@ -100,6 +109,16 @@ struct CallArgNode {
 class CallExpr : public ExprNode {
 public:
     std::unique_ptr<ExprNode>              callee;
+    std::vector<std::unique_ptr<TypeNode>> genericArgs;
+    std::vector<CallArgNode>               args;
+    SymbolID resolvedFn = kInvalidSymbolID;
+    void accept(ASTVisitor& v) override;
+};
+
+class MethodCallExpr : public ExprNode {
+public:
+    std::unique_ptr<ExprNode>              object;
+    std::string_view                       methodName;
     std::vector<std::unique_ptr<TypeNode>> genericArgs;
     std::vector<CallArgNode>               args;
     SymbolID resolvedFn = kInvalidSymbolID;

@@ -36,6 +36,7 @@ class BinaryExpr;
 class UnaryExpr;
 class AssignExpr;
 class CallExpr;
+class MethodCallExpr;
 class IndexExpr;
 class MemberExpr;
 class CastExpr;
@@ -103,6 +104,7 @@ public:
     virtual void visit(UnaryExpr&)         = 0;
     virtual void visit(AssignExpr&)        = 0;
     virtual void visit(CallExpr&)          = 0;
+    virtual void visit(MethodCallExpr&)    = 0;
     virtual void visit(IndexExpr&)         = 0;
     virtual void visit(MemberExpr&)        = 0;
     virtual void visit(CastExpr&)          = 0;

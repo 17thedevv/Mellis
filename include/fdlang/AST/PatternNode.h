@@ -12,6 +12,7 @@ class PatternVisitor;
 
 class PatternNode : public ASTNode {
 public:
+    const Type* inferredType = nullptr;
     virtual void accept(PatternVisitor& v) = 0;
 };
 
@@ -40,6 +41,7 @@ class EnumPatternNode : public PatternNode {
 public:
     std::vector<std::string_view>           path;
     std::vector<std::unique_ptr<PatternNode>> fields;
+    SymbolID                                variantSymbolId = kInvalidSymbolID;
     void accept(PatternVisitor& v) override;
     void accept(ASTVisitor& v) override { }
 };

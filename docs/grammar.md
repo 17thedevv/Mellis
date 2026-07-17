@@ -36,8 +36,11 @@ RAW_STRING_LITERAL ::= "r" "#"* '"' (bất_kỳ_ký_tự_nào) '"' "#"* // Số 
 
 BYTE_LITERAL    ::= "b" CHAR_LITERAL
 BYTE_STRING_LITERAL ::= "b" STRING_LITERAL
-path_segment ::= (IDENTIFIER | KW_SELF_TYP) generic_instantiation?
-path         ::= path_segment ("::" path_segment)*
+type_path_segment  ::= (IDENTIFIER | KW_SELF_TYP) generic_instantiation?
+type_path          ::= type_path_segment ("::" type_path_segment)*
+
+value_path_segment ::= (IDENTIFIER | KW_SELF_VAL) generic_instantiation?
+value_path         ::= value_path_segment ("::" value_path_segment)*
 
 // --- TỪ KHÓA ---
 KW_DEC     ::= "dec"
@@ -178,7 +181,7 @@ type_alias_decl ::= "export"? KW_TYPE IDENTIFIER generic_params? "=" type ";"
 
 // --- GENERICS ---
 generic_params ::= "<" generic_param ("," generic_param)* ">"
-generic_param  ::= IDENTIFIER (":" path ("+" path)* )?
+generic_param  ::= IDENTIFIER (":" type_path ("+" type_path)* )?
 generic_instantiation ::= GENERIC_START type ("," type)* ">"
 
 // --- ENUM ---
@@ -197,9 +200,9 @@ trait_method::= KW_FN IDENTIFIER "(" parameters? ")" ("->" type)? ";"
 
 impl_decl   ::= inherent_impl | full_trait_impl
 
-inherent_impl ::= "impl" generic_params? path "{" func_decl* "}"
+inherent_impl ::= "impl" generic_params? type_path "{" func_decl* "}"
 
-full_trait_impl ::= "impl" generic_params? path "for" path "{" func_decl* "}"
+full_trait_impl ::= "impl" generic_params? type_path "for" type_path "{" func_decl* "}"
 
 // --- KHAI BÁO BIẾN VÀ HÀM ---
 var_decl_core ::= "export"? ("dec" | "const") IDENTIFIER (":" type)? "=" expression
@@ -222,10 +225,18 @@ type           ::= reference_type
                  | tuple_type 
                  | func_type 
                  | never_type
+                 | builtin_type
                  | named_type
                  | trait_object_type
 
-trait_object_type ::= KW_DYN path
+builtin_type ::= BUILTIN_TYPE 
+
+BUILTIN_TYPE ::= "int_8" | "int_16" | "int_32" | "int_64" | "int_128" 
+                 | "uint_8" | "uint_16" | "uint_32" | "uint_64" | "uint_128"
+                 | "float_32" | "float_64"
+                 | "bool" | "char" | "string" | "void"
+
+trait_object_type ::= KW_DYN type_path
 
 reference_type ::= "&" KW_RW? type
 pointer_type   ::= "*" KW_RW? type
@@ -233,7 +244,7 @@ array_type     ::= "[" type ("," const_expression)? "]"
 tuple_type     ::= "(" (type ("," type)* ","?)? ")"
 func_type      ::= KW_FN "(" (type ("," type)* ","?)? ")" "->" type
 never_type     ::= BANG
-named_type     ::= path
+named_type     ::= type_path
 
 // --- LỆNH VÀ BIỂU THỨC ---
 statement   ::= expr_stmt 
@@ -274,7 +285,7 @@ const_expression ::= expression // Bắt buộc là hằng số tại compile-ti
 assignment  ::= lvalue assign_op expression 
               | range_expr
 
-lvalue      ::= "*"* path ("[" expression "]" | "." IDENTIFIER)*
+lvalue      ::= "*"* value_path ("[" expression "]" | "." IDENTIFIER)*
 
 range_expr  ::= logical_or ((".." | "..=") logical_or?)? 
               | (".." | "..=") logical_or?
@@ -326,7 +337,7 @@ base_primary::= INTEGER_LITERAL
               | lambda_expr
               | sizeof_expr
               | alignof_expr
-              | path 
+              | value_path 
               | match_expr
               | "(" expression ")"
 
@@ -347,7 +358,7 @@ pattern     ::= INTEGER_LITERAL
               | "_"
               | tuple_pattern
               | unit_literal
-              | path enum_destruct?
+              | type_path enum_destruct?
 
 tuple_pattern ::= "(" pattern "," (pattern ("," pattern)* ","?)? ")"
 
@@ -359,7 +370,7 @@ tuple_literal ::= "(" expression "," (expression ("," expression)* ","?)? ")"
 unit_literal  ::= "(" ")"
 
 // --- STRUCT LITERAL, LAMBDA, SIZEOF ---
-struct_literal ::= path "{" (IDENTIFIER ":" expression ("," IDENTIFIER ":" expression)* ","?)? "}"
+struct_literal ::= type_path "{" (IDENTIFIER ":" expression ("," IDENTIFIER ":" expression)* ","?)? "}"
 lambda_expr    ::= "|" (IDENTIFIER (":" type)? ("," IDENTIFIER (":" type)?)* ","?)? "|" ("->" type)? (expression | block_stmt)
 sizeof_expr    ::= KW_SIZEOF "(" type ")"
 alignof_expr   ::= KW_ALIGNOF "(" type ")"

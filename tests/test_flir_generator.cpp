@@ -23,7 +23,7 @@ using namespace fl;
 
 std::string generateFLIR(const std::string& source) {
     Lexer lexer(source);
-    Parser parser(lexer);
+    DiagnosticEngine diag; Parser parser(lexer, diag);
     auto ast = parser.parse();
 
     DiagnosticEngine diag;

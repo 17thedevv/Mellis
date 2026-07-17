@@ -2,15 +2,19 @@
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include "fdlang/Core/SourceLocation.h"
 #include "fdlang/FrontEnd/Lexer.h"
 #include "fdlang/FrontEnd/Parser.h"
+#if 0
 #include "fdlang/MiddleEnd/SymbolTable.h"
 #include "fdlang/MiddleEnd/Resolver.h"
 #include "fdlang/MiddleEnd/TypeChecker.h"
-#include "fdlang/MiddleEnd/FLIRGenerator.h"
+#include "fdlang/MiddleEnd/MatchAnalyzer.h"
+#include "fdlang/BackEnd/FLIRGenerator.h"
 #include "fdlang/BackEnd/LLVMIRGenerator.h"
 #include "fdlang/BackEnd/ExecutableGenerator.h"
 #include "fdlang/Support/ClangLinker.h"
+#endif
 #include "fdlang/Support/Diagnostic.h"
 
 using namespace fl;
@@ -18,14 +22,14 @@ using namespace fl;
 std::string readFile(const std::string& filepath, DiagnosticEngine& diag) {
     std::ifstream file(filepath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-        diag.error(SourceLocation{}, "Khong the mo file '" + filepath + "'");
+        diag.error(SourceLocation::invalid(), "Khong the mo file '" + filepath + "'");
         return "";
     }
     std::streamsize size = file.tellg();
     std::string buffer(size, '\0');
     file.seekg(0, std::ios::beg);
     if (file.read(buffer.data(), size)) return buffer;
-    diag.error(SourceLocation{}, "Khong the doc noi dung file '" + filepath + "'");
+    diag.error(SourceLocation::invalid(), "Khong the doc noi dung file '" + filepath + "'");
     return "";
 }
 
@@ -33,7 +37,7 @@ int main(int argc, char* argv[]) {
     DiagnosticEngine diag;
 
     if (argc < 2) {
-        diag.error(SourceLocation{}, "Cach su dung: fdlang <file_path> [-v|--verbose]");
+        diag.error(SourceLocation::invalid(), "Cach su dung: fdlang <file_path> [-v|--verbose]");
         diag.flush();
         return 64;
     }
@@ -48,14 +52,14 @@ int main(int argc, char* argv[]) {
         } else if (filepath.empty()) {
             filepath = arg;
         } else {
-            diag.error(SourceLocation{}, "Qua nhieu tham so, khong ho tro: " + arg);
+            diag.error(SourceLocation::invalid(), "Qua nhieu tham so, khong ho tro: " + arg);
             diag.flush();
             return 64;
         }
     }
 
     if (filepath.empty()) {
-        diag.error(SourceLocation{}, "Thieu <file_path>");
+        diag.error(SourceLocation::invalid(), "Thieu <file_path>");
         diag.flush();
         return 64;
     }
@@ -75,12 +79,13 @@ int main(int argc, char* argv[]) {
 
     // ── Phase 2: Parser ───────────────────────────────────────────────────────
     std::cout << "[1] Phan tich cu phap (Parser)...\n";
-    Parser parser(lexer);
+    Parser parser(lexer, diag);
     auto ast = parser.parse();
     std::cout << "[2] Parse thanh cong! ("
-              << ast->statements.size() << " cau lenh)\n";
+              << ast->items.size() << " cau lenh)\n";
 
     // ── Phase 3: Resolver ─────────────────────────────────────────────────────
+#if 0
     // Resolver is the first MiddleEnd pass.
     // It annotates every IdentifierExpr, VarDeclStmt, and AssignStmtNode
     // with a SymbolID that connects the usage to its declaration.
@@ -93,7 +98,7 @@ int main(int argc, char* argv[]) {
     bool resolveOk = resolver.resolve(ast.get());
 
     if (!resolveOk) {
-        diag.error(SourceLocation{}, "Resolver that bai voi " + std::to_string(diag.errorCount()) + " loi.");
+        diag.error(SourceLocation::invalid(), "Resolver that bai voi " + std::to_string(diag.errorCount()) + " loi.");
         diag.flush();
         return 65;
     }
@@ -110,14 +115,24 @@ int main(int argc, char* argv[]) {
     bool tcOk = typeChecker.check(ast.get());
 
     if (!tcOk) {
-        diag.error(SourceLocation{}, "TypeChecker that bai voi " + std::to_string(diag.errorCount()) + " loi.");
+        diag.error(SourceLocation::invalid(), "TypeChecker that bai voi " + std::to_string(diag.errorCount()) + " loi.");
         diag.flush();
         return 65;
     }
 
     std::cout << "[6] TypeChecker thanh cong!\n";
 
-    // ── Phase 5: FLIR Generator ───────────────────────────────────────────────
+    // ── Phase 5.5: Match Exhaustiveness Analysis ──────────────────────────────
+    std::cout << "[6.5] Phan tich Match Exhaustiveness (MatchAnalyzer)...\n";
+    MatchAnalyzer matchAnalyzer(symbolTable, diag);
+    matchAnalyzer.analyze(ast.get());
+    
+    if (diag.errorCount() > 0) {
+        diag.flush();
+        return 65;
+    }
+
+    // ── Phase 6: FLIR Generator ───────────────────────────────────────────────
     // FLIRGenerator takes the typed AST and lowers it to FLIR.
     std::cout << "[7] Tao ma trung gian (FLIRGenerator)...\n";
     FLIRGenerator flirGen(symbolTable, typeChecker);
@@ -130,7 +145,7 @@ int main(int argc, char* argv[]) {
     bool llvmOk = llvmGen.generate(flirModule.get());
 
     if (!llvmOk) {
-        diag.error(SourceLocation{}, "LLVM Module verification failed.");
+        diag.error(SourceLocation::invalid(), "LLVM Module verification failed.");
         diag.flush();
         return 65;
     }
@@ -156,13 +171,14 @@ int main(int argc, char* argv[]) {
 
     bool exeOk = exeGen.generateExecutable(&llvmModule, outExe);
     if (!exeOk) {
-        diag.error(SourceLocation{}, "Loi khi tao file thuc thi.");
+        diag.error(SourceLocation::invalid(), "Loi khi tao file thuc thi.");
         diag.flush();
         return 66;
     }
 
     std::cout << "-----------------------------------\n";
     std::cout << "Build hoan tat: " << outExe << "\n";
+#endif
 
     return 0;
 }

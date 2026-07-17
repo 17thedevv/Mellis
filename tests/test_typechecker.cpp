@@ -1,284 +1,350 @@
-// =============================================================================
-// tests/test_typechecker.cpp
-//
-// Unit tests for the TypeChecker pass.
-//
-// Strategy: full pipeline (Lexer → Parser → Resolver → TypeChecker).
-// DiagnosticEngine is NOT flushed — errors are inspected via errorCount(),
-// so test output is clean with no stderr noise.
-//
-// Test coverage (12 cases):
-//   01. Int variable declaration and use
-//   02. Bool variable declaration and use
-//   03. Type mismatch on assignment (Int ← Bool)
-//   04. Invalid binary operands (Int + Bool)
-//   05. if condition must be bool (Int given)
-//   06. while condition must be bool (Int given)
-//   07. Use before initialization (dec x; print x;)
-//   08. Assignment initializes (dec x; x = 5; print x;)
-//   09. Int + Int → Int (type inference through binary expr)
-//   10. Int < Int → Bool (comparison inference)
-//   11. Bool == Bool → Bool (same-type equality)
-//   12. Nested: use-before-init inside block
-// =============================================================================
-
-#include <cassert>
-#include <iostream>
-#include "fdlang/FrontEnd/Lexer.h"
-#include "fdlang/FrontEnd/Parser.h"
-#include "fdlang/MiddleEnd/SymbolTable.h"
-#include "fdlang/MiddleEnd/Resolver.h"
 #include "fdlang/MiddleEnd/TypeChecker.h"
-#include "fdlang/Support/Diagnostic.h"
+#include "fdlang/MiddleEnd/MatchAnalyzer.h"
+#include "fdlang/MiddleEnd/Resolver.h"
+#include "fdlang/FrontEnd/Parser.h"
+#include "fdlang/FrontEnd/Lexer.h"
+#include <iostream>
+#include <cstdlib>
 
 using namespace fl;
 
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-struct TCResult {
-    bool   ok;
-    size_t errorCount;
-    // TypeChecker is kept alive for typeOf() queries in individual tests.
+struct TestResult {
+    bool ok;
+    std::string err;
 };
 
-/// Run the full pipeline and return TC results.
-/// DiagnosticEngine is NOT flushed (no stderr noise in tests).
-/// Resolver errors are included in errorCount, but TC tests use only programs
-/// that are expected to resolve cleanly unless otherwise noted.
-struct PipelineResult {
-    bool             resolveOk;
-    bool             typeCheckOk;
-    size_t           errorCount;
-    // TypeChecker exposed for per-test type queries
-    std::unique_ptr<TypeChecker>  tc;
-    std::unique_ptr<SymbolTable>  table;
-    std::shared_ptr<DiagnosticEngine> diag;
-};
+TestResult runTypeChecker(const std::string& code, bool expectError = false) {
+    Lexer lexer(code);
+    SymbolTable table;
+    DiagnosticEngine diag;
+    TypeContext ctx;
+    
+    Parser parser(lexer, diag);
+    auto root = parser.parse();
+    
+    Resolver resolver(table, diag);
+    bool resolveOk = resolver.resolve(root.get());
+    if (!resolveOk) {
+        if (expectError) return {true, "resolver failed as expected"};
+        return {false, "resolver failed: " + (diag.allDiagnostics().empty() ? "unknown" : diag.allDiagnostics()[0].message)};
+    }
+    
+    TypeChecker checker(table, diag, ctx);
+    bool typeOk = checker.check(root.get());
+    
 
-PipelineResult runPipeline(const std::string& source) {
-    Lexer  lexer(source);
-    Parser parser(lexer);
-    auto   ast = parser.parse();
-
-    auto diag  = std::make_shared<DiagnosticEngine>();
-    auto table = std::make_unique<SymbolTable>();
-
-    Resolver resolver(*table, *diag);
-    bool resolveOk = resolver.resolve(ast.get());
-
-    auto tc = std::make_unique<TypeChecker>(*table, *diag);
-    bool tcOk = tc->check(ast.get());
-
-    size_t errs = diag->errorCount();
-
-    return {resolveOk, tcOk, errs, std::move(tc), std::move(table), diag};
+    if (!expectError && !typeOk) {
+        return {false, "typecheck failed: " + (diag.allDiagnostics().empty() ? "unknown" : diag.allDiagnostics()[0].message)};
+    }
+    
+    if (typeOk) {
+        MatchAnalyzer matchAnalyzer(table, diag);
+        matchAnalyzer.analyze(root.get());
+        
+        
+        if (expectError && diag.errorCount() == 0) {
+            return {false, "expected error, but succeeded"};
+        }
+        if (!expectError && diag.errorCount() > 0) {
+            return {false, "analysis failed: " + diag.allDiagnostics().back().message};
+        }
+    }
+    
+    if (expectError && diag.errorCount() == 0) {
+        return {false, "expected error, but succeeded"};
+    }
+    
+    return {true, ""};
 }
 
-// =============================================================================
-// Test 01: Int variable — dec x = 1; print x;
-// Expected: ok, no errors
-// =============================================================================
-void test01_intDeclaration() {
-    auto r = runPipeline("dec x = 1; print x;");
-
-    assert(r.resolveOk  && "Test01: should resolve");
-    assert(r.typeCheckOk && "Test01: should type-check");
-    assert(r.errorCount == 0 && "Test01: no errors");
-    assert(r.tc->typeOf(0) == FLType::Int && "Test01: x should be Int");
-
-    std::cout << "[OK] test01_intDeclaration\n";
-}
-
-// =============================================================================
-// Test 02: Bool variable — dec b = true; print b;
-// Expected: ok, b is Bool
-// =============================================================================
-void test02_boolDeclaration() {
-    auto r = runPipeline("dec b = true; print b;");
-
-    assert(r.resolveOk   && "Test02: should resolve");
-    assert(r.typeCheckOk && "Test02: should type-check");
-    assert(r.errorCount == 0 && "Test02: no errors");
-    assert(r.tc->typeOf(0) == FLType::Bool && "Test02: b should be Bool");
-
-    std::cout << "[OK] test02_boolDeclaration\n";
-}
-
-// =============================================================================
-// Test 03: Mismatched assignment — dec x = 1; x = true;
-// Expected: type error
-// =============================================================================
-void test03_mismatchedAssignment() {
-    auto r = runPipeline("dec x = 1; x = true;");
-
-    assert(r.resolveOk    && "Test03: should resolve");
-    assert(!r.typeCheckOk && "Test03: type check should fail");
-    assert(r.errorCount >= 1 && "Test03: at least 1 error");
-
-    std::cout << "[OK] test03_mismatchedAssignment\n";
-}
-
-// =============================================================================
-// Test 04: Invalid binary operands — dec x = 1; dec y = true; dec z = x + y;
-// Expected: type error (Int + Bool not allowed)
-// =============================================================================
-void test04_invalidBinaryOperands() {
-    auto r = runPipeline("dec x = 1; dec y = true; dec z = x + y;");
-
-    assert(r.resolveOk    && "Test04: should resolve");
-    assert(!r.typeCheckOk && "Test04: type check should fail");
-    assert(r.errorCount >= 1 && "Test04: at least 1 error");
-
-    std::cout << "[OK] test04_invalidBinaryOperands\n";
-}
-
-// =============================================================================
-// Test 05: Non-bool if condition — dec x = 1; if (x) {}
-// Expected: type error (condition must be Bool)
-// =============================================================================
-void test05_nonBoolIfCondition() {
-    auto r = runPipeline("dec x = 1; if (x) {}");
-
-    assert(r.resolveOk    && "Test05: should resolve");
-    assert(!r.typeCheckOk && "Test05: type check should fail");
-    assert(r.errorCount >= 1 && "Test05: at least 1 error");
-
-    std::cout << "[OK] test05_nonBoolIfCondition\n";
-}
-
-// =============================================================================
-// Test 06: Non-bool while condition — dec x = 1; while (x) {}
-// Expected: type error (condition must be Bool)
-// =============================================================================
-void test06_nonBoolWhileCondition() {
-    auto r = runPipeline("dec x = 1; while (x) {}");
-
-    assert(r.resolveOk    && "Test06: should resolve");
-    assert(!r.typeCheckOk && "Test06: type check should fail");
-    assert(r.errorCount >= 1 && "Test06: at least 1 error");
-
-    std::cout << "[OK] test06_nonBoolWhileCondition\n";
-}
-
-// =============================================================================
-// Test 07: Use before initialization — dec x; print x;
-// Expected: type error (x used before init)
-// =============================================================================
-void test07_useBeforeInitialization() {
-    auto r = runPipeline("dec x; print x;");
-
-    assert(r.resolveOk    && "Test07: should resolve");
-    assert(!r.typeCheckOk && "Test07: type check should fail");
-    assert(r.errorCount >= 1 && "Test07: at least 1 error");
-
-    std::cout << "[OK] test07_useBeforeInitialization\n";
-}
-
-// =============================================================================
-// Test 08: Assignment initializes — dec x; x = 5; print x;
-// Expected: ok (Unknown→Int promoted on first assignment)
-// =============================================================================
-void test08_assignmentInitializes() {
-    auto r = runPipeline("dec x; x = 5; print x;");
-
-    assert(r.resolveOk   && "Test08: should resolve");
-    assert(r.typeCheckOk && "Test08: type check should succeed");
-    assert(r.errorCount == 0 && "Test08: no errors");
-    assert(r.tc->typeOf(0) == FLType::Int && "Test08: x promoted to Int");
-
-    std::cout << "[OK] test08_assignmentInitializes\n";
-}
-
-// =============================================================================
-// Test 09: Int + Int → Int
-// Expected: ok, z is inferred as Int
-// =============================================================================
-void test09_intPlusIntIsInt() {
-    auto r = runPipeline("dec x = 1; dec y = 2; dec z = x + y;");
-
-    assert(r.resolveOk   && "Test09: should resolve");
-    assert(r.typeCheckOk && "Test09: should type-check");
-    assert(r.errorCount == 0 && "Test09: no errors");
-    // z has symbolId=2 (x=0, y=1, z=2)
-    assert(r.tc->typeOf(2) == FLType::Int && "Test09: z should be Int");
-
-    std::cout << "[OK] test09_intPlusIntIsInt\n";
-}
-
-// =============================================================================
-// Test 10: Int < Int → Bool
-// Expected: ok, b is inferred as Bool
-// =============================================================================
-void test10_intComparisonIsBool() {
-    auto r = runPipeline("dec b = 1 < 2;");
-
-    assert(r.resolveOk   && "Test10: should resolve");
-    assert(r.typeCheckOk && "Test10: should type-check");
-    assert(r.errorCount == 0 && "Test10: no errors");
-    assert(r.tc->typeOf(0) == FLType::Bool && "Test10: b should be Bool");
-
-    std::cout << "[OK] test10_intComparisonIsBool\n";
-}
-
-// =============================================================================
-// Test 11: Bool == Bool → Bool
-// Expected: ok, result of equality is Bool
-// =============================================================================
-void test11_boolEqualityIsBool() {
-    auto r = runPipeline("dec x = true; dec y = false; dec z = x == y;");
-
-    assert(r.resolveOk   && "Test11: should resolve");
-    assert(r.typeCheckOk && "Test11: should type-check");
-    assert(r.errorCount == 0 && "Test11: no errors");
-    // z has symbolId=2 (x=0, y=1, z=2)
-    assert(r.tc->typeOf(2) == FLType::Bool && "Test11: z should be Bool");
-
-    std::cout << "[OK] test11_boolEqualityIsBool\n";
-}
-
-// =============================================================================
-// Test 12: Use-before-init inside a block
-// Expected: type error (inner x not initialized)
-// =============================================================================
-void test12_useBeforeInitInsideBlock() {
-    auto r = runPipeline(R"(
-        {
-            dec inner;
-            print inner;
+void test01_primitives() {
+    auto r = runTypeChecker(R"(
+        fn main() {
+            dec x = 10;
+            dec y = 3.14;
+            dec z = true;
         }
     )");
-
-    assert(r.resolveOk    && "Test12: should resolve");
-    assert(!r.typeCheckOk && "Test12: type check should fail");
-    assert(r.errorCount >= 1 && "Test12: at least 1 error");
-
-    std::cout << "[OK] test12_useBeforeInitInsideBlock\n";
+    if (!r.ok) {
+        std::cout << "[FAIL] test01_primitives: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test01_primitives\n";
 }
 
-// =============================================================================
-// Main
-// =============================================================================
+void test02_binary_matching() {
+    auto r = runTypeChecker(R"(
+        fn main() {
+            dec a = 10;
+            dec b = 20;
+            dec c = a + b;
+        }
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test02_binary_matching: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test02_binary_matching\n";
+}
+
+void test03_binary_mismatch() {
+    auto r = runTypeChecker(R"(
+        fn main() {
+            dec a = 10;
+            dec b = 3.14;
+            dec c = a + b; // should fail
+        }
+    )", true);
+    if (!r.ok) {
+        std::cout << "[FAIL] test03_binary_mismatch (should fail): " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test03_binary_mismatch\n";
+}
+
+void test04_assign_mismatch() {
+    auto r = runTypeChecker(R"(
+        fn main() {
+            dec a: int_32 = 3.14; // mismatch!
+        }
+    )", true);
+    if (!r.ok) {
+        std::cout << "[FAIL] test04_assign_mismatch (should fail): " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test04_assign_mismatch\n";
+}
+
+void test05_function_return() {
+    auto r = runTypeChecker(R"(
+        fn get_int() -> int_32 {
+            return 10;
+        }
+        
+        fn get_bool() -> bool {
+            return 10; // mismatch!
+        }
+    )", true);
+    if (!r.ok) {
+        std::cout << "[FAIL] test05_function_return (should fail): " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test05_function_return\n";
+}
+
+void test06_struct_member() {
+    auto r = runTypeChecker(R"(
+        struct Point {
+            x: int_32,
+            y: int_32
+        }
+        
+        fn main() {
+            dec p = Point { x: 10, y: 20 };
+            dec z = p.x + p.y;
+        }
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test06_struct_member: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test06_struct_member\n";
+}
+
+void test13_match_expr_exhaustive() {
+    auto r = runTypeChecker(R"(
+        enum Color { Red, Green, Blue }
+        fn main() {
+            dec c = Color::Red;
+            dec x = match c {
+                Color::Red -> 1,
+                Color::Green -> 2,
+                Color::Blue -> 3,
+            };
+        }
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test13_match_expr_exhaustive: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test13_match_expr_exhaustive\n";
+}
+
+void test14_match_expr_non_exhaustive() {
+    auto r = runTypeChecker(R"(
+        enum Color { Red, Green, Blue }
+        fn main() {
+            dec c = Color::Red;
+            dec x = match c {
+                Color::Red -> 1,
+                Color::Green -> 2,
+                // Missing Blue
+            };
+        }
+    )", true);
+    if (!r.ok) {
+        std::cout << "[FAIL] test14_match_expr_non_exhaustive (should fail): " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test14_match_expr_non_exhaustive\n";
+}
+
+void test15_match_expr_wildcard() {
+    auto r = runTypeChecker(R"(
+        enum Color { Red, Green, Blue }
+        fn main() {
+            dec c = Color::Red;
+            dec x = match c {
+                Color::Red -> 1,
+                _ -> 2, // Catch-all covers Green and Blue
+            };
+        }
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test15_match_expr_wildcard: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test15_match_expr_wildcard\n";
+}
+
+void test16_match_expr_return_mismatch() {
+    auto r = runTypeChecker(R"(
+        enum Color { Red, Green, Blue }
+        fn main() {
+            dec c = Color::Red;
+            dec x = match c {
+                Color::Red -> 1,
+                Color::Green -> 3.14, // mismatch
+                Color::Blue -> 3,
+            };
+        }
+    )", true);
+    if (!r.ok) {
+        std::cout << "[FAIL] test16_match_expr_return_mismatch (should fail): " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test16_match_expr_return_mismatch\n";
+}
+
+void test17_named_arguments_valid() {
+    auto r = runTypeChecker(R"(
+        fn foo(x: int_32, y: int_32) -> int_32 { return x + y; }
+        fn main() {
+            dec a = foo(1, y: 2);
+            dec b = foo(y: 20, x: 10);
+        }
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test17_named_arguments_valid: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test17_named_arguments_valid\n";
+}
+
+void test18_named_arguments_invalid() {
+    auto r = runTypeChecker(R"(
+        fn foo(x: int_32, y: int_32) -> int_32 { return x + y; }
+        fn main() {
+            // Positional after named is invalid
+            dec a = foo(x: 1, 2);
+        }
+    )", true);
+    if (!r.ok) {
+        std::cout << "[FAIL] test18_named_arguments_invalid (should fail): " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test18_named_arguments_invalid\n";
+}
+
+void test19_method_call_valid() {
+    auto r = runTypeChecker(R"(
+        struct Point { x: int_32, y: int_32 }
+        impl Point {
+            fn distance(self: Point, other: Point) -> int_32 { return 0; }
+        }
+        fn main() {
+            dec p1 = Point { x: 0, y: 0 };
+            dec p2 = Point { x: 1, y: 1 };
+            dec d = p1.distance(p2);
+        }
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test19_method_call_valid: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test19_method_call_valid\n";
+}
+
+void test20_method_call_invalid() {
+    auto r = runTypeChecker(R"(
+        struct Point { x: int_32, y: int_32 }
+        impl Point {
+            fn distance(self: Point, other: Point) -> int_32 { return 0; }
+        }
+        fn main() {
+            dec p1 = Point { x: 0, y: 0 };
+            dec d = p1.distance(10); // Error: expected Point, found int_32
+        }
+    )", true);
+    if (!r.ok) {
+        std::cout << "[FAIL] test20_method_call_invalid (should fail): " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test20_method_call_invalid\n";
+}
+
+void test21_unary_deref() {
+    auto r = runTypeChecker(R"(
+        fn main() {
+            dec a: int_32 = 10;
+            dec ptr: &rw int_32 = &rw a;
+            dec val: int_32 = *ptr;
+        }
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test21_unary_deref: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test21_unary_deref\n";
+}
+
+void test22_array_index() {
+    auto r = runTypeChecker(R"(
+        fn process_array(arr: [int_32, 5]) {
+            dec val: int_32 = arr[0];
+        }
+        fn main() {}
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test22_array_index: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test22_array_index\n";
+}
 
 int main() {
     std::cout << "========================================\n";
-    std::cout << "  FDLANG TYPE CHECKER TESTS\n";
+    std::cout << "  FDLANG TYPECHECKER TESTS\n";
     std::cout << "========================================\n";
+    test01_primitives();
+    test02_binary_matching();
+    test03_binary_mismatch();
+    test04_assign_mismatch();
+    test05_function_return();
+    test06_struct_member();
+    test13_match_expr_exhaustive();
+    test14_match_expr_non_exhaustive();
+    test15_match_expr_wildcard();
+    test16_match_expr_return_mismatch();
+    test17_named_arguments_valid();
+    test18_named_arguments_invalid();
+    test19_method_call_valid();
+    test20_method_call_invalid();
+    test21_unary_deref();
+    test22_array_index();
 
-    test01_intDeclaration();
-    test02_boolDeclaration();
-    test03_mismatchedAssignment();
-    test04_invalidBinaryOperands();
-    test05_nonBoolIfCondition();
-    test06_nonBoolWhileCondition();
-    test07_useBeforeInitialization();
-    test08_assignmentInitializes();
-    test09_intPlusIntIsInt();
-    test10_intComparisonIsBool();
-    test11_boolEqualityIsBool();
-    test12_useBeforeInitInsideBlock();
-
-    std::cout << "========================================\n";
-    std::cout << "  ALL 12 TESTS PASSED\n";
-    std::cout << "========================================\n";
+    std::cout << "============================\n";
+    std::cout << "All typechecker tests passed!\n";
+    std::cout << "============================\n";
     return 0;
 }

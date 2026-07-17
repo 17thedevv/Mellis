@@ -2,78 +2,15 @@
 
 | Hạng mục | Giá trị |
 |----------|---------|
+| **Version** | `v1.0` |
 | **Branch** | `main` |
-| **Commit mới nhất** | TBD |
-| **Phase hiện tại** | **Language Specification v1.0 Frozen** |
+| **Phase hiện tại** | **Phase 2 — Middle End (Type Checker đang nâng cấp)** |
 | **Ngôn ngữ triển khai** | C++17 |
 | **Build system** | CMake 3.20+ |
 | **Backend** | LLVM |
-| **Cập nhật lần cuối** | 2026-07-17 |
+| **Cập nhật lần cuối** | 2026-07-18 |
 
----
-
-## 📁 Cấu trúc Thư mục
-
-```
-fdlang/
-├── include/
-│   └── fdlang/
-│       ├── Core/                  [NEW] Primitive shared types
-│       │   ├── Types.h            SymbolID, ScopeID, FileID, sentinels
-│       │   ├── SourceLocation.h   { file, line, col, offset }
-│       │   ├── Identifier.h       Identifier type (→ InternID in future)
-│       │   └── StringInterner.h   Stub — architecture reservation
-│       ├── AST/
-│       │   ├── ASTNode.h          Base + ProgramNode
-│       │   ├── ExprNode.h         [MODIFIED] IdentifierExpr + symbolId
-│       │   └── StmtNode.h         [MODIFIED] DeclNode base, VarDeclStmt/AssignStmtNode + symbolId
-│       ├── FrontEnd/              [frozen]
-│       │   ├── Lexer.h
-│       │   ├── Parser.h
-│       │   ├── Token.h
-│       │   └── ASTVisitor.h
-│       └── MiddleEnd/             [NEW] Resolver subsystem
-│           ├── Symbol.h           Symbol, Scope, SymbolKind, ScopeKind, ScopeBindings
-│           ├── ScopeStack.h       Transient traversal-time scope tracker
-│           ├── SymbolTable.h      Persistent arena-based symbol registry
-│           └── Resolver.h         Name resolution pass declaration
-├── src/
-│   ├── FrontEnd/                  [frozen]
-│   │   ├── Lexer.cpp
-│   │   └── Parser.cpp
-│   ├── MiddleEnd/
-│   │   ├── SymbolTable.cpp        [NEW]
-│   │   ├── Resolver.cpp           [NEW]
-│   │   └── SemanticAnalyzer.cpp   [DEPRECATED — excluded from build]
-│   ├── BackEnd/
-│   │   └── IRGenerator.cpp        [empty]
-│   ├── Support/
-│   │   └── Diagnostic.cpp         [empty]
-│   └── main.cpp                   [UPDATED] Resolver in pipeline
-├── tests/
-│   ├── test_lexer.cpp
-│   ├── test_sematic.cpp
-│   └── test_resolver.cpp          [NEW] 12 test cases — all passing ✅
-├── examples/
-│   ├── ex.fl
-│   └── math.flh
-├── docs/
-│   ├── grammar.md
-│   ├── architecture.md
-│   └── log.txt
-├── CMakeLists.txt                  [UPDATED]
-└── Status.md
-```
-
----
-
-## 🎯 Mục tiêu Dự án
-
-Xây dựng ngôn ngữ lập trình **freedomLanguage** (`.fl` / `.flh`) với:
-- Cú pháp hiện đại, phong cách riêng, gần gũi với Rust
-- Kiểm soát bộ nhớ mạnh mẽ (Ownership / Borrowing)
-- Biên dịch ra mã máy native thông qua **LLVM**
-- Đủ mạnh để làm **game engine và game**
+> ⚠️ **v1.0 — Đây là bản compiler sẽ dùng trong thực tế. Làm cẩn thận, không đốt cháy giai đoạn.**
 
 ---
 
@@ -83,164 +20,240 @@ Xây dựng ngôn ngữ lập trình **freedomLanguage** (`.fl` / `.flh`) với:
 Source (.fl)
     │
     ▼
-[FrontEnd]
-    Lexer  →  Parser (Recursive Descent)  →  AST
-    │
-    ▼
-[MiddleEnd]
-    Resolver           ✅
+[Phase 1 — FrontEnd]
+    Lexer       ✅ hoàn chỉnh
     ↓
-    Type Checker       ✅
+    Parser      ✅ hoàn chỉnh (Recursive Descent, v1.0 grammar)
     ↓
-    Borrow Checker     ← chưa có
+    AST         ✅ đầy đủ nodes (Decl, Stmt, Expr, Type, Pattern)
+
+[Phase 2 — MiddleEnd]
+    Resolver           ✅ hoàn chỉnh — Two-pass, scoped symbol table
     ↓
-    FLIR Generator     ✅
-    │
-    ▼
-[BackEnd]
-    LLVM IR Generator  ✅
+    Type Checker       🔄 đang nâng cấp — Constraint-Based (ConstraintGenerator → UnificationEngine → TypeResolver)
     ↓
-    LLVM Optimizer
+    Borrow Checker     ❌ chưa có
     ↓
-    Machine Code       ✅
+    FLIR Generator     ✅ hoàn chỉnh
+
+[Phase 3 — BackEnd]
+    LLVM IR Generator  ✅ hoàn chỉnh
+    ↓
+    Executable Gen     ✅ hoàn chỉnh
+```
+
+---
+
+## 📁 Cấu trúc Thực tế (kiểm tra từ codebase)
+
+```
+fdlang/
+├── include/fdlang/
+│   ├── Core/
+│   │   ├── FLType.h           Type system: PrimitiveType, StructType, FunctionType,
+│   │   │                      InferenceVarType, UnificationTable, TypeContext
+│   │   ├── Types.h            SymbolID, ScopeID, FileID, kInvalidSymbolID
+│   │   ├── SourceLocation.h   { file, line, col, offset }
+│   │   ├── Identifier.h       Identifier với transparent hash
+│   │   └── StringInterner.h   Stub — chừa sẵn cho string interning
+│   ├── AST/
+│   │   ├── ASTNode.h          Base node
+│   │   ├── ProgramNode.h      Top-level program
+│   │   ├── DeclNode.h         FunctionDeclNode, StructDeclNode, EnumDeclNode,
+│   │   │                      TraitDeclNode, ImplDeclNode, TypeAliasDeclNode, ...
+│   │   ├── StmtNode.h         BlockStmtNode, IfStmtNode, WhileStmtNode, ForStmtNode,
+│   │   │                      ReturnStmtNode, VarDeclNode, ExprStmtNode, ...
+│   │   ├── ExprNode.h         LiteralExpr, IdentifierExpr, BinaryExpr, CallExpr,
+│   │   │                      MethodCallExpr, MemberExpr, StructInitExpr, MatchExpr, ...
+│   │   ├── TypeNode.h         BuiltinTypeNode, NamedTypeNode, ReferenceTypeNode,
+│   │   │                      PointerTypeNode, ArrayTypeNode, FunctionTypeNode, ...
+│   │   └── PatternNode.h      WildcardPattern, LiteralPattern, IdentifierPattern,
+│   │                          EnumPattern, TuplePattern
+│   ├── FrontEnd/
+│   │   ├── Lexer.h
+│   │   ├── Parser.h
+│   │   ├── Token.h
+│   │   └── ASTVisitor.h       ASTVisitor, TypeVisitor, PatternVisitor
+│   ├── MiddleEnd/
+│   │   ├── Symbol.h           Symbol, Scope, SymbolKind, ScopeKind
+│   │   ├── ScopeStack.h       Traversal-time scope tracker
+│   │   ├── SymbolTable.h      Arena-based symbol registry
+│   │   ├── Resolver.h
+│   │   ├── TypeChecker.h
+│   │   ├── FLIR.h             FLIR instruction set
+│   │   └── FLIRGenerator.h
+│   ├── BackEnd/
+│   │   ├── LLVMIRGenerator.h
+│   │   └── ExecutableGenerator.h
+│   └── Support/
+│       └── (Diagnostic headers)
+├── src/
+│   ├── FrontEnd/
+│   │   ├── Lexer.cpp
+│   │   └── Parser.cpp
+│   ├── MiddleEnd/
+│   │   ├── SymbolTable.cpp
+│   │   ├── Resolver.cpp
+│   │   ├── TypeChecker.cpp    [🔄 đang nâng cấp — Constraint-Based architecture]
+│   │   ├── FLIR.cpp
+│   │   ├── FLIRGenerator.cpp
+│   │   └── SemanticAnalyzer.cpp  [DEPRECATED — excluded khỏi build, chờ xóa]
+│   ├── BackEnd/
+│   │   ├── LLVMIRGenerator.cpp
+│   │   └── ExecutableGenerator.cpp
+│   ├── Runtime/
+│   │   └── runtime.c
+│   └── main.cpp
+├── tests/
+│   ├── test_lexer.cpp
+│   ├── test_parser.cpp
+│   ├── test_resolver.cpp       12 test cases ✅
+│   ├── test_typechecker.cpp    6 test cases ✅
+│   ├── test_flir_generator.cpp
+│   ├── test_llvmir_generator.cpp
+│   ├── test_executable_generator.cpp
+│   ├── test_ast_manual.cpp
+│   ├── test_diagnostic.cpp
+│   └── test_sematic.cpp        [legacy — sẽ xóa cùng SemanticAnalyzer]
+├── docs/
+│   ├── grammar.md              ✅ v1.0 Frozen
+│   ├── architecture.md
+│   ├── FLIR.MD
+│   ├── RoadMap.md
+│   ├── VISION.MD
+│   └── ast.md
+└── Status.md
 ```
 
 ---
 
 ## ✅ Đã hoàn thành
 
-### Core/ — Primitive types (Phase 7)
-| File | Nội dung |
-|------|----------|
-| `Types.h` | `SymbolID`, `ScopeID`, `FileID`, sentinel values |
-| `SourceLocation.h` | `{ file, line, col, offset }` — diagnostic-ready |
-| `Identifier.h` | `Identifier` type với transparent hash/equal, InternID path chừa sẵn |
-| `StringInterner.h` | Stub — architecture slot cho full string interning |
+### Phase 1 — FrontEnd
 
-### AST Annotations (Phase 7)
-| Node | Field thêm | Ai điền |
-|------|-----------|---------|
-| `IdentifierExpr` | `SymbolID symbolId` | Resolver |
-| `DeclNode` (base) | `SymbolID symbolId` | Resolver |
-| `VarDeclStmt` | inherits `DeclNode.symbolId` | Resolver |
-| `AssignStmtNode` | `SymbolID symbolId` | Resolver |
-
-### MiddleEnd — Resolver Subsystem (Phase 7)
 | Module | Trạng thái | Ghi chú |
 |--------|-----------|---------|
-| `Symbol.h` | ✅ | `Symbol`, `Scope`, `SymbolKind`, `ScopeKind`, `ScopeBindings` |
-| `ScopeStack.h` | ✅ | Transient traversal helper |
-| `SymbolTable.h/.cpp` | ✅ | Arena-based, `lookup()` chain-walk + `lookupInScope()` single-scope |
-| `Resolver.h/.cpp` | ✅ | 4 responsibilities: scope, declare, resolve, shadow |
-| `test_resolver.cpp` | ✅ **12/12 passed** | Full pipeline integration tests |
+| **Lexer** | ✅ Hoàn chỉnh | Hỗ trợ toàn bộ Grammar v1.0: literals, operators, keywords |
+| **Parser** | ✅ Hoàn chỉnh | Recursive Descent, parse đầy đủ Decl/Stmt/Expr/Type/Pattern |
+| **AST** | ✅ Hoàn chỉnh | Đầy đủ node types cho grammar v1.0 |
+| **ASTVisitor** | ✅ Hoàn chỉnh | ASTVisitor, TypeVisitor, PatternVisitor |
 
-### Resolver — Kết quả kiểm thử
-```
-[OK] test01_simpleDeclarationAndUse
-[OK] test02_useBeforeDeclare
-[OK] test03_undeclaredIdentifier
-[OK] test04_doubleDeclarationSameScope
-[OK] test05_shadowingInNestedScope
-[OK] test06_innerScopeVariableInvisibleOutside
-[OK] test07_assignToUndeclared
-[OK] test08_printResolvesArgument
-[OK] test09_ifElseSeparateScopes
-[OK] test10_whileLoopBodyScope
-[OK] test11_declarationNoInitializer
-[OK] test12_outerNameAccessibleAfterInnerScopeCloses
-ALL 12 TESTS PASSED ✅
-```
+### Phase 2 — MiddleEnd
 
-### FrontEnd (v1.0 Upgrade)
-| Module | Trạng thái |
-|--------|-----------|
-| Lexer | ✅ **Hoàn chỉnh (v1.0)** — Hỗ trợ toàn bộ Grammar, Literals, Toán tử |
-| Parser | ⚠️ Chờ nâng cấp lên v1.0 |
+| Module | Trạng thái | Ghi chú |
+|--------|-----------|---------|
+| **Resolver** | ✅ Hoàn chỉnh | Two-pass: DeclarationVisitor → ResolutionVisitor |
+| **SymbolTable** | ✅ Hoàn chỉnh | Arena-based, persistent, chain-walk lookup |
+| **Type System (FLType.h)** | ✅ Hoàn chỉnh | PrimitiveType, StructType, EnumType, FunctionType, InferenceVarType, UnificationTable, TypeContext |
+| **TypeChecker — TypePrePass** | ✅ Hoàn chỉnh | Khai báo kiểu cho fn, struct, enum trước khi resolve |
+| **TypeChecker — ConstraintGenerator** | ✅ Hoàn chỉnh | Sinh Equality & Field constraints, không unify trực tiếp |
+| **TypeChecker — UnificationEngine** | ✅ Hoàn chỉnh | Union-Find trên InferenceVarType, giải Field constraint qua StructDecl |
+| **TypeChecker — TypeResolver** | ✅ Hoàn chỉnh | Deep-resolve InferenceVar, emit lỗi nếu còn biến chưa rõ kiểu |
+| **FLIR** | ✅ Hoàn chỉnh | FLIR instruction set, specification |
+| **FLIRGenerator** | ✅ Hoàn chỉnh | Lowering AST → FLIR |
 
-### Documentation & Specification
-| File | Nội dung |
-|------|----------|
-| `grammar.md` | ✅ **v1.0 Frozen** — Hoàn thiện toàn bộ đặc tả EBNF, OOP, Comptime, Generics, Traits, Ergonomics. |
+### Phase 3 — BackEnd
+
+| Module | Trạng thái | Ghi chú |
+|--------|-----------|---------|
+| **LLVMIRGenerator** | ✅ Hoàn chỉnh | FLIR → LLVM IR |
+| **ExecutableGenerator** | ✅ Hoàn chỉnh | LLVM IR → native executable, linker abstraction |
+
+### Specification & Documentation
+
+| File | Trạng thái |
+|------|-----------|
+| `grammar.md` | ✅ v1.0 Frozen — EBNF đầy đủ, Generics, Traits, Comptime |
+| `FLIR.MD` | ✅ Specification hoàn chỉnh |
+| `architecture.md` | ✅ Pipeline design |
+| `VISION.MD` | ✅ |
+
+### Tests
+
+| Test | Kết quả |
+|------|---------|
+| `test_lexer` | ✅ |
+| `test_parser` | ✅ |
+| `test_resolver` | ✅ 12/12 passed |
+| `test_typechecker` | ✅ 6/6 passed |
+| `test_flir_generator` | ✅ |
+| `test_llvmir_generator` | ✅ |
+| `test_executable_generator` | ✅ |
 
 ---
 
-## ⚠️ Đang thiếu / Chưa triển khai
+## ❌ Chưa triển khai / Cần làm tiếp
 
-### MiddleEnd & BackEnd — Đã tích hợp cho MVP
-| Module | Trạng thái | Ghi chú |
-|--------|-----------|---------|
-| **Type Checker** | ✅ Hoàn thành | Phân tích ngữ nghĩa, kiểu dữ liệu |
-| **FLIR Generator** | ✅ Hoàn thành | Lowering từ AST sang FLIR, tuân thủ `docs/flir.md`. |
-| **LLVM IR Generator**| ✅ Hoàn thành | Lowering từ FLIR sang LLVM IR (Pure pass). |
-| **Executable Gen** | ✅ Hoàn thành | Dịch mã máy, native code & linker abstraction (`fl::Linker`). |
+### Phase 2 — MiddleEnd (còn thiếu)
 
----
-
-## ⚠️ Đang thiếu / Chưa triển khai
-
-### MiddleEnd — Cần bổ sung
-| Tính năng | Trạng thái | Ghi chú |
-|-----------|-----------|---------|
-| **Borrow Checker** | ❌ Chưa có | `BorrowState` architecture chừa sẵn |
-| **Initialization Check** | ⚠️ Chưa tích hợp | Cần chuyển vào TypeChecker |
-
-### FrontEnd — Tính năng còn thiếu
-| Tính năng | Trạng thái |
-|-----------|-----------|
-| `fn` — hàm | ❌ Parser chưa xử lý |
-| `return` | ❌ |
-| `mod`, `export`, `extern` | ❌ |
-| `const` | ❌ |
-| Function call `foo(a, b)` | ❌ |
-| `break` / `continue` | ❌ |
-| Diagnostic Engine | ✅ Đã sử dụng | Hoạt động như trung tâm điều hướng báo lỗi |
+| Tính năng | Mức độ ưu tiên | Ghi chú |
+|-----------|---------------|---------|
+| **TypeChecker — CallExpr, MethodCallExpr** | 🔴 Cao | Hiện đang `{}` empty — chưa generate constraints cho function calls |
+| **TypeChecker — Generics** | 🔴 Cao | Generic parameter constraints chưa được sinh |
+| **TypeChecker — Trait Resolution** | 🔴 Cao | ImplMap có sẵn nhưng chưa kết nối vào solver |
+| **TypeChecker — IfStmt, WhileStmt** | 🟡 Trung bình | Condition check chưa có |
+| **TypeChecker — Pattern Matching** | 🟡 Trung bình | MatchExpr, EnumPattern chưa được handle |
+| **Initialization Check** | 🟡 Trung bình | Cần tích hợp vào TypeChecker, thay thế SemanticAnalyzer cũ |
+| **Borrow Checker** | 🔴 Cao | Chưa có — là blocker trước khi gọi là memory-safe |
 
 ---
 
 ## 🔧 Vấn đề kỹ thuật cần chú ý
 
-1. **Transparent lookup (C++17/MSVC)** — `unordered_map::find(string_view)` với custom hash cần C++20 trên MSVC. Hiện dùng `Identifier key(name)` explicit. Fix dài hạn: nâng C++20 hoặc dùng custom hash map.
-2. **`SemanticAnalyzer.cpp` deprecated** — excluded khỏi build, chưa xóa. Initialization check cần chuyển vào TypeChecker.
-3. **`SourceLocation` chưa có line/col** — Lexer chưa track. Field có sẵn, điền sau khi Lexer upgrade.
-4. **`README.MD` hoàn toàn trống** — cần viết hướng dẫn cài đặt.
-5. **Unused Variables** — `TypeChecker` hiện chưa báo lỗi khi biến không được dùng, khiến `FLIRGenerator` sinh ra `%id = alloca void`. Sẽ cần fix ở `TypeChecker`.
-6. **LLVM Build Mode Mismatch** — LLVM trên Windows (MSVC) được build ở dạng Release (`/MD`). Khi build `fdlang` ở chế độ Debug (`/MDd`), linker sẽ văng lỗi `_ITERATOR_DEBUG_LEVEL`. Tạm thời luôn build `fdlang` ở Release mode.
+| # | Vấn đề | Mức độ |
+|---|--------|--------|
+| 1 | **`SourceLocation` chưa có line/col thực** — Lexer chưa điền, mọi `loc.line == 0`. Lỗi diagnostic hiện không chỉ đúng vị trí. | 🔴 Cao |
+| 2 | **`SemanticAnalyzer.cpp` deprecated** — Excluded khỏi build nhưng chưa xóa khỏi repo. | 🟡 Trung bình |
+| 3 | **`README.MD`** — Cần viết hướng dẫn build và sử dụng cho v1.0. | 🟡 Trung bình |
+| 4 | **Unused Variables** — TypeChecker chưa báo lỗi biến không dùng → FLIRGenerator sinh `%id = alloca void`. | 🟡 Trung bình |
+| 5 | **LLVM Build Mode Mismatch** — LLVM Release (`/MD`) vs fdlang Debug (`/MDd`) → link error `_ITERATOR_DEBUG_LEVEL`. Tạm thời build fdlang ở Release. | 🟡 Trung bình |
+| 6 | **Transparent lookup C++17/MSVC** — `unordered_map::find(string_view)` cần explicit `Identifier key(name)`. Fix dài hạn: nâng C++20. | 🟢 Thấp |
 
 ---
 
-## 📊 Tiến độ tổng thể
+## 📊 Tiến độ thực tế
 
 ```
-FrontEnd (Lexer + Parser)       ████████░░   ~80%
-MiddleEnd — Resolver            ██████████   100% ✅
-MiddleEnd — TypeChecker         ██████████   100% ✅
-MiddleEnd — FLIR Generator      ██████████   100% ✅
-MiddleEnd — Borrow Checker      ░░░░░░░░░░     0%
-BackEnd — LLVM IR Gen           ██████████   100% ✅
-BackEnd — Executable Gen        ██████████   100% ✅
-Tests                           ██████████   100% ✅
-Documentation                   █████████░   ~90%
-──────────────────────────────────────────────────
-Tổng thể MVP                    ██████████   100% ✅
+Phase 1 — Lexer                 ██████████  100% ✅
+Phase 1 — Parser                ██████████  100% ✅
+Phase 1 — AST                   ██████████  100% ✅
+
+Phase 2 — Resolver              ██████████  100% ✅
+Phase 2 — Type System (FLType)  ██████████  100% ✅
+Phase 2 — TypeChecker Core      ████████░░   80% 🔄
+Phase 2 — TypeChecker Generics  ██░░░░░░░░   20% 🔄
+Phase 2 — TypeChecker Traits    ██░░░░░░░░   20% 🔄
+Phase 2 — Borrow Checker        ░░░░░░░░░░    0% ❌
+
+Phase 2 — FLIR Generator        ██████████  100% ✅
+Phase 3 — LLVM IR Generator     ██████████  100% ✅
+Phase 3 — Executable Gen        ██████████  100% ✅
+
+Diagnostic Engine               ███████░░░   70% (line/col chưa có)
+Tests                           ██████████  100% ✅
+Documentation                   ████████░░   80%
+────────────────────────────────────────────────────
+Tổng thể v1.0                   ██████░░░░  ~60%
 ```
 
 ---
 
-## 🗺️ Bước tiếp theo
+## 🗺️ Thứ tự làm tiếp (theo đúng lộ trình)
 
-### Ngắn hạn
-1. **Triển khai Parser.cpp** — Cập nhật mã nguồn C++ để xây dựng AST bám sát `grammar.md` v1.0.
-2. **Diagnostic Engine** — cải thiện xuất lỗi, thay `std::exit()`
-3. **Initialization checker** — chuyển logic từ SemanticAnalyzer cũ vào pass mới
-
-### Trung hạn
-4. **Mở rộng chức năng** — dịch LLVM IR cho if/else, loop, function call
-5. **Borrow Checker** — Bắt đầu implement Ownership/Borrowing cơ bản
-
-### Dài hạn
-6. **Module system** — `mod`, `export`, `extern`
-7. **StringInterner** — upgrade `Identifier` từ `std::string` sang `InternID`
-
----
-
-*File được cập nhật sau khi hoàn thành MVP (đã compile ra executable code).*
+```
+[Đang làm]  TypeChecker — hoàn thiện nốt các node còn thiếu
+                CallExpr, MethodCallExpr, IfStmt, WhileStmt
+                MatchExpr + Pattern binding
+                Generic parameter constraints
+                Trait method resolution qua ImplMap
+    ↓
+[Tiếp theo] Initialization Check
+                Tích hợp vào TypeChecker, xóa SemanticAnalyzer.cpp
+    ↓
+[Sau đó]    Borrow Checker
+                Ownership, borrowing, lifetime cơ bản
+    ↓
+[Dài hạn]   Module system (mod, export, extern)
+            StringInterner upgrade
+            Diagnostic Engine — line/col chính xác
+```

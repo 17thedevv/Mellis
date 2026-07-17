@@ -1,6 +1,7 @@
 #include "fdlang/FrontEnd/Lexer.h"
 #include <cctype>
 #include <string>
+#include <unordered_map>
 
 namespace fl {
 
@@ -94,6 +95,64 @@ static bool isAlnumOrUnderscore(char c) {
     return std::isalnum(c) || c == '_';
 }
 
+static const std::unordered_map<std::string_view, TokenType> kKeywords = {
+    {"dec", TokenType::KW_DEC},
+    {"const", TokenType::KW_CONST},
+    {"fn", TokenType::KW_FN},
+    {"return", TokenType::KW_RETURN},
+    {"if", TokenType::KW_IF},
+    {"else", TokenType::KW_ELSE},
+    {"while", TokenType::KW_WHILE},
+    {"for", TokenType::KW_FOR},
+    {"in", TokenType::KW_IN},
+    {"break", TokenType::KW_BREAK},
+    {"continue", TokenType::KW_CONTINUE},
+    {"mod", TokenType::KW_MOD},
+    {"export", TokenType::KW_EXPORT},
+    {"extern", TokenType::KW_EXTERN},
+    {"struct", TokenType::KW_STRUCT},
+    {"enum", TokenType::KW_ENUM},
+    {"trait", TokenType::KW_TRAIT},
+    {"impl", TokenType::KW_IMPL},
+    {"unsafe", TokenType::KW_UNSAFE},
+    {"use", TokenType::KW_USE},
+    {"as", TokenType::KW_AS},
+    {"match", TokenType::KW_MATCH},
+    {"rw", TokenType::KW_RW},
+    {"true", TokenType::KW_TRUE},
+    {"false", TokenType::KW_FALSE},
+    {"type", TokenType::KW_TYPE},
+    {"sizeof", TokenType::KW_SIZEOF},
+    {"alignof", TokenType::KW_ALIGNOF},
+    {"await", TokenType::KW_AWAIT},
+    {"async", TokenType::KW_ASYNC},
+    {"comptime", TokenType::KW_COMPTIME},
+    {"dyn", TokenType::KW_DYN},
+    {"self", TokenType::KW_SELF_VAL},
+    {"Self", TokenType::KW_SELF_TYP},
+    {"print", TokenType::KW_PRINT},
+};
+
+static const std::unordered_map<std::string_view, BuiltinKind> kBuiltinTypes = {
+    {"int_4", BuiltinKind::I4},
+    {"int_8", BuiltinKind::I8},
+    {"int_16", BuiltinKind::I16},
+    {"int_32", BuiltinKind::I32},
+    {"int_64", BuiltinKind::I64},
+    {"int_128", BuiltinKind::I128},
+    {"uint_4", BuiltinKind::U4},
+    {"uint_8", BuiltinKind::U8},
+    {"uint_16", BuiltinKind::U16},
+    {"uint_32", BuiltinKind::U32},
+    {"uint_64", BuiltinKind::U64},
+    {"uint_128", BuiltinKind::U128},
+    {"float_32", BuiltinKind::F32},
+    {"float_64", BuiltinKind::F64},
+    {"bool", BuiltinKind::Bool},
+    {"char", BuiltinKind::Char},
+    {"string", BuiltinKind::Str},
+};
+
 Token Lexer::identifierOrKeyword() {
     uint32_t startOffset = position;
     while (isAlnumOrUnderscore(peek())) {
@@ -103,44 +162,19 @@ Token Lexer::identifierOrKeyword() {
     uint32_t length = position - startOffset;
     std::string_view text = source.substr(startOffset, length);
 
-    TokenType type = TokenType::IDENTIFIER;
-    if (text == "dec") type = TokenType::KW_DEC;
-    else if (text == "const") type = TokenType::KW_CONST;
-    else if (text == "fn") type = TokenType::KW_FN;
-    else if (text == "return") type = TokenType::KW_RETURN;
-    else if (text == "if") type = TokenType::KW_IF;
-    else if (text == "else") type = TokenType::KW_ELSE;
-    else if (text == "while") type = TokenType::KW_WHILE;
-    else if (text == "for") type = TokenType::KW_FOR;
-    else if (text == "in") type = TokenType::KW_IN;
-    else if (text == "break") type = TokenType::KW_BREAK;
-    else if (text == "continue") type = TokenType::KW_CONTINUE;
-    else if (text == "mod") type = TokenType::KW_MOD;
-    else if (text == "export") type = TokenType::KW_EXPORT;
-    else if (text == "extern") type = TokenType::KW_EXTERN;
-    else if (text == "struct") type = TokenType::KW_STRUCT;
-    else if (text == "enum") type = TokenType::KW_ENUM;
-    else if (text == "trait") type = TokenType::KW_TRAIT;
-    else if (text == "impl") type = TokenType::KW_IMPL;
-    else if (text == "unsafe") type = TokenType::KW_UNSAFE;
-    else if (text == "use") type = TokenType::KW_USE;
-    else if (text == "as") type = TokenType::KW_AS;
-    else if (text == "match") type = TokenType::KW_MATCH;
-    else if (text == "rw") type = TokenType::KW_RW;
-    else if (text == "true") type = TokenType::KW_TRUE;
-    else if (text == "false") type = TokenType::KW_FALSE;
-    else if (text == "type") type = TokenType::KW_TYPE;
-    else if (text == "sizeof") type = TokenType::KW_SIZEOF;
-    else if (text == "alignof") type = TokenType::KW_ALIGNOF;
-    else if (text == "await") type = TokenType::KW_AWAIT;
-    else if (text == "async") type = TokenType::KW_ASYNC;
-    else if (text == "comptime") type = TokenType::KW_COMPTIME;
-    else if (text == "dyn") type = TokenType::KW_DYN;
-    else if (text == "self") type = TokenType::KW_SELF_VAL;
-    else if (text == "Self") type = TokenType::KW_SELF_TYP;
-    else if (text == "print") type = TokenType::KW_PRINT;
+    auto kwIt = kKeywords.find(text);
+    if (kwIt != kKeywords.end()) {
+        return makeToken(kwIt->second, startOffset, length);
+    }
 
-    return makeToken(type, startOffset, length);
+    auto typeIt = kBuiltinTypes.find(text);
+    if (typeIt != kBuiltinTypes.end()) {
+        Token t = makeToken(TokenType::BUILTIN_TYPE, startOffset, length);
+        t.builtinKind = typeIt->second;
+        return t;
+    }
+
+    return makeToken(TokenType::IDENTIFIER, startOffset, length);
 }
 
 Token Lexer::numberLiteral() {
@@ -344,6 +378,7 @@ Token Lexer::nextToken() {
             if (match('=')) return makeToken(TokenType::BIT_XOR_ASSIGN, startOffset, 2);
             return makeToken(TokenType::BIT_XOR, startOffset, 1);
         case '~': return makeToken(TokenType::BIT_NOT, startOffset, 1);
+
         case '?': return makeToken(TokenType::QUESTION, startOffset, 1);
         case ':':
             if (match(':')) return makeToken(TokenType::COLON_COLON, startOffset, 2);

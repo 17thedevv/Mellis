@@ -1,0 +1,13 @@
+build/
+.vs/
+*.user
+*.pdb
+*.suo
+*.ilk
+*.tlog
+*.exe
+*.dll
+*.lib
+*.obj
+*.lastbuildstate
+*.log

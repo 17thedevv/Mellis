@@ -648,10 +648,10 @@ class TypeNode : public ASTNode {
 };
 ```
 
-| Subclass | Nguon | Fields chinh | Ghi chu |
-|----------|-------|-------------|--------|
-| `BuiltinTypeNode` | `i32`, `u64`, `bool`, `f64`... | `kind: BuiltinKind` | Khong can Resolver. Compiler nhan ra ngay. |
-| `NamedTypeNode` | `Vec@<T>`, `MyStruct` | `segments`, `genericArgs`, `symbolId` | User-defined types. Resolver dien `symbolId`. |
+| Subclass | Nguồn (Grammar) | Fields chính | Ghi chú |
+|----------|-----------------|-------------|--------|
+| `BuiltinTypeNode` | `builtin_type` (e.g., `int_32`, `bool`) | `kind: BuiltinKind` | Không cần Resolver. Compiler nhận ra ngay. |
+| `NamedTypeNode` | `named_type` (e.g., `Vec@<T>`, `MyStruct`) | `segments`, `genericArgs`, `symbolId` | User-defined types. Resolver điền `symbolId`. |
 | `ReferenceTypeNode` | `&T`, `&rw T` | `isMutable`, `inner` | |
 | `PointerTypeNode` | `*T`, `*rw T` | `isMutable`, `inner` | |
 | `ArrayTypeNode` | `[T, N]` | `elementType`, `size: ExprNode?` | |

@@ -36,18 +36,20 @@ namespace fl {
 // =============================================================================
 enum class SymbolKind : uint8_t {
     Variable,     // dec x
-    Constant,     // const x  (future)
-    Function,     // fn foo() (future)
-    Parameter,    // fn foo(x: i32) — function parameter (future)
-    Struct,       // struct Foo (future)
-    Enum,         // enum Bar (future)
-    EnumVariant,  // Bar::Baz (future)
-    Module,       // mod m (future)
-    Trait,        // trait T (future)
-
-    // Note: 'print' is intentionally absent.
-    // PrintStmtNode is a built-in statement node, not a symbol.
-    // When 'print' migrates to the standard library, it will be SymbolKind::Function.
+    Const,        // const x
+    Parameter,    // fn foo(x: i32)
+    Function,     // fn foo()
+    Struct,       // struct Foo
+    Enum,         // enum Bar
+    EnumVariant,  // Bar::Baz
+    StructField,  // Foo.x
+    Trait,        // trait T
+    TraitMethod,  // trait T { fn foo(); }
+    Impl,         // impl T for U
+    TypeAlias,    // type X = Y;
+    GenericParam, // <T>
+    Module,       // mod m
+    Namespace,    // Logical grouping
 };
 
 // =============================================================================
@@ -65,6 +67,10 @@ enum class ScopeKind : uint8_t {
     Block,        // { } — generic block
     Loop,         // while / for body (future: ScopeKind::Loop for break/continue)
     Conditional,  // if / else branch
+    Struct,       // struct body
+    Enum,         // enum body
+    Trait,        // trait body
+    Impl,         // impl body
 };
 
 // =============================================================================
@@ -111,10 +117,11 @@ struct Symbol {
 //   Diagnostics reconstructs the full scope path for error messages.
 // =============================================================================
 struct Scope {
-    ScopeID      id;
-    ScopeID      parentId;   // kInvalidScopeID for the global scope
-    ScopeKind    kind;
-    ScopeBindings bindings;  // name → SymbolID within this scope only
+    ScopeID              id;
+    ScopeID              parentId;   // kInvalidScopeID for the global scope
+    std::vector<ScopeID> children;   // Tree hierarchy for scoping
+    ScopeKind            kind;
+    ScopeBindings        bindings;   // name → SymbolID within this scope only
 };
 
 } // namespace fl

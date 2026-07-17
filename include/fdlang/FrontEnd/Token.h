@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string_view>
+#include "fdlang/AST/TypeNode.h" // Để lấy BuiltinKind
 
 namespace fl {
     enum class TokenType {
@@ -77,6 +78,9 @@ namespace fl {
         BYTE_LITERAL,
         BYTE_STRING_LITERAL,
 
+        // --- Kiểu dữ liệu nguyên thủy ---
+        BUILTIN_TYPE,
+
         // --- Keywords ---
         KW_DEC,
         KW_CONST,
@@ -121,5 +125,12 @@ namespace fl {
         TokenType type;
         std::string_view text;
         uint32_t byteOffset; // offset in the source code
+        
+        // Payload bổ sung cho Token đặc biệt
+        union {
+            BuiltinKind builtinKind;
+        };
+        
+        Token() : type(TokenType::ERROR), text(""), byteOffset(0), builtinKind(BuiltinKind::Void) {}
     };
 }

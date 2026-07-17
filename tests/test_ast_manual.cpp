@@ -22,8 +22,8 @@ public:
     void visit(ProgramNode& node) override {
         printIndent(); std::cout << "ProgramNode\n";
         indent++;
-        for (auto& decl : node.decls) {
-            decl->accept(*this);
+        for (auto& item : node.items) {
+            item->accept(*this);
         }
         indent--;
     }
@@ -108,6 +108,7 @@ public:
     void visit(UnaryExpr&) override {}
     void visit(AssignExpr&) override {}
     void visit(CallExpr&) override {}
+    void visit(MethodCallExpr&) override {}
     void visit(IndexExpr&) override {}
     void visit(MemberExpr&) override {}
     void visit(CastExpr&) override {}
@@ -165,7 +166,7 @@ void test_var_decl() {
     bin->right = std::move(lit2);
     
     dec->initializer = std::move(bin);
-    prog->decls.push_back(std::move(dec));
+    prog->items.push_back(std::move(dec));
     
     ASTPrinter printer;
     prog->accept(printer);
@@ -216,7 +217,7 @@ void test_function_decl() {
     body->body.push_back(std::move(ret));
     
     func->body = std::move(body);
-    prog->decls.push_back(std::move(func));
+    prog->items.push_back(std::move(func));
     
     ASTPrinter printer;
     prog->accept(printer);

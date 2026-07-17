@@ -14,6 +14,7 @@ class StmtNode : public ItemNode {};
 class BlockStmtNode : public StmtNode {
 public:
     std::vector<std::unique_ptr<ItemNode>> body;
+    ScopeID                                bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 
@@ -52,6 +53,7 @@ public:
     std::unique_ptr<ExprNode>      step;
     
     std::unique_ptr<BlockStmtNode> body;
+    ScopeID                        bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
 };
 

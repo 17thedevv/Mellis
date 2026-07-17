@@ -18,6 +18,7 @@ SymbolTable::SymbolTable() {
     scopes_.push_back(Scope{
         /* id       = */ 0,
         /* parentId = */ kInvalidScopeID,
+        /* children = */ {},
         /* kind     = */ ScopeKind::Global,
         /* bindings = */ ScopeBindings{}
     });
@@ -33,7 +34,12 @@ ScopeID SymbolTable::createScope(ScopeKind kind, ScopeID parentId) {
            "createScope: invalid parentId");
 
     ScopeID newId = static_cast<ScopeID>(scopes_.size());
-    scopes_.push_back(Scope{newId, parentId, kind, ScopeBindings{}});
+    scopes_.push_back(Scope{newId, parentId, {}, kind, ScopeBindings{}});
+    
+    if (parentId != kInvalidScopeID) {
+        scopes_[parentId].children.push_back(newId);
+    }
+    
     return newId;
 }
 

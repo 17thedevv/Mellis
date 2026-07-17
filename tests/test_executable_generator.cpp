@@ -25,7 +25,7 @@ void test_end_to_end_execution() {
     std::string source = "dec x = 10; print x;";
     
     Lexer lexer(source);
-    Parser parser(lexer);
+    DiagnosticEngine diag; Parser parser(lexer, diag);
     auto ast = parser.parse();
 
     DiagnosticEngine diag;
