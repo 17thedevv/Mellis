@@ -67,6 +67,7 @@ public:
     > value;
 
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class IdentifierExpr : public ExprNode {
@@ -84,6 +85,7 @@ public:
     std::unique_ptr<ExprNode> left;
     std::unique_ptr<ExprNode> right;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class UnaryExpr : public ExprNode {
@@ -91,6 +93,7 @@ public:
     UnaryOp                   op;
     std::unique_ptr<ExprNode> operand;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class AssignExpr : public ExprNode {
@@ -99,6 +102,7 @@ public:
     std::unique_ptr<ExprNode> lvalue;
     std::unique_ptr<ExprNode> value;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 struct CallArgNode {
@@ -135,6 +139,7 @@ public:
     std::unique_ptr<ExprNode> base;
     std::unique_ptr<ExprNode> index;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class MemberExpr : public ExprNode {
@@ -144,6 +149,7 @@ public:
     SymbolID memberId = kInvalidSymbolID;
     size_t resolvedFieldIndex = (size_t)-1;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class CastExpr : public ExprNode {
@@ -151,18 +157,21 @@ public:
     std::unique_ptr<ExprNode> expr;
     std::unique_ptr<TypeNode> targetType;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class ArrayLiteralExpr : public ExprNode {
 public:
     std::vector<std::unique_ptr<ExprNode>> elements;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class TupleLiteralExpr : public ExprNode {
 public:
     std::vector<std::unique_ptr<ExprNode>> elements;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 struct FieldInitNode {
@@ -192,6 +201,7 @@ public:
     std::unique_ptr<ExprNode>  subject;
     std::vector<MatchArmNode>  arms;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class LambdaExpr : public ExprNode {
@@ -200,24 +210,30 @@ public:
     std::unique_ptr<TypeNode>                   returnType;
     std::unique_ptr<StmtNode>                   body;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class AwaitExpr : public ExprNode {
 public:
     std::unique_ptr<ExprNode> expr;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class SizeofExpr : public ExprNode {
 public:
     std::unique_ptr<TypeNode> targetType;
+    const Type* evaluatedTargetType = nullptr;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class AlignofExpr : public ExprNode {
 public:
     std::unique_ptr<TypeNode> targetType;
+    const Type* evaluatedTargetType = nullptr;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 } // namespace fl

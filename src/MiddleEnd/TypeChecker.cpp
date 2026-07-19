@@ -111,14 +111,26 @@ bool TypeChecker::check(ASTNode* root) {
             }
         }
         void visit(EnumDeclNode& node) override {
-            typeTable[node.symbolId] = ctx.getEnumType(node.symbolId);
+            std::vector<const Type*> genericArgs;
+            for (auto& param : node.genericParams) {
+                genericArgs.push_back(ctx.getGenericParamType(param.symbolId, param.name));
+                if (param.symbolId != kInvalidSymbolID) typeTable[param.symbolId] = genericArgs.back();
+            }
+            const Type* enumTy = genericArgs.empty() ? ctx.getEnumType(node.symbolId) : ctx.getEnumType(node.symbolId, genericArgs);
+            typeTable[node.symbolId] = enumTy;
             for (auto& variant : node.variants) {
-                std::vector<const Type*> fieldTypes;
-                for (auto& field : variant->fields) {
-                    fieldTypes.push_back(evaluateTypeNode(field->type.get()));
-                }
                 if (variant->symbolId != kInvalidSymbolID) {
-                    typeTable[variant->symbolId] = ctx.getTupleType(fieldTypes);
+                    if (variant->fields.empty()) {
+                        typeTable[variant->symbolId] = enumTy;
+                    } else {
+                        std::vector<const Type*> fieldTypes;
+                        std::vector<std::string> paramNames;
+                        for (auto& field : variant->fields) {
+                            fieldTypes.push_back(evaluateTypeNode(field->type.get()));
+                            paramNames.push_back(std::string(field->name));
+                        }
+                        typeTable[variant->symbolId] = ctx.getFunctionType(std::move(paramNames), std::move(fieldTypes), enumTy, false);
+                    }
                 }
             }
         }
@@ -306,19 +318,17 @@ bool TypeChecker::check(ASTNode* root) {
         void visit(BuiltinTypeNode& node) override { evaluatedType = ctx.getPrimitive(node.kind); }
         void visit(NamedTypeNode& node) override {
             if (node.symbolId != kInvalidSymbolID) {
-                evaluatedType = typeTable[node.symbolId]; 
-                if (evaluatedType && evaluatedType->getKind() == TypeKind::Unknown) {
-                    const auto& sym = table.getSymbol(node.symbolId);
-                    std::vector<const Type*> args;
-                    for (auto& argNode : node.genericArgs) {
-                        args.push_back(evaluateTypeNode(argNode.get()));
-                    }
-                    if (sym.kind == SymbolKind::Struct) evaluatedType = ctx.getStructType(node.symbolId, args);
-                    else if (sym.kind == SymbolKind::Enum) evaluatedType = ctx.getEnumType(node.symbolId, args);
-                    else if (sym.kind == SymbolKind::GenericParam) {
-                        // For generic parameters like T, we evaluate them as GenericParamType.
-                        evaluatedType = ctx.getGenericParamType(node.symbolId, sym.name.view());
-                    }
+                const auto& sym = table.getSymbol(node.symbolId);
+                std::vector<const Type*> args;
+                for (auto& argNode : node.genericArgs) {
+                    args.push_back(evaluateTypeNode(argNode.get()));
+                }
+                if (sym.kind == SymbolKind::Struct) evaluatedType = ctx.getStructType(node.symbolId, args);
+                else if (sym.kind == SymbolKind::Enum) evaluatedType = ctx.getEnumType(node.symbolId, args);
+                else if (sym.kind == SymbolKind::GenericParam) {
+                    evaluatedType = ctx.getGenericParamType(node.symbolId, sym.name.view());
+                } else {
+                    evaluatedType = typeTable[node.symbolId]; 
                 }
             } else {
                 evaluatedType = ctx.getUnknown();
@@ -362,14 +372,16 @@ bool TypeChecker::check(ASTNode* root) {
     };
     
     class PatternConstraintVisitor : public PatternVisitor {
+        SymbolTable& table;
+        DiagnosticEngine& diag;
         TypeContext& ctx;
         std::vector<const Type*>& typeTable;
         std::vector<Constraint>& constraints;
         const Type* expectedType;
         
     public:
-        PatternConstraintVisitor(TypeContext& ctx, std::vector<const Type*>& typeTable, std::vector<Constraint>& constraints, const Type* expected)
-            : ctx(ctx), typeTable(typeTable), constraints(constraints), expectedType(expected) {}
+        PatternConstraintVisitor(SymbolTable& table, DiagnosticEngine& diag, TypeContext& ctx, std::vector<const Type*>& typeTable, std::vector<Constraint>& constraints, const Type* expected)
+            : table(table), diag(diag), ctx(ctx), typeTable(typeTable), constraints(constraints), expectedType(expected) {}
             
         void visit(WildcardPatternNode& node) override {
             node.inferredType = expectedType;
@@ -388,7 +400,58 @@ bool TypeChecker::check(ASTNode* root) {
         
         void visit(EnumPatternNode& node) override {
             if (node.variantSymbolId != kInvalidSymbolID) {
-                constraints.push_back(Constraint(ConstraintKind::EnumVariantPattern, expectedType, node.variantSymbolId, &node, node.loc));
+                const auto& sym = table.getSymbol(node.variantSymbolId);
+                if (auto* variantFn = dynamic_cast<const FunctionType*>(typeTable[node.variantSymbolId])) {
+                    if (node.fields.size() != variantFn->paramTypes.size()) {
+                        diag.error(node.loc, "Variant '" + sym.name.str() + "' requires " + std::to_string(variantFn->paramTypes.size()) + " fields, but " + std::to_string(node.fields.size()) + " were provided");
+                    } else {
+                        std::unordered_map<SymbolID, const Type*> substitutionMap;
+                        std::vector<const Type*> freshArgs;
+                        const EnumType* fnRetEnum = dynamic_cast<const EnumType*>(variantFn->returnType);
+                        if (fnRetEnum) {
+                            const auto& enumSym = table.getSymbol(fnRetEnum->enumSymbolId);
+                            if (enumSym.kind == SymbolKind::Enum && enumSym.decl) {
+                                auto* enumDecl = static_cast<EnumDeclNode*>(enumSym.decl);
+                                for (const auto& param : enumDecl->genericParams) {
+                                    const Type* freshVar = ctx.getInferenceVar(ctx.newVar());
+                                    substitutionMap[param.symbolId] = freshVar;
+                                    freshArgs.push_back(freshVar);
+                                }
+                            }
+                        }
+                        
+                        if (fnRetEnum) {
+                            const Type* specializedEnum = freshArgs.empty() ? fnRetEnum : ctx.getEnumType(fnRetEnum->enumSymbolId, std::move(freshArgs));
+                            constraints.push_back(Constraint(ConstraintKind::Equality, specializedEnum, expectedType, "", node.loc));
+                        }
+
+                        for (size_t i = 0; i < node.fields.size(); ++i) {
+                            const Type* fieldExpected = variantFn->paramTypes[i];
+                            if (!substitutionMap.empty()) {
+                                fieldExpected = ctx.substitute(fieldExpected, substitutionMap);
+                            }
+                            PatternConstraintVisitor fieldVisitor(table, diag, ctx, typeTable, constraints, fieldExpected);
+                            node.fields[i]->accept(fieldVisitor);
+                        }
+                    }
+                } else if (typeTable[node.variantSymbolId]->getKind() == TypeKind::Enum) {
+                    if (!node.fields.empty()) {
+                        diag.error(node.loc, "Variant '" + sym.name.str() + "' does not take any fields");
+                    }
+                    std::vector<const Type*> freshArgs;
+                    const EnumType* variantEnum = dynamic_cast<const EnumType*>(typeTable[node.variantSymbolId]);
+                    if (variantEnum) {
+                        const auto& enumSym = table.getSymbol(variantEnum->enumSymbolId);
+                        if (enumSym.kind == SymbolKind::Enum && enumSym.decl) {
+                            auto* enumDecl = static_cast<EnumDeclNode*>(enumSym.decl);
+                            for (const auto& param : enumDecl->genericParams) {
+                                freshArgs.push_back(ctx.getInferenceVar(ctx.newVar()));
+                            }
+                        }
+                    }
+                    const Type* specializedEnum = freshArgs.empty() ? typeTable[node.variantSymbolId] : ctx.getEnumType(variantEnum->enumSymbolId, std::move(freshArgs));
+                    constraints.push_back(Constraint(ConstraintKind::Equality, specializedEnum, expectedType, "", node.loc));
+                }
             }
             node.inferredType = expectedType;
         }
@@ -398,7 +461,7 @@ bool TypeChecker::check(ASTNode* root) {
             for (auto& elem : node.elements) {
                 const Type* elemVar = ctx.getInferenceVar(ctx.newVar());
                 elementTypes.push_back(elemVar);
-                PatternConstraintVisitor elemVisitor(ctx, typeTable, constraints, elemVar);
+                PatternConstraintVisitor elemVisitor(table, diag, ctx, typeTable, constraints, elemVar);
                 elem->accept(elemVisitor);
             }
             const Type* tupleType = ctx.getTupleType(elementTypes);
@@ -409,6 +472,7 @@ bool TypeChecker::check(ASTNode* root) {
 
     class ConstraintGenerator : public ASTVisitor, public TypeVisitor {
         SymbolTable& table;
+        DiagnosticEngine& diag;
         TypeContext& ctx;
         std::vector<const Type*>& typeTable;
         std::vector<Constraint>& constraints;
@@ -422,8 +486,8 @@ bool TypeChecker::check(ASTNode* root) {
             return pre.evaluateTypeNode(node);
         }
     public:
-        ConstraintGenerator(SymbolTable& table, TypeContext& ctx, std::vector<const Type*>& typeTable, std::vector<Constraint>& constraints, MethodResolver& methodResolver, std::unordered_map<const Type*, std::unordered_set<SymbolID>>& implementedTraits)
-            : table(table), ctx(ctx), typeTable(typeTable), constraints(constraints), methodResolver(methodResolver), implementedTraits(implementedTraits) {}
+        ConstraintGenerator(SymbolTable& table, DiagnosticEngine& diag, TypeContext& ctx, std::vector<const Type*>& typeTable, std::vector<Constraint>& constraints, MethodResolver& methodResolver, std::unordered_map<const Type*, std::unordered_set<SymbolID>>& implementedTraits)
+            : table(table), diag(diag), ctx(ctx), typeTable(typeTable), constraints(constraints), methodResolver(methodResolver), implementedTraits(implementedTraits) {}
 
         void visit(ProgramNode& node) override { for (auto& item : node.items) item->accept(*this); }
         void visit(ModDeclNode& node) override { for (auto& d : node.decls) d->accept(*this); }
@@ -533,7 +597,40 @@ bool TypeChecker::check(ASTNode* root) {
         }
         void visit(IdentifierExpr& node) override {
             if (node.resolvedSymbol != kInvalidSymbolID) {
-                node.inferredType = typeTable[node.resolvedSymbol];
+                const Type* baseType = typeTable[node.resolvedSymbol];
+                
+                const EnumType* enumTy = dynamic_cast<const EnumType*>(baseType);
+                if (!enumTy) {
+                    if (auto* fnTy = dynamic_cast<const FunctionType*>(baseType)) {
+                        enumTy = dynamic_cast<const EnumType*>(fnTy->returnType);
+                    }
+                }
+                
+                if (enumTy) {
+                    const auto& sym = table.getSymbol(enumTy->enumSymbolId);
+                    if (sym.kind == SymbolKind::Enum && sym.decl) {
+                        auto* enumDecl = static_cast<EnumDeclNode*>(sym.decl);
+                        if (!enumDecl->genericParams.empty()) {
+                            std::unordered_map<SymbolID, const Type*> substitutionMap;
+                            std::vector<const Type*> freshArgs;
+                            for (size_t i = 0; i < enumDecl->genericParams.size(); ++i) {
+                                const Type* argTy = nullptr;
+                                if (i < node.genericArgs.size()) {
+                                    TypePrePass pre(table, ctx, typeTable, methodResolver, implementedTraits);
+                                    argTy = pre.evaluateTypeNode(node.genericArgs[i].get());
+                                } else {
+                                    argTy = ctx.getInferenceVar(ctx.newVar());
+                                }
+                                substitutionMap[enumDecl->genericParams[i].symbolId] = argTy;
+                                freshArgs.push_back(argTy);
+                            }
+                            node.inferredType = ctx.substitute(baseType, substitutionMap);
+                            return;
+                        }
+                    }
+                }
+                
+                node.inferredType = baseType;
             } else {
                 node.inferredType = ctx.getUnknown();
             }
@@ -654,15 +751,30 @@ bool TypeChecker::check(ASTNode* root) {
             node.inferredType = ctx.getInferenceVar(ctx.newVar());
             constraints.push_back(Constraint(ConstraintKind::Field, node.object->inferredType, node.inferredType, std::string(node.member), node.loc));
         }
-        void visit(CastExpr& node) override {}
-        void visit(ArrayLiteralExpr& node) override {}
+        void visit(CastExpr& node) override {
+            node.expr->accept(*this);
+            node.inferredType = evaluateTypeNode(node.targetType.get());
+        }
+        void visit(ArrayLiteralExpr& node) override {
+            for (auto& el : node.elements) {
+                el->accept(*this);
+            }
+            if (node.elements.empty()) {
+                node.inferredType = ctx.getArrayType(ctx.getUnknown(), 0);
+            } else {
+                node.inferredType = ctx.getArrayType(node.elements[0]->inferredType, node.elements.size());
+                for (size_t i = 1; i < node.elements.size(); ++i) {
+                    constraints.push_back(Constraint(ConstraintKind::Equality, node.elements[0]->inferredType, node.elements[i]->inferredType, "", node.loc));
+                }
+            }
+        }
         void visit(TupleLiteralExpr& node) override {}
         void visit(MatchExpr& node) override {
             node.subject->accept(*this);
             node.inferredType = ctx.getInferenceVar(ctx.newVar()); // T_ret
             for (auto& arm : node.arms) {
                 if (arm.pattern) {
-                    PatternConstraintVisitor patVisitor(ctx, typeTable, constraints, node.subject->inferredType);
+                    PatternConstraintVisitor patVisitor(table, diag, ctx, typeTable, constraints, node.subject->inferredType);
                     arm.pattern->accept(patVisitor);
                 }
                 if (arm.body) {
@@ -676,8 +788,14 @@ bool TypeChecker::check(ASTNode* root) {
         }
         void visit(LambdaExpr& node) override {}
         void visit(AwaitExpr& node) override {}
-        void visit(SizeofExpr& node) override {}
-        void visit(AlignofExpr& node) override {}
+        void visit(SizeofExpr& node) override {
+            node.evaluatedTargetType = evaluateTypeNode(node.targetType.get());
+            node.inferredType = ctx.getPrimitive(BuiltinKind::U64);
+        }
+        void visit(AlignofExpr& node) override {
+            node.evaluatedTargetType = evaluateTypeNode(node.targetType.get());
+            node.inferredType = ctx.getPrimitive(BuiltinKind::U64);
+        }
 
         void visit(BuiltinTypeNode& node) override {}
         void visit(NamedTypeNode& node) override {}
@@ -831,6 +949,15 @@ bool TypeChecker::check(ASTNode* root) {
                     }
                     return true;
                 }
+            } else if (auto* e1 = dynamic_cast<const EnumType*>(t1)) {
+                if (auto* e2 = dynamic_cast<const EnumType*>(t2)) {
+                    if (e1->enumSymbolId != e2->enumSymbolId) goto mismatch;
+                    if (e1->genericArgs.size() != e2->genericArgs.size()) goto mismatch;
+                    for (size_t i = 0; i < e1->genericArgs.size(); ++i) {
+                        if (!unify(e1->genericArgs[i], e2->genericArgs[i], loc)) return false;
+                    }
+                    return true;
+                }
             }
 
         mismatch:
@@ -845,6 +972,7 @@ bool TypeChecker::check(ASTNode* root) {
                 changed = false;
                 for (const auto& c : constraints) {
                     if (c.kind == ConstraintKind::Equality) {
+                        printf("Solving constraint: %s == %s\n", c.expected->toString().c_str(), c.actual->toString().c_str());
                         if (unify(c.expected, c.actual, c.loc)) changed = true;
                     } else if (c.kind == ConstraintKind::Field) {
                         const Type* objType = ctx.unificationTable.deepResolve(c.expected, ctx);
@@ -903,43 +1031,8 @@ bool TypeChecker::check(ASTNode* root) {
                             diag.error(c.loc, "Type '" + t1->toString() + "' is not iterable");
                         }
                     } else if (c.kind == ConstraintKind::EnumVariantPattern) {
-                        const Type* t1 = ctx.unificationTable.deepResolve(c.expected, ctx);
-                        if (t1->getKind() == TypeKind::InferenceVar) {
-                            // Wait for the subject type to be inferred
-                        } else if (auto* enumType = dynamic_cast<const EnumType*>(t1)) {
-                            SymbolID variantId = std::stoull(c.name);
-                            const auto& sym = table.getSymbol(variantId);
-                            
-                            // Check if the variant belongs to t1's enum
-                            const auto& t1Sym = table.getSymbol(enumType->enumSymbolId);
-                            if (t1Sym.kind == SymbolKind::Enum && t1Sym.decl) {
-                                auto* t1EnumDecl = static_cast<EnumDeclNode*>(t1Sym.decl);
-                                auto lookupResult = table.lookup(Identifier(sym.name), t1EnumDecl->bodyScopeId);
-                                if (lookupResult && lookupResult.value() == variantId) {
-                                    auto* patNode = static_cast<EnumPatternNode*>(c.pattern);
-                                    
-                                    // Get variant's expected tuple type from typeTable
-                                    if (auto* variantTuple = dynamic_cast<const TupleType*>(typeTable[variantId])) {
-                                        if (patNode->fields.size() != variantTuple->elements.size()) {
-                                            diag.error(c.loc, "Variant '" + sym.name.str() + "' requires " + std::to_string(variantTuple->elements.size()) + " fields, but " + std::to_string(patNode->fields.size()) + " were provided");
-                                        } else {
-                                            for (size_t i = 0; i < patNode->fields.size(); ++i) {
-                                                const Type* fieldExpected = variantTuple->elements[i];
-                                                PatternConstraintVisitor fieldVisitor(ctx, typeTable, constraints, fieldExpected);
-                                                patNode->fields[i]->accept(fieldVisitor);
-                                            }
-                                        }
-                                    }
-                                    changed = true;
-                                } else {
-                                    diag.error(c.loc, "Mismatched enum type: expected a variant of '" + t1Sym.name.str() + "'");
-                                    changed = true;
-                                }
-                            }
-                        } else if (t1->getKind() != TypeKind::Unknown) {
-                            diag.error(c.loc, "Expected enum type for variant pattern, found '" + t1->toString() + "'");
-                            changed = true;
-                        }
+                        // Dead code, now handled directly in PatternConstraintVisitor
+                        changed = true;
                     } else if (c.kind == ConstraintKind::Deref) {
                         const Type* ptrType = ctx.unificationTable.deepResolve(c.expected, ctx);
                         const Type* valType = ctx.unificationTable.deepResolve(c.actual, ctx);
@@ -958,15 +1051,32 @@ bool TypeChecker::check(ASTNode* root) {
             }
         }
     };
-    class TypeResolver : public ASTVisitor {
-        SymbolTable& table;
-        DiagnosticEngine& diag;
-        TypeContext& ctx;
-        MonomorphizationEngine* monoEngine;
-        MethodResolver& methodResolver;
-    public:
-        TypeResolver(SymbolTable& table, DiagnosticEngine& diag, TypeContext& ctx, MonomorphizationEngine* monoEngine, MethodResolver& methodResolver) 
-            : table(table), diag(diag), ctx(ctx), monoEngine(monoEngine), methodResolver(methodResolver) {}
+      class TypeResolver : public ASTVisitor {
+          SymbolTable& table;
+          DiagnosticEngine& diag;
+          TypeContext& ctx;
+          MonomorphizationEngine* monoEngine;
+          MethodResolver& methodResolver;
+      public:
+          TypeResolver(SymbolTable& table, DiagnosticEngine& diag, TypeContext& ctx, MonomorphizationEngine* monoEngine, MethodResolver& methodResolver) 
+              : table(table), diag(diag), ctx(ctx), monoEngine(monoEngine), methodResolver(methodResolver) {}
+              
+          class PatternResolverVisitor : public PatternVisitor {
+              TypeResolver& resolver;
+          public:
+              PatternResolverVisitor(TypeResolver& r) : resolver(r) {}
+              void visit(WildcardPatternNode& node) override { resolver.resolve(node.inferredType, node.loc); }
+              void visit(LiteralPatternNode& node) override { resolver.resolve(node.inferredType, node.loc); }
+              void visit(IdentifierPatternNode& node) override { resolver.resolve(node.inferredType, node.loc); }
+              void visit(TuplePatternNode& node) override {
+                  resolver.resolve(node.inferredType, node.loc);
+                  for (auto& e : node.elements) if (e) e->accept(*this);
+              }
+              void visit(EnumPatternNode& node) override {
+                  resolver.resolve(node.inferredType, node.loc);
+                  for (auto& f : node.fields) if (f) f->accept(*this);
+              }
+          };
 
         void resolve(const Type*& t, SourceLocation loc) {
             if (!t) return;
@@ -999,7 +1109,7 @@ bool TypeChecker::check(ASTNode* root) {
                 if (sym.kind == SymbolKind::Function && sym.decl) {
                     auto* fnDecl = static_cast<FunctionDeclNode*>(sym.decl);
                     try {
-                        SymbolID specializedId = monoEngine->requestSpecialization(fnDecl, concreteArgs);
+                        SymbolID specializedId = monoEngine->requestSpecialization(fnDecl, concreteArgs, ident->loc);
                         if (specializedId != kInvalidSymbolID) {
                             ident->resolvedSymbol = specializedId; // Update Call site!
                             const auto& specSym = table.getSymbol(specializedId);
@@ -1122,13 +1232,15 @@ bool TypeChecker::check(ASTNode* root) {
         void visit(ArrayLiteralExpr& node) override {}
         void visit(TupleLiteralExpr& node) override {}
         void visit(StructInitExpr& node) override {}
-        void visit(MatchExpr& node) override {
-            node.subject->accept(*this);
-            for (auto& arm : node.arms) {
-                if (arm.body) arm.body->accept(*this);
-            }
-            resolve(node.inferredType, node.loc);
-        }
+          void visit(MatchExpr& node) override {
+              node.subject->accept(*this);
+              PatternResolverVisitor patRes(*this);
+              for (auto& arm : node.arms) {
+                  if (arm.pattern) arm.pattern->accept(patRes);
+                  if (arm.body) arm.body->accept(*this);
+              }
+              resolve(node.inferredType, node.loc);
+          }
         void visit(LambdaExpr& node) override {}
         void visit(AwaitExpr& node) override {}
         void visit(SizeofExpr& node) override {}
@@ -1139,7 +1251,7 @@ bool TypeChecker::check(ASTNode* root) {
     root->accept(pre);
 
     std::vector<Constraint> constraints;
-    ConstraintGenerator gen(table_, ctx_, typeTable_, constraints, methodResolver_, implementedTraits_);
+    ConstraintGenerator gen(table_, diag_, ctx_, typeTable_, constraints, methodResolver_, implementedTraits_);
     root->accept(gen);
 
     UnificationEngine solver(table_, diag_, ctx_, typeTable_, methodResolver_);

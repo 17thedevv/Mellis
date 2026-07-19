@@ -107,12 +107,28 @@ llvm::Type* LLVMIRGenerator::mapType(const Type* type) {
         return llvm::PointerType::getUnqual(context_);
     }
     if (auto* st = dynamic_cast<const StructType*>(type)) {
-        std::string name = "Struct<" + std::to_string(st->structSymbolId) + ">";
+        const auto& sym = symTable_.getSymbol(st->structSymbolId);
+        std::string name = std::string(sym.name.str());
         if (structTypes_.count(name)) return structTypes_[name];
-        for (auto& pair : structTypes_) {
-            return pair.second;
+        
+        // If not found in structTypes_, we can try to look it up or create opaque
+        // For now, return an opaque struct if it wasn't pre-declared
+        return llvm::StructType::create(context_, name);
+    }
+    if (auto* tup = dynamic_cast<const TupleType*>(type)) {
+        std::vector<llvm::Type*> elements;
+        for (auto* elemTy : tup->elements) {
+            elements.push_back(mapType(elemTy));
         }
-        return llvm::StructType::get(context_);
+        return llvm::StructType::get(context_, elements, false);
+    }
+    if (auto* et = dynamic_cast<const EnumType*>(type)) {
+        // Simple enum for now: { i32 tag, [4 x i64] payload }
+        // This allows storing by value without malloc for MVP.
+        return llvm::StructType::get(context_, { llvm::Type::getInt32Ty(context_), llvm::ArrayType::get(llvm::Type::getInt64Ty(context_), 4) }, false);
+    }
+    if (auto* arr = dynamic_cast<const ArrayType*>(type)) {
+        return llvm::ArrayType::get(mapType(arr->elementType), arr->length);
     }
     return llvm::Type::getVoidTy(context_);
 }
@@ -146,15 +162,7 @@ llvm::Value* LLVMIRGenerator::mapOperand(const mvir::Operand& op) {
     return nullptr;
 }
 
-llvm::FunctionCallee LLVMIRGenerator::getOrDeclarePrint() {
-    llvm::Function* f = module_.getFunction("print");
-    if (!f) {
-        llvm::Type* args[] = { llvm::Type::getInt32Ty(context_) };
-        llvm::FunctionType* fType = llvm::FunctionType::get(llvm::Type::getVoidTy(context_), args, false);
-        return module_.getOrInsertFunction("print", fType);
-    }
-    return f;
-}
+
 
 void LLVMIRGenerator::createFunctionStructure(const mvir::Function* func) {
     localValues_.clear();
@@ -180,7 +188,7 @@ void LLVMIRGenerator::createFunctionStructure(const mvir::Function* func) {
 void LLVMIRGenerator::emitFunctionBody(const mvir::Function* func) {
     for (const auto& block : func->blocks) {
         llvm::BasicBlock* bb = blocks_[block->label.name];
-        builder_.SetInsertPoint(bb); llvm::errs() << "Emitting for block " << block->label.name << " in function " << func->name.name << "\n";
+        builder_.SetInsertPoint(bb);
         
         for (const auto& inst : block->instructions) {
             emitInstruction(inst.get());
@@ -195,22 +203,14 @@ void LLVMIRGenerator::emitFunctionBody(const mvir::Function* func) {
 }
 
 void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
-    if (auto* alloc = dynamic_cast<const mvir::AllocaInst*>(inst)) {
-        llvm::Type* ty = mapType(alloc->type);
-        llvm::Value* val = builder_.CreateAlloca(ty, nullptr, alloc->dest.name.substr(1));
-        localValues_[alloc->dest.name] = val;
-        pointerTypes_[alloc->dest.name] = ty;
+    if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
+        llvm::Type* ty = mapType(local->type);
+        llvm::Value* val = builder_.CreateAlloca(ty, nullptr, local->dest.name.substr(1));
+        localValues_[local->dest.name] = val;
     }
     else if (auto* load = dynamic_cast<const mvir::LoadInst*>(inst)) {
         llvm::Value* ptr = mapOperand(load->ptr);
-        std::string ptrName = std::get<mvir::LocalId>(load->ptr).name;
-        llvm::Type* pointeeTy = nullptr;
-        if (pointerTypes_.count(ptrName)) {
-            pointeeTy = pointerTypes_[ptrName];
-        } else {
-            pointeeTy = llvm::Type::getInt32Ty(context_);
-        }
-        
+        llvm::Type* pointeeTy = mapType(load->type);
         llvm::Value* val = builder_.CreateLoad(pointeeTy, ptr, load->dest.name.substr(1));
         localValues_[load->dest.name] = val;
     }
@@ -219,39 +219,43 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         llvm::Value* ptr = mapOperand(store->ptr);
         builder_.CreateStore(val, ptr);
     }
-    else if (auto* getptr = dynamic_cast<const mvir::GetPtrInst*>(inst)) {
-        llvm::Value* ptr = mapOperand(getptr->base);
-        
-        std::string ptrName = std::get<mvir::LocalId>(getptr->base).name;
-        llvm::Type* pointeeTy = nullptr;
-        if (pointerTypes_.count(ptrName)) {
-            pointeeTy = pointerTypes_[ptrName];
-        } else {
-            pointeeTy = llvm::Type::getInt32Ty(context_);
-        }
-        
-        std::vector<llvm::Value*> indices;
-        for (const auto& off : getptr->offsets) {
-            indices.push_back(mapOperand(off));
-        }
-        
-        llvm::Value* res = builder_.CreateGEP(pointeeTy, ptr, indices, getptr->dest.name.substr(1));
-        localValues_[getptr->dest.name] = res;
-        
-        if (auto* st = llvm::dyn_cast<llvm::StructType>(pointeeTy)) {
-            if (indices.size() == 2 && llvm::isa<llvm::ConstantInt>(indices[1])) {
-                auto* ci = llvm::cast<llvm::ConstantInt>(indices[1]);
-                uint64_t idx = ci->getZExtValue();
-                if (idx < st->getNumElements()) {
-                    pointerTypes_[getptr->dest.name] = st->getElementType(idx);
-                }
-            }
-        }
+    else if (auto* idx = dynamic_cast<const mvir::IndexInst*>(inst)) {
+        llvm::Value* ptr = mapOperand(idx->base);
+        llvm::Type* pointeeTy = mapType(idx->type);
+        llvm::Value* indexVal = mapOperand(idx->index);
+        llvm::Value* res = builder_.CreateGEP(pointeeTy, ptr, indexVal, idx->dest.name.substr(1));
+        localValues_[idx->dest.name] = res;
+    }
+    else if (auto* field = dynamic_cast<const mvir::FieldInst*>(inst)) {
+        llvm::Value* ptr = mapOperand(field->base);
+        llvm::Type* pointeeTy = mapType(field->type);
+        llvm::Value* res = builder_.CreateStructGEP(pointeeTy, ptr, field->index, field->dest.name.substr(1));
+        localValues_[field->dest.name] = res;
     }
     else if (auto* castinst = dynamic_cast<const mvir::CastInst*>(inst)) {
         llvm::Value* val = mapOperand(castinst->value);
-        llvm::Value* res = builder_.CreateBitCast(val, mapType(castinst->targetType), castinst->dest.name.substr(1));
+        llvm::Type* destTy = mapType(castinst->targetType);
+        llvm::Value* res = val;
+        if (val->getType()->isIntegerTy() && destTy->isIntegerTy()) {
+            res = builder_.CreateIntCast(val, destTy, true, castinst->dest.name.substr(1));
+        } else if (val->getType()->isPointerTy() && destTy->isIntegerTy()) {
+            res = builder_.CreatePtrToInt(val, destTy, castinst->dest.name.substr(1));
+        } else if (val->getType()->isIntegerTy() && destTy->isPointerTy()) {
+            res = builder_.CreateIntToPtr(val, destTy, castinst->dest.name.substr(1));
+        } else {
+            res = builder_.CreateBitCast(val, destTy, castinst->dest.name.substr(1));
+        }
         localValues_[castinst->dest.name] = res;
+    }
+    else if (auto* sizeofinst = dynamic_cast<const mvir::SizeofInst*>(inst)) {
+        llvm::Type* ty = mapType(sizeofinst->targetType);
+        llvm::Value* res = llvm::ConstantExpr::getSizeOf(ty);
+        localValues_[sizeofinst->dest.name] = res;
+    }
+    else if (auto* alignofinst = dynamic_cast<const mvir::AlignofInst*>(inst)) {
+        llvm::Type* ty = mapType(alignofinst->targetType);
+        llvm::Value* res = llvm::ConstantExpr::getAlignOf(ty);
+        localValues_[alignofinst->dest.name] = res;
     }
     else if (auto* borrow = dynamic_cast<const mvir::BorrowInst*>(inst)) {
         llvm::Value* baseVal = mapOperand(borrow->base);
@@ -284,14 +288,20 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         res->setName(alu->dest.name.substr(1));
         localValues_[alu->dest.name] = res;
     }
+    else if (auto* unary = dynamic_cast<const mvir::UnaryInst*>(inst)) {
+        llvm::Value* val = mapOperand(unary->operand);
+        llvm::Value* res = nullptr;
+        switch (unary->op) {
+            case mvir::UnaryOp::Negate: res = builder_.CreateNeg(val); break;
+            case mvir::UnaryOp::BitNot: res = builder_.CreateNot(val); break;
+        }
+        res->setName(unary->dest.name.substr(1));
+        localValues_[unary->dest.name] = res;
+    }
     else if (auto* call = dynamic_cast<const mvir::CallInst*>(inst)) {
         llvm::FunctionCallee fcallee;
-        if (std::holds_alternative<mvir::GlobalId>(call->func) && std::get<mvir::GlobalId>(call->func).name == "@print") {
-            fcallee = getOrDeclarePrint();
-        } else {
-            fcallee = module_.getFunction(std::get<mvir::GlobalId>(call->func).name.substr(1));
-            assert(fcallee && "Function not found");
-        }
+        fcallee = module_.getFunction(std::get<mvir::GlobalId>(call->func).name.substr(1));
+        assert(fcallee && "Function not found");
         
         std::vector<llvm::Value*> args;
         for (const auto& arg : call->args) {
@@ -304,6 +314,58 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
             localValues_[call->dest->name] = res;
         }
     }
+    else if (auto* variant = dynamic_cast<const mvir::VariantInst*>(inst)) {
+        llvm::Type* enumLLVMTy = mapType(variant->enumType);
+        llvm::Value* destAlloc = builder_.CreateAlloca(enumLLVMTy);
+        
+        llvm::Value* tagPtr = builder_.CreateStructGEP(enumLLVMTy, destAlloc, 0);
+        builder_.CreateStore(builder_.getInt32(variant->variantIndex), tagPtr);
+        
+        if (!variant->args.empty()) {
+            std::vector<llvm::Type*> fieldTypes;
+            for (const auto& arg : variant->args) {
+                fieldTypes.push_back(mapOperand(arg)->getType());
+            }
+            llvm::StructType* payloadTy = llvm::StructType::get(context_, fieldTypes, false);
+            
+            llvm::Value* payloadArrPtr = builder_.CreateStructGEP(enumLLVMTy, destAlloc, 1);
+            llvm::Value* payloadPtr = builder_.CreateBitCast(payloadArrPtr, llvm::PointerType::getUnqual(context_));
+            
+            for (size_t i = 0; i < variant->args.size(); ++i) {
+                llvm::Value* argVal = mapOperand(variant->args[i]);
+                llvm::Value* fieldPtr = builder_.CreateStructGEP(payloadTy, payloadPtr, i);
+                builder_.CreateStore(argVal, fieldPtr);
+            }
+        }
+        
+        llvm::Value* res = builder_.CreateLoad(enumLLVMTy, destAlloc, variant->dest.name.substr(1));
+        localValues_[variant->dest.name] = res;
+    }
+    else if (auto* tagInst = dynamic_cast<const mvir::TagInst*>(inst)) {
+        llvm::Value* baseVal = mapOperand(tagInst->base);
+        llvm::Value* res = builder_.CreateExtractValue(baseVal, 0, tagInst->dest.name.substr(1));
+        localValues_[tagInst->dest.name] = res;
+    }
+      else if (auto* extractInst = dynamic_cast<const mvir::ExtractInst*>(inst)) {
+          llvm::Value* baseVal = mapOperand(extractInst->base);
+          llvm::Type* enumLLVMTy = baseVal->getType();
+          
+          llvm::Value* tempAlloc = builder_.CreateAlloca(enumLLVMTy);
+          builder_.CreateStore(baseVal, tempAlloc);
+          
+          std::vector<llvm::Type*> fieldTypes;
+          for (const auto* pType : extractInst->payloadTypes) {
+              fieldTypes.push_back(mapType(pType));
+          }
+          llvm::StructType* payloadTy = llvm::StructType::get(context_, fieldTypes, false);
+          
+          llvm::Value* payloadArrPtr = builder_.CreateStructGEP(enumLLVMTy, tempAlloc, 1);
+          llvm::Value* payloadPtr = builder_.CreateBitCast(payloadArrPtr, llvm::PointerType::getUnqual(context_));
+          
+          llvm::Value* fieldPtr = builder_.CreateStructGEP(payloadTy, payloadPtr, extractInst->fieldIndex);
+          llvm::Value* res = builder_.CreateLoad(fieldTypes[extractInst->fieldIndex], fieldPtr, extractInst->dest.name.substr(1));
+          localValues_[extractInst->dest.name] = res;
+      }
 }
 
 void LLVMIRGenerator::emitTerminator(const mvir::Terminator* term) {
@@ -316,6 +378,16 @@ void LLVMIRGenerator::emitTerminator(const mvir::Terminator* term) {
         llvm::BasicBlock* trueBB = blocks_[branch->trueTarget.name];
         llvm::BasicBlock* falseBB = blocks_[branch->falseTarget.name];
         builder_.CreateCondBr(cond, trueBB, falseBB);
+    }
+    else if (auto* sw = dynamic_cast<const mvir::SwitchTerm*>(term)) {
+        llvm::Value* cond = mapOperand(sw->condition);
+        llvm::BasicBlock* defaultBB = blocks_[sw->defaultTarget.name];
+        llvm::SwitchInst* switchInst = builder_.CreateSwitch(cond, defaultBB, sw->cases.size());
+        for (const auto& c : sw->cases) {
+            llvm::ConstantInt* caseVal = llvm::ConstantInt::get(llvm::Type::getInt32Ty(context_), std::stoull(c.first.value), 10);
+            llvm::BasicBlock* caseBB = blocks_[c.second.name];
+            switchInst->addCase(caseVal, caseBB);
+        }
     }
     else if (auto* ret = dynamic_cast<const mvir::RetTerm*>(term)) {
         if (ret->value) {
