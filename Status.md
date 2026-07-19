@@ -4,216 +4,141 @@
 |----------|---------|
 | **Version** | `v1.0` |
 | **Branch** | `main` |
-| **Phase hiện tại** | **Phase 5 — TBD** |
 | **Ngôn ngữ triển khai** | C++17 |
 | **Build system** | CMake 3.20+ |
 | **Backend** | LLVM |
-| **Cập nhật lần cuối** | 2026-07-18 |
+| **Cập nhật lần cuối** | 2026-07-19 |
 
 > ⚠️ **v1.0 — Đây là bản compiler sẽ dùng trong thực tế. Làm cẩn thận, không đốt cháy giai đoạn.**
+
+---
+
+## ✅ Các cấu trúc đã biên dịch được (Verified)
+
+### 🔢 Kiểu dữ liệu nguyên thủy
+| Cú pháp | Trạng thái |
+|---------|-----------|
+| `int_8`, `int_16`, `int_32`, `int_64` | ✅ |
+| `uint_8`, `uint_16`, `uint_32`, `uint_64` | ✅ |
+| `float_32`, `float_64` | ✅ |
+| `bool` | ✅ |
+| `str` (C string literal) | ✅ |
+| `void` | ✅ |
+
+### 🏗️ Khai báo & Hàm
+| Cú pháp | Ví dụ | Trạng thái |
+|---------|-------|-----------|
+| Khai báo biến | `dec x: int_32 = 5;` | ✅ |
+| Khai báo + type inference | `dec x = 42;` | ✅ |
+| Hàm | `fn foo(a: int_32) -> int_32 { ... }` | ✅ |
+| Export hàm | `export fn main() -> int_32 { ... }` | ✅ |
+| FFI / extern | `extern fn printf(fmt: str, ...) -> int_32;` | ✅ |
+| Varargs (`...`) | `extern fn printf(fmt: str, ...) -> int_32;` | ✅ |
+| Generic hàm | `fn add@<T>(a: T, b: T) -> T { ... }` | ✅ |
+
+### 🔀 Toán tử & Biểu thức
+| Cú pháp | Trạng thái |
+|---------|-----------|
+| Arithmetic: `+`, `-`, `*`, `/`, `%` | ✅ |
+| Comparison: `>`, `<`, `>=`, `<=`, `==`, `!=` | ✅ |
+| Logic: `&&`, `\|\|`, `!` | ✅ |
+| Bitwise: `&`, `\|`, `^`, `<<`, `>>` | ✅ |
+| Gọi hàm: `foo(a, b)` | ✅ |
+| Type cast: `x as int_8` | ✅ |
+| `sizeof(int_32)` | ✅ |
+| `alignof(int_32)` | ✅ |
+| Gán: `x = expr` | ✅ |
+
+### 🔁 Luồng điều khiển
+| Cú pháp | Ví dụ | Trạng thái |
+|---------|-------|-----------|
+| `if` | `if x > 0 { ... }` | ✅ |
+| `if/else` | `if x > 0 { ... } else { ... }` | ✅ |
+| `while` | `while i < 10 { i = i + 1; }` | ✅ |
+| `for` (C-style) | `for (dec i = 0; i < 5; i = i+1) { }` | ✅ |
+| `return` | `return x;` | ✅ |
+| `match` (literal + wildcard) | `match x { 1 -> 10, _ -> 0 }` | ✅ |
+
+### 🧱 Struct & Field
+| Cú pháp | Ví dụ | Trạng thái |
+|---------|-------|-----------|
+| Struct định nghĩa | `struct Point { x: int_32; y: int_32; }` | ✅ |
+| Struct khởi tạo | `Point { x: 10, y: 20 }` | ✅ |
+| Field access | `p.x`, `p.y` | ✅ |
+| Generic struct | `struct Box<T> { value: T; }` | ✅ |
+| Generic struct init | `Box@<int_32>{ value: 42 }` | ✅ |
+| Impl block (methods) | `impl Box<T> { fn get(self: ...) -> T { ... } }` | ✅ |
+| Method call | `b.get()` | ✅ |
+| Generic impl monomorphization | `impl<T> Box<T>` → concrete `Box<int_32>` | ✅ |
+
+### 📦 Enum
+| Cú pháp | Ví dụ | Trạng thái |
+|---------|-------|-----------|
+| Enum đơn giản | `enum Color { Red, Green, Blue }` | ✅ |
+| Enum variant access | `Color::Red` | ✅ |
+| Generic enum | `enum Option<T> { Some(T), None }` | ✅ |
+| Enum pattern matching | `match opt { Option::Some(x) -> x, ... }` | ✅ |
+| Enum với data | `Option::Some(42)` | ✅ |
+
+### 📐 Array & Slice
+| Cú pháp | Ví dụ | Trạng thái |
+|---------|-------|-----------|
+| Array literal | `[1, 2, 3, 4, 5]` | ✅ |
+| Array indexing | `arr[2]` | ✅ |
+
+### 🔗 Module System
+| Cú pháp | Ví dụ | Trạng thái |
+|---------|-------|-----------|
+| `mod` import | `mod math;` | ✅ |
+| `use` alias | `use math as m;` | ✅ |
+| Qualified call | `m::add(10, 20)` | ✅ |
+
+---
+
+## ❌ Chưa hoạt động / Còn lỗi
+
+| Tính năng | Vấn đề | Mức độ |
+|-----------|--------|--------|
+| **Tuple access** `t.0`, `t.1` | Parser lỗi "Expected member name" khi gặp index số | 🔴 Cao |
+| **`if/else` với `return` trong else branch** | LLVM IR sinh sai (thiếu terminator) | 🔴 Cao |
+| **`for in` iterable** | Chưa implement (`for x in arr`) | 🟡 Trung bình |
+| **Generic enum pattern matching** | Phức tạp hơn — cần test kỹ hơn | 🟡 Trung bình |
+| **Trait objects `dyn Trait`** | Chưa implement (cần VTable) | 🟡 Trung bình |
+| **String type nội tại** | Chỉ có C string literal `str`, chưa có heap string | 🟡 Trung bình |
+| **`break` / `continue`** | Chưa test | 🟡 Trung bình |
+| **Diagnostic line/col** | Tất cả lỗi chỉ báo byte offset, không có line:col | 🟢 Thấp |
 
 ---
 
 ## 🏗️ Kiến trúc Pipeline
 
 ```
-Source (.fl)
+Source (.ms)
     │
     ▼
-[Phase 1 — FrontEnd]
+[FrontEnd]
     Lexer       ✅ hoàn chỉnh
     ↓
-    Parser      ✅ hoàn chỉnh (Recursive Descent, v1.0 grammar)
+    Parser      ✅ hoàn chỉnh (Recursive Descent)
     ↓
-    AST         ✅ đầy đủ nodes (Decl, Stmt, Expr, Type, Pattern)
+    AST         ✅ đầy đủ nodes
 
-[Phase 2 — MiddleEnd]
-    Resolver           ✅ hoàn chỉnh — Two-pass, scoped symbol table
+[MiddleEnd]
+    Resolver           ✅ Two-pass, scoped symbol table
     ↓
-    Type Checker       ✅ hoàn chỉnh — Constraint-Based, Pattern Matching
+    Type Checker       ✅ Constraint-Based, Generics, Traits
     ↓
-    Borrow Checker     ✅ hoàn chỉnh — Scope-based, Ownership, Aliasing
+    Monomorphization   ✅ Generic impl instantiation
     ↓
-    MVIR Generator     ✅ hoàn chỉnh
+    Borrow Checker     ✅ Scope-based ownership
+    ↓
+    MVIR Generator     ✅
 
-[Phase 3 — BackEnd]
-    LLVM IR Generator  ✅ hoàn chỉnh
+[BackEnd]
+    LLVM IR Generator  ✅
     ↓
-    Executable Gen     ✅ hoàn chỉnh
+    Executable Gen     ✅ (lld-link)
 ```
-
----
-
-## 📁 Cấu trúc Thực tế (kiểm tra từ codebase)
-
-```
-mellis/
-├── include/mellis/
-│   ├── Core/
-│   │   ├── FLType.h           Type system: PrimitiveType, StructType, FunctionType,
-│   │   │                      InferenceVarType, UnificationTable, TypeContext
-│   │   ├── Types.h            SymbolID, ScopeID, FileID, kInvalidSymbolID
-│   │   ├── SourceLocation.h   { file, line, col, offset }
-│   │   ├── Identifier.h       Identifier với transparent hash
-│   │   └── StringInterner.h   Stub — chừa sẵn cho string interning
-│   ├── AST/
-│   │   ├── ASTNode.h          Base node
-│   │   ├── ProgramNode.h      Top-level program
-│   │   ├── DeclNode.h         FunctionDeclNode, StructDeclNode, EnumDeclNode,
-│   │   │                      TraitDeclNode, ImplDeclNode, TypeAliasDeclNode, ...
-│   │   ├── StmtNode.h         BlockStmtNode, IfStmtNode, WhileStmtNode, ForStmtNode,
-│   │   │                      ReturnStmtNode, VarDeclNode, ExprStmtNode, ...
-│   │   ├── ExprNode.h         LiteralExpr, IdentifierExpr, BinaryExpr, CallExpr,
-│   │   │                      MethodCallExpr, MemberExpr, StructInitExpr, MatchExpr, ...
-│   │   ├── TypeNode.h         BuiltinTypeNode, NamedTypeNode, ReferenceTypeNode,
-│   │   │                      PointerTypeNode, ArrayTypeNode, FunctionTypeNode, ...
-│   │   └── PatternNode.h      WildcardPattern, LiteralPattern, IdentifierPattern,
-│   │                          EnumPattern, TuplePattern
-│   ├── FrontEnd/
-│   │   ├── Lexer.h
-│   │   ├── Parser.h
-│   │   ├── Token.h
-│   │   └── ASTVisitor.h       ASTVisitor, TypeVisitor, PatternVisitor
-│   ├── MiddleEnd/
-│   │   ├── Symbol.h           Symbol, Scope, SymbolKind, ScopeKind
-│   │   ├── ScopeStack.h       Traversal-time scope tracker
-│   │   ├── SymbolTable.h      Arena-based symbol registry
-│   │   ├── Resolver.h
-│   │   ├── TypeChecker.h
-│   │   ├── MVIR.h             MVIR instruction set
-│   │   └── MVIRGenerator.h
-│   ├── BackEnd/
-│   │   ├── LLVMIRGenerator.h
-│   │   └── ExecutableGenerator.h
-│   └── Support/
-│       └── (Diagnostic headers)
-├── src/
-│   ├── FrontEnd/
-│   │   ├── Lexer.cpp
-│   │   └── Parser.cpp
-│   ├── MiddleEnd/
-│   │   ├── SymbolTable.cpp
-│   │   ├── Resolver.cpp
-│   │   ├── TypeChecker.cpp    ✅ hoàn chỉnh
-│   │   ├── MVIR.cpp
-│   │   ├── MVIRGenerator.cpp
-│   │   └── SemanticAnalyzer.cpp  [DEPRECATED — excluded khỏi build, chờ xóa]
-│   ├── BackEnd/
-│   │   ├── LLVMIRGenerator.cpp
-│   │   └── ExecutableGenerator.cpp
-│   ├── Runtime/
-│   │   └── runtime.c
-│   └── main.cpp
-├── tests/
-│   ├── test_lexer.cpp
-│   ├── test_parser.cpp
-│   ├── test_resolver.cpp       12 test cases ✅
-│   ├── test_typechecker.cpp    6 test cases ✅
-│   ├── test_mvir_generator.cpp
-│   ├── test_llvmir_generator.cpp
-│   ├── test_executable_generator.cpp
-│   ├── test_ast_manual.cpp
-│   ├── test_diagnostic.cpp
-│   └── test_sematic.cpp        [legacy — sẽ xóa cùng SemanticAnalyzer]
-├── docs/
-│   ├── grammar.md              ✅ v1.0 Frozen
-│   ├── architecture.md
-│   ├── MVIR.MD
-│   ├── RoadMap.md
-│   ├── VISION.MD
-│   └── ast.md
-└── Status.md
-```
-
----
-
-## ✅ Đã hoàn thành
-
-### Phase 1 — FrontEnd
-
-| Module | Trạng thái | Ghi chú |
-|--------|-----------|---------|
-| **Lexer** | ✅ Hoàn chỉnh | Hỗ trợ toàn bộ Grammar v1.0: literals, operators, keywords |
-| **Parser** | ✅ Hoàn chỉnh | Recursive Descent, parse đầy đủ Decl/Stmt/Expr/Type/Pattern |
-| **AST** | ✅ Hoàn chỉnh | Đầy đủ node types cho grammar v1.0 |
-| **ASTVisitor** | ✅ Hoàn chỉnh | ASTVisitor, TypeVisitor, PatternVisitor |
-
-### Phase 2 — MiddleEnd
-
-| Module | Trạng thái | Ghi chú |
-|--------|-----------|---------|
-| **Resolver** | ✅ Hoàn chỉnh | Two-pass: DeclarationVisitor → ResolutionVisitor |
-| **SymbolTable** | ✅ Hoàn chỉnh | Arena-based, persistent, chain-walk lookup |
-| **Type System (FLType.h)** | ✅ Hoàn chỉnh | PrimitiveType, StructType, EnumType, FunctionType, InferenceVarType, UnificationTable, TypeContext |
-| **TypeChecker — TypePrePass** | ✅ Hoàn chỉnh | Khai báo kiểu cho fn, struct, enum trước khi resolve |
-| **TypeChecker — ConstraintGenerator** | ✅ Hoàn chỉnh | Sinh Equality & Field constraints, không unify trực tiếp |
-| **TypeChecker — UnificationEngine** | ✅ Hoàn chỉnh | Union-Find trên InferenceVarType, giải Field constraint qua StructDecl |
-| **TypeChecker — TypeResolver** | ✅ Hoàn chỉnh | Deep-resolve InferenceVar, emit lỗi nếu còn biến chưa rõ kiểu |
-| **MVIR** | ✅ Hoàn chỉnh | MVIR instruction set, specification |
-| **MVIRGenerator** | ✅ Hoàn chỉnh | Lowering AST → MVIR |
-
-### Phase 3 — BackEnd
-
-| Module | Trạng thái | Ghi chú |
-|--------|-----------|---------|
-| **LLVMIRGenerator** | ✅ Hoàn chỉnh | MVIR → LLVM IR |
-| **ExecutableGenerator** | ✅ Hoàn chỉnh | LLVM IR → native executable, linker abstraction |
-
-### Specification & Documentation
-
-| File | Trạng thái |
-|------|-----------|
-| `grammar.md` | ✅ v1.0 Frozen — EBNF đầy đủ, Generics, Traits, Comptime |
-| `MVIR.MD` | ✅ Specification hoàn chỉnh |
-| `architecture.md` | ✅ Pipeline design |
-| `VISION.MD` | ✅ |
-
-### Tests
-
-| Test | Kết quả |
-|------|---------|
-| `test_lexer` | ✅ |
-| `test_parser` | ✅ |
-| `test_resolver` | ✅ 12/12 passed |
-| `test_typechecker` | ✅ 6/6 passed |
-| `test_mvir_generator` | ✅ |
-| `test_llvmir_generator` | ✅ |
-| `test_executable_generator` | ✅ |
-
----
-
-## ❌ Chưa triển khai / Cần làm tiếp
-
-### Đã hoàn thành (chờ xóa khỏi TODO)
-- **Borrow Checker**: Hoàn thiện Phase 3, xử lý Scope Unwinding.
-- **FFI & Strings**: Hoàn thiện Phase 4, hỗ trợ extern, varargs (...), C stdlib printf.
-- **TypeChecker — Pattern Matching, Statements**: Đã xử lý toàn bộ các cấu trúc phức tạp.
-
-
-### Phase 2 — MiddleEnd (còn thiếu)
-
-| Tính năng | Mức độ ưu tiên | Ghi chú |
-|-----------|---------------|---------|
-| **TypeChecker — CallExpr, MethodCallExpr** | 🔴 Cao | Hiện đang `{}` empty — chưa generate constraints cho function calls |
-| **TypeChecker — Generics** | 🔴 Cao | Generic parameter constraints chưa được sinh |
-| **TypeChecker — Trait Resolution** | 🔴 Cao | ImplMap có sẵn nhưng chưa kết nối vào solver |
-| **TypeChecker — IfStmt, WhileStmt** | 🟡 Trung bình | Condition check chưa có |
-| **TypeChecker — Pattern Matching** | 🟡 Trung bình | MatchExpr, EnumPattern chưa được handle |
-| **Initialization Check** | 🟡 Trung bình | Cần tích hợp vào TypeChecker, thay thế SemanticAnalyzer cũ |
-| **Borrow Checker** | 🔴 Cao | Chưa có — là blocker trước khi gọi là memory-safe |
-
----
-
-## 🔧 Vấn đề kỹ thuật cần chú ý
-
-| # | Vấn đề | Mức độ |
-|---|--------|--------|
-| 1 | **`SourceLocation` chưa có line/col thực** — Lexer chưa điền, mọi `loc.line == 0`. Lỗi diagnostic hiện không chỉ đúng vị trí. | 🔴 Cao |
-| 2 | **`SemanticAnalyzer.cpp` deprecated** — Excluded khỏi build nhưng chưa xóa khỏi repo. | 🟡 Trung bình |
-| 3 | **`README.MD`** — Cần viết hướng dẫn build và sử dụng cho v1.0. | 🟡 Trung bình |
-| 4 | **Unused Variables** — TypeChecker chưa báo lỗi biến không dùng → MVIRGenerator sinh `%id = alloca void`. | 🟡 Trung bình |
-| 5 | **LLVM Build Mode Mismatch** — LLVM Release (`/MD`) vs mellis Debug (`/MDd`) → link error `_ITERATOR_DEBUG_LEVEL`. Tạm thời build mellis ở Release. | 🟡 Trung bình |
-| 6 | **Transparent lookup C++17/MSVC** — `unordered_map::find(string_view)` cần explicit `Identifier key(name)`. Fix dài hạn: nâng C++20. | 🟢 Thấp |
 
 ---
 
@@ -221,38 +146,21 @@ mellis/
 
 ```
 Phase 1 — Lexer                 ██████████  100% ✅
-Phase 1 — Parser                ██████████  100% ✅
+Phase 1 — Parser                █████████░   90% (tuple index, for-in)
 Phase 1 — AST                   ██████████  100% ✅
 
 Phase 2 — Resolver              ██████████  100% ✅
-Phase 2 — Type System (FLType)  ██████████  100% ✅
+Phase 2 — Type System           ██████████  100% ✅
 Phase 2 — TypeChecker Core      ██████████  100% ✅
-Phase 2 — TypeChecker Generics  ██░░░░░░░░   20% 🔄
-Phase 2 — TypeChecker Traits    ██░░░░░░░░   20% 🔄
+Phase 2 — TypeChecker Generics  ████████░░   80% ✅ (monomorphization done)
+Phase 2 — TypeChecker Traits    ██████░░░░   60% (no dyn Trait yet)
 Phase 2 — Borrow Checker        ██████████  100% ✅
-
 Phase 2 — MVIR Generator        ██████████  100% ✅
-Phase 3 — LLVM IR Generator     ██████████  100% ✅
+
+Phase 3 — LLVM IR Generator     █████████░   90% (if/else edge case)
 Phase 3 — Executable Gen        ██████████  100% ✅
 
 Diagnostic Engine               ███████░░░   70% (line/col chưa có)
-Tests                           ██████████  100% ✅
-Documentation                   ████████░░   80%
 ────────────────────────────────────────────────────
-Tổng thể v1.0                   ████████░░  ~80%
-```
-
----
-
-## 🗺️ Thứ tự làm tiếp (theo đúng lộ trình)
-
-```
-[Đang làm]  Generics & Trait Resolution
-    ↓
-[Tiếp theo] Module system (mod, export, extern)
-                Xây dựng hệ thống module, quản lý scope theo file
-    ↓
-[Dài hạn]   Module system (mod, export, extern)
-            StringInterner upgrade
-            Diagnostic Engine — line/col chính xác
+Tổng thể v1.0                   █████████░  ~88%
 ```
