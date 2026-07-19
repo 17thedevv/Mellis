@@ -1,13 +1,53 @@
 build/
 .vs/
+
+# MSVC artifacts
 *.user
 *.pdb
 *.suo
 *.ilk
 *.tlog
+*.lastbuildstate
+
+# Compiled outputs
 *.exe
 *.dll
 *.lib
 *.obj
-*.lastbuildstate
+*.o
 *.log
+
+# LLVM IR / object dumps
+*.ll
+*.bc
+
+# Temp C/C++ test files at root
+test.c
+test2.c
+test_resize.cpp
+minimal_main.cpp
+
+# Python debug scripts (temporary, should never be committed)
+add_*.py
+check*.py
+dbg*.py
+debug_*.py
+fix_*.py
+generate_*.py
+inject*.py
+map_*.py
+patch*.py
+print_*.py
+remove_*.py
+rewrite_*.py
+run_*.py
+update_*.py
+
+# Misc junk
+*.fd
+out.txt
+output.txt
+ir_dump.txt
+stderr.txt
+llvmdump.txt
+
