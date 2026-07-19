@@ -62,7 +62,7 @@ void assertContains(const std::string& fullText, const std::string& substring) {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 void test01_variable_declaration() {
-    std::string ir = generateLLVM("dec x = 42;");
+    std::string ir = generateLLVM("fn foo() { dec x = 42; }");
     
     assertContains(ir, "alloca i32");
     assertContains(ir, "store i32 42, ptr %");
@@ -71,26 +71,20 @@ void test01_variable_declaration() {
 
 void test02_arithmetic() {
     // We use variables to avoid llvm::IRBuilder's implicit constant folding
-    std::string ir = generateLLVM("dec x = 10; dec y = x + 20;");
+    std::string ir = generateLLVM("fn foo() { dec x = 10; dec y = x + 20; }");
     
     assertContains(ir, "add i32");
     std::cout << "[OK] test02_arithmetic\n";
 }
 
 void test03_if_statement() {
-    std::string ir = generateLLVM("if (true) { dec x = 1; }");
+    std::string ir = generateLLVM("fn foo() { if (true) { dec x = 1; } }");
     
     assertContains(ir, "br i1 true");
     std::cout << "[OK] test03_if_statement\n";
 }
 
-void test04_print_call() {
-    std::string ir = generateLLVM("print 100;");
-    
-    assertContains(ir, "declare void @print(i32)");
-    assertContains(ir, "call void @print(i32 100)");
-    std::cout << "[OK] test04_print_call\n";
-}
+
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
@@ -102,7 +96,7 @@ int main() {
     test01_variable_declaration();
     test02_arithmetic();
     test03_if_statement();
-    test04_print_call();
+
 
     std::cout << "========================================\n";
     std::cout << "  ALL TESTS PASSED\n";

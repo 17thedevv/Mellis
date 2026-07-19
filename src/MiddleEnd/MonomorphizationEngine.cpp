@@ -51,14 +51,20 @@ static std::unique_ptr<TypeNode> typeToAST(const Type* type, const SymbolTable& 
                 node->segments.push_back(gp->name);
                 return node;
             }
-            throw std::runtime_error("Unsupported type kind for AST conversion in Monomorphization Engine");
+            throw std::runtime_error("Unsupported type kind for AST conversion in Monomorphization Engine: " + std::to_string(static_cast<int>(type->getKind())));
     }
 }
 
 SymbolID MonomorphizationEngine::requestSpecialization(
     const FunctionDeclNode* genericTemplate,
-    const std::vector<const Type*>& genericArgs
+    const std::vector<const Type*>& genericArgs,
+    SourceLocation loc
 ) {
+    if (currentDepth >= kMaxDepth) {
+        diag.error(loc, "Maximum generic instantiation depth exceeded. Infinite recursion detected.");
+        return kInvalidSymbolID;
+    }
+    currentDepth++;
     // 1. Check Generic Bounds First
     for (size_t i = 0; i < genericTemplate->genericParams.size(); ++i) {
         if (i >= genericArgs.size()) break;
@@ -71,7 +77,9 @@ SymbolID MonomorphizationEngine::requestSpecialization(
                 // named->symbolId should point to the Trait
                 // Use typeChecker to check if argType implements this Trait
                 if (!typeChecker.implementsTrait(argType, named->symbolId)) {
-                    throw std::runtime_error("Generic bounds check failed: Type does not implement required trait");
+                    diag.error(loc, "Generic bounds check failed: Type does not implement required trait");
+                    currentDepth--;
+                    return kInvalidSymbolID;
                 }
             }
         }
@@ -83,6 +91,7 @@ SymbolID MonomorphizationEngine::requestSpecialization(
     // 3. Check Cache & Get stable string reference
     auto it = specializedRegistry.find(mangledName);
     if (it != specializedRegistry.end()) {
+        currentDepth--;
         return it->second;
     }
     
@@ -92,7 +101,9 @@ SymbolID MonomorphizationEngine::requestSpecialization(
 
     // 3. Cycle Detection
     if (inProgress.count(stableMangledName)) {
-        throw std::runtime_error("Infinite generic recursion detected for: " + stableMangledName);
+        diag.error(loc, "Infinite generic recursion detected for: " + stableMangledName);
+        currentDepth--;
+        return kInvalidSymbolID;
     }
     
     // 4. Mark In-Progress
@@ -127,6 +138,113 @@ SymbolID MonomorphizationEngine::requestSpecialization(
     inProgress.erase(stableMangledName);
     specializedASTs.push_back(std::move(specializedAST));
 
+    currentDepth--;
+    return newId;
+}
+
+SymbolID MonomorphizationEngine::requestStructSpecialization(
+    const StructDeclNode* genericTemplate,
+    const std::vector<const Type*>& genericArgs,
+    SourceLocation loc
+) {
+    if (currentDepth >= kMaxDepth) {
+        diag.error(loc, "Maximum generic instantiation depth exceeded. Infinite recursion detected.");
+        return kInvalidSymbolID;
+    }
+    currentDepth++;
+
+    std::string mangledName = Mangle::mangleStruct(genericTemplate->name, genericArgs, symTable);
+
+    auto it = specializedRegistry.find(mangledName);
+    if (it != specializedRegistry.end()) {
+        currentDepth--;
+        return it->second;
+    }
+    
+    auto [insertedIt, inserted] = specializedRegistry.insert({std::move(mangledName), kInvalidSymbolID});
+    const std::string& stableMangledName = insertedIt->first;
+
+    if (inProgress.count(stableMangledName)) {
+        diag.error(loc, "Infinite generic recursion detected for: " + stableMangledName);
+        currentDepth--;
+        return kInvalidSymbolID;
+    }
+    inProgress.insert(stableMangledName);
+
+    auto specializedAST = genericTemplate->cloneAs<StructDeclNode>();
+    specializedAST->name = stableMangledName;
+    specializedAST->genericParams.clear();
+
+    std::unordered_map<std::string, std::unique_ptr<TypeNode>> subs;
+    for (size_t i = 0; i < genericTemplate->genericParams.size() && i < genericArgs.size(); ++i) {
+        subs[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+    }
+
+    SubstitutionVisitor visitor(std::move(subs));
+    visitor.substitute(*specializedAST);
+
+    resolver.resolve(specializedAST.get());
+    typeChecker.check(specializedAST.get());
+
+    SymbolID newId = specializedAST->symbolId;
+    insertedIt->second = newId;
+    inProgress.erase(stableMangledName);
+    specializedASTs.push_back(std::move(specializedAST));
+
+    currentDepth--;
+    return newId;
+}
+
+SymbolID MonomorphizationEngine::requestEnumSpecialization(
+    const EnumDeclNode* genericTemplate,
+    const std::vector<const Type*>& genericArgs,
+    SourceLocation loc
+) {
+    if (currentDepth >= kMaxDepth) {
+        diag.error(loc, "Maximum generic instantiation depth exceeded. Infinite recursion detected.");
+        return kInvalidSymbolID;
+    }
+    currentDepth++;
+
+    std::string mangledName = Mangle::mangleStruct(genericTemplate->name, genericArgs, symTable);
+
+    auto it = specializedRegistry.find(mangledName);
+    if (it != specializedRegistry.end()) {
+        currentDepth--;
+        return it->second;
+    }
+    
+    auto [insertedIt, inserted] = specializedRegistry.insert({std::move(mangledName), kInvalidSymbolID});
+    const std::string& stableMangledName = insertedIt->first;
+
+    if (inProgress.count(stableMangledName)) {
+        diag.error(loc, "Infinite generic recursion detected for: " + stableMangledName);
+        currentDepth--;
+        return kInvalidSymbolID;
+    }
+    inProgress.insert(stableMangledName);
+
+    auto specializedAST = genericTemplate->cloneAs<EnumDeclNode>();
+    specializedAST->name = stableMangledName;
+    specializedAST->genericParams.clear();
+
+    std::unordered_map<std::string, std::unique_ptr<TypeNode>> subs;
+    for (size_t i = 0; i < genericTemplate->genericParams.size() && i < genericArgs.size(); ++i) {
+        subs[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+    }
+
+    SubstitutionVisitor visitor(std::move(subs));
+    visitor.substitute(*specializedAST);
+
+    resolver.resolve(specializedAST.get());
+    typeChecker.check(specializedAST.get());
+
+    SymbolID newId = specializedAST->symbolId;
+    insertedIt->second = newId;
+    inProgress.erase(stableMangledName);
+    specializedASTs.push_back(std::move(specializedAST));
+
+    currentDepth--;
     return newId;
 }
 

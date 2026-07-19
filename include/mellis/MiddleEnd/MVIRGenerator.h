@@ -80,6 +80,12 @@ private:
 
     std::unordered_map<SymbolID, mvir::LocalId> varAllocas_;
 
+    struct LoopTarget {
+        mvir::LabelId stepLbl;
+        mvir::LabelId endLbl;
+    };
+    std::vector<LoopTarget> loopTargets_;
+
     enum class EvalMode { RValue, LValue };
     EvalMode evalMode_ = EvalMode::RValue;
 

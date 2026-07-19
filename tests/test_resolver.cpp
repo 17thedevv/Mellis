@@ -110,8 +110,8 @@ void test04_shadowingInNestedScope() {
 void test05_structAndFields() {
     auto r = runResolver(R"(
         struct Point {
-            x: int_32,
-            y: int_32
+            x: int_32;
+            y: int_32;
         }
         
         fn main() -> void {
@@ -132,7 +132,7 @@ void test06_generics() {
             return x;
         }
         struct Option<T> {
-            val: T
+            val: T;
         }
     )");
 

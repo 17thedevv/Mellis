@@ -83,36 +83,49 @@ struct Instruction {
 
 // ── Memory Instructions ──────────────────────────────────────────────────────
 
-struct AllocaInst : public Instruction {
+struct LocalInst : public Instruction {
     LocalId dest;
     const Type* type;
 
-    AllocaInst(LocalId d, const Type* t) : dest(std::move(d)), type(t) {}
+    LocalInst(LocalId d, const Type* t) : dest(std::move(d)), type(t) {}
     std::string toString() const override;
 };
 
 struct LoadInst : public Instruction {
     LocalId dest;
+    const Type* type;
     Operand ptr;
 
-    LoadInst(LocalId d, Operand p) : dest(std::move(d)), ptr(std::move(p)) {}
+    LoadInst(LocalId d, const Type* t, Operand p) : dest(std::move(d)), type(t), ptr(std::move(p)) {}
     std::string toString() const override;
 };
 
 struct StoreInst : public Instruction {
+    const Type* type;
     Operand value;
     Operand ptr;
 
-    StoreInst(Operand v, Operand p) : value(std::move(v)), ptr(std::move(p)) {}
+    StoreInst(const Type* t, Operand v, Operand p) : type(t), value(std::move(v)), ptr(std::move(p)) {}
     std::string toString() const override;
 };
 
-struct GetPtrInst : public Instruction {
+struct IndexInst : public Instruction {
     LocalId dest;
+    const Type* type;
     Operand base;
-    std::vector<Operand> offsets;
+    Operand index;
 
-    GetPtrInst(LocalId d, Operand b, std::vector<Operand> offs) : dest(std::move(d)), base(std::move(b)), offsets(std::move(offs)) {}
+    IndexInst(LocalId d, const Type* t, Operand b, Operand idx) : dest(std::move(d)), type(t), base(std::move(b)), index(std::move(idx)) {}
+    std::string toString() const override;
+};
+
+struct FieldInst : public Instruction {
+    LocalId dest;
+    const Type* type;
+    Operand base;
+    size_t index;
+
+    FieldInst(LocalId d, const Type* t, Operand b, size_t idx) : dest(std::move(d)), type(t), base(std::move(b)), index(idx) {}
     std::string toString() const override;
 };
 
@@ -142,6 +155,22 @@ struct CastInst : public Instruction {
     std::string toString() const override;
 };
 
+struct SizeofInst : public Instruction {
+    LocalId dest;
+    const Type* targetType;
+
+    SizeofInst(LocalId d, const Type* t) : dest(std::move(d)), targetType(t) {}
+    std::string toString() const override;
+};
+
+struct AlignofInst : public Instruction {
+    LocalId dest;
+    const Type* targetType;
+
+    AlignofInst(LocalId d, const Type* t) : dest(std::move(d)), targetType(t) {}
+    std::string toString() const override;
+};
+
 // ── ALU Instructions ─────────────────────────────────────────────────────────
 
 enum class AluOp {
@@ -150,6 +179,12 @@ enum class AluOp {
 };
 
 std::string formatAluOp(AluOp op);
+
+enum class UnaryOp {
+    Negate,
+    BitNot
+};
+std::string formatUnaryOp(UnaryOp op);
 
 struct AluInst : public Instruction {
     LocalId dest;
@@ -162,7 +197,48 @@ struct AluInst : public Instruction {
     std::string toString() const override;
 };
 
+struct UnaryInst : public Instruction {
+    LocalId dest;
+    UnaryOp op;
+    Operand operand;
+
+    UnaryInst(LocalId d, UnaryOp o, Operand v)
+        : dest(std::move(d)), op(o), operand(std::move(v)) {}
+    std::string toString() const override;
+};
+
 // ── Call Instruction ─────────────────────────────────────────────────────────
+
+struct ExtractInst : public Instruction {
+    LocalId dest;
+    Operand base;
+    std::vector<const Type*> payloadTypes;
+    size_t variantIndex;
+    size_t fieldIndex;
+
+    ExtractInst(LocalId d, Operand b, std::vector<const Type*> pTypes, size_t vIdx, size_t fIdx)
+        : dest(std::move(d)), base(std::move(b)), payloadTypes(std::move(pTypes)), variantIndex(vIdx), fieldIndex(fIdx) {}
+    std::string toString() const override;
+};
+
+struct TagInst : public Instruction {
+    LocalId dest;
+    Operand base;
+
+    TagInst(LocalId d, Operand b) : dest(std::move(d)), base(std::move(b)) {}
+    std::string toString() const override;
+};
+
+struct VariantInst : public Instruction {
+    LocalId dest;
+    const Type* enumType;
+    size_t variantIndex;
+    std::vector<Operand> args;
+
+    VariantInst(LocalId d, const Type* t, size_t vIdx, std::vector<Operand> a)
+        : dest(std::move(d)), enumType(t), variantIndex(vIdx), args(std::move(a)) {}
+    std::string toString() const override;
+};
 
 struct CallInst : public Instruction {
     std::optional<LocalId> dest;

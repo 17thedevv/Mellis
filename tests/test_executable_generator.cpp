@@ -23,7 +23,7 @@
 using namespace fl;
 
 void test_end_to_end_execution() {
-    std::string source = "dec x = 10; print x;";
+    std::string source = "fn main() -> void { return; }";
     
     Lexer lexer(source);
     DiagnosticEngine diag; Parser parser(lexer, diag);
@@ -36,7 +36,7 @@ void test_end_to_end_execution() {
 
     TypeContext typeCtx;
     TypeChecker tc(table, diag2, typeCtx);
-    MonomorphizationEngine monoEngine(table, resolver, tc);
+    MonomorphizationEngine monoEngine(table, resolver, tc, diag2);
     tc.setMonomorphizationEngine(&monoEngine);
     tc.check(ast.get());
 

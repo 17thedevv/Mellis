@@ -107,15 +107,19 @@ std::string typeToString(const Type* type, const SymbolTable& symTable) {
 }
 
 std::string mangleFunction(std::string_view baseName, const std::vector<const Type*>& genericArgs, const SymbolTable& symTable) {
-    if (genericArgs.empty()) {
-        return std::string(baseName);
-    }
-    
     std::string out(baseName);
-    out.reserve(baseName.size() + genericArgs.size() * 16);
     for (const auto* arg : genericArgs) {
         out += "_";
-        typeToStringImpl(arg, symTable, out);
+        out += typeToString(arg, symTable);
+    }
+    return out;
+}
+
+std::string mangleStruct(std::string_view baseName, const std::vector<const Type*>& genericArgs, const SymbolTable& symTable) {
+    std::string out(baseName);
+    for (const auto* arg : genericArgs) {
+        out += "_";
+        out += typeToString(arg, symTable);
     }
     return out;
 }

@@ -32,6 +32,7 @@ public:
     std::unique_ptr<BlockStmtNode> thenBranch;
     std::unique_ptr<StmtNode>      elseBranch;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class WhileStmtNode : public StmtNode {
@@ -39,6 +40,7 @@ public:
     std::unique_ptr<ExprNode>      condition;
     std::unique_ptr<BlockStmtNode> body;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 enum class ForKind : uint8_t { ForEach, CStyle };
@@ -57,6 +59,7 @@ public:
     std::unique_ptr<BlockStmtNode> body;
     ScopeID                        bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class ReturnStmtNode : public StmtNode {
@@ -69,23 +72,27 @@ public:
 class BreakStmtNode : public StmtNode {
 public:
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class ContinueStmtNode : public StmtNode {
 public:
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class UnsafeStmtNode : public StmtNode {
 public:
     std::unique_ptr<BlockStmtNode> body;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class ComptimeStmtNode : public StmtNode {
 public:
     std::unique_ptr<BlockStmtNode> body;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 } // namespace fl

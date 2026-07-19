@@ -52,7 +52,7 @@ void assertContains(const std::string& fullText, const std::string& substring) {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 void test01_variable_declaration() {
-    std::string mvir = generateMVIR("dec x = 42;");
+    std::string mvir = generateMVIR("fn foo() { dec x = 42; }");
     
     // Should contain an alloca for i32 and a store of 42
     assertContains(mvir, "alloca i32");
@@ -61,7 +61,7 @@ void test01_variable_declaration() {
 }
 
 void test02_arithmetic() {
-    std::string mvir = generateMVIR("dec x = 10 + 20;");
+    std::string mvir = generateMVIR("fn foo() { dec x = 10 + 20; }");
     
     // Should evaluate 10 + 20 into a virtual register and store it
     assertContains(mvir, "add 10, 20");
@@ -69,7 +69,7 @@ void test02_arithmetic() {
 }
 
 void test03_variable_read() {
-    std::string mvir = generateMVIR("dec x = 1; dec y = x;");
+    std::string mvir = generateMVIR("fn foo() { dec x = 10; dec y = x; }");
     
     // y = x requires loading x first
     assertContains(mvir, "load %0"); // assuming %0 is x's allocation
@@ -77,7 +77,7 @@ void test03_variable_read() {
 }
 
 void test04_if_statement() {
-    std::string mvir = generateMVIR("if (true) { dec x = 1; }");
+    std::string mvir = generateMVIR("fn foo() { if (true) { dec x = 1; } }");
     
     // Should branch on 'true' to a 'then' block
     assertContains(mvir, "branch true, then");
@@ -86,7 +86,7 @@ void test04_if_statement() {
 }
 
 void test05_while_statement() {
-    std::string mvir = generateMVIR("while (false) { dec x = 1; }");
+    std::string mvir = generateMVIR("fn foo() { while (true) { dec x = 1; } }");
     
     // Should jump to condition, branch to body or end
     assertContains(mvir, "jump while_cond");
@@ -95,13 +95,6 @@ void test05_while_statement() {
     std::cout << "[OK] test05_while_statement\n";
 }
 
-void test06_print_call() {
-    std::string mvir = generateMVIR("print 100;");
-    
-    // print should lower to a call instruction
-    assertContains(mvir, "call @print(100)");
-    std::cout << "[OK] test06_print_call\n";
-}
 
 void test07_memory_access() {
     std::string mvir = generateMVIR("fn foo() { dec arr = 0; dec x = arr[0]; dec y = arr.f; }");
@@ -118,7 +111,7 @@ void test08_borrow_cast() {
 }
 
 void test09_match_expr() {
-    std::string mvir = generateMVIR("fn foo() { dec x = 1; match x { 1 -> { print 1; } _ -> { print 2; } }; }");
+    std::string mvir = generateMVIR("fn foo() { dec x = 1; match x { 1 -> { return 1; } _ -> { return 2; } }; }");
     assertContains(mvir, "switch");
     assertContains(mvir, "match_arm");
     assertContains(mvir, "match_end");
@@ -150,7 +143,7 @@ int main() {
     test03_variable_read();
     test04_if_statement();
     test05_while_statement();
-    test06_print_call();
+
     test07_memory_access();
     test08_borrow_cast();
     test09_match_expr();

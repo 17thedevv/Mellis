@@ -61,8 +61,7 @@ private:
 
     llvm::Type* mapType(const Type* type);
     llvm::Value* mapOperand(const mvir::Operand& op);
-    
-    // Pass 1: Declare functions and blocks
+
     void createFunctionStructure(const mvir::Function* func);
     
     // Pass 2: Emit instructions

@@ -109,6 +109,7 @@ struct Symbol {
                                      // e.g. VarDeclStmt*, FuncDecl* (future)
     bool           isExported = false;
     SymbolID       aliasTo = kInvalidSymbolID;
+    std::string    mangledName;
 };
 
 // =============================================================================

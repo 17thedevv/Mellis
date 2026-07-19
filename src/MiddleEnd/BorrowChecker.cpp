@@ -45,16 +45,27 @@ void BorrowChecker::checkInstruction(const mvir::Instruction& inst) {
     // Basic intra-procedural dataflow for borrow checker.
     SourceLocation fakeLoc{0, 0, 0}; // TODO: Pass source location in MVIR if possible
 
-    if (auto* getPtr = dynamic_cast<const mvir::GetPtrInst*>(&inst)) {
-        Place basePlace = resolvePlace(getPtr->base);
+    if (auto* idxInst = dynamic_cast<const mvir::IndexInst*>(&inst)) {
+        Place basePlace = resolvePlace(idxInst->base);
         // Append projection
-        std::string offsetStr = "idx";
-        if (!getPtr->offsets.empty()) {
-            offsetStr = mvir::toString(getPtr->offsets[0]);
-        }
-        basePlace.projections.push_back(Projection{ProjectionKind::Index, offsetStr});
-        placeMap_[getPtr->dest.name] = basePlace;
-    } 
+        Place derefPlace = basePlace;
+        derefPlace.projections.push_back(Projection{ProjectionKind::Deref, ""});
+        placeMap_[idxInst->dest.name] = derefPlace;
+    }
+    else if (auto* fieldInst = dynamic_cast<const mvir::FieldInst*>(&inst)) {
+        Place basePlace = resolvePlace(fieldInst->base);
+        Place fieldPlace = basePlace;
+        fieldPlace.projections.push_back(Projection{ProjectionKind::Field, std::to_string(fieldInst->index)});
+        placeMap_[fieldInst->dest.name] = fieldPlace;
+    }
+    else if (auto* load = dynamic_cast<const mvir::LoadInst*>(&inst)) {
+        Place srcPlace = resolvePlace(load->ptr);
+        checkAccess(srcPlace, false /* isMut */, fakeLoc);
+    }
+    else if (auto* store = dynamic_cast<const mvir::StoreInst*>(&inst)) {
+        Place destPlace = resolvePlace(store->ptr);
+        checkAccess(destPlace, true /* isMut */, fakeLoc);
+    }
     else if (dynamic_cast<const mvir::BeginScopeInst*>(&inst)) {
         scopeStack_.push_back({});
     }

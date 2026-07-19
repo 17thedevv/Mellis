@@ -66,6 +66,39 @@ public:
         return *optSym;
     }
 
+    
+    SymbolID resolvePath(const std::vector<std::string_view>& path, SourceLocation loc) {
+        if (path.empty()) return kInvalidSymbolID;
+        SymbolID currentSym = resolve(path[0], loc);
+        if (currentSym == kInvalidSymbolID) return currentSym;
+
+        for (size_t i = 1; i < path.size(); ++i) {
+            auto& sym = table.getSymbol(currentSym);
+            if (sym.kind != SymbolKind::Module && sym.kind != SymbolKind::Enum) {
+                diag.error(loc, "Symbol '" + std::string(path[i-1]) + "' is not a module or enum.");
+                return kInvalidSymbolID;
+            }
+            ScopeID nextScope = kInvalidScopeID;
+            if (sym.kind == SymbolKind::Module) {
+                nextScope = static_cast<ModDeclNode*>(sym.decl)->bodyScopeId;
+            } else if (sym.kind == SymbolKind::Enum) {
+                nextScope = static_cast<EnumDeclNode*>(sym.decl)->bodyScopeId;
+            }
+            auto optNext = table.lookupInScope(Identifier(path[i]), nextScope);
+            if (!optNext) {
+                diag.error(loc, "Module/Enum '" + std::string(path[i-1]) + "' does not contain '" + std::string(path[i]) + "'.");
+                return kInvalidSymbolID;
+            }
+            auto& nextSym = table.getSymbol(*optNext);
+            if (sym.kind == SymbolKind::Module && !nextSym.isExported) {
+                diag.error(loc, "Symbol '" + std::string(path[i]) + "' is private.");
+                return kInvalidSymbolID;
+            }
+            currentSym = *optNext;
+        }
+        return currentSym;
+    }
+
     SymbolTable& table;
     DiagnosticEngine& diag;
     ScopeStack scopeStack;
@@ -141,7 +174,9 @@ public:
         node.bodyScopeId = sm.table.createScope(ScopeKind::Enum, sm.scopeStack.current());
         sm.enterExistingScope(node.bodyScopeId);
 
-        for (auto& param : node.genericParams) {}
+        for (auto& param : node.genericParams) {
+            param.symbolId = sm.declare(param.name, SymbolKind::GenericParam, param.loc, nullptr);
+        }
         for (auto& v : node.variants) {
             v->accept(*this);
         }
@@ -301,34 +336,6 @@ public:
 class UseResolutionVisitor : public ASTVisitor {
     ScopeManager& sm;
 
-    SymbolID resolvePath(const std::vector<std::string_view>& path, SourceLocation loc) {
-        if (path.empty()) return kInvalidSymbolID;
-        SymbolID currentSym = sm.resolve(path[0], loc);
-        if (currentSym == kInvalidSymbolID) return currentSym;
-
-        for (size_t i = 1; i < path.size(); ++i) {
-            auto& sym = sm.table.getSymbol(currentSym);
-            if (sym.kind != SymbolKind::Module) {
-                sm.diag.error(loc, "Symbol '" + std::string(path[i-1]) + "' is not a module.");
-                return kInvalidSymbolID;
-            }
-            auto* modNode = static_cast<ModDeclNode*>(sym.decl);
-            ScopeID modScope = modNode->bodyScopeId;
-            auto optNext = sm.table.lookupInScope(Identifier(path[i]), modScope);
-            if (!optNext) {
-                sm.diag.error(loc, "Module '" + std::string(path[i-1]) + "' does not export '" + std::string(path[i]) + "'.");
-                return kInvalidSymbolID;
-            }
-            auto& nextSym = sm.table.getSymbol(*optNext);
-            if (!nextSym.isExported) {
-                sm.diag.error(loc, "Symbol '" + std::string(path[i]) + "' is private.");
-                return kInvalidSymbolID;
-            }
-            currentSym = *optNext;
-        }
-        return currentSym;
-    }
-
     void processUseTree(const UseTreeNode& tree, const std::vector<std::string_view>& basePath) {
         std::vector<std::string_view> fullPath = basePath;
         fullPath.insert(fullPath.end(), tree.segments.begin(), tree.segments.end());
@@ -339,7 +346,7 @@ class UseResolutionVisitor : public ASTVisitor {
         }
 
         if (tree.children.empty()) {
-            SymbolID target = resolvePath(fullPath, tree.loc);
+            SymbolID target = sm.resolvePath(fullPath, tree.loc);
             if (target != kInvalidSymbolID) {
                 std::string_view aliasName = tree.alias.empty() ? fullPath.back() : tree.alias;
                 SymbolID aliasId = sm.declare(aliasName, SymbolKind::Alias, tree.loc, nullptr);
@@ -489,6 +496,11 @@ public:
 
     void visit(EnumDeclNode& node) override { 
         sm.enterExistingScope(node.bodyScopeId);
+        for (auto& gp : node.genericParams) {
+            for (auto& bound : gp.bounds) {
+                bound->accept(static_cast<TypeVisitor&>(*this));
+            }
+        }
         for (auto& v : node.variants) {
             v->accept(static_cast<ASTVisitor&>(*this));
         }
@@ -619,9 +631,8 @@ public:
     void visit(LiteralExpr&) override { }
     
     void visit(IdentifierExpr& node) override { 
-        // Resolve the first segment as a symbol in the current scope
         if (!node.segments.empty()) {
-            SymbolID id = sm.resolve(node.segments[0], node.loc);
+            SymbolID id = sm.resolvePath(node.segments, node.loc);
             while (id != kInvalidSymbolID) {
                 auto& sym = sm.table.getSymbol(id);
                 if (sym.kind == SymbolKind::Alias) {
@@ -775,21 +786,13 @@ public:
     }
     void visit(EnumPatternNode& node) override { 
         if (!node.path.empty()) {
-            SymbolID enumId = sm.resolve(node.path[0], node.loc);
-            if (enumId != kInvalidSymbolID) {
-                auto sym = sm.table.getSymbol(enumId);
-                if (sym.kind == SymbolKind::Enum && sym.decl) {
-                    auto* enumDecl = static_cast<EnumDeclNode*>(sym.decl);
-                    if (node.path.size() > 1) {
-                        node.variantSymbolId = sm.table.lookup(Identifier(node.path[1]), enumDecl->bodyScopeId).value_or(kInvalidSymbolID);
-                        if (node.variantSymbolId == kInvalidSymbolID) {
-                            diag.error(node.loc, "Variant '" + std::string(node.path[1]) + "' not found in enum '" + std::string(node.path[0]) + "'");
-                        }
-                    } else {
-                        diag.error(node.loc, "Expected enum variant path (e.g., EnumName::VariantName)");
-                    }
+            SymbolID varId = sm.resolvePath(node.path, node.loc);
+            if (varId != kInvalidSymbolID) {
+                auto sym = sm.table.getSymbol(varId);
+                if (sym.kind == SymbolKind::EnumVariant) {
+                    node.variantSymbolId = varId;
                 } else {
-                    diag.error(node.loc, "'" + std::string(node.path[0]) + "' is not an enum");
+                    sm.diag.error(node.loc, "'" + std::string(node.path.back()) + "' is not an enum variant");
                 }
             }
         }

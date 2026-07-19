@@ -33,24 +33,24 @@ std::string toString(const Operand& op) {
 // 3. Instructions
 // =============================================================================
 
-std::string AllocaInst::toString() const {
-    return dest.toString() + " = alloca " + formatType(type);
+std::string LocalInst::toString() const {
+    return dest.toString() + " = local " + formatType(type);
 }
 
 std::string LoadInst::toString() const {
-    return dest.toString() + " = load " + mvir::toString(ptr);
+    return dest.toString() + " = load " + formatType(type) + " " + mvir::toString(ptr);
 }
 
 std::string StoreInst::toString() const {
-    return "store " + mvir::toString(value) + ", " + mvir::toString(ptr);
+    return "store " + formatType(type) + " " + mvir::toString(value) + ", " + mvir::toString(ptr);
 }
 
-std::string GetPtrInst::toString() const {
-    std::string res = dest.toString() + " = get_ptr " + mvir::toString(base);
-    for (const auto& off : offsets) {
-        res += ", " + mvir::toString(off);
-    }
-    return res;
+std::string IndexInst::toString() const {
+    return dest.toString() + " = index " + formatType(type) + " " + mvir::toString(base) + ", " + mvir::toString(index);
+}
+
+std::string FieldInst::toString() const {
+    return dest.toString() + " = field " + formatType(type) + " " + mvir::toString(base) + ", " + std::to_string(index);
 }
 
 std::string BeginScopeInst::toString() const {
@@ -67,6 +67,14 @@ std::string BorrowInst::toString() const {
 
 std::string CastInst::toString() const {
     return dest.toString() + " = cast " + mvir::toString(value) + " to " + formatType(targetType);
+}
+
+std::string SizeofInst::toString() const {
+    return dest.toString() + " = sizeof " + formatType(targetType);
+}
+
+std::string AlignofInst::toString() const {
+    return dest.toString() + " = alignof " + formatType(targetType);
 }
 
 std::string formatAluOp(AluOp op) {
@@ -88,6 +96,39 @@ std::string formatAluOp(AluOp op) {
 std::string AluInst::toString() const {
     return dest.toString() + " = " + formatAluOp(op) + " " +
            mvir::toString(left) + ", " + mvir::toString(right);
+}
+
+std::string formatUnaryOp(UnaryOp op) {
+    switch (op) {
+        case UnaryOp::Negate: return "neg";
+        case UnaryOp::BitNot: return "not";
+    }
+    return "unknown_unary_op";
+}
+
+std::string UnaryInst::toString() const {
+    return dest.toString() + " = " + formatUnaryOp(op) + " " + mvir::toString(operand);
+}
+
+std::string ExtractInst::toString() const {
+    return dest.name + " = extract " + mvir::toString(base) + ", var " + std::to_string(variantIndex) + ", fld " + std::to_string(fieldIndex);
+}
+
+std::string TagInst::toString() const {
+    return dest.toString() + " = tag " + mvir::toString(base);
+}
+
+std::string VariantInst::toString() const {
+    std::string res = dest.toString() + " = variant " + enumType->toString() + ", " + std::to_string(variantIndex);
+    if (!args.empty()) {
+        res += " (";
+        for (size_t i = 0; i < args.size(); ++i) {
+            res += mvir::toString(args[i]);
+            if (i + 1 < args.size()) res += ", ";
+        }
+        res += ")";
+    }
+    return res;
 }
 
 std::string CallInst::toString() const {

@@ -18,5 +18,8 @@ std::string typeToString(const Type* type, const SymbolTable& symTable);
 /// E.g., push(Vec<int_32>, int_32) -> push_Vec_int_32_int_32
 std::string mangleFunction(std::string_view baseName, const std::vector<const Type*>& genericArgs, const SymbolTable& symTable);
 
+/// Mangles a struct or enum into a specialized name.
+std::string mangleStruct(std::string_view baseName, const std::vector<const Type*>& genericArgs, const SymbolTable& symTable);
+
 } // namespace Mangle
 } // namespace fl

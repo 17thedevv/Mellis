@@ -72,6 +72,7 @@ add_executable(mellis
     ${SUPPORT_SRC}
 
     src/Core/SourceManager.cpp
+    src/Core/CompilerSession.cpp
 )
 
 # Liên kết với LLVM

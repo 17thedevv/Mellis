@@ -28,6 +28,7 @@ public:
     BuiltinKind kind;
     void accept(TypeVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 class NamedTypeNode : public TypeNode {
@@ -88,6 +89,7 @@ class NeverTypeNode : public TypeNode {
 public:
     void accept(TypeVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 class TraitObjectTypeNode : public TypeNode {
@@ -95,6 +97,7 @@ public:
     std::unique_ptr<TypeNode> trait;
     void accept(TypeVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 } // namespace fl

@@ -106,7 +106,7 @@ void Parser::consumeGenericEnd() {
 
 std::vector<GenericParamNode> Parser::parseGenericParams() {
     std::vector<GenericParamNode> params;
-    if (match(TokenType::GENERIC_START)) {
+    if (match(TokenType::GENERIC_START) || match(TokenType::LESS_THAN)) {
         if (!isGenericEnd(current.type)) {
             do {
                 GenericParamNode param;
@@ -129,7 +129,7 @@ std::vector<GenericParamNode> Parser::parseGenericParams() {
 
 std::vector<std::unique_ptr<TypeNode>> Parser::parseGenericArgs() {
     std::vector<std::unique_ptr<TypeNode>> args;
-    if (match(TokenType::GENERIC_START)) {
+    if (match(TokenType::GENERIC_START) || match(TokenType::LESS_THAN)) {
         if (!isGenericEnd(current.type)) {
             do {
                 args.push_back(parseType());
@@ -808,7 +808,7 @@ std::unique_ptr<TypeNode> Parser::parseNamedType() {
         }
         node->segments.push_back(idTok.text);
         
-        if (check(TokenType::GENERIC_START)) {
+        if (check(TokenType::GENERIC_START) || check(TokenType::LESS_THAN)) {
             auto args = parseGenericArgs();
             for (auto& arg : args) {
                 node->genericArgs.push_back(std::move(arg));

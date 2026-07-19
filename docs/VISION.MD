@@ -134,32 +134,6 @@ Every stage should have a single responsibility.
 
 ---
 
-# The .flo Philosophy
-
-.flo is not an object file.
-
-.flo is the compilation unit of the fdlang ecosystem.
-
-It may contain:
-
-- FLIR
-- Symbol information
-- Metadata
-- Dependencies
-- Reflection metadata
-- Debug information
-- Optimization cache
-- Incremental compilation cache
-
-This enables:
-
-- Incremental compilation
-- Fast linking
-- Hot reload
-- Better IDE support
-
----
-
 # Libraries Over Language Features
 
 Whenever possible, features belong in libraries instead of the language itself.
