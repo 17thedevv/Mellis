@@ -22,6 +22,8 @@ enum class SectionType : uint32_t {
     GenericMVIR = 7,
     ObjectCode = 8,
     Debug = 9,
+    Manifest = 10,
+    ImplTable = 11,
     Custom = 0xFFFFFFFF
 };
 
@@ -57,6 +59,65 @@ struct SectionEntry {
     SectionCompression compression;// Compression algorithm used
     uint8_t reserved[5];          // Padding for alignment
     uint64_t hash;                // XXHash64 of the section data
+};
+
+// ---------------------------------------------------------
+// Phase M2: Manifest & Dependency
+// ---------------------------------------------------------
+
+struct ManifestHeader {
+    uint32_t nameStringID;
+    uint32_t authorStringID;
+    uint32_t versionStringID;
+    uint32_t licenseStringID;
+    uint32_t featureCount;
+    uint32_t dependencyCount;
+};
+
+enum class ImportMode : uint8_t {
+    Private = 0,
+    Public = 1,
+    Optional = 2
+};
+
+struct DependencyEntry {
+    uint8_t moduleUUID[16];
+    uint32_t versionStringID;
+    uint64_t moduleHash;
+    ImportMode importMode;
+    uint32_t featureCount; // Followed by featureCount * StringID
+};
+
+// ---------------------------------------------------------
+// Phase M2: Metadata Arena Tables
+// ---------------------------------------------------------
+
+struct NamespaceEntry {
+    uint32_t nameStringID;
+    uint32_t parentNamespaceID; // 0xFFFFFFFF if root
+};
+
+struct TypeEntry {
+    uint32_t nameStringID;
+    uint32_t namespaceID;
+    uint64_t size;
+    uint64_t alignment;
+};
+
+struct TraitEntry {
+    uint32_t nameStringID;
+    uint32_t namespaceID;
+};
+
+struct FunctionEntry {
+    uint32_t nameStringID;
+    uint32_t namespaceID;
+    uint32_t signatureTypeID;
+};
+
+struct ImplEntry {
+    uint32_t traitID;
+    uint32_t targetTypeID;
 };
 
 #pragma pack(pop)
