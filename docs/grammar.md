@@ -74,6 +74,7 @@ KW_ALIGNOF ::= "alignof"
 KW_AWAIT   ::= "await"
 KW_ASYNC   ::= "async"
 KW_COMPTIME::= "comptime"
+KW_MACRO   ::= "macro"
 KW_DYN     ::= "dyn"
 KW_SELF_VAL::= "self"
 KW_SELF_TYP::= "Self"
@@ -105,6 +106,7 @@ DOT_DOT    ::= ".."
 DOT_DOT_EQ ::= "..="
 DOT_DOT_DOT::= "..."
 AT_BRACKET ::= "@["
+DOLLAR     ::= "$"
 
 // Toán tử gán & so sánh
 ASSIGN       ::= "="
@@ -162,6 +164,7 @@ declaration ::= use_decl
               | extern_decl
               | mod_decl
               | type_alias_decl
+              | macro_decl
 
 use_decl      ::= "export"? KW_USE use_tree ";"
 
@@ -257,6 +260,8 @@ statement   ::= expr_stmt
               | continue_stmt
               | unsafe_stmt
               | comptime_stmt
+              | macro_call_stmt
+              | macro_expand_for
 
 comptime_stmt ::= KW_COMPTIME block_stmt
 
@@ -339,6 +344,7 @@ base_primary::= INTEGER_LITERAL
               | alignof_expr
               | value_path 
               | match_expr
+              | macro_call_expr
               | "(" expression ")"
 
 // --- MATCH STATEMENT ---
@@ -382,3 +388,32 @@ argument    ::= (IDENTIFIER ":")? expression
 
 // Giữ lại arguments cho array_literal
 arguments   ::= expression ("," expression)*
+// --- MACRO DEFINITION ---
+macro_decl ::= annotation* "export"? KW_MACRO IDENTIFIER "(" macro_params? ")" block_stmt
+
+macro_params ::= macro_param ("," macro_param)* ("," macro_variadic_param)?
+               | macro_variadic_param
+
+macro_param ::= DOLLAR IDENTIFIER ":" macro_frag_spec
+
+macro_variadic_param ::= DOLLAR IDENTIFIER ":" macro_frag_spec DOT_DOT_DOT
+
+macro_frag_spec ::= "expr" | "ident" | "ty" | "stmt" | "block"
+
+// --- MACRO INVOCATION ---
+macro_call_expr ::= IDENTIFIER BANG "(" macro_call_args? ")"
+                  | IDENTIFIER BANG "[" macro_call_args? "]"
+
+macro_call_stmt ::= IDENTIFIER BANG "(" macro_call_args? ")" ";"
+                  | IDENTIFIER BANG "[" macro_call_args? "]" ";"
+                  | IDENTIFIER BANG "{" macro_call_args? "}"
+
+macro_call_args ::= macro_call_arg ("," macro_call_arg)* ","?
+
+macro_call_arg  ::= expression 
+                  | type 
+                  | block_stmt
+                  | IDENTIFIER
+
+// --- MACRO EXPANSION LOOP ---
+macro_expand_for ::= DOLLAR KW_FOR DOLLAR IDENTIFIER KW_IN DOLLAR IDENTIFIER block_stmt
