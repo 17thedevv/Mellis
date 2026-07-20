@@ -5,6 +5,7 @@
 #include "mellis/MiddleEnd/TypeChecker.h"
 #include "mellis/MiddleEnd/MVIR.h"
 #include <unordered_map>
+#include <unordered_set>
 
 namespace fl {
 
@@ -69,6 +70,12 @@ public:
 private:
     SymbolTable& table_;
     TypeChecker& typeChecker_;
+
+    bool isUnsafeContext_ = false;
+    bool isComptimeContext_ = false;
+
+    // Track which external symbols have been generated to avoid duplicates
+    std::unordered_set<SymbolID> generatedExternals_;
 
     // ── Context State ────────────────────────────────────────────────────────
 

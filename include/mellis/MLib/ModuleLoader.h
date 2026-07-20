@@ -45,11 +45,15 @@ public:
     // Check if a module has already been loaded (cache hit).
     bool isLoaded(std::string_view moduleName) const;
 
+    // Get the absolute paths of all loaded .mlib files
+    std::vector<std::string> getLoadedPaths() const;
+
 private:
     SymbolTable& symbolTable;
     DiagnosticEngine& diag;
     std::vector<std::string> searchPaths;
     std::unordered_map<std::string, ScopeID> loadedModules;
+    std::vector<std::string> loadedMLibPaths_;
 
     // Search libraryPaths for "<moduleName>.mlib". Returns "" if not found.
     std::string findMLibFile(std::string_view moduleName) const;

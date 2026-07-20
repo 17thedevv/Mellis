@@ -123,6 +123,9 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
         }
     }
     
+    // Save loaded mlib paths for linking phase
+    loadedMLibs_ = moduleLoader.getLoadedPaths();
+
     // ── Phase 1.45: Macro Validation ─────────────────────────────
     if (verbose) std::cout << "[1.45] Kiem tra Macro..." << std::endl;
     MacroValidator macroValidator(macroRegistry, diag_);
@@ -264,7 +267,7 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     }
     outName += ".exe";
 
-    bool exeOk = exeGen.generateExecutable(&llvmModule, outName);
+    bool exeOk = exeGen.generateExecutable(&llvmModule, outName, loadedMLibs_);
     if (!exeOk) {
         diag_.error(SourceLocation::invalid(), "Tao file thuc thi that bai.");
         diag_.flush();

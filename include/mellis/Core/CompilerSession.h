@@ -29,6 +29,13 @@ public:
     DiagnosticEngine& getDiagnostics() { return diag_; }
 
 private:
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Compilation Artifacts & State
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    // Holds the absolute paths of all .mlib files that were dynamically loaded during compilation.
+    std::vector<std::string> loadedMLibs_;
+
     // Fills libraryPaths_ with default locations relative to the compiler exe.
     void initDefaultLibraryPaths();
 

@@ -60,6 +60,10 @@ bool ModuleLoader::isLoaded(std::string_view moduleName) const {
     return loadedModules.count(std::string(moduleName)) > 0;
 }
 
+std::vector<std::string> ModuleLoader::getLoadedPaths() const {
+    return loadedMLibPaths_;
+}
+
 ScopeID ModuleLoader::loadModule(std::string_view moduleName, SourceLocation loc) {
     std::string key(moduleName);
 
@@ -83,6 +87,7 @@ ScopeID ModuleLoader::loadModule(std::string_view moduleName, SourceLocation loc
     // Parse only Header + Metadata — no MVIR, no ObjectCode.
     try {
         parseMLibMetadata(path, virtualScope, nullptr);
+        loadedMLibPaths_.push_back(path);
     } catch (const std::exception& ex) {
         diag.error(loc, std::string("Failed to load module '") + key + "': " + ex.what());
         return kInvalidScopeID;

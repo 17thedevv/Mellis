@@ -22,7 +22,9 @@ public:
     /// @param llvmModule The generated LLVM module.
     /// @param outputPath The desired path to the final executable (e.g. "ex.exe").
     /// @return true if compilation and linking succeeded.
-    bool generateExecutable(llvm::Module* llvmModule, const std::string& outputPath);
+    bool generateExecutable(llvm::Module* llvmModule,
+                            const std::string& outputPath,
+                            const std::vector<std::string>& extraMLibs = {});
 
 private:
     DiagnosticEngine& diag_;

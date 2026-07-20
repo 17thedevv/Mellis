@@ -656,11 +656,33 @@ void MVIRGenerator::visit(CallExpr& node) {
             const auto& sym = table_.getSymbol(actualFn);
             std::string calleeName = sym.mangledName.empty() ? std::string(sym.name.str()) : sym.mangledName;
             callee = mvir::GlobalId{"@" + calleeName};
+
+            if (sym.isExternal && generatedExternals_.insert(actualFn).second) {
+                mvir::ExternFunction ext;
+                ext.name = std::get<mvir::GlobalId>(callee);
+                if (auto* fTy = dynamic_cast<const FunctionType*>(typeChecker_.typeOf(actualFn))) {
+                    ext.paramTypes = fTy->paramTypes;
+                    ext.returnType = fTy->returnType;
+                    ext.isVariadic = fTy->isVariadic;
+                }
+                module_->externFunctions.push_back(ext);
+            }
         } else if (auto* ident = dynamic_cast<IdentifierExpr*>(node.callee.get())) {
             if (ident->resolvedSymbol != kInvalidSymbolID) {
                 const auto& sym = table_.getSymbol(ident->resolvedSymbol);
                 std::string calleeName = sym.mangledName.empty() ? std::string(sym.name.str()) : sym.mangledName;
                 callee = mvir::GlobalId{"@" + calleeName};
+
+                if (sym.isExternal && generatedExternals_.insert(ident->resolvedSymbol).second) {
+                    mvir::ExternFunction ext;
+                    ext.name = std::get<mvir::GlobalId>(callee);
+                    if (auto* fTy = dynamic_cast<const FunctionType*>(typeChecker_.typeOf(ident->resolvedSymbol))) {
+                        ext.paramTypes = fTy->paramTypes;
+                        ext.returnType = fTy->returnType;
+                        ext.isVariadic = fTy->isVariadic;
+                    }
+                    module_->externFunctions.push_back(ext);
+                }
             } else if (!ident->segments.empty()) {
                 callee = mvir::GlobalId{"@" + std::string(ident->segments.back())};
             }
