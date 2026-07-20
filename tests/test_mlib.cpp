@@ -8,6 +8,8 @@
 #include "mellis/MLib/MetadataBuilder.h"
 #include "mellis/MLib/GenericSerializer.h"
 #include "mellis/MLib/GenericDeserializer.h"
+#include "mellis/MLib/ObjectCodeBuilder.h"
+#include "mellis/MLib/ObjectCodeExtractor.h"
 #include "mellis/MiddleEnd/MVIR.h"
 
 #include <iostream>
@@ -216,6 +218,59 @@ void testGenericSectionIndex() {
     assert(loadedFunc->blocks[0]->terminator->getOpcode() == Opcode::Ret);
 }
 
+void testObjectCodeSection() {
+    // Mock object blobs for 3 functions
+    const uint8_t blob1[] = {0x48, 0x89, 0xC3, 0x90};        // func 1
+    const uint8_t blob2[] = {0x55, 0x48, 0x8B, 0xEC, 0xC3};  // func 2
+    const uint8_t blob3[] = {0xC3};                            // func 3
+
+    ObjectCodeBuilder builder;
+    builder.addFunction(10, blob1, sizeof(blob1));
+    builder.addFunction(20, blob2, sizeof(blob2));
+    builder.addFunction(30, blob3, sizeof(blob3));
+
+    assert(builder.getFunctionCount() == 3);
+
+    BinaryWriter writer;
+    builder.serialize(writer);
+    auto sectionBytes = writer.takeBuffer();
+
+    ObjectCodeExtractor extractor(sectionBytes.data(), sectionBytes.size());
+    extractor.parseIndexTable();
+
+    assert(extractor.getFunctionCount() == 3);
+
+    // Test: extracting non-existent function
+    auto missing = extractor.extractFunction(99);
+    assert(!missing.has_value());
+
+    // Test: Lazy loading — extract only function 20
+    auto func2 = extractor.extractFunction(20);
+    assert(func2.has_value());
+    assert(func2->size() == sizeof(blob2));
+    assert(std::memcmp(func2->data(), blob2, sizeof(blob2)) == 0);
+
+    // Test: function 10 and 30 untouched, extract correctly
+    auto func1 = extractor.extractFunction(10);
+    assert(func1.has_value());
+    assert(std::memcmp(func1->data(), blob1, sizeof(blob1)) == 0);
+
+    auto func3 = extractor.extractFunction(30);
+    assert(func3.has_value());
+    assert(func3->data()[0] == 0xC3);
+
+    // Test: getHash is consistent
+    auto hash20a = extractor.getHash(20);
+    assert(hash20a.has_value());
+
+    // Test: extractAll() returns concatenated blobs in order
+    auto all = extractor.extractAll();
+    assert(all.size() == sizeof(blob1) + sizeof(blob2) + sizeof(blob3));
+    assert(std::memcmp(all.data(), blob1, sizeof(blob1)) == 0);
+    assert(std::memcmp(all.data() + sizeof(blob1), blob2, sizeof(blob2)) == 0);
+    assert(all.back() == 0xC3);
+}
+
 int main() {
     testBasicWriterReader();
     std::cout << "testBasicWriterReader passed\n";
@@ -232,6 +287,9 @@ int main() {
     testGenericSectionIndex();
     std::cout << "testGenericSectionIndex passed\n";
 
-    std::cout << "All MLib Phase M2 & M3 tests passed!\n";
+    testObjectCodeSection();
+    std::cout << "testObjectCodeSection passed\n";
+
+    std::cout << "All MLib Phase M2, M3 & M4 tests passed!\n";
     return 0;
 }

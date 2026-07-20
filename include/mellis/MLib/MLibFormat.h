@@ -143,6 +143,17 @@ struct GenericPackageHeader {
     uint32_t returnTypeID;
 };
 
+// ---------------------------------------------------------
+// Phase M4: Object Code Section
+// ---------------------------------------------------------
+
+struct ObjectFunctionIndex {
+    uint32_t functionID;
+    uint32_t size;             // Byte count of the raw object blob
+    uint64_t offset;           // Absolute byte offset within the Object Code Section
+    uint64_t objectHash;       // XXHash64 of the raw object bytes (for incremental linking)
+};
+
 #pragma pack(pop)
 
 } // namespace mlib
