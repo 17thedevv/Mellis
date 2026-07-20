@@ -26,12 +26,17 @@ namespace fl {
 /// Unique identifier for a declared symbol (variable, function, struct, …).
 /// Indexes into SymbolTable::arena_. O(1) access guaranteed.
 using SymbolID = uint32_t;
+using MacroID = uint32_t;
+using ModuleID = uint32_t;
+using ExpansionID = uint32_t;
 
 /// Sentinel: "this node has not been resolved yet."
 /// Set as default in every AST node that carries a SymbolID.
 /// After Resolver runs, any remaining kInvalidSymbolID indicates a bug
 /// (either undeclared name or a Resolver path that forgot to annotate).
 constexpr SymbolID kInvalidSymbolID = std::numeric_limits<SymbolID>::max();
+constexpr MacroID kInvalidMacroID = std::numeric_limits<MacroID>::max();
+constexpr ModuleID kInvalidModuleID = std::numeric_limits<ModuleID>::max();
 
 // ── Scope Identification ──────────────────────────────────────────────────────
 

@@ -5,6 +5,7 @@
 
 #include "mellis/AST/StmtNode.h"
 #include "mellis/AST/PatternNode.h"
+#include "mellis/AST/MacroNode.h"
 
 namespace fl {
 
@@ -595,4 +596,72 @@ ASTNode* ComptimeStmtNode::cloneImpl() const {
     return copy;
 }
 
+
+// Macro & Placeholder Clones
+// ==========================================
+ASTNode* PlaceholderExpr::cloneImpl() const {
+    auto copy = new PlaceholderExpr();
+    copy->loc = this->loc;
+    copy->expansionID = this->expansionID;
+    copy->data = this->data;
+    return copy;
+}
+ASTNode* PlaceholderStmt::cloneImpl() const {
+    auto copy = new PlaceholderStmt();
+    copy->loc = this->loc;
+    copy->expansionID = this->expansionID;
+    copy->data = this->data;
+    return copy;
+}
+ASTNode* PlaceholderTypeNode::cloneImpl() const {
+    auto copy = new PlaceholderTypeNode();
+    copy->loc = this->loc;
+    copy->expansionID = this->expansionID;
+    copy->data = this->data;
+    return copy;
+}
+ASTNode* MacroDeclNode::cloneImpl() const {
+    auto copy = new MacroDeclNode();
+    copy->loc = this->loc;
+    copy->expansionID = this->expansionID;
+    copy->name = this->name;
+    copy->params = this->params;
+    if (this->body) copy->body = this->body->cloneAs<BlockStmtNode>();
+    return copy;
+}
+ASTNode* MacroCallExpr::cloneImpl() const {
+    auto copy = new MacroCallExpr();
+    copy->loc = this->loc;
+    copy->expansionID = this->expansionID;
+    copy->name = this->name;
+    copy->resolvedMacroId = this->resolvedMacroId;
+    for (const auto& a : this->args) {
+        MacroCallArgNode clonedArg;
+        if (a.node) clonedArg.node = std::unique_ptr<ASTNode>(a.node->cloneImpl());
+        copy->args.push_back(std::move(clonedArg));
+    }
+    return copy;
+}
+ASTNode* MacroCallStmt::cloneImpl() const {
+    auto copy = new MacroCallStmt();
+    copy->loc = this->loc;
+    copy->expansionID = this->expansionID;
+    copy->name = this->name;
+    copy->resolvedMacroId = this->resolvedMacroId;
+    for (const auto& a : this->args) {
+        MacroCallArgNode clonedArg;
+        if (a.node) clonedArg.node = std::unique_ptr<ASTNode>(a.node->cloneImpl());
+        copy->args.push_back(std::move(clonedArg));
+    }
+    return copy;
+}
+ASTNode* MacroExpandForStmt::cloneImpl() const {
+    auto copy = new MacroExpandForStmt();
+    copy->loc = this->loc;
+    copy->expansionID = this->expansionID;
+    copy->iterName = this->iterName;
+    copy->listName = this->listName;
+    if (this->body) copy->body = this->body->cloneAs<BlockStmtNode>();
+    return copy;
+}
 } // namespace fl

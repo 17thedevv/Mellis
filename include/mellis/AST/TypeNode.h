@@ -1,6 +1,7 @@
 #pragma once
 #include "mellis/AST/ASTNode.h"
 #include "mellis/Core/Types.h"
+#include "mellis/AST/PlaceholderData.h"
 #include <vector>
 #include <memory>
 #include <string_view>
@@ -95,6 +96,15 @@ public:
 class TraitObjectTypeNode : public TypeNode {
 public:
     std::unique_ptr<TypeNode> trait;
+    void accept(TypeVisitor& v) override;
+    void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
+};
+
+class PlaceholderTypeNode : public TypeNode {
+public:
+    PlaceholderData data;
+
     void accept(TypeVisitor& v) override;
     void accept(ASTVisitor& v) override { }
     ASTNode* cloneImpl() const override;

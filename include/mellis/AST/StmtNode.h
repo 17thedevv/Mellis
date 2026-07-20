@@ -1,6 +1,7 @@
 #pragma once
 #include "mellis/AST/ASTNode.h"
 #include "mellis/Core/Types.h"
+#include "mellis/AST/PlaceholderData.h"
 #include <vector>
 #include <memory>
 #include <string_view>
@@ -10,6 +11,14 @@ namespace fl {
 class ExprNode;
 
 class StmtNode : public ItemNode {};
+
+class PlaceholderStmt : public StmtNode {
+public:
+    PlaceholderData data;
+
+    void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
+};
 
 class BlockStmtNode : public StmtNode {
 public:

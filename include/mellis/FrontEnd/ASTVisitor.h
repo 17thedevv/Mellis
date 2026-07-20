@@ -120,6 +120,14 @@ public:
     virtual void visit(AwaitExpr&)         = 0;
     virtual void visit(SizeofExpr&)        = 0;
     virtual void visit(AlignofExpr&)       = 0;
+
+    // Macros & Placeholders (Phase 1)
+    virtual void visit(class MacroDeclNode&) {}
+    virtual void visit(class MacroCallExpr&) {}
+    virtual void visit(class MacroCallStmt&) {}
+    virtual void visit(class MacroExpandForStmt&) {}
+    virtual void visit(class PlaceholderExpr&) {}
+    virtual void visit(class PlaceholderStmt&) {}
 };
 
 class TypeVisitor {
@@ -134,6 +142,8 @@ public:
     virtual void visit(FunctionTypeNode&)    = 0;
     virtual void visit(NeverTypeNode&)       = 0;
     virtual void visit(TraitObjectTypeNode&) = 0;
+
+    virtual void visit(class PlaceholderTypeNode&) {}
 };
 
 class PatternVisitor {

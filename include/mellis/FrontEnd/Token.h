@@ -52,6 +52,7 @@ namespace fl {
         DOT_DOT_EQ,          // ..=
         DOT_DOT_DOT,         // ...
         AT_BRACKET,          // @[
+        AT,                  // @
         GENERIC_START,       // @<
         QUESTION,            // ?
 
@@ -98,6 +99,7 @@ namespace fl {
         KW_EXTERN,
         KW_STRUCT,
         KW_ENUM,
+        KW_MACRO,
         KW_TRAIT,
         KW_DYN,
         KW_IMPL,

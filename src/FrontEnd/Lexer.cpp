@@ -119,6 +119,7 @@ static const std::unordered_map<std::string_view, TokenType> kKeywords = {
     {"extern", TokenType::KW_EXTERN},
     {"struct", TokenType::KW_STRUCT},
     {"enum", TokenType::KW_ENUM},
+    {"macro", TokenType::KW_MACRO},
     {"trait", TokenType::KW_TRAIT},
     {"impl", TokenType::KW_IMPL},
     {"unsafe", TokenType::KW_UNSAFE},
@@ -404,7 +405,7 @@ Token Lexer::nextToken() {
         case '@':
             if (match('[')) return makeToken(TokenType::AT_BRACKET, startOffset, 2);
             if (match('<')) return makeToken(TokenType::GENERIC_START, startOffset, 2);
-            return errorToken("Invalid '@'", startOffset);
+            return makeToken(TokenType::AT, startOffset, 1);
         case ';': return makeToken(TokenType::SEMI, startOffset, 1);
         case ',': return makeToken(TokenType::COMMA, startOffset, 1);
         case '(': return makeToken(TokenType::L_PAREN, startOffset, 1);

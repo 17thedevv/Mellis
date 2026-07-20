@@ -4,6 +4,12 @@
 #include "mellis/Core/SourceLocation.h"
 #include "mellis/FrontEnd/Lexer.h"
 #include "mellis/FrontEnd/Parser.h"
+#include "mellis/FrontEnd/MacroRegistry.h"
+#include "mellis/FrontEnd/MacroCollector.h"
+#include "mellis/FrontEnd/ImportResolver.h"
+#include "mellis/FrontEnd/MacroResolver.h"
+#include "mellis/FrontEnd/MacroValidator.h"
+#include "mellis/FrontEnd/MacroExpander.h"
 #include "mellis/MiddleEnd/Resolver.h"
 #include "mellis/MiddleEnd/MatchAnalyzer.h"
 #include "mellis/MiddleEnd/MVIRGenerator.h"
@@ -49,8 +55,42 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
                   << ast->items.size() << " cau lenh top-level)" << std::endl;
     }
 
-    // ── Phase 3: Resolver ─────────────────────────────────────────────────────
-    if (verbose) std::cout << "[3] Giai quyet ten (Resolver)..." << std::endl;
+    // ── Phase 1.2: Macro Registry & Collector ────────────────────
+    if (verbose) std::cout << "[1.2] Thu thap Macro..." << std::endl;
+    MacroRegistry macroRegistry(diag_);
+    MacroCollector macroCollector(macroRegistry, diag_);
+    if (ast) {
+        macroCollector.collect(*ast);
+    }
+    
+    // ── Phase 1.3: Import & Macro Resolution ─────────────────────
+    if (verbose) std::cout << "[1.3] Phan giai Import & Macro..." << std::endl;
+    ImportResolver importResolver(diag_);
+    MacroResolver macroResolver(macroRegistry, diag_);
+    if (ast) {
+        auto* prog = dynamic_cast<ProgramNode*>(ast.get());
+        if (prog) {
+            importResolver.resolve(*prog);
+            macroResolver.resolve(*prog);
+        }
+    }
+    
+    // ── Phase 1.45: Macro Validation ─────────────────────────────
+    if (verbose) std::cout << "[1.45] Kiem tra Macro..." << std::endl;
+    MacroValidator macroValidator(macroRegistry, diag_);
+    if (ast) {
+        macroValidator.validate(*ast);
+    }
+    
+    // ── Phase 1.4: Macro Expansion ──────────────────────────────
+    if (verbose) std::cout << "[1.4] Khai trien Macro..." << std::endl;
+    MacroExpander macroExpander(macroRegistry, diag_);
+    if (ast) {
+        ast = std::unique_ptr<ProgramNode>(static_cast<ProgramNode*>(macroExpander.transformNode(std::move(ast)).release()));
+    }
+
+    // ── Phase 3: Phân giải (Resolver) ────────────────────────────────
+    if (verbose) std::cout << "[2] Phan giai ky hieu (Resolver)..." << std::endl;
     Resolver resolver(symbolTable_, diag_);
     bool resolveOk = resolver.resolve(ast.get());
 

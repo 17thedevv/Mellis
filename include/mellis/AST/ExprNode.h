@@ -2,6 +2,7 @@
 #include "mellis/AST/ASTNode.h"
 #include "mellis/Core/Types.h"
 #include "mellis/Core/FLType.h"
+#include "mellis/AST/PlaceholderData.h"
 #include <vector>
 #include <memory>
 #include <string_view>
@@ -216,6 +217,14 @@ class MatchExpr : public ExprNode {
 public:
     std::unique_ptr<ExprNode>  subject;
     std::vector<MatchArmNode>  arms;
+    void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
+};
+
+class PlaceholderExpr : public ExprNode {
+public:
+    PlaceholderData data;
+
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };

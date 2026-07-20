@@ -30,6 +30,8 @@ llvm_map_components_to_libnames(LLVM_LIBS Core ExecutionEngine Interpreter Suppo
 include_directories(include)
 
 # ── Source files ──────────────────────────────────────────────────────────────
+file(GLOB MLIB_SRC "src/MLib/*.cpp")
+
 # Gom Frontend sources (parser frozen — no changes)
 file(GLOB FRONTEND_SRC "src/FrontEnd/*.cpp")
 
@@ -169,6 +171,15 @@ add_executable(test_typechecker
 )
 target_include_directories(test_typechecker PRIVATE include)
 add_test(NAME TypeCheckerTest COMMAND test_typechecker)
+
+
+# ── test_mlib ─────────────────────────────────────────────────────────────────
+add_executable(test_mlib
+    tests/test_mlib.cpp
+    ${MLIB_SRC}
+)
+target_include_directories(test_mlib PRIVATE include)
+add_test(NAME MLibTest COMMAND test_mlib)
 
 # ── test_cfg ──────────────────────────────────────────────────────────
 add_executable(test_cfg

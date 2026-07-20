@@ -7,11 +7,14 @@
 
 namespace fl {
 
+using ExpansionID = uint32_t;
+
 class ASTVisitor;
 
 class ASTNode {
 public:
     SourceLocation loc;
+    ExpansionID expansionID = 0;
     virtual ~ASTNode() = default;
     virtual void accept(ASTVisitor& v) = 0;
 

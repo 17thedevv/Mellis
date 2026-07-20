@@ -1,6 +1,8 @@
 #include "mellis/FrontEnd/Parser.h"
 #include "mellis/FrontEnd/ASTVisitor.h"
 #include "mellis/AST/PatternNode.h"
+#include "mellis/AST/MacroNode.h"
+#include "mellis/AST/MacroNode.h"
 #include "mellis/Core/SourceManager.h"
 #include <charconv>
 #include <iostream>
@@ -349,6 +351,8 @@ std::unique_ptr<ItemNode> Parser::parseDeclaration() {
 
     if (current.type == TokenType::KW_DEC || current.type == TokenType::KW_CONST) {
         decl = parseVarDecl();
+    } else if (current.type == TokenType::KW_MACRO) {
+        decl = parseMacroDecl();
     } else if (isFunction) {
         decl = parseFunctionDecl();
     } else if (current.type == TokenType::KW_STRUCT) {
@@ -454,6 +458,42 @@ std::unique_ptr<DeclNode> Parser::parseFunctionDecl(bool allowEmptyBody) {
         funcDecl->body = parseBlockStatement();
     }
     return funcDecl;
+}
+
+std::unique_ptr<DeclNode> Parser::parseMacroDecl() {
+    auto node = std::make_unique<MacroDeclNode>();
+    node->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+    consume(TokenType::KW_MACRO, "Expected 'macro'");
+    node->name = consume(TokenType::IDENTIFIER, "Expected macro name").text;
+
+    consume(TokenType::L_PAREN, "Expected '(' after macro name");
+    if (!check(TokenType::R_PAREN)) {
+        do {
+            MacroParamNode param;
+            param.loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+            consume(TokenType::AT, "Expected '@' before macro parameter name");
+            param.name = consume(TokenType::IDENTIFIER, "Expected macro parameter name").text;
+            consume(TokenType::COLON, "Expected ':' after macro parameter name");
+            Token fragTok = consume(TokenType::IDENTIFIER, "Expected fragment specifier (e.g., 'expr', 'stmt', 'ident')");
+            if (fragTok.text == "expr") param.fragSpec = MacroFragSpec::Expr;
+            else if (fragTok.text == "stmt") param.fragSpec = MacroFragSpec::Stmt;
+            else if (fragTok.text == "ident") param.fragSpec = MacroFragSpec::Ident;
+            else if (fragTok.text == "ty") param.fragSpec = MacroFragSpec::Ty;
+            else if (fragTok.text == "item") param.fragSpec = MacroFragSpec::Item;
+            else if (fragTok.text == "block") param.fragSpec = MacroFragSpec::Block;
+            else if (fragTok.text == "pat") param.fragSpec = MacroFragSpec::Pat;
+            else {
+                diag.error(param.loc, "Unknown macro fragment specifier '" + std::string(fragTok.text) + "'");
+            }
+            if (match(TokenType::DOT_DOT_DOT)) {
+                param.isVariadic = true;
+            }
+            node->params.push_back(std::move(param));
+        } while (match(TokenType::COMMA));
+    }
+    consume(TokenType::R_PAREN, "Expected ')' after macro parameters");
+    node->body = parseBlockStatement();
+    return node;
 }
 
 std::unique_ptr<DeclNode> Parser::parseStructDecl() {
@@ -651,9 +691,22 @@ std::unique_ptr<StmtNode> Parser::parseWhileStatement() {
 }
 
 std::unique_ptr<StmtNode> Parser::parseForStatement() {
-    auto forStmt = std::make_unique<ForStmtNode>();
-    forStmt->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+    SourceLocation loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
     consume(TokenType::KW_FOR, "Expected 'for'");
+    
+    if (match(TokenType::AT)) {
+        auto mFor = std::make_unique<MacroExpandForStmt>();
+        mFor->loc = loc;
+        mFor->iterName = consume(TokenType::IDENTIFIER, "Expected identifier after '@'").text;
+        consume(TokenType::KW_IN, "Expected 'in'");
+        consume(TokenType::AT, "Expected '@' before list name");
+        mFor->listName = consume(TokenType::IDENTIFIER, "Expected identifier after '@'").text;
+        mFor->body = parseBlockStatement();
+        return mFor;
+    }
+
+    auto forStmt = std::make_unique<ForStmtNode>();
+    forStmt->loc = loc;
     consume(TokenType::L_PAREN, "Expected '(' after 'for'");
 
     if (current.type == TokenType::KW_DEC || current.type == TokenType::KW_CONST || current.type == TokenType::SEMI) {
@@ -1087,6 +1140,31 @@ std::unique_ptr<ExprNode> Parser::parsePostfix(bool allowStructLiteral) {
             expr = std::move(unExpr);
             continue;
         }
+        if (match(TokenType::BANG)) {
+            auto macroCall = std::make_unique<MacroCallExpr>();
+            macroCall->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+            if (auto identExpr = dynamic_cast<IdentifierExpr*>(expr.get())) {
+                if (identExpr->segments.size() == 1) {
+                    macroCall->name = std::string(identExpr->segments[0]);
+                } else {
+                    diag.error(macroCall->loc, "Macro call must be a simple identifier");
+                }
+            } else {
+                diag.error(macroCall->loc, "Expected identifier before '!' in macro call");
+            }
+            
+            consume(TokenType::L_PAREN, "Expected '(' after macro '!'");
+            if (!check(TokenType::R_PAREN)) {
+                do {
+                    MacroCallArgNode arg;
+                    arg.node = parseExpression(true);
+                    macroCall->args.push_back(std::move(arg));
+                } while (match(TokenType::COMMA));
+            }
+            consume(TokenType::R_PAREN, "Expected ')' after macro arguments");
+            expr = std::move(macroCall);
+            continue;
+        }
         if (match(TokenType::L_PAREN)) {
             // Function Call
             auto callExpr = std::make_unique<CallExpr>();
@@ -1369,6 +1447,13 @@ std::unique_ptr<ExprNode> Parser::parsePrimary(bool allowStructLiteral) {
         auto lit = std::make_unique<LiteralExpr>();
         lit->kind = LiteralKind::Byte;
         return lit;
+    }
+    if (match(TokenType::AT)) {
+        Token ident = consume(TokenType::IDENTIFIER, "Expected identifier after '@'");
+        auto ph = std::make_unique<PlaceholderExpr>();
+        ph->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+        ph->data.name = ident.text;
+        return ph;
     }
     if (match(TokenType::BYTE_STRING_LITERAL)) {
         auto lit = std::make_unique<LiteralExpr>();

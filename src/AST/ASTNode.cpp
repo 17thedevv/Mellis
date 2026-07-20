@@ -4,6 +4,7 @@
 #include "mellis/AST/ExprNode.h"
 #include "mellis/AST/TypeNode.h"
 #include "mellis/AST/PatternNode.h"
+#include "mellis/AST/MacroNode.h"
 #include "mellis/FrontEnd/ASTVisitor.h"
 
 namespace fl {
@@ -66,4 +67,11 @@ void IdentifierPatternNode::accept(PatternVisitor& v) { v.visit(*this); }
 void EnumPatternNode::accept(PatternVisitor& v) { v.visit(*this); }
 void TuplePatternNode::accept(PatternVisitor& v) { v.visit(*this); }
 void MethodCallExpr::accept(ASTVisitor& v) { v.visit(*this); }
+void PlaceholderExpr::accept(ASTVisitor& v) { v.visit(*this); }
+void PlaceholderStmt::accept(ASTVisitor& v) { v.visit(*this); }
+void PlaceholderTypeNode::accept(TypeVisitor& v) { v.visit(*this); }
+void MacroDeclNode::accept(ASTVisitor& v) { v.visit(*this); }
+void MacroCallExpr::accept(ASTVisitor& v) { v.visit(*this); }
+void MacroCallStmt::accept(ASTVisitor& v) { v.visit(*this); }
+void MacroExpandForStmt::accept(ASTVisitor& v) { v.visit(*this); }
 } // namespace fl

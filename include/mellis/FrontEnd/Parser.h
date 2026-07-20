@@ -42,6 +42,7 @@ private:
     // Declarations
     std::unique_ptr<DeclNode> parseVarDecl();
     std::unique_ptr<DeclNode> parseFunctionDecl(bool allowEmptyBody = false);
+    std::unique_ptr<DeclNode> parseMacroDecl();
     std::unique_ptr<DeclNode> parseStructDecl();
     std::unique_ptr<DeclNode> parseEnumDecl();
     std::unique_ptr<DeclNode> parseTraitDecl();
