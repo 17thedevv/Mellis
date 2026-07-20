@@ -106,7 +106,7 @@ DOT_DOT    ::= ".."
 DOT_DOT_EQ ::= "..="
 DOT_DOT_DOT::= "..."
 AT_BRACKET ::= "@["
-DOLLAR     ::= "$"
+AT         ::= "@"
 
 // Toán tử gán & so sánh
 ASSIGN       ::= "="
@@ -231,6 +231,7 @@ type           ::= reference_type
                  | builtin_type
                  | named_type
                  | trait_object_type
+                 | placeholder_type
 
 builtin_type ::= BUILTIN_TYPE 
 
@@ -262,6 +263,7 @@ statement   ::= expr_stmt
               | comptime_stmt
               | macro_call_stmt
               | macro_expand_for
+              | placeholder_stmt
 
 comptime_stmt ::= KW_COMPTIME block_stmt
 
@@ -346,6 +348,7 @@ base_primary::= INTEGER_LITERAL
               | match_expr
               | macro_call_expr
               | "(" expression ")"
+              | placeholder_expr
 
 // --- MATCH STATEMENT ---
 match_expr  ::= "match" expression "{" match_arm* "}"
@@ -394,19 +397,19 @@ macro_decl ::= annotation* "export"? KW_MACRO IDENTIFIER "(" macro_params? ")" b
 macro_params ::= macro_param ("," macro_param)* ("," macro_variadic_param)?
                | macro_variadic_param
 
-macro_param ::= DOLLAR IDENTIFIER ":" macro_frag_spec
+macro_param ::= AT IDENTIFIER ":" macro_frag_spec
 
-macro_variadic_param ::= DOLLAR IDENTIFIER ":" macro_frag_spec DOT_DOT_DOT
+macro_variadic_param ::= AT IDENTIFIER ":" macro_frag_spec "..."
 
-macro_frag_spec ::= "expr" | "ident" | "ty" | "stmt" | "block"
+macro_frag_spec ::= "expr" | "ident" | "ty" | "stmt" | "block" | "item"
 
 // --- MACRO INVOCATION ---
-macro_call_expr ::= IDENTIFIER BANG "(" macro_call_args? ")"
-                  | IDENTIFIER BANG "[" macro_call_args? "]"
+macro_call_expr ::= IDENTIFIER "!" "(" macro_call_args? ")"
+                  | IDENTIFIER "!" "[" macro_call_args? "]"
 
-macro_call_stmt ::= IDENTIFIER BANG "(" macro_call_args? ")" ";"
-                  | IDENTIFIER BANG "[" macro_call_args? "]" ";"
-                  | IDENTIFIER BANG "{" macro_call_args? "}"
+macro_call_stmt ::= IDENTIFIER "!" "(" macro_call_args? ")" ";"
+                  | IDENTIFIER "!" "[" macro_call_args? "]" ";"
+                  | IDENTIFIER "!" "{" macro_call_args? "}"
 
 macro_call_args ::= macro_call_arg ("," macro_call_arg)* ","?
 
@@ -416,4 +419,10 @@ macro_call_arg  ::= expression
                   | IDENTIFIER
 
 // --- MACRO EXPANSION LOOP ---
-macro_expand_for ::= DOLLAR KW_FOR DOLLAR IDENTIFIER KW_IN DOLLAR IDENTIFIER block_stmt
+macro_expand_for ::= AT KW_FOR AT IDENTIFIER KW_IN AT IDENTIFIER block_stmt
+
+// --- PLACEHOLDERS VÀO AST ---
+placeholder_expr ::= AT IDENTIFIER
+placeholder_stmt ::= AT IDENTIFIER ";"
+placeholder_type ::= AT IDENTIFIER
+
