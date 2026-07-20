@@ -37,6 +37,7 @@ file(GLOB FRONTEND_SRC "src/FrontEnd/*.cpp")
 
 # Gom AST sources
 file(GLOB AST_SRC "src/AST/*.cpp")
+file(GLOB CORE_SRC "src/Core/*.cpp")
 
 # MiddleEnd sources — explicit list to exclude deprecated SemanticAnalyzer.cpp
 set(MIDDLEEND_SRC
@@ -77,8 +78,7 @@ add_executable(mellis
     ${SUPPORT_SRC}
     ${MLIB_SRC}
 
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 
 # Liên kết với LLVM
@@ -102,8 +102,7 @@ add_executable(test_ast_manual
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_ast_manual PRIVATE include)
 target_link_libraries(test_ast_manual PRIVATE ${LLVM_LIBS})
@@ -118,8 +117,7 @@ add_executable(test_lexer
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_lexer PRIVATE include)
 target_link_libraries(test_lexer PRIVATE ${LLVM_LIBS})
@@ -134,8 +132,7 @@ add_executable(test_parser
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_parser PRIVATE include)
 target_link_libraries(test_parser PRIVATE ${LLVM_LIBS})
@@ -151,8 +148,7 @@ add_executable(test_resolver
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_resolver PRIVATE include)
 target_link_libraries(test_resolver PRIVATE ${LLVM_LIBS})
@@ -164,7 +160,7 @@ add_executable(test_diagnostic
     tests/test_diagnostic.cpp
     src/Support/Diagnostic.cpp
 
-    src/Core/SourceManager.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_diagnostic PRIVATE include)
 add_test(NAME DiagnosticTest COMMAND test_diagnostic)
@@ -178,8 +174,7 @@ add_executable(test_typechecker
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_typechecker PRIVATE include)
 target_link_libraries(test_typechecker PRIVATE ${LLVM_LIBS})
@@ -195,8 +190,7 @@ add_executable(test_mlib
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_mlib PRIVATE include)
 target_link_libraries(test_mlib PRIVATE ${LLVM_LIBS})
@@ -211,8 +205,7 @@ add_executable(test_module_loader
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_module_loader PRIVATE include)
 target_link_libraries(test_module_loader PRIVATE ${LLVM_LIBS})
@@ -227,8 +220,7 @@ add_executable(test_cfg
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_cfg PRIVATE include)
 target_link_libraries(test_cfg PRIVATE ${LLVM_LIBS})
@@ -243,8 +235,7 @@ add_executable(test_mvir_generator
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_mvir_generator PRIVATE include)
 target_link_libraries(test_mvir_generator PRIVATE ${LLVM_LIBS})
@@ -259,8 +250,7 @@ add_executable(test_borrow_checker
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_borrow_checker PRIVATE include)
 target_link_libraries(test_borrow_checker PRIVATE ${LLVM_LIBS})
@@ -275,8 +265,7 @@ add_executable(test_llvmir_generator
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_llvmir_generator PRIVATE include)
 target_link_libraries(test_llvmir_generator PRIVATE ${LLVM_LIBS})
@@ -291,9 +280,22 @@ add_executable(test_executable_generator
     ${BACKEND_SRC}
     ${MLIB_SRC}
     ${SUPPORT_SRC}
-    src/Core/SourceManager.cpp
-    src/Core/CompilerSession.cpp
+    ${CORE_SRC}
 )
 target_include_directories(test_executable_generator PRIVATE include)
 target_link_libraries(test_executable_generator PRIVATE ${LLVM_LIBS})
 add_test(NAME ExecutableGeneratorTest COMMAND test_executable_generator)
+
+add_executable(test_workspace_builder
+    tests/test_workspace_builder.cpp
+    ${CORE_SRC}
+    ${FRONTEND_SRC}
+    ${AST_SRC}
+    ${SUPPORT_SRC}
+    ${MIDDLEEND_SRC}
+    ${BACKEND_SRC}
+    ${MLIB_SRC}
+)
+target_include_directories(test_workspace_builder PRIVATE include)
+target_link_libraries(test_workspace_builder PRIVATE ${LLVM_LIBS})
+add_test(NAME WorkspaceBuilderTest COMMAND test_workspace_builder)
