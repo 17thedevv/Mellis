@@ -10,6 +10,7 @@
 // =============================================================================
 
 #include "mellis/Support/Diagnostic.h"
+#include "mellis/Support/DiagnosticConsumer.h"
 #include "mellis/Core/SourceManager.h"
 #include <iostream>
 #include <string_view>
@@ -93,77 +94,13 @@ void DiagnosticEngine::fatal(SourceLocation loc, std::string msg) {
 ///   - TODO(DiagnosticConsumer): dispatch to consumer->handleDiagnostic()
 ///     instead of writing directly to stderr.
 void DiagnosticEngine::flush() const {
-    const char* RESET = "\033[0m";
-    const char* BOLD = "\033[1m";
-    const char* RED = "\033[31m";
-    const char* YELLOW = "\033[33m";
-    const char* BLUE = "\033[34m";
-    const char* GREEN = "\033[32m";
-
+    if (consumers_.empty()) {
+        // Fallback or warning if no consumer is registered
+        return;
+    }
     for (const Diagnostic& d : diagnostics_) {
-        std::string_view label = severityLabel(d.severity);
-        const char* color = (d.severity == DiagSeverity::Error || d.severity == DiagSeverity::Fatal) ? RED : 
-                            (d.severity == DiagSeverity::Warning ? YELLOW : GREEN);
-        
-        const SourceLocation& loc = d.location;
-
-        std::string filename = "mellis";
-        if (sourceMgr_ && loc.file != SourceManager::kInvalidFileID) {
-            filename = sourceMgr_->getFilepath(loc.file);
-        }
-
-        if (loc.line != 0) {
-            // First line: error: message
-            std::cerr << BOLD << color << label << ": " << RESET << BOLD << d.message << RESET << "\n";
-            // Second line:  --> filename:line:col
-            std::cerr << " " << BLUE << "--> " << RESET << filename << ":" << loc.line << ":" << loc.column << "\n";
-            
-            if (sourceMgr_ && loc.file != SourceManager::kInvalidFileID) {
-                std::string_view sourceView = sourceMgr_->getSource(loc.file);
-                // Find the start of the line
-                size_t lineStart = 0;
-                uint32_t currentLine = 1;
-                while (currentLine < loc.line && lineStart < sourceView.size()) {
-                    if (sourceView[lineStart] == '\n') currentLine++;
-                    lineStart++;
-                }
-                
-                size_t lineEnd = lineStart;
-                while (lineEnd < sourceView.size() && sourceView[lineEnd] != '\n' && sourceView[lineEnd] != '\r') {
-                    lineEnd++;
-                }
-                
-                if (lineStart < sourceView.size()) {
-                    std::string_view sourceLine = sourceView.substr(lineStart, lineEnd - lineStart);
-                    
-                    std::cerr << "  " << BLUE << "|\n" << RESET;
-                    std::cerr << loc.line << " " << BLUE << "| " << RESET;
-                    
-                    // Replace tabs with 4 spaces to align caret perfectly
-                    std::string expandedSource = "";
-                    size_t visualCol = 0;
-                    for (size_t i = 0; i < sourceLine.size(); ++i) {
-                        if (sourceLine[i] == '\t') {
-                            expandedSource += "    ";
-                            if (i < loc.column - 1) visualCol += 4;
-                        } else {
-                            expandedSource += sourceLine[i];
-                            if (i < loc.column - 1) visualCol += 1;
-                        }
-                    }
-                    
-                    std::cerr << expandedSource << "\n";
-                    std::cerr << "  " << BLUE << "| " << RESET;
-                    
-                    for (size_t i = 0; i < visualCol; ++i) std::cerr << " ";
-                    std::cerr << color << BOLD << "^" << RESET << "\n";
-                    
-                    std::cerr << "  " << BLUE << "|\n" << RESET;
-                }
-            }
-        } else {
-            // MVP: location not yet tracked by Lexer — omit line/col.
-            std::cerr << filename << ": byte: " << loc.offset << " " << BOLD << color << label << ": " << RESET << d.message << '\n';
+        for (const auto& consumer : consumers_) {
+            consumer->handleDiagnostic(d);
         }
     }
 }

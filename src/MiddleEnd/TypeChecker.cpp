@@ -6,6 +6,7 @@
 #include "mellis/AST/PatternNode.h"
 #include "mellis/AST/ProgramNode.h"
 #include "mellis/MiddleEnd/MonomorphizationEngine.h"
+#include "mellis/MiddleEnd/ConstEvaluator.h"
 #include <iostream>
 #include <typeinfo>
 #include <vector>
@@ -109,7 +110,8 @@ bool TypeChecker::check(ASTNode* root) {
         MethodResolver& methodResolver;
         std::unordered_map<const Type*, std::unordered_set<SymbolID>>& implementedTraits;
         const Type* evaluatedType = nullptr;
-          MonomorphizationEngine* monoEngine;
+        MonomorphizationEngine* monoEngine;
+        DiagnosticEngine& diag;
 
     public:
         const Type* evaluateTypeNode(TypeNode* node) {
@@ -119,8 +121,8 @@ bool TypeChecker::check(ASTNode* root) {
             return evaluatedType ? evaluatedType : ctx.getUnknown();
         }
 
-        TypePrePass(SymbolTable& table, TypeContext& ctx, std::vector<const Type*>& typeTable, MethodResolver& methodResolver, std::unordered_map<const Type*, std::unordered_set<SymbolID>>& implementedTraits, MonomorphizationEngine* monoEngine)
-              : table(table), ctx(ctx), typeTable(typeTable), methodResolver(methodResolver), implementedTraits(implementedTraits), monoEngine(monoEngine) {}
+        TypePrePass(SymbolTable& table, TypeContext& ctx, std::vector<const Type*>& typeTable, MethodResolver& methodResolver, std::unordered_map<const Type*, std::unordered_set<SymbolID>>& implementedTraits, MonomorphizationEngine* monoEngine, DiagnosticEngine& diag)
+              : table(table), ctx(ctx), typeTable(typeTable), methodResolver(methodResolver), implementedTraits(implementedTraits), monoEngine(monoEngine), diag(diag) {}
 
         void visit(ProgramNode& node) override { for (auto& item : node.items) item->accept(*this); }
         void visit(ModDeclNode& node) override { for (auto& d : node.decls) d->accept(*this); }
@@ -463,8 +465,16 @@ bool TypeChecker::check(ASTNode* root) {
         }
         void visit(ArrayTypeNode& node) override {
             const Type* elem = evaluateTypeNode(node.elementType.get());
-            // TODO: Evaluate node.size for constant array length. Using 0 for now.
-            evaluatedType = ctx.getArrayType(elem, 0); 
+            if (node.size) {
+                auto evaluatedSize = ConstEvaluator::evaluate(node.size.get(), &table);
+                if (!evaluatedSize.has_value()) {
+                    diag.error(node.loc, "Array size must be a constant expression evaluated at compile-time");
+                    node.resolvedSize = 0;
+                } else {
+                    node.resolvedSize = evaluatedSize.value();
+                }
+            }
+            evaluatedType = ctx.getArrayType(elem, node.resolvedSize); 
         }
         void visit(TupleTypeNode& node) override {
             std::vector<const Type*> elements;
@@ -609,7 +619,7 @@ bool TypeChecker::check(ASTNode* root) {
 
         const Type* evaluateTypeNode(TypeNode* node) {
             if (!node) return nullptr;
-            TypePrePass pre(table, ctx, typeTable, methodResolver, implementedTraits, monoEngine);
+            TypePrePass pre(table, ctx, typeTable, methodResolver, implementedTraits, monoEngine, diag);
             return pre.evaluateTypeNode(node);
         }
     public:
@@ -619,6 +629,19 @@ bool TypeChecker::check(ASTNode* root) {
         void visit(ProgramNode& node) override { for (auto& item : node.items) item->accept(*this); }
         void visit(ModDeclNode& node) override { for (auto& d : node.decls) d->accept(*this); }
         void visit(ExternDeclNode& node) override { if (node.func) node.func->accept(*this); }
+        
+        void visit(BlockStmtNode& node) override {
+            for (auto& s : node.body) s->accept(*this);
+            if (node.tailExpr) {
+                node.tailExpr->accept(*this);
+                if (node.tailExpr->inferredType) {
+                    node.inferredType = node.tailExpr->inferredType;
+                }
+            } else {
+                node.inferredType = ctx.getVoid();
+            }
+        }
+        
         void visit(VarDeclNode& node) override {
             const Type* annotType = nullptr;
             if (node.typeAnnot) {
@@ -652,7 +675,7 @@ bool TypeChecker::check(ASTNode* root) {
                         std::vector<const Type*> args;
                         for (size_t i = 0; i < structDecl->genericParams.size(); ++i) {
                             if (i < node.genericArgs.size()) {
-                                TypePrePass pre(table, ctx, typeTable, methodResolver, implementedTraits, monoEngine);
+                                TypePrePass pre(table, ctx, typeTable, methodResolver, implementedTraits, monoEngine, diag);
                                 args.push_back(pre.evaluateTypeNode(node.genericArgs[i].get()));
                             } else {
                                 args.push_back(ctx.getInferenceVar(ctx.newVar()));
@@ -752,7 +775,6 @@ bool TypeChecker::check(ASTNode* root) {
         void visit(UseDeclNode& node) override {}
         
         void visit(ExprStmtNode& node) override { node.expr->accept(*this); }
-        void visit(BlockStmtNode& node) override { for (auto& s : node.body) s->accept(*this); }
         void visit(IfStmtNode& node) override {
             node.condition->accept(*this);
             if (node.condition->inferredType) {
@@ -837,7 +859,7 @@ bool TypeChecker::check(ASTNode* root) {
                             for (size_t i = 0; i < enumDecl->genericParams.size(); ++i) {
                                 const Type* argTy = nullptr;
                                 if (i < node.genericArgs.size()) {
-                                    TypePrePass pre(table, ctx, typeTable, methodResolver, implementedTraits, monoEngine);
+                                    TypePrePass pre(table, ctx, typeTable, methodResolver, implementedTraits, monoEngine, diag);
                                     argTy = pre.evaluateTypeNode(node.genericArgs[i].get());
                                 } else {
                                     argTy = ctx.getInferenceVar(ctx.newVar());
@@ -1567,7 +1589,14 @@ bool TypeChecker::check(ASTNode* root) {
         void visit(TypeAliasDeclNode& node) override {}
         void visit(UseDeclNode& node) override {}
 
-        void visit(BlockStmtNode& node) override { for (auto& s : node.body) s->accept(*this); }
+        void visit(BlockStmtNode& node) override { 
+            for (auto& s : node.body) s->accept(*this); 
+            if (node.tailExpr) {
+                node.tailExpr->accept(*this);
+            }
+            resolve(node.inferredType, node.loc);
+        }
+        
         void visit(ExprStmtNode& node) override { node.expr->accept(*this); }
         void visit(IfStmtNode& node) override {
             node.condition->accept(*this);
@@ -1770,7 +1799,7 @@ bool TypeChecker::check(ASTNode* root) {
         void visit(AlignofExpr& node) override {}
     };
 
-    TypePrePass pre(table_, ctx_, typeTable_, methodResolver_, implementedTraits_, monoEngine_);
+    TypePrePass pre(table_, ctx_, typeTable_, methodResolver_, implementedTraits_, monoEngine_, diag_);
     root->accept(pre);
 
     std::vector<Constraint> constraints;

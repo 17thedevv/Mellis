@@ -54,6 +54,7 @@ set(MIDDLEEND_SRC
     src/MiddleEnd/SubstitutionVisitor.cpp
     src/MiddleEnd/MonomorphizationEngine.cpp
     src/MiddleEnd/Mangle.cpp
+    src/MiddleEnd/ConstEvaluator.cpp
 )
 
 set(BACKEND_SRC

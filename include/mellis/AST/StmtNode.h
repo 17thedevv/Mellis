@@ -9,6 +9,7 @@
 namespace fl {
 
 class ExprNode;
+class Type;
 
 class StmtNode : public ItemNode {};
 
@@ -23,6 +24,8 @@ public:
 class BlockStmtNode : public StmtNode {
 public:
     std::vector<std::unique_ptr<ItemNode>> body;
+    std::unique_ptr<ExprNode> tailExpr; // Biểu thức trả về ngầm định ở cuối
+    const Type* inferredType = nullptr; // Khác với ExprNode, BlockStmtNode cần tự lưu trữ Type
     ScopeID bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
@@ -31,6 +34,7 @@ public:
 class ExprStmtNode : public StmtNode {
 public:
     std::unique_ptr<ExprNode> expr;
+    bool hasSemicolon = true;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };

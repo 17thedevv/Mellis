@@ -143,6 +143,10 @@ ASTNode* BlockStmtNode::cloneImpl() const {
     for (const auto& s : this->body) {
         copy->body.push_back(s->cloneAs<ItemNode>());
     }
+    if (this->tailExpr) {
+        copy->tailExpr = this->tailExpr->cloneAs<ExprNode>();
+    }
+    copy->inferredType = this->inferredType;
     return copy;
 }
 
@@ -152,6 +156,7 @@ ASTNode* ExprStmtNode::cloneImpl() const {
     if (this->expr) {
         copy->expr = this->expr->cloneAs<ExprNode>();
     }
+    copy->hasSemicolon = this->hasSemicolon;
     return copy;
 }
 
@@ -309,12 +314,9 @@ ASTNode* PointerTypeNode::cloneImpl() const {
 ASTNode* ArrayTypeNode::cloneImpl() const {
     auto copy = new ArrayTypeNode();
     copy->loc = this->loc;
-    if (this->elementType) {
-        copy->elementType = this->elementType->cloneAs<TypeNode>();
-    }
-    if (this->size) {
-        copy->size = this->size->cloneAs<ExprNode>();
-    }
+    if (this->elementType) copy->elementType = this->elementType->cloneAs<TypeNode>();
+    if (this->size) copy->size = this->size->cloneAs<ExprNode>();
+    copy->resolvedSize = this->resolvedSize;
     return copy;
 }
 

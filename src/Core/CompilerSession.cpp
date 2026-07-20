@@ -22,12 +22,14 @@
 #include "mellis/BackEnd/LLVMIRGenerator.h"
 #include "mellis/BackEnd/ExecutableGenerator.h"
 #include "mellis/Support/LLDLinker.h"
+#include "mellis/Support/ConsoleDiagnosticConsumer.h"
 #include "mellis/AST/ProgramNode.h"
 
 namespace fl {
 
 CompilerSession::CompilerSession() : sourceManager_(diag_) {
     diag_.setSourceManager(&sourceManager_);
+    diag_.addConsumer(std::make_shared<ConsoleDiagnosticConsumer>(&sourceManager_));
     initDefaultLibraryPaths();
 }
 CompilerSession::~CompilerSession() = default;

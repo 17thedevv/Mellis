@@ -129,6 +129,9 @@ void MVIRGenerator::visit(BlockStmtNode& node) {
         if (currentBlock_->terminator != nullptr) break;
         stmt->accept(*this);
     }
+    if (currentBlock_->terminator == nullptr && node.tailExpr) {
+        lastEvaluatedOperand_ = evaluateRValue(*node.tailExpr);
+    }
 }
 
 void MVIRGenerator::visit(IfStmtNode& node) {

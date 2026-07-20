@@ -32,9 +32,11 @@
 #include "mellis/Core/SourceLocation.h"
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace fl {
 class SourceManager;
+class DiagnosticConsumer;
 } // namespace fl
 #include <cstddef>
 
@@ -125,6 +127,10 @@ public:
     /// Intended for unit tests that need to inspect individual diagnostics
     /// without parsing stderr output.
     const std::vector<Diagnostic>& allDiagnostics() const { return diagnostics_; }
+    
+    void addConsumer(std::shared_ptr<DiagnosticConsumer> consumer) {
+        consumers_.push_back(consumer);
+    }
 
     // ── Reset ─────────────────────────────────────────────────────────────────
 
@@ -134,6 +140,7 @@ public:
 
 private:
     std::vector<Diagnostic> diagnostics_;
+    std::vector<std::shared_ptr<DiagnosticConsumer>> consumers_;
     const SourceManager* sourceMgr_ = nullptr;
     size_t errorCount_   = 0;
     size_t warningCount_ = 0;

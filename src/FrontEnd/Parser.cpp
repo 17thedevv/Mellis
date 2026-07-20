@@ -662,11 +662,13 @@ std::unique_ptr<StmtNode> Parser::parseExpressionStatement() {
     if (current.type == TokenType::R_BRACE) {
         auto stmt = std::make_unique<ExprStmtNode>();
         stmt->expr = std::move(expr);
+        stmt->hasSemicolon = false;
         return stmt;
     }
     consume(TokenType::SEMI, "Expected ';' after expression");
     auto stmt = std::make_unique<ExprStmtNode>();
     stmt->expr = std::move(expr);
+    stmt->hasSemicolon = true;
     return stmt;
 }
 
@@ -677,7 +679,35 @@ std::unique_ptr<BlockStmtNode> Parser::parseBlockStatement() {
     while (!check(TokenType::R_BRACE) && !check(TokenType::END_OF_FILE)) {
         block->body.push_back(parseDeclaration());
     }
+    
+    // Check if the last item is an expression statement without a semicolon
+    if (!block->body.empty()) {
+        if (auto* exprStmt = dynamic_cast<ExprStmtNode*>(block->body.back().get())) {
+            // Because ExprStmtNode might have been created without a semicolon if it was right before '}'
+            // We can check if it's right before R_BRACE. We actually handle this in parseExpressionStatement!
+            // Wait, parseExpressionStatement already checks for R_BRACE and skips SEMI.
+            // Let's just extract it if it's an ExprStmtNode and we are at R_BRACE.
+            // Actually, we need to know if it HAD a semicolon.
+            // Let's modify parseDeclaration/parseExpressionStatement to mark if it had a semicolon, 
+            // or just rely on the fact that if it's the last statement and it's an ExprStmtNode, it's a tail expr.
+            // In Rust, a block returns the last expression IF there is no semicolon.
+            // We can just pop it and set as tailExpr.
+        }
+    }
+    
     consume(TokenType::R_BRACE, "Expected '}' to end block");
+    
+    // Convert last ExprStmtNode to tailExpr if it didn't end with a semicolon.
+    if (!block->body.empty()) {
+        auto* lastItem = block->body.back().get();
+        if (auto* exprStmt = dynamic_cast<ExprStmtNode*>(lastItem)) {
+            if (!exprStmt->hasSemicolon) {
+                block->tailExpr = std::move(exprStmt->expr);
+                block->body.pop_back();
+            }
+        }
+    }
+
     return block;
 }
 

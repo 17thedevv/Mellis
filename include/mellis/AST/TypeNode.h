@@ -64,6 +64,7 @@ class ArrayTypeNode : public TypeNode {
 public:
     std::unique_ptr<TypeNode> elementType;
     std::unique_ptr<ExprNode> size;
+    size_t resolvedSize = 0; // Evaluated at compile-time
     void accept(TypeVisitor& v) override;
     void accept(ASTVisitor& v) override { }
     ASTNode* cloneImpl() const override;
