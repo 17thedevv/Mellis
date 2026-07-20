@@ -391,7 +391,28 @@ void LLVMIRGenerator::emitFunctionBody(const mvir::Function* func) {
 }
 
 void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
-    if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
+    if (auto* drop = dynamic_cast<const mvir::DropInst*>(inst)) {
+        // Generate call to Type_drop
+        std::string typeName = "unknown";
+        if (auto* st = dynamic_cast<const StructType*>(drop->type)) {
+            typeName = "Struct" + std::to_string(st->structSymbolId);
+        } else if (auto* et = dynamic_cast<const EnumType*>(drop->type)) {
+            typeName = "Enum" + std::to_string(et->enumSymbolId);
+        }
+        std::string dropFnName = typeName + "_drop";
+        
+        llvm::Function* dropFn = module_.getFunction(dropFnName);
+        if (!dropFn) {
+            llvm::Type* voidTy = llvm::Type::getVoidTy(context_);
+            llvm::Type* ptrTy = llvm::PointerType::getUnqual(context_);
+            llvm::FunctionType* fnTy = llvm::FunctionType::get(voidTy, {ptrTy}, false);
+            dropFn = llvm::Function::Create(fnTy, llvm::Function::ExternalLinkage, dropFnName, &module_);
+        }
+        
+        llvm::Value* val = mapOperand(drop->value);
+        builder_.CreateCall(dropFn, {val});
+    }
+    else if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
         llvm::Type* ty = mapType(local->type);
         llvm::Value* val = builder_.CreateAlloca(ty, nullptr, local->dest.name.substr(1));
         localValues_[local->dest.name] = val;

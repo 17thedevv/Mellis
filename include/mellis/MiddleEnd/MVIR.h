@@ -149,6 +149,14 @@ struct CastInst : public Instruction {
     std::string toString() const override;
 };
 
+struct DropInst : public Instruction {
+    Operand value;
+    const Type* type;
+
+    DropInst(Operand v, const Type* t) : value(std::move(v)), type(t) {}
+    std::string toString() const override;
+};
+
 struct SizeofInst : public Instruction {
     LocalId dest;
     const Type* targetType;

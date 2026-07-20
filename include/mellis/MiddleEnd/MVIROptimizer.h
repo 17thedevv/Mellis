@@ -39,6 +39,12 @@ public:
     bool runOnFunction(mvir::Function& func) override;
 };
 
+class DropInsertionPass : public MVIROptimizationPass {
+public:
+    std::string getName() const override { return "DropInsertion"; }
+    bool runOnFunction(mvir::Function& func) override;
+};
+
 class MVIROptimizer {
     std::vector<std::unique_ptr<MVIROptimizationPass>> passes_;
     DiagnosticEngine& diag_;

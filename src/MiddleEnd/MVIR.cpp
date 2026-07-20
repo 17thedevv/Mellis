@@ -62,6 +62,10 @@ std::string CastInst::toString() const {
     return dest.toString() + " = cast " + mvir::toString(value) + " to " + formatType(targetType);
 }
 
+std::string DropInst::toString() const {
+    return "drop " + mvir::toString(value) + " : " + formatType(type);
+}
+
 std::string SizeofInst::toString() const {
     return dest.toString() + " = sizeof " + formatType(targetType);
 }

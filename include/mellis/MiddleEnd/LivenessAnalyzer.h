@@ -8,8 +8,11 @@
 namespace fl {
 
 struct LivenessInfo {
-    // Map t? Tn Bi?n (Reference) sang t?p cc Instruction pointers m bi?n  cn s?ng (LiveOut)
+    // Map từ Tên Biến (Reference) sang tập các Instruction pointers mà biến đó còn sống (LiveOut)
     std::unordered_map<std::string, std::unordered_set<const mvir::Instruction*>> liveInstructions;
+    
+    // LiveOut cho từng block (phục vụ DropInsertion tại terminator)
+    std::unordered_map<const mvir::BasicBlock*, std::unordered_set<std::string>> blockLiveOut;
 };
 
 class LivenessAnalyzer {

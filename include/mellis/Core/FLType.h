@@ -57,6 +57,9 @@ public:
 
     // DST (Dynamically Sized Type) check
     virtual bool isSized() const { return true; } // By default, most types are sized
+    
+    // Auto-Drop check
+    virtual bool needsDrop() const { return false; }
 };
 
 // -----------------------------------------------------------------------------
@@ -170,11 +173,13 @@ public:
     std::vector<const Type*> genericArgs;
     std::unordered_map<std::string, size_t> fieldIndices;
     std::vector<const Type*> fieldTypes;
+    bool hasDrop;
     
-    explicit StructType(SymbolID id, std::vector<const Type*> args = {}) 
-        : structSymbolId(id), genericArgs(std::move(args)) {}
+    explicit StructType(SymbolID id, std::vector<const Type*> args = {}, bool hasDrop = false) 
+        : structSymbolId(id), genericArgs(std::move(args)), hasDrop(hasDrop) {}
     
     TypeKind getKind() const override { return TypeKind::Struct; }
+    bool needsDrop() const override { return hasDrop; }
     std::string toString() const override {
         std::string s = "Struct<" + std::to_string(structSymbolId);
         if (!genericArgs.empty()) {
@@ -208,11 +213,13 @@ class EnumType : public Type {
 public:
     SymbolID enumSymbolId;
     std::vector<const Type*> genericArgs;
+    bool hasDrop;
     
-    explicit EnumType(SymbolID id, std::vector<const Type*> args = {}) 
-        : enumSymbolId(id), genericArgs(std::move(args)) {}
+    explicit EnumType(SymbolID id, std::vector<const Type*> args = {}, bool hasDrop = false) 
+        : enumSymbolId(id), genericArgs(std::move(args)), hasDrop(hasDrop) {}
     
     TypeKind getKind() const override { return TypeKind::Enum; }
+    bool needsDrop() const override { return hasDrop; }
     std::string toString() const override {
         std::string s = "Enum<" + std::to_string(enumSymbolId);
         if (!genericArgs.empty()) {
