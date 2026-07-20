@@ -29,6 +29,9 @@ public:
     DiagnosticEngine& getDiagnostics() { return diag_; }
 
 private:
+    // Fills libraryPaths_ with default locations relative to the compiler exe.
+    void initDefaultLibraryPaths();
+
     DiagnosticEngine diag_;
     SourceManager sourceManager_;
     SymbolTable symbolTable_;

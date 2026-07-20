@@ -1,6 +1,7 @@
 #include "mellis/Core/CompilerSession.h"
 #include <iostream>
 #include <cassert>
+#include <filesystem>
 #include "mellis/Core/SourceLocation.h"
 #include "mellis/FrontEnd/Lexer.h"
 #include "mellis/FrontEnd/Parser.h"
@@ -25,8 +26,52 @@
 
 namespace fl {
 
-CompilerSession::CompilerSession() : sourceManager_(diag_) { diag_.setSourceManager(&sourceManager_); }
+CompilerSession::CompilerSession() : sourceManager_(diag_) {
+    diag_.setSourceManager(&sourceManager_);
+    initDefaultLibraryPaths();
+}
 CompilerSession::~CompilerSession() = default;
+
+// Populate libraryPaths_ with well-known locations.
+// Search order (first match wins at load time):
+//   1. <compiler_exe_dir>/lib/      — installed alongside the binary
+//   2. <compiler_exe_dir>/../lib/   — common install layout
+//   3. ./lib/                       — current working directory (dev convenience)
+// Users can prepend extra paths via setLibraryPaths().
+void CompilerSession::initDefaultLibraryPaths() {
+    namespace fs = std::filesystem;
+
+    // Use current_path() as a portable baseline.
+    // When invoked as `mellis.exe` from a shell, CWD is typically the project root
+    // or the directory the user is in. We search lib/ relative to CWD and relative
+    // to a sibling path for installed layouts.
+    //
+    // Candidate paths in priority order:
+    //   1. ./lib/           — cạnh CWD (dev: run từ build/Debug/)
+    //   2. ../lib/          — một tầng lên (dev: run từ trong subdir)
+    std::error_code ec;
+    fs::path cwd = fs::current_path(ec);
+    if (ec) return;
+
+    std::vector<fs::path> candidates = {
+        cwd / "lib",        // ./lib/
+        cwd / "../lib",     // ../lib/
+    };
+
+    for (auto& p : candidates) {
+        std::error_code ec2;
+        auto canonical = fs::canonical(p, ec2);
+        if (!ec2 && fs::is_directory(canonical, ec2)) {
+            // Avoid duplicates
+            std::string s = canonical.string();
+            bool found = false;
+            for (auto& existing : libraryPaths_) {
+                if (existing == s) { found = true; break; }
+            }
+            if (!found) libraryPaths_.push_back(s);
+        }
+    }
+}
 
 bool CompilerSession::compile(const std::string& filepath, bool verbose, int optLevel) {
     FileID mainFileId = sourceManager_.loadFile(filepath);

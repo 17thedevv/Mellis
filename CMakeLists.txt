@@ -62,6 +62,7 @@ set(BACKEND_SRC
 
 set(SUPPORT_SRC
     src/Support/Diagnostic.cpp
+    src/Support/OSUtils.cpp
     src/Support/LLDLinker.cpp
 )
 
@@ -182,6 +183,7 @@ add_executable(test_mlib
     src/MiddleEnd/MVIR.cpp
     src/Core/SourceManager.cpp
     src/Support/Diagnostic.cpp
+    src/Support/OSUtils.cpp
 )
 target_include_directories(test_mlib PRIVATE include)
 add_test(NAME MLibTest COMMAND test_mlib)
@@ -194,6 +196,7 @@ add_executable(test_module_loader
     src/MiddleEnd/MVIR.cpp
     src/Core/SourceManager.cpp
     src/Support/Diagnostic.cpp
+    src/Support/OSUtils.cpp
 )
 target_include_directories(test_module_loader PRIVATE include)
 add_test(NAME ModuleLoaderTest COMMAND test_module_loader)

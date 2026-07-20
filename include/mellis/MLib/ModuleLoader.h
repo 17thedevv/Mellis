@@ -35,7 +35,7 @@ class ModuleLoader {
 public:
     ModuleLoader(SymbolTable& symbolTable,
                  DiagnosticEngine& diag,
-                 const std::vector<std::string>& libraryPaths);
+                 const std::vector<std::string>& extraLibraryPaths = {});
 
     // Load an external module by name (e.g. "std").
     // - If already loaded, returns cached VirtualScopeID immediately (O(1)).
@@ -46,6 +46,11 @@ public:
     bool isLoaded(std::string_view moduleName) const;
 
 private:
+    SymbolTable& symbolTable;
+    DiagnosticEngine& diag;
+    std::vector<std::string> searchPaths;
+    std::unordered_map<std::string, ScopeID> loadedModules;
+
     // Search libraryPaths for "<moduleName>.mlib". Returns "" if not found.
     std::string findMLibFile(std::string_view moduleName) const;
 
@@ -83,12 +88,6 @@ private:
                         const std::vector<char>& strings,
                         const uint8_t moduleUUID[16]);
 
-    SymbolTable& symbolTable;
-    DiagnosticEngine& diag;
-    std::vector<std::string> libraryPaths;
-
-    // Cache: moduleName → VirtualScopeID
-    std::unordered_map<std::string, ScopeID> loadedModules;
 };
 
 } // namespace fl

@@ -4,9 +4,12 @@
 
 #include "mellis/MLib/ModuleLoader.h"
 #include "mellis/MLib/MLibFormat.h"
+#include "mellis/Support/OSUtils.h"
 #include <fstream>
 #include <cstring>
 #include <stdexcept>
+#include <filesystem>
+#include <cstdlib>
 
 namespace fl {
 
@@ -18,8 +21,36 @@ using namespace mlib;
 
 ModuleLoader::ModuleLoader(SymbolTable& symbolTable,
                            DiagnosticEngine& diag,
-                           const std::vector<std::string>& libraryPaths)
-    : symbolTable(symbolTable), diag(diag), libraryPaths(libraryPaths) {}
+                           const std::vector<std::string>& extraLibraryPaths)
+    : symbolTable(symbolTable), diag(diag) {
+    namespace fs = std::filesystem;
+
+    // 1. Local project (future FDLang package manager)
+    std::error_code ec;
+    fs::path cwd = fs::current_path(ec);
+    if (!ec) {
+        searchPaths.push_back((cwd / ".fd_modules").string());
+        // For development convenience:
+        searchPaths.push_back((cwd / "lib").string());
+    }
+
+    // 2. Command Line (extra paths passed via CompilerSession)
+    for (const auto& path : extraLibraryPaths) {
+        searchPaths.push_back(path);
+    }
+
+    // 3. Environment Variable
+    if (const char* envPath = std::getenv("MELLIS_PATH")) {
+        searchPaths.push_back(envPath);
+    }
+
+    // 4. Sysroot (Default Fallback)
+    std::string exePath = OSUtils::getExecutablePath();
+    std::string sysroot = OSUtils::getParentDirectory(exePath, 2); // go up from bin/
+    searchPaths.push_back((fs::path(sysroot) / "lib").string());
+    // Also add next to the executable (for simple layout: mellis.exe and lib/ in same dir)
+    searchPaths.push_back((fs::path(OSUtils::getParentDirectory(exePath, 1)) / "lib").string());
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public API
@@ -66,13 +97,22 @@ ScopeID ModuleLoader::loadModule(std::string_view moduleName, SourceLocation loc
 
 std::string ModuleLoader::findMLibFile(std::string_view moduleName) const {
     std::string filename = std::string(moduleName) + ".mlib";
-    for (const auto& dir : libraryPaths) {
-        std::string full = dir + "/" + filename;
-        std::ifstream probe(full, std::ios::binary);
-        if (probe.good()) return full;
+    for (const auto& dir : searchPaths) {
+        // Simple concatenation. In production, use std::filesystem::path.
+        std::string fullPath = dir;
+        if (!fullPath.empty() && fullPath.back() != '/' && fullPath.back() != '\\') {
+            fullPath += "/";
+        }
+        fullPath += filename;
+
+        // Use OSUtils instead of fstream to just check existence, it's faster
+        if (OSUtils::fileExists(fullPath)) {
+            return fullPath;
+        }
     }
     return "";
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Binary Parsing — Header + Metadata Sections (Lazy Load)
