@@ -1,5 +1,6 @@
 #include "mellis/MiddleEnd/SymbolTable.h"
 #include <cassert>
+#include <cstring>
 
 namespace fl {
 
@@ -53,6 +54,19 @@ ScopeID SymbolTable::createScope(ScopeKind kind, ScopeID parentId) {
 }
 
 // =============================================================================
+// Virtual Scope (External Module Support)
+// =============================================================================
+
+ScopeID SymbolTable::createVirtualModuleScope(std::string_view moduleName) {
+    // Virtual scopes are isolated — no parent, no scope-chain walk.
+    // They are accessed only by explicit lookupInScope(virtualScopeID).
+    (void)moduleName; // Name is informational; ID is the canonical key
+    ScopeID newId = static_cast<ScopeID>(scopes_.size());
+    scopes_.push_back(Scope{newId, kInvalidScopeID, {}, ScopeKind::Module, ScopeBindings{}});
+    return newId;
+}
+
+// =============================================================================
 // Symbol Declaration
 // =============================================================================
 
@@ -78,6 +92,31 @@ SymbolID SymbolTable::declareSymbol(const Identifier& name,
     // Precondition: caller verified no duplicate via containsInScope().
     scopes_[scope].bindings.emplace(name, newId);
 
+    return newId;
+}
+
+SymbolID SymbolTable::declareExternalSymbol(const Identifier& name,
+                                             SymbolKind        kind,
+                                             ScopeID           virtualScope,
+                                             uint32_t          mlibSymbolID,
+                                             const uint8_t     moduleUUID[16]) {
+    assert(virtualScope < scopes_.size() && "declareExternalSymbol: invalid virtualScope");
+
+    SymbolID newId = static_cast<SymbolID>(arena_.size());
+    arena_.push_back(Symbol{
+        /* id              = */ newId,
+        /* declaredInScope = */ virtualScope,
+        /* name            = */ name,
+        /* kind            = */ kind,
+        /* location        = */ SourceLocation::invalid(),
+        /* decl            = */ nullptr
+    });
+    Symbol& sym = arena_.back();
+    sym.isExternal   = true;
+    sym.mlibSymbolID = mlibSymbolID;
+    std::memcpy(sym.externalModuleID, moduleUUID, 16);
+
+    scopes_[virtualScope].bindings.emplace(name, newId);
     return newId;
 }
 

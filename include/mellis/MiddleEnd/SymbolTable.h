@@ -63,6 +63,11 @@ public:
     /// @param parentId The enclosing scope. Pass kInvalidScopeID only for global.
     ScopeID createScope(ScopeKind kind, ScopeID parentId);
 
+    /// Create a virtual scope for an external module loaded from .mlib.
+    /// It does not have a parent scope (parentId = kInvalidScopeID).
+    ScopeID createVirtualModuleScope(std::string_view moduleName);
+
+
     // ── Symbol Declaration ────────────────────────────────────────────────────
 
     /// Declare a new symbol in the given scope.
@@ -82,6 +87,15 @@ public:
                            ScopeID           scope,
                            SourceLocation    location,
                            ASTNode*          decl = nullptr);
+
+    /// Declare a symbol loaded from an external .mlib module.
+    /// This bypasses AST nodes and sets up the external linkage fields.
+    SymbolID declareExternalSymbol(const Identifier& name,
+                                   SymbolKind        kind,
+                                   ScopeID           virtualScope,
+                                   uint32_t          mlibSymbolID,
+                                   const uint8_t     moduleUUID[16]);
+
 
     // ── Lookup: Chain Walk ────────────────────────────────────────────────────
 

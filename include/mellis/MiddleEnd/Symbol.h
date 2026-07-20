@@ -51,6 +51,7 @@ enum class SymbolKind : uint8_t {
     Module,       // mod m
     Namespace,    // Logical grouping
     Alias,        // use foo::bar
+    ExternalModule, // Virtual scope for loaded .mlib
 };
 
 // =============================================================================
@@ -111,6 +112,11 @@ struct Symbol {
     SymbolID       aliasTo = kInvalidSymbolID;
     std::string    mangledName;
     uint16_t       declaredDepth = 0; // The function depth where this symbol was declared (used for closure capture analysis)
+    
+    // For external symbols loaded from .mlib
+    bool           isExternal = false;
+    uint32_t       mlibSymbolID = 0;
+    uint8_t        externalModuleID[16] = {0}; // UUID of the module
 };
 
 // =============================================================================

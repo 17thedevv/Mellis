@@ -10,6 +10,7 @@
 #include "mellis/FrontEnd/MacroResolver.h"
 #include "mellis/FrontEnd/MacroValidator.h"
 #include "mellis/FrontEnd/MacroExpander.h"
+#include "mellis/MLib/ModuleLoader.h"
 #include "mellis/MiddleEnd/Resolver.h"
 #include "mellis/MiddleEnd/MatchAnalyzer.h"
 #include "mellis/MiddleEnd/MVIRGenerator.h"
@@ -65,7 +66,8 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     
     // ── Phase 1.3: Import & Macro Resolution ─────────────────────
     if (verbose) std::cout << "[1.3] Phan giai Import & Macro..." << std::endl;
-    ImportResolver importResolver(diag_);
+    ModuleLoader moduleLoader(symbolTable_, diag_, libraryPaths_);
+    ImportResolver importResolver(diag_, symbolTable_, moduleLoader);
     MacroResolver macroResolver(macroRegistry, diag_);
     if (ast) {
         auto* prog = dynamic_cast<ProgramNode*>(ast.get());

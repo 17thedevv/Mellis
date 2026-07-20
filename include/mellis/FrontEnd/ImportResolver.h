@@ -4,13 +4,20 @@
 #include "mellis/Support/Diagnostic.h"
 #include "mellis/AST/ProgramNode.h"
 #include "mellis/AST/DeclNode.h"
+#include "mellis/MLib/ModuleLoader.h"
+#include "mellis/MiddleEnd/SymbolTable.h"
+#include "mellis/MiddleEnd/ScopeStack.h"
+#include <vector>
+#include <string_view>
 
 namespace fl {
 
 class ImportResolver : public ASTVisitor {
 public:
-    ImportResolver(DiagnosticEngine& diag)
-        : diag_(diag) {}
+    ImportResolver(DiagnosticEngine& diag,
+                   SymbolTable& symbolTable,
+                   ModuleLoader& moduleLoader)
+        : diag_(diag), symbolTable_(symbolTable), moduleLoader_(moduleLoader) {}
 
     void resolve(ProgramNode& program) {
         program.accept(*this);
@@ -76,6 +83,12 @@ public:
 
 private:
     DiagnosticEngine& diag_;
+    SymbolTable& symbolTable_;
+    ModuleLoader& moduleLoader_;
+
+    // Track the current module scope for path resolution
+    // (mirrors the scope stack maintained by Resolver in Pass 1)
+    ScopeID currentScope_ = 0; // global scope
 };
 
 } // namespace fl

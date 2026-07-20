@@ -73,6 +73,7 @@ add_executable(mellis
     ${MIDDLEEND_SRC}
     ${BACKEND_SRC}
     ${SUPPORT_SRC}
+    ${MLIB_SRC}
 
     src/Core/SourceManager.cpp
     src/Core/CompilerSession.cpp
@@ -183,6 +184,18 @@ add_executable(test_mlib
 )
 target_include_directories(test_mlib PRIVATE include)
 add_test(NAME MLibTest COMMAND test_mlib)
+
+# ── test_module_loader ────────────────────────────────────────────────────────
+add_executable(test_module_loader
+    tests/test_module_loader.cpp
+    ${MLIB_SRC}
+    src/MiddleEnd/SymbolTable.cpp
+    src/MiddleEnd/MVIR.cpp
+    src/Core/SourceManager.cpp
+    src/Support/Diagnostic.cpp
+)
+target_include_directories(test_module_loader PRIVATE include)
+add_test(NAME ModuleLoaderTest COMMAND test_module_loader)
 
 # ── test_cfg ──────────────────────────────────────────────────────────
 add_executable(test_cfg
