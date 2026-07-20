@@ -17,7 +17,7 @@
 
 namespace fl {
 
-CompilerSession::CompilerSession() : sourceManager_(diag_) {}
+CompilerSession::CompilerSession() : sourceManager_(diag_) { diag_.setSourceManager(&sourceManager_); }
 CompilerSession::~CompilerSession() = default;
 
 bool CompilerSession::compile(const std::string& filepath, bool verbose, int optLevel) {

@@ -32,6 +32,10 @@
 #include "mellis/Core/SourceLocation.h"
 #include <string>
 #include <vector>
+
+namespace fl {
+class SourceManager;
+} // namespace fl
 #include <cstddef>
 
 namespace fl {
@@ -77,6 +81,11 @@ struct Diagnostic {
 /// Passes receive a DiagnosticEngine& — never a pointer or copy.
 class DiagnosticEngine {
 public:
+    DiagnosticEngine() = default;
+    
+    // Connect SourceManager for rich diagnostics (fetching source snippets)
+    void setSourceManager(const SourceManager* sm) { sourceMgr_ = sm; }
+
     // ── Reporting API ─────────────────────────────────────────────────────────
 
     /// Generic report — prefer the typed helpers below.
@@ -125,6 +134,7 @@ public:
 
 private:
     std::vector<Diagnostic> diagnostics_;
+    const SourceManager* sourceMgr_ = nullptr;
     size_t errorCount_   = 0;
     size_t warningCount_ = 0;
 };
