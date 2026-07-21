@@ -586,7 +586,7 @@ void MVIRGenerator::visit(UnaryExpr& node) {
         mvir::LocalId dest = nextLocal();
         currentBlock_->instructions.push_back(std::make_unique<mvir::UnaryInst>(dest, mvir::UnaryOp::Negate, val));
         lastEvaluatedOperand_ = mvir::Operand(dest);
-    } else if (node.op == UnaryOp::BitNot) {
+    } else if (node.op == UnaryOp::BitNot || node.op == UnaryOp::Not) {
         mvir::Operand val = evaluateRValue(*node.operand);
         mvir::LocalId dest = nextLocal();
         currentBlock_->instructions.push_back(std::make_unique<mvir::UnaryInst>(dest, mvir::UnaryOp::BitNot, val));
