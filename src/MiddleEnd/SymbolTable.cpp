@@ -25,9 +25,9 @@ SymbolTable::SymbolTable() {
     });
 
     const char* builtins[] = {
-        "u8", "u16", "u32", "u64",
-        "i8", "i16", "i32", "i64",
-        "f32", "f64", "bool", "char", "str"
+        "uint_8", "uint_16", "uint_32", "uint_64", "uint_128",
+        "int_8", "int_16", "int_32", "int_64", "int_128",
+        "float_32", "float_64", "bool", "char", "str"
     };
     for (const char* name : builtins) {
         declareSymbol(Identifier(std::string_view(name)), SymbolKind::TypeAlias, 0, SourceLocation::invalid(), nullptr);

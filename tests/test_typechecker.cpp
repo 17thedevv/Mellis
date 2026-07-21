@@ -322,6 +322,40 @@ void test22_array_index() {
     std::cout << "[OK] test22_array_index\n";
 }
 
+void test23_function_overloading() {
+    auto r = runTypeChecker(R"(
+        fn foo(a: int_32) -> int_32 { return a; }
+        fn foo(a: float_32) -> float_32 { return a; }
+        
+        fn main() {
+            dec x: int_32 = foo(10);
+            dec y: float_32 = foo(10.5);
+        }
+    )");
+    if (!r.ok) {
+        std::cout << "[FAIL] test23_function_overloading: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test23_function_overloading\n";
+}
+
+void test24_function_overloading_ambiguous() {
+    auto r = runTypeChecker(R"(
+        fn bar(a: int_32, b: float_32) -> int_32 { return a; }
+        fn bar(a: int_32, b: int_32) -> float_32 { return 0.0; }
+        
+        fn main() {
+            dec x: int_32 = bar(10, 10);
+            dec y = bar(10); // Error: no match
+        }
+    )", true); // expect error
+    if (!r.ok) {
+        std::cout << "[FAIL] test24_function_overloading_ambiguous: " << r.err << "\n";
+        exit(1);
+    }
+    std::cout << "[OK] test24_function_overloading_ambiguous\n";
+}
+
 int main() {
     std::cout << "========================================\n";
     std::cout << "  MELLIS TYPECHECKER TESTS\n";
@@ -342,6 +376,8 @@ int main() {
     test20_method_call_invalid();
     test21_unary_deref();
     test22_array_index();
+    test23_function_overloading();
+    test24_function_overloading_ambiguous();
 
     std::cout << "============================\n";
     std::cout << "All typechecker tests passed!\n";
