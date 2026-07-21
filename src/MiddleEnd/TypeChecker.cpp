@@ -11,6 +11,8 @@
 #include <typeinfo>
 #include <vector>
 
+#include "mellis/MiddleEnd/Mangle.h"
+
 namespace fl {
 
 struct UnsafeContextGuard {
@@ -133,7 +135,8 @@ bool TypeChecker::check(ASTNode* root) {
             for (size_t i = 0; i < node.fields.size(); ++i) {
                 auto& field = node.fields[i];
                 mutSt->fieldIndices[std::string(field->name)] = i;
-                field->symbolId = table.lookup(Identifier(field->name), node.bodyScopeId).value_or(kInvalidSymbolID);
+                auto optId = table.lookup(Identifier(field->name), node.bodyScopeId);
+                field->symbolId = optId.empty() ? kInvalidSymbolID : optId[0];
                 if (field->symbolId != kInvalidSymbolID) {
                     typeTable[field->symbolId] = evaluateTypeNode(field->type.get());
                 }
@@ -178,6 +181,25 @@ bool TypeChecker::check(ASTNode* root) {
               }
               typeTable[node.symbolId] = ctx.getFunctionType(std::move(paramNames), std::move(paramTypes), retType, false, node.isVariadic);
 
+            // Mangle name if overloaded, and check for extern overload error
+            auto& sym = table.getMutableSymbol(node.symbolId);
+            auto existingSyms = table.lookupInScope(Identifier(node.name), sym.declaredInScope);
+            
+            if (existingSyms.size() > 1) {
+                bool hasExtern = false;
+                for (SymbolID sid : existingSyms) {
+                    if (table.getSymbol(sid).isExternal) hasExtern = true;
+                }
+                if (hasExtern) {
+                    diag.error(node.loc, "Cannot overload external function '" + std::string(node.name) + "'");
+                }
+                
+                if (!sym.isExternal && std::string(node.name) != "main") {
+                    if (auto* fnTy = dynamic_cast<const FunctionType*>(typeTable[node.symbolId])) {
+                        sym.mangledName = Mangle::mangleOverloadedFunction(node.name, fnTy->paramTypes, table);
+                    }
+                }
+            }
             
             // Register methods from generic bounds
             for (auto& gp : node.genericParams) {
@@ -268,8 +290,8 @@ bool TypeChecker::check(ASTNode* root) {
             if (!selfType) return;
 
             auto optSelfId = table.lookup(Identifier(std::string("Self")), node.bodyScopeId);
-            if (optSelfId) {
-                typeTable[*optSelfId] = selfType;
+            if (!optSelfId.empty()) {
+                typeTable[optSelfId[0]] = selfType;
             }
             
             // Register methods for Generic Params in Impl
@@ -840,8 +862,9 @@ bool TypeChecker::check(ASTNode* root) {
             }
         }
         void visit(IdentifierExpr& node) override {
-            if (node.resolvedSymbol != kInvalidSymbolID) {
-                const Type* baseType = typeTable[node.resolvedSymbol];
+            if (node.overloadCandidates.size() == 1) {
+                SymbolID resolvedSymbol = node.overloadCandidates[0];
+                const Type* baseType = typeTable[resolvedSymbol];
                 
                 const EnumType* enumTy = dynamic_cast<const EnumType*>(baseType);
 
@@ -876,6 +899,9 @@ bool TypeChecker::check(ASTNode* root) {
                 }
                 
                 node.inferredType = baseType;
+            } else if (node.overloadCandidates.size() > 1) {
+                // Type is unknown until we resolve the overload in CallExpr
+                node.inferredType = ctx.getUnknown();
             } else {
                 node.inferredType = ctx.getUnknown();
             }
@@ -936,12 +962,56 @@ bool TypeChecker::check(ASTNode* root) {
             node.inferredType = ctx.getInferenceVar(ctx.newVar());
 
             if (auto* ident = dynamic_cast<IdentifierExpr*>(node.callee.get())) {
-                if (ident->resolvedSymbol != kInvalidSymbolID) {
-                    const auto& sym = table.getSymbol(ident->resolvedSymbol);
+                if (ident->overloadCandidates.size() > 1) {
+                    std::vector<SymbolID> validCandidates;
+                    for (SymbolID candidate : ident->overloadCandidates) {
+                        const Type* candType = typeTable[candidate];
+                        if (auto* fnTy = dynamic_cast<const FunctionType*>(candType)) {
+                            if (fnTy->paramTypes.size() != argTypes.size() && !fnTy->isVariadic) continue;
+                            if (fnTy->isVariadic && fnTy->paramTypes.size() > argTypes.size()) continue;
+
+                            bool match = true;
+                            for (size_t i = 0; i < argTypes.size(); ++i) {
+                                const Type* pTy = (fnTy->isVariadic && i >= fnTy->paramTypes.size()) ? fnTy->paramTypes.back() : fnTy->paramTypes[i];
+                                const Type* aTy = ctx.unificationTable.deepResolve(argTypes[i], ctx);
+                                if (aTy->getKind() == TypeKind::InferenceVar) continue; 
+                                if (aTy->getKind() == TypeKind::Unknown) { match = false; break; }
+                                if (pTy->equals(aTy)) continue;
+                                if (aTy->getKind() == TypeKind::Primitive && static_cast<const PrimitiveType*>(aTy)->builtinKind == BuiltinKind::Str) {
+                                    if (auto* ptr = dynamic_cast<const PointerType*>(pTy)) {
+                                        if (auto* prim = dynamic_cast<const PrimitiveType*>(ptr->pointee)) {
+                                            if (prim->builtinKind == BuiltinKind::I8) continue;
+                                        }
+                                    }
+                                }
+                                match = false;
+                                break;
+                            }
+                            if (match) validCandidates.push_back(candidate);
+                        }
+                    }
+
+                    if (validCandidates.size() == 1) {
+                        ident->overloadCandidates = { validCandidates[0] };
+                    } else if (validCandidates.size() > 1) {
+                        diag.error(node.loc, "Ambiguous call to overloaded function");
+                    } else {
+                        diag.error(node.loc, "No matching function for call");
+                    }
+                }
+
+                if (ident->overloadCandidates.size() == 1) {
+                    SymbolID resolvedSymbol = ident->overloadCandidates[0];
+                    node.resolvedFn = resolvedSymbol;
+                    const auto& sym = table.getSymbol(resolvedSymbol);
+
+                    // Update inferred type now that overload is resolved
+                    ident->inferredType = typeTable[resolvedSymbol];
+                    node.callee->inferredType = ident->inferredType;
 
                     // ── External Symbol path (loaded from .mlib) ──────────────
                     if (sym.isExternal && metadataCache) {
-                        const Type* extType = metadataCache->getType(ident->resolvedSymbol);
+                        const Type* extType = metadataCache->getType(resolvedSymbol);
                         if (extType && extType->getKind() != TypeKind::Unknown) {
                             // The cache has the full FunctionType: use it directly.
                             ident->inferredType = extType;

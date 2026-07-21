@@ -83,7 +83,7 @@ enum class ScopeKind : uint8_t {
 //   bindings.find("x")           — O(1), zero allocation
 //   bindings.find(some_sv)       — O(1), zero allocation
 // =============================================================================
-using ScopeBindings = std::unordered_map<Identifier, SymbolID,
+using ScopeBindings = std::unordered_multimap<Identifier, SymbolID,
                                          IdentifierHash, IdentifierEqual>;
 
 // =============================================================================

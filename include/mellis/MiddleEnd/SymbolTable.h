@@ -102,10 +102,10 @@ public:
     /// Walk the scope chain from fromScope toward global, return first match.
     /// Returns nullopt if not found anywhere in the chain.
     /// This implements shadowing: inner declarations shadow outer ones.
-    std::optional<SymbolID> lookup(std::string_view name, ScopeID fromScope) const;
+    std::vector<SymbolID> lookup(std::string_view name, ScopeID fromScope) const;
 
     /// Overload accepting Identifier directly (avoids string construction).
-    std::optional<SymbolID> lookup(const Identifier& name, ScopeID fromScope) const;
+    std::vector<SymbolID> lookup(const Identifier& name, ScopeID fromScope) const;
 
     // ── Lookup: Single Scope (no chain walk) ──────────────────────────────────
 
@@ -117,8 +117,8 @@ public:
 
     /// Lookup within a single scope (no chain walk).
     /// Returns nullopt if not found in that specific scope.
-    std::optional<SymbolID> lookupInScope(std::string_view name, ScopeID scope) const;
-    std::optional<SymbolID> lookupInScope(const Identifier& name, ScopeID scope) const;
+    std::vector<SymbolID> lookupInScope(std::string_view name, ScopeID scope) const;
+    std::vector<SymbolID> lookupInScope(const Identifier& name, ScopeID scope) const;
 
     // ── Direct Access by ID ───────────────────────────────────────────────────
 

@@ -75,7 +75,7 @@ class IdentifierExpr : public ExprNode {
 public:
     std::vector<std::string_view> segments;
     std::vector<std::unique_ptr<TypeNode>> genericArgs;
-    SymbolID symbolId = kInvalidSymbolID;
+    std::vector<SymbolID> overloadCandidates;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };
@@ -118,6 +118,7 @@ public:
     std::vector<std::unique_ptr<TypeNode>> genericArgs;
     std::vector<const Type*>               inferredGenericArgs;
     std::vector<CallArgNode>               args;
+    std::vector<SymbolID> overloadCandidates;
     SymbolID resolvedFn = kInvalidSymbolID;
     bool isClosureCall = false; // Set by TypeChecker if calling a closure struct
     void accept(ASTVisitor& v) override;
@@ -131,6 +132,7 @@ public:
     std::vector<std::unique_ptr<TypeNode>> genericArgs;
     std::vector<const Type*>               inferredGenericArgs;
     std::vector<CallArgNode>               args;
+    std::vector<SymbolID> overloadCandidates;
     SymbolID resolvedFn = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;

@@ -124,5 +124,14 @@ std::string mangleStruct(std::string_view baseName, const std::vector<const Type
     return out;
 }
 
+std::string mangleOverloadedFunction(std::string_view baseName, const std::vector<const Type*>& paramTypes, const SymbolTable& symTable) {
+    std::string out(baseName);
+    for (const auto* arg : paramTypes) {
+        out += "_";
+        out += typeToString(arg, symTable);
+    }
+    return out;
+}
+
 } // namespace Mangle
 } // namespace fl

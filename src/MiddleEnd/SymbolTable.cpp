@@ -124,7 +124,7 @@ SymbolID SymbolTable::declareExternalSymbol(const Identifier& name,
 // Lookup: Chain Walk
 // =============================================================================
 
-std::optional<SymbolID> SymbolTable::lookup(std::string_view name,
+std::vector<SymbolID> SymbolTable::lookup(std::string_view name,
                                              ScopeID fromScope) const {
     ScopeID current = fromScope;
 
@@ -132,23 +132,23 @@ std::optional<SymbolID> SymbolTable::lookup(std::string_view name,
         assert(current < scopes_.size() && "lookup: corrupted scope chain");
         const Scope& scope = scopes_[current];
 
-        // MSVC C++17: unordered_map transparent lookup requires C++20.
-        // Construct Identifier explicitly for the find() call.
-        // Cost: one std::string construction per scope level per lookup.
-        // Future: upgrade to C++20 or use a custom hash map with C++17 find(string_view).
         Identifier key(name);
-        auto it = scope.bindings.find(key);
-        if (it != scope.bindings.end()) {
-            return it->second;
+        auto range = scope.bindings.equal_range(key);
+        if (range.first != range.second) {
+            std::vector<SymbolID> results;
+            for (auto it = range.first; it != range.second; ++it) {
+                results.push_back(it->second);
+            }
+            return results;
         }
 
         current = scope.parentId;
     }
 
-    return std::nullopt;
+    return {};
 }
 
-std::optional<SymbolID> SymbolTable::lookup(const Identifier& name,
+std::vector<SymbolID> SymbolTable::lookup(const Identifier& name,
                                              ScopeID fromScope) const {
     return lookup(name.view(), fromScope);
 }
@@ -167,18 +167,19 @@ bool SymbolTable::containsInScope(const Identifier& name, ScopeID scope) const {
     return containsInScope(name.view(), scope);
 }
 
-std::optional<SymbolID> SymbolTable::lookupInScope(std::string_view name,
+std::vector<SymbolID> SymbolTable::lookupInScope(std::string_view name,
                                                     ScopeID scope) const {
     assert(scope < scopes_.size() && "lookupInScope: invalid ScopeID");
     Identifier key(name);
-    auto it = scopes_[scope].bindings.find(key);
-    if (it != scopes_[scope].bindings.end()) {
-        return it->second;
+    auto range = scopes_[scope].bindings.equal_range(key);
+    std::vector<SymbolID> results;
+    for (auto it = range.first; it != range.second; ++it) {
+        results.push_back(it->second);
     }
-    return std::nullopt;
+    return results;
 }
 
-std::optional<SymbolID> SymbolTable::lookupInScope(const Identifier& name,
+std::vector<SymbolID> SymbolTable::lookupInScope(const Identifier& name,
                                                     ScopeID scope) const {
     return lookupInScope(name.view(), scope);
 }

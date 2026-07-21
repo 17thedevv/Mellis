@@ -109,7 +109,7 @@ void testFunctionAndControlFlow() {
         "        x = x + 1;\n"
         "    }\n"
         "    for (i in iter) {\n"
-        "        print i;\n"
+        "        dec _dummy = i;\n"
         "    }\n"
         "    return x;\n"
         "}"
@@ -130,7 +130,7 @@ void testFunctionAndControlFlow() {
 
     auto* body = funcDecl->body.get();
     assert(body != nullptr);
-    assert(body->body.size() == 5); // varDecl, ifStmt, whileStmt, forStmt, exprStmt (wait, I didn't implement return stmt in parser yet! Oh no, let's check `parseStatement`)
+    assert(body->body.size() == 5); // varDecl, ifStmt, whileStmt, forStmt, returnStmt
 
     std::cout << "[OK] testFunctionAndControlFlow passed!\n";
 }

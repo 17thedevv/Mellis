@@ -394,18 +394,20 @@ void ModuleLoader::loadGenericMetadata(const std::vector<uint8_t>& fileData,
             // 3. Inject into virtual scope or Impl list
             if (kind == GenericKind::Impl) {
                 auto* implNode = static_cast<ImplDeclNode*>(decl.get());
-                auto optSym = symbolTable.lookupInScope(name, virtualScope);
-                if (optSym) {
-                    injectedImpls_.push_back({*optSym, implNode});
+                auto optSyms = symbolTable.lookupInScope(name, virtualScope);
+                if (!optSyms.empty()) {
+                    injectedImpls_.push_back({optSyms[0], implNode});
                 } else {
                     diag.error(SourceLocation::invalid(), "Could not find target struct '" + name + "' in .mlib");
                 }
                 injectedGenerics_.push_back(std::move(decl));
             } else {
                 // For Function, Struct, Enum: find the symbol in virtualScope and update its AST node
-                auto optSym = symbolTable.lookupInScope(name, virtualScope);
-                if (optSym) {
-                    symbolTable.getMutableSymbol(*optSym).decl = decl.get();
+                auto optSyms = symbolTable.lookupInScope(name, virtualScope);
+                if (!optSyms.empty()) {
+                    for (auto id : optSyms) {
+                        symbolTable.getMutableSymbol(id).decl = decl.get();
+                    }
                 }
                 injectedGenerics_.push_back(std::move(decl));
             }

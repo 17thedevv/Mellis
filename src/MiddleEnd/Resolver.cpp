@@ -42,8 +42,24 @@ public:
         ScopeID currentScope = scopeStack.current();
 
         if (table.containsInScope(id, currentScope)) {
-            diag.error(loc, "Redeclaration of name '" + std::string(name) + "' in this scope.");
-            return kInvalidSymbolID;
+            if (kind == SymbolKind::Function || kind == SymbolKind::TraitMethod || kind == SymbolKind::Alias) {
+                auto existingSyms = table.lookupInScope(id, currentScope);
+                bool allFunctions = true;
+                for (SymbolID sid : existingSyms) {
+                    auto& s = table.getSymbol(sid);
+                    if (s.kind != SymbolKind::Function && s.kind != SymbolKind::TraitMethod && s.kind != SymbolKind::Alias) {
+                        allFunctions = false;
+                        break;
+                    }
+                }
+                if (!allFunctions) {
+                    diag.error(loc, "Redeclaration of name '" + std::string(name) + "' in this scope.");
+                    return kInvalidSymbolID;
+                }
+            } else {
+                diag.error(loc, "Redeclaration of name '" + std::string(name) + "' in this scope.");
+                return kInvalidSymbolID;
+            }
         }
 
         SymbolID symId = table.declareSymbol(id, kind, currentScope, loc, declNode);
@@ -59,30 +75,35 @@ public:
         return symId;
     }
 
-    SymbolID resolve(std::string_view name, SourceLocation loc) {
+    std::vector<SymbolID> resolve(std::string_view name, SourceLocation loc) {
         Identifier id(name);
         ScopeID currentScope = scopeStack.current();
 
         auto optSym = table.lookup(id, currentScope);
-        if (!optSym) {
+        if (optSym.empty()) {
             diag.error(loc, "Use of undeclared name '" + std::string(name) + "'.");
-            return kInvalidSymbolID;
+            return {};
         }
 
-        return *optSym;
+        return optSym;
     }
 
     
-    SymbolID resolvePath(const std::vector<std::string_view>& path, SourceLocation loc) {
-        if (path.empty()) return kInvalidSymbolID;
-        SymbolID currentSym = resolve(path[0], loc);
-        if (currentSym == kInvalidSymbolID) return currentSym;
+    std::vector<SymbolID> resolvePath(const std::vector<std::string_view>& path, SourceLocation loc) {
+        if (path.empty()) return {};
+        std::vector<SymbolID> currentSyms = resolve(path[0], loc);
+        if (currentSyms.empty()) return currentSyms;
 
         for (size_t i = 1; i < path.size(); ++i) {
+            if (currentSyms.size() > 1) {
+                diag.error(loc, "Ambiguous path '" + std::string(path[i-1]) + "'.");
+                return {};
+            }
+            SymbolID currentSym = currentSyms[0];
             auto& sym = table.getSymbol(currentSym);
             if (sym.kind != SymbolKind::Module && sym.kind != SymbolKind::Enum) {
                 diag.error(loc, "Symbol '" + std::string(path[i-1]) + "' is not a module or enum.");
-                return kInvalidSymbolID;
+                return {};
             }
             ScopeID nextScope = kInvalidScopeID;
             if (sym.kind == SymbolKind::Module) {
@@ -91,18 +112,18 @@ public:
                 nextScope = static_cast<EnumDeclNode*>(sym.decl)->bodyScopeId;
             }
             auto optNext = table.lookupInScope(Identifier(path[i]), nextScope);
-            if (!optNext) {
+            if (optNext.empty()) {
                 diag.error(loc, "Module/Enum '" + std::string(path[i-1]) + "' does not contain '" + std::string(path[i]) + "'.");
-                return kInvalidSymbolID;
+                return {};
             }
-            auto& nextSym = table.getSymbol(*optNext);
+            auto& nextSym = table.getSymbol(optNext[0]);
             if (sym.kind == SymbolKind::Module && !nextSym.isExported) {
                 diag.error(loc, "Symbol '" + std::string(path[i]) + "' is private.");
-                return kInvalidSymbolID;
+                return {};
             }
-            currentSym = *optNext;
+            currentSyms = optNext;
         }
-        return currentSym;
+        return currentSyms;
     }
 
     SymbolTable& table;
@@ -250,7 +271,12 @@ public:
     }
 
     void visit(ExternDeclNode& node) override { 
-        if (node.func) node.func->accept(*this);
+        if (node.func) {
+            node.func->accept(*this);
+            if (node.func->symbolId != kInvalidSymbolID) {
+                sm.table.getMutableSymbol(node.func->symbolId).isExternal = true;
+            }
+        }
     }
 
     void visit(TypeAliasDeclNode& node) override { 
@@ -354,12 +380,14 @@ class UseResolutionVisitor : public ASTVisitor {
         }
 
         if (tree.children.empty()) {
-            SymbolID target = sm.resolvePath(fullPath, tree.loc);
-            if (target != kInvalidSymbolID) {
-                std::string_view aliasName = tree.alias.empty() ? fullPath.back() : tree.alias;
-                SymbolID aliasId = sm.declare(aliasName, SymbolKind::Alias, tree.loc, nullptr);
-                if (aliasId != kInvalidSymbolID) {
-                    sm.table.getMutableSymbol(aliasId).aliasTo = target;
+            auto targets = sm.resolvePath(fullPath, tree.loc);
+            for (SymbolID target : targets) {
+                if (target != kInvalidSymbolID) {
+                    std::string_view aliasName = tree.alias.empty() ? fullPath.back() : tree.alias;
+                    SymbolID aliasId = sm.declare(aliasName, SymbolKind::Alias, tree.loc, nullptr);
+                    if (aliasId != kInvalidSymbolID) {
+                        sm.table.getMutableSymbol(aliasId).aliasTo = target;
+                    }
                 }
             }
         } else {
@@ -568,7 +596,12 @@ public:
 
     void visit(UseDeclNode& node) override { }
     void visit(ExternDeclNode& node) override { 
-        if (node.func) node.func->accept(static_cast<ASTVisitor&>(*this));
+        if (node.func) {
+            node.func->accept(*this);
+            if (node.func->symbolId != kInvalidSymbolID) {
+                sm.table.getMutableSymbol(node.func->symbolId).isExternal = true;
+            }
+        }
     }
     void visit(TypeAliasDeclNode& node) override { 
         if (node.aliasedType) node.aliasedType->accept(static_cast<TypeVisitor&>(*this));
@@ -648,30 +681,33 @@ public:
     
     void visit(IdentifierExpr& node) override { 
         if (!node.segments.empty()) {
-            SymbolID id = sm.resolvePath(node.segments, node.loc);
-            while (id != kInvalidSymbolID) {
-                auto& sym = sm.table.getSymbol(id);
-                if (sym.kind == SymbolKind::Alias) {
-                    id = sym.aliasTo;
-                } else {
-                    break;
+            std::vector<SymbolID> ids = sm.resolvePath(node.segments, node.loc);
+            std::vector<SymbolID> finalIds;
+            for (SymbolID id : ids) {
+                while (id != kInvalidSymbolID) {
+                    auto& sym = sm.table.getSymbol(id);
+                    if (sym.kind == SymbolKind::Alias) {
+                        id = sym.aliasTo;
+                    } else {
+                        break;
+                    }
                 }
-            }
-            node.resolvedSymbol = id; 
-            
-            if (id != kInvalidSymbolID) {
-                auto& sym = sm.table.getSymbol(id);
-                if (sym.kind == SymbolKind::Variable || sym.kind == SymbolKind::Parameter) {
-                    for (auto& pair : activeLambdas) {
-                        if (sym.declaredDepth < pair.first) {
-                            auto& caps = pair.second->capturedSymbols;
-                            if (std::find(caps.begin(), caps.end(), id) == caps.end()) {
-                                caps.push_back(id);
+                if (id != kInvalidSymbolID) {
+                    finalIds.push_back(id);
+                    auto& sym = sm.table.getSymbol(id);
+                    if (sym.kind == SymbolKind::Variable || sym.kind == SymbolKind::Parameter) {
+                        for (auto& pair : activeLambdas) {
+                            if (sym.declaredDepth < pair.first) {
+                                auto& caps = pair.second->capturedSymbols;
+                                if (std::find(caps.begin(), caps.end(), id) == caps.end()) {
+                                    caps.push_back(id);
+                                }
                             }
                         }
                     }
                 }
             }
+            node.overloadCandidates = finalIds; 
         }
     }
     
@@ -740,7 +776,10 @@ public:
     
     void visit(StructInitExpr& node) override { 
         if (!node.path.empty()) {
-            node.structId = sm.resolve(node.path[0], node.loc);
+            auto syms = sm.resolvePath(node.path, node.loc);
+            if (!syms.empty()) {
+                node.structId = syms[0];
+            }
         }
         for (auto& f : node.fields) {
             if (f.value) f.value->accept(static_cast<ASTVisitor&>(*this));
@@ -792,16 +831,19 @@ public:
     void visit(BuiltinTypeNode&) override { }
     void visit(NamedTypeNode& node) override { 
         if (!node.segments.empty()) {
-            SymbolID id = sm.resolve(node.segments[0], node.loc);
-            while (id != kInvalidSymbolID) {
-                auto& sym = sm.table.getSymbol(id);
-                if (sym.kind == SymbolKind::Alias) {
-                    id = sym.aliasTo;
-                } else {
-                    break;
+            auto ids = sm.resolve(node.segments[0], node.loc);
+            if (!ids.empty()) {
+                SymbolID id = ids[0];
+                while (id != kInvalidSymbolID) {
+                    auto& sym = sm.table.getSymbol(id);
+                    if (sym.kind == SymbolKind::Alias) {
+                        id = sym.aliasTo;
+                    } else {
+                        break;
+                    }
                 }
+                node.symbolId = id;
             }
-            node.symbolId = id;
         }
     }
     void visit(ReferenceTypeNode& node) override { if (node.inner) node.inner->accept(static_cast<TypeVisitor&>(*this)); }
@@ -833,8 +875,9 @@ public:
     }
     void visit(EnumPatternNode& node) override { 
         if (!node.path.empty()) {
-            SymbolID varId = sm.resolvePath(node.path, node.loc);
-            if (varId != kInvalidSymbolID) {
+            auto varIds = sm.resolvePath(node.path, node.loc);
+            if (!varIds.empty()) {
+                SymbolID varId = varIds[0];
                 auto sym = sm.table.getSymbol(varId);
                 if (sym.kind == SymbolKind::EnumVariant) {
                     node.variantSymbolId = varId;

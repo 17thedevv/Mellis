@@ -24,8 +24,8 @@ namespace fl {
 // Returns true if `name` is already declared as a Module in the global scope.
 static bool isLocalModule(SymbolTable& st, std::string_view name) {
     auto optSym = st.lookupInScope(name, /* global scope = */ 0);
-    if (!optSym) return false;
-    return st.getSymbol(*optSym).kind == SymbolKind::Module;
+    if (optSym.empty()) return false;
+    return st.getSymbol(optSym[0]).kind == SymbolKind::Module;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -38,7 +38,15 @@ void processLeaf(SymbolTable& st,
                  std::string_view localName,
                  SourceLocation loc) {
     Identifier aliasIdent(localName);
-    if (st.containsInScope(aliasIdent, currentScope)) return; // already declared
+    // For overloaded functions, we might need multiple aliases.
+    // For now, we just insert all of them. The resolver will handle ambiguity.
+    // We only skip if this EXACT targetID is already aliased in this scope.
+    auto existing = st.lookupInScope(aliasIdent, currentScope);
+    for (auto id : existing) {
+        if (st.getSymbol(id).kind == SymbolKind::Alias && st.getSymbol(id).aliasTo == targetID) {
+            return;
+        }
+    }
 
     SymbolID aliasID = st.declareSymbol(aliasIdent, SymbolKind::Alias,
                                         currentScope, loc, nullptr);
@@ -71,19 +79,26 @@ static void walkExternalTree(SymbolTable& st,
         std::string_view leafName = fullPath.back();
 
         auto optSym = st.lookupInScope(leafName, virtualScope);
-        if (!optSym) {
+        if (optSym.empty()) {
             diag.error(tree.loc, "Symbol '" + std::string(leafName)
                        + "' not found in external module.");
             return;
         }
 
-        if (!st.getSymbol(*optSym).isExported) {
+        bool anyExported = false;
+        std::string_view localName = tree.alias.empty() ? leafName : tree.alias;
+        for (auto symId : optSym) {
+            if (!st.getSymbol(symId).isExported) {
+                continue;
+            }
+            anyExported = true;
+            processLeaf(st, currentScope, symId, localName, tree.loc);
+        }
+
+        if (!anyExported) {
             diag.error(tree.loc, "Symbol '" + std::string(leafName) + "' is private.");
             return;
         }
-
-        std::string_view localName = tree.alias.empty() ? leafName : tree.alias;
-        processLeaf(st, currentScope, *optSym, localName, tree.loc);
     } else {
         for (const auto& child : tree.children) {
             walkExternalTree(st, diag, currentScope, virtualScope, child, fullPath);

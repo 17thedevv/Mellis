@@ -177,27 +177,27 @@ void testModuleLoaderBasic() {
 
     // Test: functions registered
     auto addSym = symbolTable.lookupInScope("add", scope);
-    assert(addSym.has_value());
-    assert(symbolTable.getSymbol(*addSym).kind == SymbolKind::Function);
-    assert(symbolTable.getSymbol(*addSym).isExternal == true);
+    assert(!addSym.empty());
+    assert(symbolTable.getSymbol(addSym[0]).kind == SymbolKind::Function);
+    assert(symbolTable.getSymbol(addSym[0]).isExternal == true);
 
     auto subSym = symbolTable.lookupInScope("sub", scope);
-    assert(subSym.has_value());
-    assert(symbolTable.getSymbol(*subSym).kind == SymbolKind::Function);
+    assert(!subSym.empty());
+    assert(symbolTable.getSymbol(subSym[0]).kind == SymbolKind::Function);
 
     // Test: types registered
     auto vecSym = symbolTable.lookupInScope("Vec", scope);
-    assert(vecSym.has_value());
-    assert(symbolTable.getSymbol(*vecSym).kind == SymbolKind::Struct);
-    assert(symbolTable.getSymbol(*vecSym).isExternal == true);
+    assert(!vecSym.empty());
+    assert(symbolTable.getSymbol(vecSym[0]).kind == SymbolKind::Struct);
+    assert(symbolTable.getSymbol(vecSym[0]).isExternal == true);
 
     // Test: traits registered
     auto ordSym = symbolTable.lookupInScope("Ord", scope);
-    assert(ordSym.has_value());
-    assert(symbolTable.getSymbol(*ordSym).kind == SymbolKind::Trait);
+    assert(!ordSym.empty());
+    assert(symbolTable.getSymbol(ordSym[0]).kind == SymbolKind::Trait);
 
     // Test: UUID stored correctly
-    const Symbol& addSymbol = symbolTable.getSymbol(*addSym);
+    const Symbol& addSymbol = symbolTable.getSymbol(addSym[0]);
     assert(addSymbol.externalModuleID[0] == 1);
     assert(addSymbol.externalModuleID[15] == 16);
 

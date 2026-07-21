@@ -20,6 +20,7 @@ std::string mangleFunction(std::string_view baseName, const std::vector<const Ty
 
 /// Mangles a struct or enum into a specialized name.
 std::string mangleStruct(std::string_view baseName, const std::vector<const Type*>& genericArgs, const SymbolTable& symTable);
+std::string mangleOverloadedFunction(std::string_view baseName, const std::vector<const Type*>& paramTypes, const SymbolTable& symTable);
 
 } // namespace Mangle
 } // namespace fl
