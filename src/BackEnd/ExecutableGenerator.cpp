@@ -150,16 +150,7 @@ bool ExecutableGenerator::generateExecutable(llvm::Module* llvmModule,
     // std::cout << "[ExeGen] Object file emitted." << std::endl;
 
     // 3. Link Object File into Executable
-    std::string exePath = OSUtils::getExecutablePath();
-    std::string libDir = OSUtils::getParentDirectory(exePath, 2) + "\\lib"; // Parent of bin is mellis root, then lib/
-    std::string portableRt = libDir + "\\mellis_rt.lib";
-    
-    std::string rtLibPath = OSUtils::getParentDirectory(exePath, 2) + "\\build\\Release\\mellis_rt.lib"; // Fallback to local dev build (absolute)
-    if (OSUtils::fileExists(portableRt)) {
-        rtLibPath = portableRt;
-    }
-    
-    std::vector<std::string> libs = { rtLibPath };
+    std::vector<std::string> libs;
     
     // Extract MLib Object Codes to .fd_obj
     if (!extraMLibs.empty()) {
