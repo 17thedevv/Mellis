@@ -1334,11 +1334,13 @@ void MVIRGenerator::visit(MatchExpr& node) {
     for (size_t i = 0; i < node.arms.size(); ++i) {
         armFailLabels.push_back(nextLabel("match_arm_fail_" + std::to_string(i)));
     }
+    
+    mvir::LabelId unreachableLbl = nextLabel("match_unreachable");
 
     for (size_t i = 0; i < node.arms.size(); ++i) {
         auto& arm = node.arms[i];
         mvir::LabelId armSuccessLbl = nextLabel("match_arm_success_" + std::to_string(i));
-        mvir::LabelId armFailLbl = (i + 1 < node.arms.size()) ? armFailLabels[i + 1] : endLbl; // If last arm fails, go to endLbl
+        mvir::LabelId armFailLbl = (i + 1 < node.arms.size()) ? armFailLabels[i + 1] : unreachableLbl;
         
         compilePattern(arm.pattern.get(), subj, armSuccessLbl, armFailLbl);
         
@@ -1360,12 +1362,13 @@ void MVIRGenerator::visit(MatchExpr& node) {
             terminateBlock(std::make_unique<mvir::JumpTerm>(endLbl));
         }
         
-        startBlock(armFailLbl); // Start the failure block for this arm, which the next arm will compile into!
+        if (i + 1 < node.arms.size()) {
+            startBlock(armFailLbl); // Start the failure block for this arm, which the next arm will compile into!
+        }
     }
     
-    if (currentBlock_->terminator == nullptr) {
-        terminateBlock(std::make_unique<mvir::JumpTerm>(endLbl));
-    }
+    startBlock(unreachableLbl);
+    terminateBlock(std::make_unique<mvir::UnreachableTerm>());
     
     startBlock(endLbl);
     if (!resultPtr.name.empty()) {

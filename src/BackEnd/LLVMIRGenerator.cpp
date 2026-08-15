@@ -26,11 +26,37 @@ bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
     for (const auto& tDecl : mvirModule->typeDecls) {
         std::string structName = tDecl.name.substr(1);
         llvm::StructType* st = structTypes_[structName];
-        std::vector<llvm::Type*> fields;
-        for (const auto& fType : tDecl.fields) {
-            fields.push_back(mapType(fType));
+        if (tDecl.isEnum) {
+            uint64_t maxPayloadSize = 0;
+            unsigned maxPayloadAlign = 1;
+            for (const auto& variant : tDecl.variants) {
+                std::vector<llvm::Type*> fieldTypes;
+                for (auto* fTy : variant) fieldTypes.push_back(mapType(fTy));
+                if (fieldTypes.empty()) continue;
+                llvm::StructType* tempStruct = llvm::StructType::get(context_, fieldTypes, false);
+                uint64_t size = module_.getDataLayout().getTypeAllocSize(tempStruct);
+                unsigned align = module_.getDataLayout().getABITypeAlign(tempStruct).value();
+                if (size > maxPayloadSize) maxPayloadSize = size;
+                if (align > maxPayloadAlign) maxPayloadAlign = align;
+            }
+            llvm::Type* payloadType = nullptr;
+            if (maxPayloadSize == 0) {
+                payloadType = llvm::StructType::get(context_); // empty struct
+            } else {
+                unsigned alignBits = maxPayloadAlign * 8;
+                if (alignBits > 64) alignBits = 64; // Fallback for very large alignments
+                llvm::Type* alignType = llvm::Type::getIntNTy(context_, alignBits);
+                uint64_t numElements = (maxPayloadSize + maxPayloadAlign - 1) / maxPayloadAlign;
+                payloadType = llvm::ArrayType::get(alignType, numElements);
+            }
+            st->setBody({llvm::Type::getInt32Ty(context_), payloadType});
+        } else {
+            std::vector<llvm::Type*> fields;
+            for (const auto& fType : tDecl.fields) {
+                fields.push_back(mapType(fType));
+            }
+            st->setBody(fields);
         }
-        st->setBody(fields);
     }
 
     // Pass 1: Declare all functions
