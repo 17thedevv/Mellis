@@ -11,32 +11,171 @@
 
 namespace fl {
 
-// Helper visitor to extract variant IDs covered by a pattern
-class CoveredVariantVisitor : public PatternVisitor {
-public:
-    std::unordered_set<SymbolID> coveredVariants;
-    bool hasCatchAll = false;
+namespace {
 
-    void visit(WildcardPatternNode&) override { hasCatchAll = true; }
-    void visit(LiteralPatternNode&) override {}
-    void visit(IdentifierPatternNode&) override { hasCatchAll = true; }
-    void visit(TuplePatternNode& node) override {
-        // For tuples, exhaustiveness is more complex. We skip deep tuple checking for MVP.
-    }
-    void visit(EnumPatternNode& node) override {
-        if (node.variantSymbolId != kInvalidSymbolID) {
-            coveredVariants.insert(node.variantSymbolId);
-        }
+enum class CtorKind { Wildcard, Literal, Tuple, EnumVariant };
+
+struct Constructor {
+    CtorKind kind;
+    std::string literalText;
+    SymbolID variantId = kInvalidSymbolID;
+    size_t arity = 0;
+
+    bool operator==(const Constructor& o) const {
+        if (kind != o.kind) return false;
+        if (kind == CtorKind::Literal) return literalText == o.literalText;
+        if (kind == CtorKind::EnumVariant) return variantId == o.variantId;
+        if (kind == CtorKind::Tuple) return arity == o.arity;
+        return true;
     }
 };
 
-MatchAnalyzer::MatchAnalyzer(SymbolTable& table, DiagnosticEngine& diag)
-    : table(table), diag(diag) {}
+struct Deconstructed {
+    Constructor ctor;
+    std::vector<PatternNode*> fields;
+};
+
+Deconstructed deconstruct(PatternNode* pat) {
+    if (!pat) return { Constructor{CtorKind::Wildcard}, {} };
+    if (dynamic_cast<WildcardPatternNode*>(pat) || dynamic_cast<IdentifierPatternNode*>(pat)) {
+        return { Constructor{CtorKind::Wildcard}, {} };
+    }
+    if (auto* lit = dynamic_cast<LiteralPatternNode*>(pat)) {
+        return { Constructor{CtorKind::Literal, std::string(lit->lit->rawText)}, {} };
+    }
+    if (auto* tup = dynamic_cast<TuplePatternNode*>(pat)) {
+        std::vector<PatternNode*> fields;
+        for (auto& e : tup->elements) fields.push_back(e.get());
+        return { Constructor{CtorKind::Tuple, "", kInvalidSymbolID, fields.size()}, fields };
+    }
+    if (auto* enm = dynamic_cast<EnumPatternNode*>(pat)) {
+        std::vector<PatternNode*> fields;
+        for (auto& f : enm->fields) fields.push_back(f.get());
+        return { Constructor{CtorKind::EnumVariant, "", enm->variantSymbolId, fields.size()}, fields };
+    }
+    return { Constructor{CtorKind::Wildcard}, {} };
+}
+
+using PatRow = std::vector<PatternNode*>;
+using PatMatrix = std::vector<PatRow>;
+
+PatMatrix filterMatrix(const PatMatrix& matrix, const Constructor& ctor) {
+    PatMatrix result;
+    for (const auto& row : matrix) {
+        if (row.empty()) continue;
+        PatternNode* head = row[0];
+        auto dec = deconstruct(head);
+        
+        if (dec.ctor.kind == CtorKind::Wildcard) {
+            PatRow newRow;
+            for (size_t i = 0; i < ctor.arity; ++i) newRow.push_back(nullptr);
+            for (size_t i = 1; i < row.size(); ++i) newRow.push_back(row[i]);
+            result.push_back(newRow);
+        } else if (dec.ctor == ctor) {
+            PatRow newRow = dec.fields;
+            for (size_t i = 1; i < row.size(); ++i) newRow.push_back(row[i]);
+            result.push_back(newRow);
+        }
+    }
+    return result;
+}
+
+bool isExhaustive(const PatMatrix& matrix, const std::vector<const Type*>& colTypes, SymbolTable& table, TypeChecker& typeChecker, std::vector<std::string>& missingPatterns) {
+    if (colTypes.empty()) return !matrix.empty();
+    if (matrix.empty()) {
+        missingPatterns.push_back("_");
+        return false;
+    }
+    
+    TypeContext& ctx = typeChecker.getContext();
+    const Type* headTy = colTypes[0];
+    const Type* resolvedTy = ctx.unificationTable.deepResolve(headTy, ctx);
+    
+    std::vector<const Type*> tailTypes;
+    for (size_t i = 1; i < colTypes.size(); ++i) tailTypes.push_back(colTypes[i]);
+    
+    if (auto* enumTy = dynamic_cast<const EnumType*>(resolvedTy)) {
+        auto sym = table.getSymbol(enumTy->enumSymbolId);
+        if (sym.kind == SymbolKind::Enum && sym.decl) {
+            auto* enumDecl = static_cast<EnumDeclNode*>(sym.decl);
+            std::vector<Constructor> allCtors;
+            for (auto& var : enumDecl->variants) {
+                allCtors.push_back(Constructor{CtorKind::EnumVariant, "", var->symbolId, var->fields.size()});
+            }
+            
+            bool allExhaustive = true;
+            for (size_t i = 0; i < allCtors.size(); ++i) {
+                const auto& ctor = allCtors[i];
+                PatMatrix filtered = filterMatrix(matrix, ctor);
+                
+                std::vector<const Type*> newColTypes;
+                for (auto& fDecl : enumDecl->variants[i]->fields) {
+                    newColTypes.push_back(typeChecker.typeOf(fDecl->symbolId));
+                }
+                newColTypes.insert(newColTypes.end(), tailTypes.begin(), tailTypes.end());
+                
+                std::vector<std::string> subMissing;
+                if (!isExhaustive(filtered, newColTypes, table, typeChecker, subMissing)) {
+                    allExhaustive = false;
+                    for (auto& m : subMissing) {
+                        std::string prefix = std::string(enumDecl->variants[i]->name);
+                        if (ctor.arity > 0) {
+                            if (m == "_") prefix += "(_)"; // simplified format
+                            else prefix += "(" + m + ")";
+                        }
+                        missingPatterns.push_back(prefix);
+                    }
+                }
+            }
+            return allExhaustive;
+        }
+    } else if (auto* tupTy = dynamic_cast<const TupleType*>(resolvedTy)) {
+        Constructor ctor{CtorKind::Tuple, "", kInvalidSymbolID, tupTy->elements.size()};
+        PatMatrix filtered = filterMatrix(matrix, ctor);
+        
+        std::vector<const Type*> newColTypes;
+        for (auto* eTy : tupTy->elements) newColTypes.push_back(eTy);
+        newColTypes.insert(newColTypes.end(), tailTypes.begin(), tailTypes.end());
+        
+        std::vector<std::string> subMissing;
+        if (!isExhaustive(filtered, newColTypes, table, typeChecker, subMissing)) {
+            for (auto& m : subMissing) missingPatterns.push_back("(" + m + ")");
+            return false;
+        }
+        return true;
+    }
+    
+    // Primitive types (requires wildcard)
+    PatMatrix filtered;
+    for (const auto& row : matrix) {
+        if (row.empty()) continue;
+        auto dec = deconstruct(row[0]);
+        if (dec.ctor.kind == CtorKind::Wildcard) {
+            PatRow newRow;
+            for (size_t i = 1; i < row.size(); ++i) newRow.push_back(row[i]);
+            filtered.push_back(newRow);
+        }
+    }
+    
+    std::vector<std::string> subMissing;
+    if (!isExhaustive(filtered, tailTypes, table, typeChecker, subMissing)) {
+        for (auto& m : subMissing) missingPatterns.push_back("_");
+        return false;
+    }
+    
+    return true;
+}
+
+} // namespace
+
+MatchAnalyzer::MatchAnalyzer(SymbolTable& table, TypeChecker& typeChecker, DiagnosticEngine& diag)
+    : table(table), typeChecker(typeChecker), diag(diag) {}
 
 bool MatchAnalyzer::analyze(ASTNode* root) {
     if (!root) return false;
+    hasError_ = false;
     root->accept(*this);
-    return true; // We don't track errors as a boolean return here, diag tracks it
+    return !hasError_;
 }
 
 void MatchAnalyzer::visit(ProgramNode& node) { for (auto& item : node.items) item->accept(*this); }
@@ -72,38 +211,25 @@ void MatchAnalyzer::visit(ComptimeStmtNode& node) { if (node.body) node.body->ac
 void MatchAnalyzer::visit(MatchExpr& node) {
     node.subject->accept(*this);
 
-    CoveredVariantVisitor visitor;
+    PatMatrix matrix;
     for (auto& arm : node.arms) {
-        if (arm.pattern) arm.pattern->accept(visitor);
+        if (arm.pattern) {
+            matrix.push_back({arm.pattern.get()});
+        }
         if (arm.body) arm.body->accept(*this);
     }
 
     if (node.subject->inferredType) {
-        if (auto* enumType = dynamic_cast<const EnumType*>(node.subject->inferredType)) {
-            auto sym = table.getSymbol(enumType->enumSymbolId);
-            if (sym.kind == SymbolKind::Enum && sym.decl) {
-                auto* enumDecl = static_cast<EnumDeclNode*>(sym.decl);
-                if (!visitor.hasCatchAll) {
-                    std::vector<std::string_view> missing;
-                    for (auto& variant : enumDecl->variants) {
-                        if (visitor.coveredVariants.find(variant->symbolId) == visitor.coveredVariants.end()) {
-                            missing.push_back(variant->name);
-                        }
-                    }
-                    if (!missing.empty()) {
-                        std::string missingStr = "";
-                        for (size_t i = 0; i < missing.size(); ++i) {
-                            missingStr += "`" + std::string(missing[i]) + "`";
-                            if (i < missing.size() - 1) missingStr += ", ";
-                        }
-                        diag.error(node.loc, "non-exhaustive patterns: " + missingStr + " not covered");
-                    }
-                }
+        std::vector<const Type*> colTypes = { node.subject->inferredType };
+        std::vector<std::string> missingPatterns;
+        if (!isExhaustive(matrix, colTypes, table, typeChecker, missingPatterns)) {
+            std::string missingStr = "";
+            for (size_t i = 0; i < missingPatterns.size(); ++i) {
+                missingStr += "`" + missingPatterns[i] + "`";
+                if (i < missingPatterns.size() - 1) missingStr += ", ";
             }
-        } else if (auto* primType = dynamic_cast<const PrimitiveType*>(node.subject->inferredType)) {
-            if (!visitor.hasCatchAll && primType->builtinKind != BuiltinKind::Void) {
-                diag.error(node.loc, "non-exhaustive patterns: `_` not covered");
-            }
+            diag.error(node.loc, "non-exhaustive patterns: " + missingStr + " not covered");
+            hasError_ = true;
         }
     }
 }
@@ -128,6 +254,7 @@ void MatchAnalyzer::visit(ArrayLiteralExpr& node) { for (auto& e : node.elements
 void MatchAnalyzer::visit(TupleLiteralExpr& node) { for (auto& e : node.elements) e->accept(*this); }
 void MatchAnalyzer::visit(StructInitExpr& node) { for (auto& f : node.fields) f.value->accept(*this); }
 void MatchAnalyzer::visit(LambdaExpr& node) { if (node.body) node.body->accept(*this); }
+void MatchAnalyzer::visit(TryExpr& node) { node.expr->accept(*this); }
 void MatchAnalyzer::visit(AwaitExpr& node) { node.expr->accept(*this); }
 
 } // namespace fl

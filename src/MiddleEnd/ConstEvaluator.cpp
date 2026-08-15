@@ -13,11 +13,18 @@ std::optional<int64_t> ConstEvaluator::evaluate(ExprNode* expr, SymbolTable* sym
     // 1. Trường hợp là số nguyên trực tiếp (Integer Literal)
     if (auto* lit = dynamic_cast<LiteralExpr*>(expr)) {
         if (lit->kind == LiteralKind::Integer) {
+            // Prefer explicitly-set variant values first
             if (auto* i64 = std::get_if<int64_t>(&lit->value)) {
                 return *i64;
             }
             if (auto* u64 = std::get_if<uint64_t>(&lit->value)) {
                 return static_cast<int64_t>(*u64);
+            }
+            // Fallback: Parser may only set rawText; parse it directly
+            if (!lit->rawText.empty()) {
+                try {
+                    return static_cast<int64_t>(std::stoull(std::string(lit->rawText)));
+                } catch (...) {}
             }
         }
         return std::nullopt;

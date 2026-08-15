@@ -18,7 +18,7 @@ MacroID MacroRegistry::registerMacro(const MacroDeclNode* node) {
     def.id = id;
     def.symbol = kInvalidSymbolID;
     def.module = kInvalidModuleID;
-    def.visibility = Visibility::Crate; // Default for now
+    def.visibility = Visibility::Internal; // Default for now
     def.strategy = ExpansionStrategy::Declarative; // We only support declarative right now
     def.templateAST = node;
 

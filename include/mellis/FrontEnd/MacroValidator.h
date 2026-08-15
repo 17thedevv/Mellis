@@ -46,6 +46,7 @@ public:
     void visit(MatchExpr& node) override;
     void visit(PlaceholderExpr& node) override;
     void visit(LambdaExpr& node) override;
+    void visit(TryExpr& node) override;
     void visit(AwaitExpr& node) override;
     void visit(SizeofExpr& node) override;
     void visit(AlignofExpr& node) override;
@@ -61,6 +62,7 @@ public:
     void visit(UnsafeStmtNode& node) override;
     void visit(ComptimeStmtNode& node) override;
     void visit(BuiltinTypeNode& node) override;
+    void visit(LifetimeNode& node) override;
     void visit(NamedTypeNode& node) override;
     void visit(ReferenceTypeNode& node) override;
     void visit(PointerTypeNode& node) override;

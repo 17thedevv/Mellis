@@ -32,6 +32,17 @@
 namespace fl {
 
 // =============================================================================
+// BorrowCheckStatus
+// =============================================================================
+enum class BorrowCheckStatus : uint8_t {
+    Unchecked,
+    Checking,
+    Checked,
+    Failed,
+    Skipped // For extern/FFI functions
+};
+
+// =============================================================================
 // SymbolKind — what a Symbol represents
 // =============================================================================
 enum class SymbolKind : uint8_t {
@@ -48,6 +59,7 @@ enum class SymbolKind : uint8_t {
     Impl,         // impl T for U
     TypeAlias,    // type X = Y;
     GenericParam, // <T>
+    Lifetime,     // <'a>
     Module,       // mod m
     Namespace,    // Logical grouping
     Alias,        // use foo::bar
@@ -108,7 +120,10 @@ struct Symbol {
     SourceLocation location;         // declaration site — for diagnostics
     ASTNode*       decl = nullptr;   // back-pointer to declaring AST node (non-owning)
                                      // e.g. VarDeclStmt*, FuncDecl* (future)
-    bool           isExported = false;
+    ExpansionID    expansionID = 0;
+    Visibility     visibility = Visibility::Internal;
+    ModuleID       moduleID = kInvalidModuleID;
+    PackageID      packageID = kInvalidPackageID;
     SymbolID       aliasTo = kInvalidSymbolID;
     std::string    mangledName;
     uint16_t       declaredDepth = 0; // The function depth where this symbol was declared (used for closure capture analysis)

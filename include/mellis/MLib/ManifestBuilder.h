@@ -29,16 +29,19 @@ public:
 private:
     StringTableBuilder& stringTable;
     
-    uint32_t nameStringID = 0;
-    uint32_t authorStringID = 0;
-    uint32_t versionStringID = 0;
-    uint32_t licenseStringID = 0;
+    std::string packageName;
+    std::string author;
+    std::string version;
+    std::string license;
     
-    std::vector<uint32_t> features; // feature string IDs
+    std::vector<std::string> features;
 
     struct DepInfo {
-        DependencyEntry entry;
-        std::vector<uint32_t> featureIDs;
+        uint8_t moduleUUID[16];
+        std::string version;
+        uint64_t moduleHash;
+        ImportMode importMode;
+        std::vector<std::string> featureStrs;
     };
     std::vector<DepInfo> dependencies;
 };

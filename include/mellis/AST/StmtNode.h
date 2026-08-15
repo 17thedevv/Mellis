@@ -63,6 +63,8 @@ public:
     ForKind kind;
     std::string_view               bindingName;
     SymbolID                       bindingId = kInvalidSymbolID;
+    SymbolID                       iterMethodId = kInvalidSymbolID;
+    SymbolID                       nextMethodId = kInvalidSymbolID;
     std::unique_ptr<ExprNode>      iterable;
     
     std::unique_ptr<ItemNode>      init;

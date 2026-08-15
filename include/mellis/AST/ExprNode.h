@@ -85,6 +85,7 @@ public:
     BinaryOp                  op;
     std::unique_ptr<ExprNode> left;
     std::unique_ptr<ExprNode> right;
+    SymbolID                  overloadedMethodId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };
@@ -161,6 +162,7 @@ public:
     std::unique_ptr<ExprNode> object;
     uint32_t                  index; // t.0 → 0, t.1 → 1
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class CastExpr : public ExprNode {
@@ -239,6 +241,15 @@ public:
     std::vector<SymbolID>                       capturedSymbols;
     SymbolID                                    generatedStructId = kInvalidSymbolID;
     SymbolID                                    generatedFuncId = kInvalidSymbolID;
+    void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
+};
+
+// Postfix `?` operator — desugars to match Ok(v) => v, Err(e) => return Err(e)
+// or match Some(v) => v, None => return None
+class TryExpr : public ExprNode {
+public:
+    std::unique_ptr<ExprNode> expr;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };

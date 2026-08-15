@@ -4,6 +4,7 @@
 #include "mellis/MLib/MLibFormat.h"
 #include "mellis/MLib/BinaryWriter.h"
 #include "mellis/MLib/StringTableBuilder.h"
+#include "mellis/MiddleEnd/SemanticSnapshot.h"
 #include <vector>
 #include <cstdint>
 #include <string>
@@ -14,6 +15,8 @@ namespace mlib {
 class MetadataBuilder {
 public:
     explicit MetadataBuilder(StringTableBuilder& stringTable);
+
+    void buildFromSnapshot(const SemanticSnapshot& snapshot);
 
     // Namespaces
     uint32_t addNamespace(const std::string& name, uint32_t parentNamespaceID = 0xFFFFFFFF);
@@ -39,10 +42,27 @@ public:
 private:
     StringTableBuilder& stringTable;
 
-    std::vector<NamespaceEntry> namespaces;
-    std::vector<TypeEntry> types;
-    std::vector<TraitEntry> traits;
-    std::vector<FunctionEntry> functions;
+    struct InternalNamespace {
+        std::string name;
+        NamespaceEntry entry;
+    };
+    struct InternalType {
+        std::string name;
+        TypeEntry entry;
+    };
+    struct InternalTrait {
+        std::string name;
+        TraitEntry entry;
+    };
+    struct InternalFunction {
+        std::string name;
+        FunctionEntry entry;
+    };
+
+    std::vector<InternalNamespace> namespaces;
+    std::vector<InternalType> types;
+    std::vector<InternalTrait> traits;
+    std::vector<InternalFunction> functions;
     std::vector<ImplEntry> impls;
 };
 

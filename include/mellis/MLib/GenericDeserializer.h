@@ -3,7 +3,7 @@
 
 #include "mellis/MLib/MLibFormat.h"
 #include "mellis/MLib/BinaryReader.h"
-#include "mellis/MiddleEnd/MVIR.h"
+#include "mellis/IR/MVIR.h"
 #include <vector>
 #include <memory>
 #include <optional>
@@ -20,6 +20,15 @@ public:
 
     // Lazy loads a specific Generic Function Package
     std::unique_ptr<mvir::Function> loadFunction(uint32_t functionID);
+
+    // Loads function AND returns the generic param metadata (for round-trip verification)
+    // Returns nullptr if not found. Fills outTypeParamIDs and outLifetimeParamIDs.
+    std::unique_ptr<mvir::Function> loadFunctionWithParams(
+        uint32_t functionID,
+        std::vector<uint32_t>& outTypeParamIDs,
+        std::vector<uint32_t>& outLifetimeParamIDs,
+        std::vector<uint32_t>& outConstraintIDs
+    );
 
 private:
     mvir::Operand deserializeOperand(BinaryReader& reader);

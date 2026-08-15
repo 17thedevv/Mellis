@@ -196,7 +196,7 @@ void ModuleLoader::parseMLibMetadata(const std::string& path,
                 break;
             case SectionType::GenericMetadata:
                 loadGenericMetadata(fileData, sections[i].offset, sections[i].size,
-                                    strings, virtualScope, moduleName);
+                                    strings, virtualScope, moduleName, moduleUUID);
                 break;
             default:
                 // GenericMVIR, ObjectCode, Debug, Dependency — skip (lazy load).
@@ -361,7 +361,8 @@ void ModuleLoader::loadGenericMetadata(const std::vector<uint8_t>& fileData,
                                        uint64_t sectionOffset, uint64_t sectionSize,
                                        const std::vector<char>& strings,
                                        ScopeID virtualScope,
-                                       std::string_view moduleName) {
+                                       std::string_view moduleName,
+                                       const uint8_t moduleUUID[16]) {
     if (sectionSize == 0) return;
 
     BinaryReader reader(fileData.data() + sectionOffset, sectionSize);
@@ -370,6 +371,7 @@ void ModuleLoader::loadGenericMetadata(const std::vector<uint8_t>& fileData,
         GenericKind kind = static_cast<GenericKind>(reader.readU8());
         std::string name = reader.readString();
         std::string rawSource = reader.readString();
+        std::cout << "[MLibLoader] Loading generic: " << name << " rawSource size=" << rawSource.size() << "\n";
 
         // 1. Replace $crate with actual moduleName
         std::string replacedSource;
@@ -408,6 +410,21 @@ void ModuleLoader::loadGenericMetadata(const std::vector<uint8_t>& fileData,
                     for (auto id : optSyms) {
                         symbolTable.getMutableSymbol(id).decl = decl.get();
                     }
+                } else {
+                    SymbolKind skind = SymbolKind::Function; // default
+                    if (kind == GenericKind::Function) skind = SymbolKind::Function;
+                    else if (kind == GenericKind::Struct) skind = SymbolKind::Struct;
+                    else if (kind == GenericKind::Enum) skind = SymbolKind::Enum;
+                    else if (kind == GenericKind::Trait) skind = SymbolKind::Trait;
+                    
+                    SymbolID newId = symbolTable.declareExternalSymbol(Identifier(name), skind, virtualScope, 0, moduleUUID);
+                    auto* d = decl.get();
+                    if (auto* fd = dynamic_cast<FunctionDeclNode*>(d)) fd->symbolId = newId;
+                    else if (auto* sd = dynamic_cast<StructDeclNode*>(d)) sd->symbolId = newId;
+                    else if (auto* ed = dynamic_cast<EnumDeclNode*>(d)) ed->symbolId = newId;
+                    else if (auto* td = dynamic_cast<TraitDeclNode*>(d)) td->symbolId = newId;
+                    
+                    symbolTable.getMutableSymbol(newId).decl = d;
                 }
                 injectedGenerics_.push_back(std::move(decl));
             }

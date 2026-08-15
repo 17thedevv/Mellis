@@ -51,17 +51,17 @@ LivenessInfo LivenessAnalyzer::computeLiveness(const mvir::Function& func) {
             std::unordered_set<std::string> in = out;
             
             if (auto* br = dynamic_cast<const mvir::BranchTerm*>(block->terminator.get())) {
-                if (auto* loc = std::get_if<mvir::LocalId>(&br->condition)) {
+                if (auto* loc = mvir::getLocalIf(br->condition)) {
                     in.insert(loc->name);
                 }
             } else if (auto* ret = dynamic_cast<const mvir::RetTerm*>(block->terminator.get())) {
                 if (ret->value) {
-                    if (auto* loc = std::get_if<mvir::LocalId>(&*ret->value)) {
+                    if (auto* loc = mvir::getLocalIf(*ret->value)) {
                         in.insert(loc->name);
                     }
                 }
             } else if (auto* sw = dynamic_cast<const mvir::SwitchTerm*>(block->terminator.get())) {
-                if (auto* loc = std::get_if<mvir::LocalId>(&sw->condition)) {
+                if (auto* loc = mvir::getLocalIf(sw->condition)) {
                     in.insert(loc->name);
                 }
             }
@@ -83,8 +83,7 @@ LivenessInfo LivenessAnalyzer::computeLiveness(const mvir::Function& func) {
                 else if (auto* call = dynamic_cast<const mvir::CallInst*>(inst)) {
                     if (call->dest) destName = call->dest->name;
                 }
-                else if (auto* idx = dynamic_cast<const mvir::IndexInst*>(inst)) destName = idx->dest.name;
-                else if (auto* fld = dynamic_cast<const mvir::FieldInst*>(inst)) destName = fld->dest.name;
+
                 else if (auto* cast = dynamic_cast<const mvir::CastInst*>(inst)) destName = cast->dest.name;
                 else if (auto* ext = dynamic_cast<const mvir::ExtractInst*>(inst)) destName = ext->dest.name;
                 else if (auto* tag = dynamic_cast<const mvir::TagInst*>(inst)) destName = tag->dest.name;
@@ -102,7 +101,7 @@ LivenessInfo LivenessAnalyzer::computeLiveness(const mvir::Function& func) {
                 }
                 
                 auto addUse = [&](const mvir::Operand& op) {
-                    if (auto* loc = std::get_if<mvir::LocalId>(&op)) {
+                    if (auto* loc = mvir::getLocalIf(op)) {
                         in.insert(loc->name);
                     }
                 };
@@ -116,8 +115,6 @@ LivenessInfo LivenessAnalyzer::computeLiveness(const mvir::Function& func) {
                     addUse(call->func);
                     for (auto& arg : call->args) addUse(arg);
                 }
-                else if (auto* idx = dynamic_cast<const mvir::IndexInst*>(inst)) { addUse(idx->base); addUse(idx->index); }
-                else if (auto* fld = dynamic_cast<const mvir::FieldInst*>(inst)) { addUse(fld->base); }
                 else if (auto* cast = dynamic_cast<const mvir::CastInst*>(inst)) { addUse(cast->value); }
                 else if (auto* ext = dynamic_cast<const mvir::ExtractInst*>(inst)) { addUse(ext->base); }
                 else if (auto* tag = dynamic_cast<const mvir::TagInst*>(inst)) { addUse(tag->base); }

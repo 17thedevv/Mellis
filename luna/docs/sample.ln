@@ -1,0 +1,99 @@
+import game // cả file game.ln
+import ui::panel
+import ui::label
+import ui::button
+
+namespace sys {
+    act print(s: str){
+        // hàm in ra chuỗi
+    }
+    Type List<T> {
+        data: T[];
+
+        len: int;
+
+        act getLen() -> int {
+            return this.len;
+        }
+    }
+    List<T>::new(data: T[]) -> List<T> {
+        l = alloc List<T>
+        l.data = data
+        l.len = data.getLen();// chưa biết cách lấy len của mảng 
+        return l
+    }
+}
+
+Type Player {
+    stat: PlayerStats;
+
+
+    // lỗi cú pháp
+    act create(stat: PlayerStats) -> Player {
+        p = alloc Player;
+        p.stat = stat;
+        return p;
+    }
+    act takedamage(dmg: int) -> void{
+        this.hp -= dmg
+        if this.hp <= 0 {
+            this.hp = 0
+        }
+    }
+}
+
+Player::create = (stat: PlayerStats) => {
+    p = alloc Player;
+    p.stat = stat;
+    return p;
+};
+
+// hoặc có thể viết
+Player::create(stat: PlayerStats) -> Player {
+    p = alloc Player;
+    p.stat = stat;
+    return p;
+}
+
+Type PlayerStats {
+    // lỗi cú pháp k đc khai báo classfunction trong class
+    act init(hp: int) -> PlayerStats{
+        s: PlayerStats = alloc PlayerStats;
+        s.hp = hp;
+        return s;
+    }
+    hp: int;
+}
+
+act add(a: int, b: int) -> int {
+    return a + b;
+}
+
+Player.attack = (dmg: int) => {
+    this.animator.play("attack");
+};
+
+act CharactorDie() {
+    print("die");
+}
+
+act Player.move(){
+    this.position.x += 2f;
+}
+
+
+
+Player.die = CharactorDie;
+
+act main(args: str[]){
+    let s =  PlayerStats::init(100);
+    let p: Player = Player::create(s);
+    p.attack(10);
+    p.move();
+    p.die();
+    sys::List<int> list;
+    list.push(1);
+    list.push(2);
+    list.push(3);
+    sys::print(list.getLen());
+}

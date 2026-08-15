@@ -58,7 +58,9 @@ static std::unique_ptr<TypeNode> typeToAST(const Type* type, const SymbolTable& 
 SymbolID MonomorphizationEngine::requestSpecialization(
     const FunctionDeclNode* genericTemplate,
     const std::vector<const Type*>& genericArgs,
-    SourceLocation loc
+    SourceLocation loc,
+    const ImplDeclNode* parentImpl,
+    const Type* selfType
 ) {
     if (currentDepth >= kMaxDepth) {
         diag.error(loc, "Maximum generic instantiation depth exceeded. Infinite recursion detected.");
@@ -81,6 +83,18 @@ SymbolID MonomorphizationEngine::requestSpecialization(
                     currentDepth--;
                     return kInvalidSymbolID;
                 }
+            }
+        }
+    }
+
+    // S7.4d Check BorrowCheckStatus
+    if (genericTemplate->symbolId != kInvalidSymbolID) {
+        auto status = symTable.getFunctionInfo(genericTemplate->symbolId).borrowCheckStatus;
+        if (status != BorrowCheckStatus::Checked && status != BorrowCheckStatus::Skipped) {
+            if (symTable.getSymbol(genericTemplate->symbolId).isExternal) {
+                diag.error(loc, "Cannot instantiate generic function that has not passed borrow checking.");
+                currentDepth--;
+                return kInvalidSymbolID;
             }
         }
     }
@@ -117,9 +131,9 @@ SymbolID MonomorphizationEngine::requestSpecialization(
     specializedAST->genericParams.clear(); // The new function is NO LONGER generic!
 
     // 7. Prepare Substitution Map
-    std::unordered_map<std::string, std::unique_ptr<TypeNode>> subs;
+    GenericSubstitution subs;
     for (size_t i = 0; i < genericTemplate->genericParams.size() && i < genericArgs.size(); ++i) {
-        subs[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+        subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
     }
 
     // 8. Run SubstitutionVisitor
@@ -175,9 +189,9 @@ SymbolID MonomorphizationEngine::requestStructSpecialization(
     specializedAST->name = stableMangledName;
     specializedAST->genericParams.clear();
 
-    std::unordered_map<std::string, std::unique_ptr<TypeNode>> subs;
+    GenericSubstitution subs;
     for (size_t i = 0; i < genericTemplate->genericParams.size() && i < genericArgs.size(); ++i) {
-        subs[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+        subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
     }
 
     SubstitutionVisitor visitor(std::move(subs));
@@ -198,9 +212,9 @@ SymbolID MonomorphizationEngine::requestStructSpecialization(
             auto specializedImpl = implNode->cloneAs<ImplDeclNode>();
             specializedImpl->genericParams.clear(); // Now concrete!
             
-            std::unordered_map<std::string, std::unique_ptr<TypeNode>> implSubs;
+            GenericSubstitution implSubs;
             for (size_t i = 0; i < implNode->genericParams.size() && i < genericArgs.size(); ++i) {
-                implSubs[std::string(implNode->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+                implSubs.typeSubstitutions[std::string(implNode->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
             }
             
             SubstitutionVisitor implVisitor(std::move(implSubs));
@@ -250,9 +264,9 @@ SymbolID MonomorphizationEngine::requestEnumSpecialization(
     specializedAST->name = stableMangledName;
     specializedAST->genericParams.clear();
 
-    std::unordered_map<std::string, std::unique_ptr<TypeNode>> subs;
+    GenericSubstitution subs;
     for (size_t i = 0; i < genericTemplate->genericParams.size() && i < genericArgs.size(); ++i) {
-        subs[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+        subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
     }
 
     SubstitutionVisitor visitor(std::move(subs));

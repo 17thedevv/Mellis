@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
-#include "mellis/MiddleEnd/MVIR.h"
+#include "mellis/IR/MVIR.h"
 
 namespace fl {
 

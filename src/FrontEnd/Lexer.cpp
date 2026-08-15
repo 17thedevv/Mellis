@@ -413,9 +413,40 @@ Token Lexer::nextToken() {
         case '}': return makeToken(TokenType::R_BRACE, startOffset, 1);
         case '[': return makeToken(TokenType::L_BRACKET, startOffset, 1);
         case ']': return makeToken(TokenType::R_BRACKET, startOffset, 1);
-        case '\'':
-            position--;
+        case '\'': {
+            uint32_t savePos = position;
+            uint32_t saveLine = line_;
+            uint32_t saveCol = col_;
+            char nextC = peek();
+            if (isAlphaOrUnderscore(nextC)) {
+                advance();
+                while (isAlphaOrUnderscore(peek()) || std::isdigit(peek())) {
+                    advance();
+                }
+                if (peek() != '\'') { // Not closed by ', it's a lifetime!
+                    return makeToken(TokenType::LIFETIME, startOffset, position - startOffset);
+                }
+            }
+            // Not a lifetime (either not alpha or closed by ')
+            position = savePos;
+            line_ = saveLine;
+            col_ = saveCol;
+            
+            // Go back to the ' character so charLiteral can consume it
+            position--; 
+            // We shouldn't rollback line/col for the ' character because it's already accounted for, but we're about to read it again in charLiteral... 
+            // Wait, charLiteral uses `position` but does it use advance()?
+            // Yes, charLiteral calls advance().
+            // Wait, in the original code it just did `position--` and left line/col alone.
+            // But if we advanced, line/col are changed. Let's just restore them minus the ' char effect if any.
+            // Actually, `c` was already read, so `position` is `startOffset + 1`.
+            // We just need `position = startOffset; line_ = startLine_; col_ = startCol_;`
+            position = startOffset;
+            line_ = startLine_;
+            col_ = startCol_;
+            
             return charLiteral(false);
+        }
         case '"':
             position--;
             return stringLiteral(false, false);

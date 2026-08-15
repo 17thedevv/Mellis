@@ -3,16 +3,19 @@
 #include "mellis/AST/ASTNode.h"
 #include "mellis/FrontEnd/ASTVisitor.h"
 #include "mellis/MiddleEnd/SymbolTable.h"
+#include "mellis/MiddleEnd/TypeChecker.h"
 #include "mellis/Support/Diagnostic.h"
 
 namespace fl {
 
 class MatchAnalyzer : public ASTVisitor {
     SymbolTable& table;
+    TypeChecker& typeChecker;
     DiagnosticEngine& diag;
+    bool hasError_ = false;
 
 public:
-    MatchAnalyzer(SymbolTable& table, DiagnosticEngine& diag);
+    MatchAnalyzer(SymbolTable& table, TypeChecker& typeChecker, DiagnosticEngine& diag);
     bool analyze(ASTNode* root);
 
     void visit(ProgramNode& node) override;
@@ -59,6 +62,7 @@ public:
     void visit(TupleLiteralExpr& node) override;
     void visit(StructInitExpr& node) override;
     void visit(LambdaExpr& node) override;
+    void visit(TryExpr& node) override;
     void visit(AwaitExpr& node) override;
     void visit(SizeofExpr& node) override {}
     void visit(AlignofExpr& node) override {}

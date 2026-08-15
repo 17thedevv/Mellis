@@ -8,12 +8,43 @@
 
 namespace fl {
 
+// =============================================================================
+// GenericSubstitution
+// =============================================================================
+// Encapsulates all substitutions needed for a generic instantiation:
+//   - typeSubstitutions: T → concrete TypeNode*
+//   - lifetimeSubstitutions: 'a → concrete LifetimeNode*
+//   - associatedProjections: "Self::Item" → concrete TypeNode*
+//
+// This replaces the raw unordered_map<string, TypeNode*> to make substitution
+// categories explicit and type-safe.
+// =============================================================================
+struct GenericSubstitution {
+    // Type parameter substitutions: param name → replacement TypeNode (owned)
+    std::unordered_map<std::string, std::unique_ptr<TypeNode>> typeSubstitutions;
+
+    // Lifetime parameter substitutions: lifetime name → replacement LifetimeNode (owned)
+    // E.g.: "'a" → LifetimeNode("static")
+    std::unordered_map<std::string, std::unique_ptr<LifetimeNode>> lifetimeSubstitutions;
+
+    // Associated type projections: "Self::Item", "T::Error" → replacement TypeNode (owned)
+    std::unordered_map<std::string, std::unique_ptr<TypeNode>> associatedProjections;
+
+    // Helper: make projection key "SelfType::AssocName"
+    static std::string projectionKey(const std::string& selfName, const std::string& assocName) {
+        return selfName + "::" + assocName;
+    }
+};
+
 class SubstitutionVisitor : public ASTVisitor {
 public:
-    std::unordered_map<std::string, std::unique_ptr<TypeNode>> substitutions;
+    // Extended substitution with lifetime and projection support
+    GenericSubstitution genericSubstitution;
 
-    SubstitutionVisitor(std::unordered_map<std::string, std::unique_ptr<TypeNode>> subs)
-        : substitutions(std::move(subs)) {}
+    // Full constructor using GenericSubstitution
+    SubstitutionVisitor(GenericSubstitution subst)
+        : genericSubstitution(std::move(subst)) {
+    }
 
     void substitute(ASTNode& node) {
         node.accept(*this);
@@ -30,12 +61,12 @@ public:
     void visit(StructFieldNode&) override;
     void visit(EnumDeclNode&) override {}
     void visit(EnumVariantNode&) override {}
-    void visit(TraitDeclNode&) override {}
+    void visit(TraitDeclNode&) override;
     void visit(ImplDeclNode&) override;
     void visit(ModDeclNode&) override {}
     void visit(UseDeclNode&) override {}
     void visit(ExternDeclNode&) override {}
-    void visit(TypeAliasDeclNode&) override {}
+    void visit(TypeAliasDeclNode&) override;
 
     // Stmt
     void visit(BlockStmtNode&) override;
@@ -67,6 +98,7 @@ public:
     void visit(StructInitExpr&) override;
     void visit(MatchExpr&) override;
     void visit(LambdaExpr&) override;
+    void visit(TryExpr&) override;
     void visit(AwaitExpr&) override;
     void visit(SizeofExpr&) override;
     void visit(AlignofExpr&) override;

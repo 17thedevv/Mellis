@@ -7,35 +7,41 @@ ManifestBuilder::ManifestBuilder(StringTableBuilder& stringTable)
     : stringTable(stringTable) {}
 
 void ManifestBuilder::setPackageName(const std::string& name) {
-    nameStringID = stringTable.addString(name);
+    packageName = name;
+    stringTable.addString(name);
 }
 
-void ManifestBuilder::setAuthor(const std::string& author) {
-    authorStringID = stringTable.addString(author);
+void ManifestBuilder::setAuthor(const std::string& authorName) {
+    author = authorName;
+    stringTable.addString(authorName);
 }
 
-void ManifestBuilder::setVersion(const std::string& version) {
-    versionStringID = stringTable.addString(version);
+void ManifestBuilder::setVersion(const std::string& ver) {
+    version = ver;
+    stringTable.addString(ver);
 }
 
-void ManifestBuilder::setLicense(const std::string& license) {
-    licenseStringID = stringTable.addString(license);
+void ManifestBuilder::setLicense(const std::string& lic) {
+    license = lic;
+    stringTable.addString(lic);
 }
 
 void ManifestBuilder::addFeature(const std::string& feature) {
-    features.push_back(stringTable.addString(feature));
+    features.push_back(feature);
+    stringTable.addString(feature);
 }
 
-void ManifestBuilder::addDependency(const uint8_t uuid[16], const std::string& version, uint64_t hash, ImportMode mode, const std::vector<std::string>& depFeatures) {
+void ManifestBuilder::addDependency(const uint8_t uuid[16], const std::string& ver, uint64_t hash, ImportMode mode, const std::vector<std::string>& depFeatures) {
     DepInfo info;
-    std::memcpy(info.entry.moduleUUID, uuid, 16);
-    info.entry.versionStringID = stringTable.addString(version);
-    info.entry.moduleHash = hash;
-    info.entry.importMode = mode;
-    info.entry.featureCount = static_cast<uint32_t>(depFeatures.size());
+    std::memcpy(info.moduleUUID, uuid, 16);
+    info.version = ver;
+    info.moduleHash = hash;
+    info.importMode = mode;
+    stringTable.addString(ver);
 
     for (const auto& f : depFeatures) {
-        info.featureIDs.push_back(stringTable.addString(f));
+        info.featureStrs.push_back(f);
+        stringTable.addString(f);
     }
 
     dependencies.push_back(info);
@@ -43,25 +49,32 @@ void ManifestBuilder::addDependency(const uint8_t uuid[16], const std::string& v
 
 void ManifestBuilder::serialize(BinaryWriter& writer) const {
     ManifestHeader header;
-    header.nameStringID = nameStringID;
-    header.authorStringID = authorStringID;
-    header.versionStringID = versionStringID;
-    header.licenseStringID = licenseStringID;
+    header.nameStringID = stringTable.getStringOffset(packageName);
+    header.authorStringID = stringTable.getStringOffset(author);
+    header.versionStringID = stringTable.getStringOffset(version);
+    header.licenseStringID = stringTable.getStringOffset(license);
     header.featureCount = static_cast<uint32_t>(features.size());
     header.dependencyCount = static_cast<uint32_t>(dependencies.size());
 
     writer.writeStruct(header);
 
     // Write features array
-    for (uint32_t featID : features) {
-        writer.writeU32(featID);
+    for (const auto& feat : features) {
+        writer.writeU32(stringTable.getStringOffset(feat));
     }
 
     // Write dependencies
     for (const auto& dep : dependencies) {
-        writer.writeStruct(dep.entry);
-        for (uint32_t fID : dep.featureIDs) {
-            writer.writeU32(fID);
+        DependencyEntry entry;
+        std::memcpy(entry.moduleUUID, dep.moduleUUID, 16);
+        entry.versionStringID = stringTable.getStringOffset(dep.version);
+        entry.moduleHash = dep.moduleHash;
+        entry.importMode = dep.importMode;
+        entry.featureCount = static_cast<uint32_t>(dep.featureStrs.size());
+        
+        writer.writeStruct(entry);
+        for (const auto& f : dep.featureStrs) {
+            writer.writeU32(stringTable.getStringOffset(f));
         }
     }
 }

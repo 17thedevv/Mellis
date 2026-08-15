@@ -8,7 +8,7 @@
 
 #include "mellis/Support/Diagnostic.h"
 #include "mellis/MiddleEnd/SymbolTable.h"
-#include "mellis/Core/FLType.h"
+#include "mellis/MiddleEnd/SemanticSnapshot.h"
 #include "mellis/FrontEnd/MacroRegistry.h"
 #include <llvm/IR/Module.h>
 #include <string>
@@ -17,7 +17,7 @@ namespace fl {
 
 class MLibGenerator {
 public:
-    MLibGenerator(DiagnosticEngine& diag, SymbolTable& symTab, TypeContext& typeCtx, MacroRegistry& macroReg);
+    MLibGenerator(DiagnosticEngine& diag, const SemanticSnapshot& snapshot, MacroRegistry& macroReg, std::string_view sourceCode);
 
     /// Generate a .mlib file from the LLVM module and SymbolTable metadata.
     ///
@@ -28,9 +28,9 @@ public:
 
 private:
     DiagnosticEngine& diag_;
-    SymbolTable& symTab_;
-    TypeContext& typeCtx_;
+    const SemanticSnapshot& snapshot_;
     MacroRegistry& macroReg_;
+    std::string_view sourceCode_;
 };
 
 } // namespace fl

@@ -47,11 +47,13 @@ class TupleLiteralExpr;
 class StructInitExpr;
 class MatchExpr;
 class LambdaExpr;
+class TryExpr;
 class AwaitExpr;
 class SizeofExpr;
 class AlignofExpr;
 
 class BuiltinTypeNode;
+class LifetimeNode;
 class NamedTypeNode;
 class ReferenceTypeNode;
 class PointerTypeNode;
@@ -117,6 +119,7 @@ public:
     virtual void visit(StructInitExpr&)    = 0;
     virtual void visit(MatchExpr&)         = 0;
     virtual void visit(LambdaExpr&)        = 0;
+    virtual void visit(TryExpr&)           = 0;
     virtual void visit(AwaitExpr&)         = 0;
     virtual void visit(SizeofExpr&)        = 0;
     virtual void visit(AlignofExpr&)       = 0;
@@ -134,6 +137,7 @@ class TypeVisitor {
 public:
     virtual ~TypeVisitor() = default;
     virtual void visit(BuiltinTypeNode&)     = 0;
+    virtual void visit(LifetimeNode&)        = 0;
     virtual void visit(NamedTypeNode&)       = 0;
     virtual void visit(ReferenceTypeNode&)   = 0;
     virtual void visit(PointerTypeNode&)     = 0;

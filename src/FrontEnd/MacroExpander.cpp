@@ -70,7 +70,24 @@ std::unique_ptr<ASTNode> MacroExpander::expandMacro(MacroID macroId, const Sourc
 
 void MacroExpander::visit(MacroCallExpr& node) {
     std::cerr << "[DEBUG] MacroExpander::visit(MacroCallExpr) for " << node.name << " with id " << node.resolvedMacroId << std::endl;
-    result_ = expandMacro(node.resolvedMacroId, node.loc, node.args);
+    auto expanded = expandMacro(node.resolvedMacroId, node.loc, node.args);
+    
+    if (auto block = dynamic_cast<BlockStmtNode*>(expanded.get())) {
+        if (block->body.empty() && block->tailExpr) {
+            result_ = std::move(block->tailExpr);
+            return;
+        }
+        if (block->body.size() == 1 && !block->tailExpr) {
+            if (auto exprStmt = dynamic_cast<ExprStmtNode*>(block->body.front().get())) {
+                result_ = std::move(exprStmt->expr);
+                return;
+            }
+        }
+        diag_.error(node.loc, "Macro used in expression context must expand to a single expression");
+        result_ = nullptr;
+    } else {
+        result_ = std::move(expanded);
+    }
 }
 
 void MacroExpander::visit(MacroCallStmt& node) {

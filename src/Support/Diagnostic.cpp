@@ -43,6 +43,14 @@ constexpr std::string_view severityLabel(DiagSeverity sev) {
 
 void DiagnosticEngine::report(DiagSeverity sev, SourceLocation loc,
                                std::string msg) {
+    // Deduplicate identical errors
+    for (const auto& d : diagnostics_) {
+        if (d.severity == sev && d.location.line == loc.line && 
+            d.location.column == loc.column && d.message == msg) {
+            return; // Skip duplicate
+        }
+    }
+    
     diagnostics_.push_back({sev, loc, std::move(msg)});
 
     switch (sev) {
@@ -69,6 +77,7 @@ void DiagnosticEngine::warning(SourceLocation loc, std::string msg) {
 }
 
 void DiagnosticEngine::error(SourceLocation loc, std::string msg) {
+    std::cerr << "[DEBUG] DiagnosticEngine::error called: " << msg << "\n";
     report(DiagSeverity::Error, loc, std::move(msg));
 }
 

@@ -37,7 +37,7 @@ ASTNode* VarDeclNode::cloneImpl() const {
     auto copy = new VarDeclNode();
     copy->loc = this->loc;
     copy->annotations = cloneAnnotations(this->annotations);
-    copy->isExported = this->isExported;
+    copy->visibility = this->visibility;
     copy->name = this->name;
     copy->isMutable = this->isMutable;
     if (this->typeAnnot) {
@@ -53,7 +53,7 @@ ASTNode* ParamDeclNode::cloneImpl() const {
     auto copy = new ParamDeclNode();
     copy->loc = this->loc;
     copy->annotations = cloneAnnotations(this->annotations);
-    copy->isExported = this->isExported;
+    copy->visibility = this->visibility;
     copy->name = this->name;
     copy->isVariadic = this->isVariadic;
     copy->isSelf = this->isSelf;
@@ -67,7 +67,7 @@ ASTNode* FunctionDeclNode::cloneImpl() const {
     auto copy = new FunctionDeclNode();
     copy->loc = this->loc;
     copy->annotations = cloneAnnotations(this->annotations);
-    copy->isExported = this->isExported;
+    copy->visibility = this->visibility;
     copy->name = this->name;
     copy->isAsync = this->isAsync;
     copy->isComptime = this->isComptime;
@@ -102,6 +102,7 @@ ASTNode* StructFieldNode::cloneImpl() const {
     auto copy = new StructFieldNode();
     copy->loc = this->loc;
     copy->name = this->name;
+    copy->visibility = this->visibility;
     if (this->type) {
         copy->type = this->type->cloneAs<TypeNode>();
     }
@@ -112,13 +113,14 @@ ASTNode* StructDeclNode::cloneImpl() const {
     auto copy = new StructDeclNode();
     copy->loc = this->loc;
     copy->annotations = cloneAnnotations(this->annotations);
-    copy->isExported = this->isExported;
+    copy->visibility = this->visibility;
     copy->name = this->name;
     
     for (const auto& gp : this->genericParams) {
         GenericParamNode gpCopy;
         gpCopy.loc = gp.loc;
         gpCopy.name = gp.name;
+        gpCopy.kind = gp.kind;
         gpCopy.symbolId = gp.symbolId;
         for (const auto& b : gp.bounds) {
             gpCopy.bounds.push_back(b->cloneAs<TypeNode>());
@@ -280,6 +282,14 @@ ASTNode* TraitObjectTypeNode::cloneImpl() const {
     return copy;
 }
 
+ASTNode* LifetimeNode::cloneImpl() const {
+    auto copy = new LifetimeNode();
+    copy->loc = this->loc;
+    copy->name = this->name;
+    copy->symbolId = this->symbolId;
+    return copy;
+}
+
 ASTNode* NamedTypeNode::cloneImpl() const {
     auto copy = new NamedTypeNode();
     copy->loc = this->loc;
@@ -288,6 +298,9 @@ ASTNode* NamedTypeNode::cloneImpl() const {
     for (const auto& arg : this->genericArgs) {
         copy->genericArgs.push_back(arg->cloneAs<TypeNode>());
     }
+    for (const auto& binding : this->associatedBindings) {
+        copy->associatedBindings.push_back({binding.name, binding.type->cloneAs<TypeNode>()});
+    }
     return copy;
 }
 
@@ -295,6 +308,9 @@ ASTNode* ReferenceTypeNode::cloneImpl() const {
     auto copy = new ReferenceTypeNode();
     copy->loc = this->loc;
     copy->isMutable = this->isMutable;
+    if (this->lifetime) {
+        copy->lifetime = this->lifetime->cloneAs<LifetimeNode>();
+    }
     if (this->inner) {
         copy->inner = this->inner->cloneAs<TypeNode>();
     }
@@ -344,7 +360,7 @@ ASTNode* TraitDeclNode::cloneImpl() const {
     auto copy = new TraitDeclNode();
     copy->loc = this->loc;
     copy->annotations = cloneAnnotations(this->annotations);
-    copy->isExported = this->isExported;
+    copy->visibility = this->visibility;
     copy->name = this->name;
     
     for (const auto& gp : this->genericParams) {
@@ -358,6 +374,10 @@ ASTNode* TraitDeclNode::cloneImpl() const {
         copy->genericParams.push_back(std::move(gpCopy));
     }
     
+    for (const auto& at : this->associatedTypes) {
+        copy->associatedTypes.push_back(at->cloneAs<TypeAliasDeclNode>());
+    }
+    
     for (const auto& m : this->methods) {
         copy->methods.push_back(m->cloneAs<FunctionDeclNode>());
     }
@@ -368,7 +388,7 @@ ASTNode* ImplDeclNode::cloneImpl() const {
     auto copy = new ImplDeclNode();
     copy->loc = this->loc;
     copy->annotations = cloneAnnotations(this->annotations);
-    copy->isExported = this->isExported;
+    copy->visibility = this->visibility;
     
     for (const auto& gp : this->genericParams) {
         GenericParamNode gpCopy;
@@ -389,12 +409,44 @@ ASTNode* ImplDeclNode::cloneImpl() const {
         copy->traitType = this->traitType->cloneAs<TypeNode>();
     }
     
+    for (const auto& at : this->associatedTypes) {
+        copy->associatedTypes.push_back(at->cloneAs<TypeAliasDeclNode>());
+    }
+
     for (const auto& m : this->methods) {
         copy->methods.push_back(m->cloneAs<FunctionDeclNode>());
     }
     return copy;
 }
 
+
+ASTNode* TypeAliasDeclNode::cloneImpl() const {
+    auto copy = new TypeAliasDeclNode();
+    copy->loc = this->loc;
+    copy->annotations = cloneAnnotations(this->annotations);
+    copy->visibility = this->visibility;
+    copy->name = this->name;
+    
+    for (const auto& gp : this->genericParams) {
+        GenericParamNode gpCopy;
+        gpCopy.loc = gp.loc;
+        gpCopy.name = gp.name;
+        gpCopy.symbolId = gp.symbolId;
+        for (const auto& b : gp.bounds) {
+            gpCopy.bounds.push_back(b->cloneAs<TypeNode>());
+        }
+        copy->genericParams.push_back(std::move(gpCopy));
+    }
+    
+    for (const auto& b : this->bounds) {
+        copy->bounds.push_back(b->cloneAs<TypeNode>());
+    }
+    
+    if (this->aliasedType) {
+        copy->aliasedType = this->aliasedType->cloneAs<TypeNode>();
+    }
+    return copy;
+}
 
 // --- GENERATED CLONES ---
 
@@ -470,6 +522,17 @@ ASTNode* MemberExpr::cloneImpl() const {
     return copy;
 }
 
+ASTNode* TupleIndexExpr::cloneImpl() const {
+    auto copy = new TupleIndexExpr();
+    copy->loc = this->loc;
+    copy->inferredType = this->inferredType;
+    copy->valueCategory = this->valueCategory;
+    copy->isConstant = this->isConstant;
+    if (this->object) copy->object = this->object->cloneAs<ExprNode>();
+    copy->index = this->index;
+    return copy;
+}
+
 ASTNode* CastExpr::cloneImpl() const {
     auto copy = new CastExpr();
     copy->loc = this->loc;
@@ -530,6 +593,13 @@ ASTNode* AwaitExpr::cloneImpl() const {
     if (this->expr) copy->expr = this->expr->cloneAs<ExprNode>();
     return copy;
 }
+ASTNode* TryExpr::cloneImpl() const {
+    auto copy = new TryExpr();
+    copy->loc = this->loc;
+    copy->inferredType = this->inferredType;
+    if (this->expr) copy->expr = this->expr->cloneAs<ExprNode>();
+    return copy;
+}
 ASTNode* SizeofExpr::cloneImpl() const { 
     auto copy = new SizeofExpr();
     copy->loc = this->loc;
@@ -566,6 +636,8 @@ ASTNode* ForStmtNode::cloneImpl() const {
     copy->kind = this->kind;
     copy->bindingName = this->bindingName;
     copy->bindingId = this->bindingId;
+    copy->iterMethodId = this->iterMethodId;
+    copy->nextMethodId = this->nextMethodId;
     if (this->iterable) copy->iterable = this->iterable->cloneAs<ExprNode>();
     if (this->init) copy->init = this->init->cloneAs<ItemNode>();
     if (this->cond) copy->cond = this->cond->cloneAs<ExprNode>();

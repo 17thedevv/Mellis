@@ -39,6 +39,25 @@ FileID SourceManager::loadFile(const std::string& filepath) {
     return newId;
 }
 
+FileID SourceManager::addVirtualFile(const std::string& uri, const std::string& content) {
+    auto it = pathToId_.find(uri);
+    if (it != pathToId_.end()) {
+        files_[it->second]->content = content;
+        return it->second;
+    }
+
+    FileID newId = static_cast<FileID>(files_.size());
+    auto srcFile = std::make_unique<SourceFile>();
+    srcFile->fileId = newId;
+    srcFile->filepath = uri;
+    srcFile->content = content;
+
+    pathToId_[uri] = newId;
+    files_.push_back(std::move(srcFile));
+
+    return newId;
+}
+
 std::string_view SourceManager::getSource(FileID fileId) const {
     if (fileId < files_.size()) {
         return files_[fileId]->content;

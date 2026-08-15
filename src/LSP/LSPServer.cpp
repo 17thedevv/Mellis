@@ -8,14 +8,39 @@
 #include "mellis/Core/SourceManager.h"
 #include "mellis/FrontEnd/Lexer.h"
 #include "mellis/FrontEnd/Parser.h"
+#include "mellis/MiddleEnd/SymbolTable.h"
+#include "mellis/MiddleEnd/Resolver.h"
+#include "mellis/MiddleEnd/TypeChecker.h"
+#include "mellis/Core/FLType.h"
+#include "mellis/MiddleEnd/MonomorphizationEngine.h"
 #include <llvm/Support/JSON.h>
 #include <llvm/Support/raw_ostream.h>
 #include <iostream>
 #include <string>
 #include <vector>
+#include "HoverVisitor.h"
 
 namespace fl {
 namespace lsp {
+
+struct LSPState {
+    std::unique_ptr<ProgramNode> lastAst;
+    std::unique_ptr<SymbolTable> lastTable;
+    std::unique_ptr<TypeContext> lastTypeCtx;
+    std::string lastSourceCode;
+};
+static LSPState g_state;
+
+inline uint32_t getOffsetFromPosition(const std::string& source, int line, int col) {
+    int currentLine = 0;
+    int currentCol = 0;
+    for (uint32_t i = 0; i < source.size(); ++i) {
+        if (currentLine == line && currentCol == col) return i;
+        if (source[i] == '\n') { currentLine++; currentCol = 0; }
+        else { currentCol++; }
+    }
+    return source.size();
+}
 
 // Ghi JSON-RPC message ra stdout theo chuẩn LSP
 void sendMessage(const llvm::json::Object& msg) {
@@ -30,26 +55,42 @@ void sendMessage(const llvm::json::Object& msg) {
 
 // Chạy luồng phân tích để sinh Diagnostics
 void publishDiagnostics(const std::string& uri, const std::string& sourceCode) {
-    // Để giữ cho LSP phản hồi nhanh, chúng ta chỉ chạy qua TypeChecker
-    // Chúng ta không gọi ExecutableGenerator hay LLVM IR Generator.
-
     // 1. Tạo SourceManager ảo
     DiagnosticEngine diag;
     SourceManager sourceManager(diag);
     diag.setSourceManager(&sourceManager);
     
-    // Để tránh lỗi loadFile ko có addVirtualFile, ta lưu ra file tạm
-    std::string tempPath = "lsp_temp.ms";
-    if (FILE* f = fopen(tempPath.c_str(), "wb")) {
-        fwrite(sourceCode.data(), 1, sourceCode.size(), f);
-        fclose(f);
-    }
-    FileID fileId = sourceManager.loadFile(tempPath);
+    // Sử dụng addVirtualFile thay vì ghi đĩa
+    FileID fileId = sourceManager.addVirtualFile(uri, sourceCode);
 
     // 2. Chạy Lexer & Parser
     Lexer lexer(sourceCode);
     Parser parser(lexer, diag, &sourceManager, fileId);
     auto ast = parser.parse();
+
+    // 3. Chạy Semantic Analysis
+    if (ast && !diag.hasErrors()) {
+        auto table = std::make_unique<SymbolTable>();
+        Resolver resolver(*table, diag);
+        resolver.resolve(ast.get());
+        
+        auto typeCtx = std::make_unique<TypeContext>();
+        TypeChecker tc(*table, diag, *typeCtx);
+        MonomorphizationEngine monoEngine(*table, resolver, tc, diag);
+        tc.setMonomorphizationEngine(&monoEngine);
+        tc.check(ast.get());
+        
+        g_state.lastAst = std::move(ast);
+        g_state.lastTable = std::move(table);
+        g_state.lastTypeCtx = std::move(typeCtx);
+        g_state.lastSourceCode = sourceCode;
+    } else {
+        // If there's an AST, we might still want it for hover even with errors.
+        if (ast) {
+            g_state.lastAst = std::move(ast);
+            g_state.lastSourceCode = sourceCode;
+        }
+    }
 
     // 4. Lấy danh sách lỗi từ DiagnosticEngine
     llvm::json::Array diagnostics;
@@ -164,6 +205,58 @@ int runServer() {
                 auto text = textDoc->getString("text");
                 if (uri && text) publishDiagnostics(uri->str(), text->str());
             }
+        }
+
+        else if (method == "textDocument/hover") {
+            auto id = request->get("id");
+            auto params = request->getObject("params");
+            auto pos = params ? params->getObject("position") : nullptr;
+            
+            llvm::json::Object response;
+            response["jsonrpc"] = "2.0";
+            response["id"] = *id;
+            
+            if (pos && g_state.lastAst) {
+                int line = pos->getInteger("line").value_or(0);
+                int col = pos->getInteger("character").value_or(0);
+                uint32_t offset = getOffsetFromPosition(g_state.lastSourceCode, line, col);
+                
+                HoverVisitor visitor(offset);
+                g_state.lastAst->accept(visitor);
+                
+                ASTNode* best = visitor.bestNode;
+                if (best) {
+                    std::string hoverText = "";
+                    
+                    if (auto* id = dynamic_cast<IdentifierExpr*>(best)) {
+                        hoverText = "Variable: `" + (!id->segments.empty() ? std::string(id->segments.back()) : "") + "`\nType: `" + (id->inferredType ? id->inferredType->toString() : "?") + "`";
+                    } else if (auto* e = dynamic_cast<ExprNode*>(best)) {
+                        if (e->inferredType) {
+                            hoverText = "Type: `" + e->inferredType->toString() + "`";
+                        }
+                    } else if (auto* decl = dynamic_cast<VarDeclNode*>(best)) {
+                        hoverText = "Variable Declaration: `" + std::string(decl->name) + "`";
+                    } else if (auto* func = dynamic_cast<FunctionDeclNode*>(best)) {
+                        hoverText = "Function: `" + std::string(func->name) + "`";
+                    }
+                    
+                    if (!hoverText.empty()) {
+                        llvm::json::Object hoverResult;
+                        llvm::json::Object contents;
+                        contents["kind"] = "markdown";
+                        contents["value"] = hoverText;
+                        hoverResult["contents"] = std::move(contents);
+                        response["result"] = std::move(hoverResult);
+                    } else {
+                        response["result"] = nullptr;
+                    }
+                } else {
+                    response["result"] = nullptr;
+                }
+            } else {
+                response["result"] = nullptr;
+            }
+            sendMessage(response);
         }
         else if (method == "textDocument/didChange") {
             auto params = request->getObject("params");

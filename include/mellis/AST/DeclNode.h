@@ -31,7 +31,7 @@ public:
 class DeclNode : public ItemNode {
 public:
     std::vector<AnnotationNode> annotations;
-    bool     isExported = false;
+    Visibility visibility = Visibility::Internal;
     SymbolID symbolId   = kInvalidSymbolID;
 };
 
@@ -55,10 +55,17 @@ public:
     ASTNode* cloneImpl() const override;
 };
 
+enum class GenericParamKind : uint8_t {
+    Type,
+    Lifetime,
+    Const
+};
+
 struct GenericParamNode {
     SourceLocation                         loc;
     std::string_view                       name;
-    std::vector<std::unique_ptr<TypeNode>> bounds;
+    GenericParamKind                       kind = GenericParamKind::Type;
+    std::vector<std::unique_ptr<TypeNode>> bounds; // For Lifetimes, bounds can represent 'a : 'b
     SymbolID symbolId = kInvalidSymbolID;
 };
 
@@ -83,7 +90,7 @@ public:
     std::string_view          name;
     std::unique_ptr<TypeNode> type;
     SymbolID                  symbolId = kInvalidSymbolID;
-    bool                      isPublic = false;
+    Visibility                visibility = Visibility::Private;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };
@@ -115,10 +122,13 @@ public:
     void accept(ASTVisitor& v) override;
 };
 
+class TypeAliasDeclNode;
+
 class TraitDeclNode : public DeclNode {
 public:
     std::string_view                               name;
     std::vector<GenericParamNode>                  genericParams;
+    std::vector<std::unique_ptr<TypeAliasDeclNode>> associatedTypes;
     std::vector<std::unique_ptr<FunctionDeclNode>> methods;
     ScopeID                                        bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
@@ -130,6 +140,7 @@ public:
     std::vector<GenericParamNode>                  genericParams;
     std::unique_ptr<TypeNode>                      selfType;
     std::unique_ptr<TypeNode>                      traitType;
+    std::vector<std::unique_ptr<TypeAliasDeclNode>> associatedTypes;
     std::vector<std::unique_ptr<FunctionDeclNode>> methods;
     ScopeID                                        bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
@@ -167,10 +178,12 @@ public:
 
 class TypeAliasDeclNode : public DeclNode {
 public:
-    std::string_view              name;
-    std::vector<GenericParamNode> genericParams;
-    std::unique_ptr<TypeNode>     aliasedType;
+    std::string_view                       name;
+    std::vector<GenericParamNode>          genericParams;
+    std::vector<std::unique_ptr<TypeNode>> bounds;
+    std::unique_ptr<TypeNode>              aliasedType;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 } // namespace fl

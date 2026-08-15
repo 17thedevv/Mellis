@@ -43,6 +43,7 @@ bool LLDLinker::link(const std::string& objFile,
     command += " /DEFAULTLIB:libcmt";
     command += " /DEFAULTLIB:libucrt";
     command += " /DEFAULTLIB:legacy_stdio_definitions";
+    command += " /subsystem:console";
 
     if (!verbose_) {
         // std::cout << "Running command: " << command << "\n";

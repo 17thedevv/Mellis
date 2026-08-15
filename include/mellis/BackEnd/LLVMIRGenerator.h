@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "mellis/MiddleEnd/MVIR.h"
+#include "mellis/IR/MVIR.h"
 #include "mellis/MiddleEnd/SymbolTable.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -29,7 +29,7 @@ namespace fl {
 
 class LLVMIRGenerator {
 public:
-    explicit LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module, const SymbolTable& symTable);
+    explicit LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module);
 
     /// Generate LLVM IR from the given MVIR module.
     ///
@@ -40,8 +40,7 @@ private:
     llvm::LLVMContext& context_;
     llvm::Module& module_;
     llvm::IRBuilder<> builder_;
-    const SymbolTable& symTable_;
-
+    const mvir::Module* mvirModule_ = nullptr;
     // ── Environments ─────────────────────────────────────────────────────────
     
     // Maps MVIR LocalId ("%0") to the allocated LLVM Value.
@@ -63,7 +62,7 @@ private:
     // ── Translation Helpers ──────────────────────────────────────────────────
 
     llvm::Type* mapType(const Type* type);
-    llvm::Value* mapOperand(const mvir::Operand& op);
+    llvm::Value* mapOperand(const mvir::Operand& op, llvm::Type* expectedType = nullptr);
 
     void createFunctionStructure(const mvir::Function* func);
     

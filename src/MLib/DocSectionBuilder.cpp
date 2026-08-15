@@ -13,17 +13,21 @@ DocSectionBuilder::DocSectionBuilder(StringTableBuilder& stringTable)
     : stringTable(stringTable) {}
 
 void DocSectionBuilder::addDoc(uint32_t symbolID, const std::string& docComment) {
-    DocEntry e;
-    e.symbolID    = symbolID;
-    e.docStringID = stringTable.addString(docComment);
+    InternalDocEntry e;
+    e.symbolID = symbolID;
+    e.docComment = docComment;
     entries.push_back(e);
+    stringTable.addString(docComment);
 }
 
 void DocSectionBuilder::serialize(BinaryWriter& writer) const {
     writer.writeU32(1); // Version
     writer.writeU32(static_cast<uint32_t>(entries.size()));
     for (const auto& e : entries) {
-        writer.writeStruct(e);
+        DocEntry out;
+        out.symbolID = e.symbolID;
+        out.docStringID = stringTable.getStringOffset(e.docComment);
+        writer.writeStruct(out);
     }
 }
 

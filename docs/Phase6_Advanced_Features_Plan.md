@@ -1,4 +1,4 @@
-# Phase 6: Advanced Features Implementation Plan
+# Phase 8: Ecosystem, Standard Library & Advanced Features Plan
 
 Tài liệu này vạch ra kiến trúc và lộ trình triển khai chi tiết cho các tính năng nâng cao còn thiếu ở Backend (LLVM IR Generation) và Middle-End của FD-Lang. Các tính năng này đã được Parser hỗ trợ nhưng cần chuyển đổi thành mã máy LLVM.
 
@@ -32,8 +32,8 @@ Cơ chế lập trình bất đồng bộ. Trong FD-Lang, `async fn` không tr�
 - **Suspend Points (`llvm.coro.suspend`)**:
   - Tại lệnh `await`, compiler phải sinh mã gọi `@llvm.coro.suspend` để nhường quyền điều khiển (yield) lại cho hàm gọi (caller).
   - Bổ sung state logic cho `AwaitInst` trong MVIR để theo dõi tính hoàn thành của `Future`.
-- **C-Runtime Executor (`block_on`)**:
-  - Xây dựng hệ thống runtime trong file `mellis_rt.lib` (bằng C hoặc sinh trực tiếp từ LLVM IR) chứa hàm `block_on`.
+- **C-Runtime Executor (Standard Library)**:
+  - Xây dựng hệ thống runtime trong file `lib/std` (viết bằng chính `fdlang` kết hợp C-FFI) chứa hàm `block_on` và một Executor đơn giản (Event Loop).
   - `block_on` sẽ nhận vào Coroutine Handle, gọi `@llvm.coro.resume` lặp đi lặp lại cho đến khi cờ trạng thái báo hoàn thành (Done), sau đó trích xuất kết quả `T` trả về cho chương trình chính (`main`).
 
 ---
@@ -57,6 +57,9 @@ Cho phép thực thi trực tiếp các khối lệnh hoặc hàm `comptime` nga
 ### Khái quát
 Cung cấp "cửa hậu" (escape hatch) cho phép lập trình viên vượt rào Borrow Checker để thao tác trực tiếp với con trỏ thô (raw pointers), gọi C-FFI, và ép kiểu nguy hiểm.
 
+### Hiện trạng (v1.0)
+- **Đã hoạt động một phần**: Khối `unsafe {}` đã được Lexer và Parser ghi nhận. Trình biên dịch hiện tại đã cho phép lấy con trỏ thô (Raw Pointers) và thao tác với chúng thông qua ép kiểu (cast). Tuy nhiên, cần thắt chặt hơn ranh giới giữa an toàn và không an toàn.
+
 ### Kiến trúc & Các bước triển khai
 - **Middle-End (TypeChecker / Borrow Checker)**:
   - Khi phân tích vào một `UnsafeStmtNode`, bật cờ `is_unsafe_context = true`.
@@ -67,9 +70,8 @@ Cung cấp "cửa hậu" (escape hatch) cho phép lập trình viên vượt rà
 
 ---
 
-## Lộ trình đề xuất (Roadmap)
-Để không bị ngợp, chúng ta sẽ triển khai theo trình tự ưu tiên sau:
-1. **Hoàn thiện Async/Await (Executor & Suspend)**: Đây là tính năng đang thực hiện dở dang, cần hoàn thiện khâu tạm dừng luồng (`suspend`) và Runtime Executor (`block_on`).
-2. **Lambda / Closures**: Đòi hỏi thay đổi TypeChecker để tạo Struct ẩn và cập nhật LLVM IR (Đã có kế hoạch kiến trúc chi tiết).
-3. **Unsafe Blocks**: Dễ thực hiện, chỉ cần điều chỉnh cờ ngữ cảnh ở Middle-End để bypass Borrow Checker.
+## Lộ trình ưu tiên cho Phase 8 (Ecosystem)
+1. **Standard Library (lib/std) & Core Utilities**: Bắt đầu xây dựng thư viện chuẩn viết bằng fdlang, bao gồm các cấu trúc dữ liệu nền tảng như `String`, `Vec`, `File`.
+2. **Hoàn thiện Async/Await (Executor & Suspend)**: Đi kèm với Standard Library, cần hoàn thiện khâu tạm dừng luồng (`suspend`) và viết Runtime Executor (`block_on`) bằng chính fdlang.
+3. **Lambda / Closures**: Đòi hỏi thay đổi TypeChecker để tạo Struct ẩn và cập nhật LLVM IR (Đã có kế hoạch kiến trúc chi tiết).
 4. **Comptime**: Phức tạp nhất và độc lập nhất, yêu cầu tích hợp LLVM ORC JIT hoặc viết thêm AST Interpreter.

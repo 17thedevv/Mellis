@@ -28,6 +28,7 @@ namespace fl {
 using SymbolID = uint32_t;
 using MacroID = uint32_t;
 using ModuleID = uint32_t;
+using PackageID = uint32_t;
 using ExpansionID = uint32_t;
 
 /// Sentinel: "this node has not been resolved yet."
@@ -37,6 +38,7 @@ using ExpansionID = uint32_t;
 constexpr SymbolID kInvalidSymbolID = std::numeric_limits<SymbolID>::max();
 constexpr MacroID kInvalidMacroID = std::numeric_limits<MacroID>::max();
 constexpr ModuleID kInvalidModuleID = std::numeric_limits<ModuleID>::max();
+constexpr PackageID kInvalidPackageID = std::numeric_limits<PackageID>::max();
 
 // ── Scope Identification ──────────────────────────────────────────────────────
 
@@ -54,5 +56,13 @@ constexpr ScopeID kInvalidScopeID = std::numeric_limits<ScopeID>::max();
 using FileID = uint32_t;
 
 constexpr FileID kMainFileID = 0;
+
+// ── Visibility ────────────────────────────────────────────────────────────────
+
+enum class Visibility : uint8_t {
+    Private,   // Visible only within the declaration owner/lexical scope
+    Internal,  // Visible within the current package/module graph
+    Public     // Visible to external packages (exported)
+};
 
 } // namespace fl

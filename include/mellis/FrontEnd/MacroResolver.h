@@ -38,7 +38,7 @@ public:
     void visit(MacroExpandForStmt& node) override;
 
 
-    void visit(VarDeclNode&) override {}
+    void visit(VarDeclNode& node) override { std::cerr << "[DEBUG] MacroResolver visiting VarDeclNode\n"; if (node.initializer) node.initializer->accept(*this); }
     void visit(ParamDeclNode&) override {}
     void visit(StructDeclNode&) override {}
     void visit(StructFieldNode&) override {}
@@ -50,7 +50,7 @@ public:
     void visit(TypeAliasDeclNode&) override {}
 
     void visit(ExprStmtNode&) override;
-    void visit(ReturnStmtNode&) override {}
+    void visit(ReturnStmtNode& node) override { if (node.value) node.value->accept(*this); }
     void visit(BreakStmtNode&) override {}
     void visit(ContinueStmtNode&) override {}
     void visit(UnsafeStmtNode&) override {}
@@ -58,21 +58,22 @@ public:
 
     void visit(LiteralExpr&) override {}
     void visit(IdentifierExpr&) override {}
-    void visit(BinaryExpr&) override {}
-    void visit(UnaryExpr&) override {}
-    void visit(AssignExpr&) override {}
-    void visit(CallExpr&) override {}
-    void visit(MethodCallExpr&) override {}
-    void visit(IndexExpr&) override {}
-    void visit(MemberExpr&) override {}
+    void visit(BinaryExpr& node) override { if (node.left) node.left->accept(*this); if (node.right) node.right->accept(*this); }
+    void visit(UnaryExpr& node) override { if (node.operand) node.operand->accept(*this); }
+    void visit(AssignExpr& node) override { if (node.lvalue) node.lvalue->accept(*this); if (node.value) node.value->accept(*this); }
+    void visit(CallExpr& node) override { if (node.callee) node.callee->accept(*this); for (auto& arg : node.args) if (arg.value) arg.value->accept(*this); }
+    void visit(MethodCallExpr& node) override { if (node.object) node.object->accept(*this); for (auto& arg : node.args) if (arg.value) arg.value->accept(*this); }
+    void visit(IndexExpr& node) override { if (node.base) node.base->accept(*this); if (node.index) node.index->accept(*this); }
+    void visit(MemberExpr& node) override { if (node.object) node.object->accept(*this); }
     void visit(TupleIndexExpr&) override {}
     void visit(CastExpr&) override {}
     void visit(UnsizeCastExpr&) override {}
     void visit(ArrayLiteralExpr&) override {}
     void visit(TupleLiteralExpr&) override {}
-    void visit(StructInitExpr&) override {}
-    void visit(MatchExpr&) override {}
+    void visit(StructInitExpr& node) override { for (auto& field : node.fields) if (field.value) field.value->accept(*this); }
+    void visit(MatchExpr& node) override { if (node.subject) node.subject->accept(*this); for (auto& arm : node.arms) if (arm.body) arm.body->accept(*this); }
     void visit(LambdaExpr&) override {}
+    void visit(TryExpr&) override {}
     void visit(AwaitExpr&) override {}
     void visit(SizeofExpr&) override {}
     void visit(AlignofExpr&) override {}

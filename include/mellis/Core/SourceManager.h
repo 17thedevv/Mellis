@@ -24,6 +24,9 @@ public:
     /// If the file cannot be loaded, reports a diagnostic error and returns kInvalidFileID.
     FileID loadFile(const std::string& filepath);
 
+    /// Adds or updates a virtual file (e.g., from an LSP client) and returns its FileID.
+    FileID addVirtualFile(const std::string& uri, const std::string& content);
+
     /// Gets the source content for a given FileID as a stable string_view.
     std::string_view getSource(FileID fileId) const;
 

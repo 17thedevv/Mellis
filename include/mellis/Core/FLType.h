@@ -11,10 +11,13 @@
 // =============================================================================
 
 #pragma once
-#include <unordered_map>
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <unordered_set>
 #include <memory>
+#include <sstream>
+#include <iostream>
 #include "mellis/Core/Types.h"
 #include "mellis/AST/TypeNode.h" // For BuiltinKind
 
@@ -42,7 +45,48 @@ enum class TypeKind : uint8_t {
     Closure,
     Future,
     Unknown,
-    Error
+    Error,
+    AssociatedProjection, // <T as Trait>::AssocName
+    Lifetime              // Represents a lifetime argument in a generic parameter list
+};
+
+// =============================================================================
+// Lifetime Semantics
+// =============================================================================
+using LifetimeId = uint32_t;
+constexpr LifetimeId kInvalidLifetimeId = 0xFFFFFFFF;
+
+enum class LifetimeKind : uint8_t {
+    Named,        // 'a
+    Anonymous,    // '_
+    Static,       // 'static
+    Inference,    // inference variable during type checking
+    Placeholder   // Used for higher-ranked trait bounds
+};
+
+struct Lifetime {
+    LifetimeId id = kInvalidLifetimeId;
+    LifetimeKind kind = LifetimeKind::Named;
+    std::string name; // "a", "static", etc.
+    
+    bool operator==(const Lifetime& other) const {
+        if (kind != other.kind) return false;
+        if (kind == LifetimeKind::Named) return id == other.id;
+        return true; // Simplistic for now
+    }
+    bool operator!=(const Lifetime& other) const { return !(*this == other); }
+};
+
+
+enum class LifetimeRelation : uint8_t {
+    Outlives,  // 'a : 'b
+    Equal,     // 'a == 'b
+};
+
+struct LifetimeConstraint {
+    Lifetime left;
+    LifetimeRelation relation;
+    Lifetime right;
 };
 
 // Base class for all Semantic Types
@@ -61,6 +105,30 @@ public:
     
     // Auto-Drop check
     virtual bool needsDrop() const { return false; }
+
+    // Move semantics: is this type implicitly copyable? (e.g. primitives, immutable refs)
+    virtual bool isCopy() const { return false; }
+};
+
+// -----------------------------------------------------------------------------
+class LifetimeType : public Type {
+public:
+    Lifetime lt;
+
+    LifetimeType(Lifetime lt) : lt(lt) {}
+
+    TypeKind getKind() const override { return TypeKind::Lifetime; }
+    
+    std::string toString() const override {
+        if (lt.kind == LifetimeKind::Static) return "'static";
+        if (lt.kind == LifetimeKind::Anonymous) return "'_";
+        return "'" + lt.name;
+    }
+    
+    bool equals(const Type* other) const override {
+        if (!other || other->getKind() != TypeKind::Lifetime) return false;
+        return lt == static_cast<const LifetimeType*>(other)->lt;
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -104,6 +172,8 @@ public:
         }
         return false;
     }
+    
+    bool isCopy() const override { return true; }
 };
 
 // -----------------------------------------------------------------------------
@@ -187,6 +257,8 @@ public:
     std::unordered_map<std::string, size_t> fieldIndices;
     std::vector<const Type*> fieldTypes;
     bool hasDrop;
+    SymbolID originalTemplateId = kInvalidSymbolID;
+    std::vector<const Type*> specializedArgs;
     
     explicit StructType(SymbolID id, std::vector<const Type*> args = {}, bool hasDrop = false) 
         : structSymbolId(id), genericArgs(std::move(args)), hasDrop(hasDrop) {}
@@ -348,6 +420,8 @@ public:
         }
         return false;
     }
+    
+    bool isCopy() const override { return true; } // Raw pointers are Copy
 };
 
 // -----------------------------------------------------------------------------
@@ -357,19 +431,27 @@ class ReferenceType : public Type {
 public:
     const Type* pointee;
     bool isMutable;
+    Lifetime lifetime;
     
-    ReferenceType(const Type* p, bool mut) : pointee(p), isMutable(mut) {}
+    ReferenceType(const Type* p, bool mut, Lifetime lt = {}) : pointee(p), isMutable(mut), lifetime(std::move(lt)) {}
     
     TypeKind getKind() const override { return TypeKind::Reference; }
     std::string toString() const override {
-        return (isMutable ? "&mut " : "&") + pointee->toString();
+        std::string s = "&";
+        if (lifetime.kind != LifetimeKind::Anonymous) {
+            s += "'" + lifetime.name + " ";
+        }
+        if (isMutable) s += "mut ";
+        return s + pointee->toString();
     }
     bool equals(const Type* other) const override {
         if (auto* o = dynamic_cast<const ReferenceType*>(other)) {
-            return isMutable == o->isMutable && pointee->equals(o->pointee);
+            return isMutable == o->isMutable && lifetime == o->lifetime && pointee->equals(o->pointee);
         }
         return false;
     }
+    
+    bool isCopy() const override { return !isMutable; } // &T is Copy, &mut T is Move
 };
 
 // -----------------------------------------------------------------------------
@@ -378,16 +460,38 @@ public:
 class TraitType : public Type {
 public:
     SymbolID traitId;
+    std::unordered_map<std::string, const Type*> associatedBindings;
     
     explicit TraitType(SymbolID id) : traitId(id) {}
+    TraitType(SymbolID id, std::unordered_map<std::string, const Type*> bindings) 
+        : traitId(id), associatedBindings(std::move(bindings)) {}
     
     TypeKind getKind() const override { return TypeKind::Trait; }
     std::string toString() const override {
-        return "Trait<" + std::to_string(traitId) + ">";
+        std::string s = "Trait<" + std::to_string(traitId);
+        if (!associatedBindings.empty()) {
+            s += " {";
+            bool first = true;
+            for (const auto& kv : associatedBindings) {
+                if (!first) s += ", ";
+                s += kv.first + " = " + kv.second->toString();
+                first = false;
+            }
+            s += "}";
+        }
+        s += ">";
+        return s;
     }
     bool equals(const Type* other) const override {
         if (auto* o = dynamic_cast<const TraitType*>(other)) {
-            return traitId == o->traitId;
+            if (traitId != o->traitId) return false;
+            if (associatedBindings.size() != o->associatedBindings.size()) return false;
+            for (const auto& kv : associatedBindings) {
+                auto it = o->associatedBindings.find(kv.first);
+                if (it == o->associatedBindings.end()) return false;
+                if (!kv.second->equals(it->second)) return false;
+            }
+            return true;
         }
         return false;
     }
@@ -534,6 +638,35 @@ public:
     }
 };
 
+// -----------------------------------------------------------------------------
+// AssociatedTypeProjection: <T as Trait>::AssocName
+// Represents a not-yet-resolved associated type projection.
+// TraitSolver resolves this into a concrete type.
+// E.g.: in `fn next() -> Self::Item`, Item is initially an AssociatedTypeProjection.
+// -----------------------------------------------------------------------------
+class AssociatedTypeProjection : public Type {
+public:
+    const Type* selfType;    // The self type (T in <T as Trait>)
+    SymbolID traitId;        // The trait ID
+    std::string assocName;   // The associated type name ("Item", "Error", etc.)
+
+    AssociatedTypeProjection(const Type* self, SymbolID trait, std::string name)
+        : selfType(self), traitId(trait), assocName(std::move(name)) {}
+
+    TypeKind getKind() const override { return TypeKind::AssociatedProjection; }
+    std::string toString() const override {
+        std::string selfStr = selfType ? selfType->toString() : "?";
+        return "<" + selfStr + " as Trait<" + std::to_string(traitId) + ">>::" + assocName;
+    }
+    bool equals(const Type* other) const override {
+        if (auto* o = dynamic_cast<const AssociatedTypeProjection*>(other)) {
+            return traitId == o->traitId && assocName == o->assocName &&
+                   ((selfType == o->selfType) || (selfType && o->selfType && selfType->equals(o->selfType)));
+        }
+        return false;
+    }
+};
+
 // =============================================================================
 // TypeContext (Phase 4.2.1)
 // Acts as an arena allocator and interner for all Semantic Types.
@@ -547,15 +680,23 @@ class TypeContext;
 
 class UnificationTable {
     std::vector<const Type*> vars;
+    std::vector<uint32_t> unifiedLog; // Logs IDs that were unified for rollback
 public:
+    struct Snapshot {
+        size_t varsSize;
+        size_t logSize;
+    };
+
     uint32_t newVar() {
         uint32_t id = vars.size();
         vars.push_back(nullptr);
-
         return id;
     }
     
     void unify(uint32_t id, const Type* t) {
+        if (!vars[id]) {
+            unifiedLog.push_back(id);
+        }
         vars[id] = t;
     }
     
@@ -563,6 +704,26 @@ public:
         return vars[id]; // Might be nullptr if unbound
     }
     
+    Snapshot snapshot() const {
+        return {vars.size(), unifiedLog.size()};
+    }
+
+    void rollback(const Snapshot& snap) {
+        // Revert unified variables
+        while (unifiedLog.size() > snap.logSize) {
+            vars[unifiedLog.back()] = nullptr;
+            unifiedLog.pop_back();
+        }
+        // Remove newly created variables
+        if (vars.size() > snap.varsSize) {
+            vars.resize(snap.varsSize);
+        }
+    }
+
+    void commit(const Snapshot& snap) {
+        // Nothing to do for commit in this design, log remains for outer snapshots
+    }
+
     // Deep resolve a type, replacing InferenceVarTypes with their unified type
     const Type* deepResolve(const Type* t, TypeContext& ctx) const;
 };
@@ -579,6 +740,7 @@ class TypeContext {
 
 public:
     UnificationTable unificationTable;
+    std::vector<LifetimeConstraint> lifetimeConstraints;
 
     TypeContext() {
         // Pre-allocate singletons
@@ -631,13 +793,13 @@ public:
         return create<PointerType>(pointee, isMutable);
     }
     
-    const ReferenceType* getReferenceType(const Type* pointee, bool isMutable) {
+    const ReferenceType* getReferenceType(const Type* pointee, bool isMutable, Lifetime lt = {}) {
         for (auto& t : arena_) {
             if (auto* p = dynamic_cast<ReferenceType*>(t.get())) {
-                if (p->pointee == pointee && p->isMutable == isMutable) return p;
+                if (p->pointee == pointee && p->isMutable == isMutable && p->lifetime == lt) return p;
             }
         }
-        return create<ReferenceType>(pointee, isMutable);
+        return create<ReferenceType>(pointee, isMutable, std::move(lt));
     }
     
     const TupleType* getTupleType(const std::vector<const Type*>& elements) {
@@ -661,14 +823,25 @@ public:
         if (!t) return nullptr;
         if (auto* gp = dynamic_cast<const GenericParamType*>(t)) {
             auto it = mapping.find(gp->paramId);
-            if (it != mapping.end()) return it->second;
+            if (it != mapping.end()) {
+                return it->second;
+            }
             return t;
         }
         if (auto* ptr = dynamic_cast<const PointerType*>(t)) {
             return getPointerType(substitute(ptr->pointee, mapping), ptr->isMutable);
         }
         if (auto* ref = dynamic_cast<const ReferenceType*>(t)) {
-            return getReferenceType(substitute(ref->pointee, mapping), ref->isMutable);
+            // Lifetime substitution would go here later (if mapping captures lifetimes)
+            return getReferenceType(substitute(ref->pointee, mapping), ref->isMutable, ref->lifetime);
+        }
+        if (auto* proj = dynamic_cast<const AssociatedTypeProjection*>(t)) {
+            // Substitute within the self type of the projection
+            const Type* newSelf = substitute(proj->selfType, mapping);
+            if (newSelf != proj->selfType) {
+                return getAssociatedProjection(newSelf, proj->traitId, proj->assocName);
+            }
+            return t;
         }
         if (auto* st = dynamic_cast<const StructType*>(t)) {
             if (st->genericArgs.empty()) return t;
@@ -714,13 +887,26 @@ public:
         return create<EnumType>(id, std::move(args));
     }
     
-    const TraitType* getTraitType(SymbolID id) {
+    const TraitType* getTraitType(SymbolID id, std::unordered_map<std::string, const Type*> bindings = {}) {
         for (auto& t : arena_) {
             if (auto* tr = dynamic_cast<TraitType*>(t.get())) {
-                if (tr->traitId == id) return tr;
+                if (tr->traitId == id) {
+                    bool match = true;
+                    if (tr->associatedBindings.size() != bindings.size()) match = false;
+                    else {
+                        for (const auto& kv : bindings) {
+                            auto it = tr->associatedBindings.find(kv.first);
+                            if (it == tr->associatedBindings.end() || !kv.second->equals(it->second)) {
+                                match = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (match) return tr;
+                }
             }
         }
-        return create<TraitType>(id);
+        return create<TraitType>(id, std::move(bindings));
     }
     
     const TraitObjectType* getTraitObjectType(SymbolID id) {
@@ -757,7 +943,24 @@ public:
         }
         return create<GenericParamType>(id, name);
     }
+    
+    const Type* getLifetimeType(const Lifetime& lt) {
+        return create<LifetimeType>(lt);
+    }
+
+    const AssociatedTypeProjection* getAssociatedProjection(const Type* selfType, SymbolID traitId, const std::string& assocName) {
+        for (auto& t : arena_) {
+            if (auto* proj = dynamic_cast<AssociatedTypeProjection*>(t.get())) {
+                if (proj->traitId == traitId && proj->assocName == assocName &&
+                    proj->selfType == selfType) {
+                    return proj;
+                }
+            }
+        }
+        return create<AssociatedTypeProjection>(selfType, traitId, assocName);
+    }
 };
+
 
 inline const Type* UnificationTable::deepResolve(const Type* t, TypeContext& ctx) const {
     if (!t) return nullptr;

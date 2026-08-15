@@ -68,6 +68,7 @@ public:
     void visit(StructInitExpr&) override {}
     void visit(MatchExpr&) override {}
     void visit(LambdaExpr&) override {}
+    void visit(TryExpr&) override {}
     void visit(AwaitExpr&) override {}
     void visit(SizeofExpr&) override {}
     void visit(AlignofExpr&) override {}

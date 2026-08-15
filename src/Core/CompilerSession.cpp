@@ -1,4 +1,5 @@
 #include "mellis/Core/CompilerSession.h"
+#include "mellis/MiddleEnd/SemanticSnapshot.h"
 #include "mellis/MLib/MLibGenerator.h"
 #include "mellis/Support/OSUtils.h"
 #include <iostream>
@@ -13,14 +14,18 @@
 #include "mellis/FrontEnd/MacroResolver.h"
 #include "mellis/FrontEnd/MacroValidator.h"
 #include "mellis/FrontEnd/MacroExpander.h"
+#include "mellis/FrontEnd/LifetimeElider.h"
 #include "mellis/MLib/ModuleLoader.h"
 #include "mellis/MLib/MLibMetadataCache.h"
 #include "mellis/MiddleEnd/Resolver.h"
 #include "mellis/MiddleEnd/MatchAnalyzer.h"
-#include "mellis/MiddleEnd/MVIRGenerator.h"
+#include "mellis/MiddleEnd/ComptimeEvaluator.h"
+#include "mellis/IR/MVIRGenerator.h"
+#include "mellis/IR/IRVerifier.h"
+#include "mellis/MiddleEnd/SemanticSnapshot.h"
 #include "mellis/MiddleEnd/MonomorphizationEngine.h"
-#include "mellis/MiddleEnd/MVIROptimizer.h"
-#include "mellis/MiddleEnd/BorrowChecker.h"
+#include "mellis/Optimizer/MVIROptimizer.h"
+#include "mellis/MiddleEnd/Semantic/SemanticAnalyzer.h"
 #include "mellis/BackEnd/LLVMIRGenerator.h"
 #include "mellis/BackEnd/ExecutableGenerator.h"
 #include "mellis/Support/LLDLinker.h"
@@ -149,6 +154,11 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
         auto* prog = dynamic_cast<ProgramNode*>(ast.get());
         if (prog) {
             importResolver.resolve(*prog);
+            
+            auto generics = moduleLoader.takeInjectedGenerics();
+            for (auto& g : generics) {
+                prog->items.push_back(std::move(g));
+            }
             macroResolver.resolve(*prog);
         }
     }
@@ -169,6 +179,13 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     if (ast) {
         ast = std::unique_ptr<ProgramNode>(static_cast<ProgramNode*>(macroExpander.transformNode(std::move(ast)).release()));
     }
+    
+    // ── Phase 1.5: Lifetime Elision ─────────────────────────────
+    if (verbose) std::cout << "[1.5] Lifetime Elision..." << std::endl;
+    LifetimeElider elider(diag_);
+    if (ast) {
+        elider.elide(*ast);
+    }
 
     // ── Phase 3: Phân giải (Resolver) ────────────────────────────────
     if (verbose) std::cout << "[2] Phan giai ky hieu (Resolver)..." << std::endl;
@@ -182,13 +199,17 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     }
 
     if (verbose) std::cout << "[4] Resolver thanh cong!" << std::endl;
+    std::cerr << "[DEBUG] Resolver finished!" << std::endl;
 
     // ── Phase 4: TypeChecker ──────────────────────────────────────────────────
     if (verbose) std::cout << "[5] Kiem tra kieu du lieu (TypeChecker)..." << std::endl;
+    std::cerr << "[DEBUG] Creating TypeChecker..." << std::endl;
     TypeChecker typeChecker(symbolTable_, diag_, typeContext_);
+    std::cerr << "[DEBUG] Creating MonomorphizationEngine..." << std::endl;
     MonomorphizationEngine monoEngine(symbolTable_, resolver, typeChecker, diag_);
     typeChecker.setMonomorphizationEngine(&monoEngine);
     // Attach MLibMetadataCache so TypeChecker can resolve external symbol types.
+    std::cerr << "[DEBUG] Creating MLibMetadataCache..." << std::endl;
     MLibMetadataCache metadataCache(typeContext_);
     typeChecker.setMetadataCache(&metadataCache);
 
@@ -199,7 +220,9 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
         monoEngine.registerGenericImpl(targetStructId, implNode);
     }
 
+    std::cerr << "[DEBUG] Calling TypeChecker::check..." << std::endl;
     bool tcOk = typeChecker.check(ast.get());
+    std::cerr << "[PHASE] TypeChecker done, tcOk=" << tcOk << std::endl;
 
     if (!tcOk) {
         diag_.error(SourceLocation::invalid(), "Compilation aborted due to TypeChecker errors.");
@@ -207,6 +230,7 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
         return false;
     }
     if (verbose) std::cout << "[6] Type Checker thanh cong!" << std::endl;
+    std::cerr << "[PHASE] Injecting specialized ASTs..." << std::endl;
 
     auto* prog = dynamic_cast<ProgramNode*>(ast.get());
     assert(prog);
@@ -221,23 +245,50 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
         }
     }
 
+    std::cerr << "[PHASE] Specialized ASTs injected" << std::endl;
+
+    // ── Phase 4.75: Comptime Evaluation ──────────────────────────────────────
+    if (verbose) std::cout << "[6.08] Evaluate Comptime blocks..." << std::endl;
+    ComptimeEvaluator comptimeEval(diag_);
+    bool comptimeOk = comptimeEval.evaluateComptimeBlocks(ast.get());
+    std::cerr << "[PHASE] ComptimeEval done, ok=" << comptimeOk << std::endl;
+    if (!comptimeOk) {
+        diag_.error(SourceLocation::invalid(), "Comptime evaluation failed.");
+        diag_.flush();
+        return false;
+    }
+    if (verbose) std::cout << "[6.09] Comptime Evaluation thanh cong!" << std::endl;
+
     // ── Phase 5: Match Analyzer ──────────────────────────────────────────────
     if (verbose) std::cout << "[6.1] Phan tich Pattern Matching (MatchAnalyzer)..." << std::endl;
-    MatchAnalyzer matchAnalyzer(symbolTable_, diag_);
+    MatchAnalyzer matchAnalyzer(symbolTable_, typeChecker, diag_);
     bool matchOk = matchAnalyzer.analyze(ast.get());
+    std::cerr << "[PHASE] MatchAnalyzer done, ok=" << matchOk << std::endl;
     if (!matchOk) {
-        diag_.error(SourceLocation::invalid(), "MatchAnalyzer that bai, nhung tiep tuc de test MVIR...");
+        diag_.error(SourceLocation::invalid(), "Non-exhaustive match or invalid pattern. Aborting compilation.");
         diag_.flush();
-        // return false;
+        return false;
     }
     if (verbose) std::cout << "[6.2] MatchAnalyzer thanh cong!" << std::endl;
 
     // ── Phase 6: MVIR Generation ──────────────────────────────────────────────
     if (verbose) std::cout << "[7] Sinh MVIR (MVIRGenerator)..." << std::endl;
+    std::cerr << "[PHASE] MVIRGenerator starting" << std::endl;
     MVIRGenerator mvirGen(symbolTable_, typeChecker);
     auto mvirModule = mvirGen.generate(*prog);
+    std::cerr << "[PHASE] MVIRGenerator done" << std::endl;
     if (!mvirModule) {
         diag_.error(SourceLocation::invalid(), "Khong the sinh MVIR.");
+        diag_.flush();
+        return false;
+    }
+
+    if (verbose) std::cout << "[7b] Verifying MVIR invariants..." << std::endl;
+    SemanticSnapshot snapshot(typeChecker.getTypeTable(), typeChecker.getContext(), symbolTable_);
+    IRVerifier irVerifier(diag_, &snapshot);
+    auto verifResult = irVerifier.verify(*mvirModule);
+    if (!verifResult.ok) {
+        diag_.error(SourceLocation::invalid(), "MVIR Verification failed: " + verifResult.error);
         diag_.flush();
         return false;
     }
@@ -262,22 +313,22 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
         }
     }
 
-    // ── Phase 7: Borrow Checker ──────────────────────────────────────────────
-    if (verbose) std::cout << "[8.1] Kiem tra muon tham chieu (BorrowChecker)..." << std::endl;
-    BorrowChecker borrowChecker(mvirModule.get(), diag_);
-    bool borrowOk = borrowChecker.check();
-    if (!borrowOk) {
-        diag_.error(SourceLocation::invalid(), "BorrowChecker that bai.");
+    // ── Phase 7: Semantic Analysis ───────────────────────────────────────────
+    if (verbose) std::cout << "[8.1] Phan tich Ngu nghia (SemanticAnalyzer)..." << std::endl;
+    SemanticAnalyzer semanticAnalyzer(mvirModule.get(), diag_, symbolTable_);
+    bool semanticOk = semanticAnalyzer.analyze();
+    if (!semanticOk) {
+        diag_.error(SourceLocation::invalid(), "SemanticAnalyzer that bai.");
         diag_.flush();
         return false;
     }
-    if (verbose) std::cout << "[8.2] BorrowChecker thanh cong!" << std::endl;
+    if (verbose) std::cout << "[8.2] SemanticAnalyzer thanh cong!" << std::endl;
 
     // ── Phase 8: LLVM IR Generation ──────────────────────────────────────────
     llvm::LLVMContext llvmContext;
     llvm::Module llvmModule(filepath, llvmContext);
     
-    LLVMIRGenerator llvmGen(llvmContext, llvmModule, symbolTable_);
+    LLVMIRGenerator llvmGen(llvmContext, llvmModule);
     bool llvmOk = llvmGen.generate(mvirModule.get());
     // llvmModule.print(llvm::errs(), nullptr);
     
@@ -303,7 +354,8 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
         }
         outName += ".mlib";
 
-        fl::MLibGenerator mlibGen(diag_, symbolTable_, typeContext_, macroRegistry);
+        fl::SemanticSnapshot snapshot(typeChecker.getTypeTable(), typeContext_, symbolTable_);
+        fl::MLibGenerator mlibGen(diag_, snapshot, macroRegistry, sourceCode);
         bool mlibOk = mlibGen.generate(&llvmModule, outName);
         if (!mlibOk) {
             diag_.error(SourceLocation::invalid(), "Tao file thu vien that bai.");

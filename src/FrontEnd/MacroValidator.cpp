@@ -196,6 +196,10 @@ void MacroValidator::visit(AwaitExpr& node) {
     if (node.expr) node.expr->accept(*this);
 }
 
+void MacroValidator::visit(TryExpr& node) {
+    if (node.expr) node.expr->accept(*this);
+}
+
 void MacroValidator::visit(SizeofExpr& node) {
     if (node.targetType) node.targetType->accept(this->typeVisitor());
 }
@@ -258,13 +262,17 @@ void MacroValidator::visit(BuiltinTypeNode& node) {
 }
 
 void MacroValidator::visit(NamedTypeNode& node) {
-    for (const auto& item : node.genericArgs) {
-        if (item) item->accept(this->typeVisitor());
+    for (auto& item : node.genericArgs) {
+        if (item) item->accept(static_cast<TypeVisitor&>(*this));
     }
 }
 
+void MacroValidator::visit(LifetimeNode& node) {
+}
+
 void MacroValidator::visit(ReferenceTypeNode& node) {
-    if (node.inner) node.inner->accept(this->typeVisitor());
+    if (node.lifetime) node.lifetime->accept(static_cast<TypeVisitor&>(*this));
+    if (node.inner) node.inner->accept(static_cast<TypeVisitor&>(*this));
 }
 
 void MacroValidator::visit(PointerTypeNode& node) {

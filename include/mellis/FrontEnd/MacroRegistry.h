@@ -9,11 +9,6 @@
 
 namespace fl {
 
-enum class Visibility {
-    Private,
-    Public,
-    Crate
-};
 
 enum class ExpansionStrategy {
     Declarative,

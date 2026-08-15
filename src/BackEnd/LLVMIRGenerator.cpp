@@ -5,14 +5,14 @@
 #include <llvm/Support/raw_ostream.h>
 #include <iostream>
 #include <cassert>
-#include "mellis/AST/DeclNode.h"
 
 namespace fl {
 
-LLVMIRGenerator::LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module, const SymbolTable& symTable)
-    : context_(context), module_(module), builder_(context), symTable_(symTable) {}
+LLVMIRGenerator::LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module)
+    : context_(context), module_(module), builder_(context) {}
 
 bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
+    mvirModule_ = mvirModule;
     globalValues_.clear(); localValues_.clear(); pointerTypes_.clear();
     structTypes_.clear(); blocks_.clear();
 
@@ -46,6 +46,8 @@ bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
 
     bool hasAsyncMain = false;
     for (const auto& func : mvirModule->functions) {
+        if (func->isGeneric) continue;
+
         std::string funcName = func->name.name.substr(1);
         if (funcName == "main" && func->isAsync) {
             funcName = "__fd_main";
@@ -73,13 +75,14 @@ bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
         }
     }
 
-    // Translate instructions
-    // std::cout << "[LLVMGen] Start generating..." << std::endl;
+    // Pass 2: Define functions
     for (const auto& func : mvirModule->functions) {
+        if (func->isGeneric) continue;
+        
+        // Create BasicBlocks first to allow forward references.
         createFunctionStructure(func.get());
         emitFunctionBody(func.get());
     }
-    // std::cout << "[LLVMGen] Functions built." << std::endl;
 
     if (hasAsyncMain) {
         // Generate a synchronous C main that calls block_on
@@ -119,7 +122,7 @@ bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
 
     // Inject runtime helpers
     llvm::FunctionType* doneFnTy = llvm::FunctionType::get(llvm::Type::getInt1Ty(context_), {llvm::PointerType::getUnqual(context_)}, false);
-    llvm::Function* doneFn = llvm::Function::Create(doneFnTy, llvm::Function::ExternalLinkage, "mellis_coro_is_done", module_);
+    llvm::Function* doneFn = llvm::Function::Create(doneFnTy, llvm::Function::LinkOnceAnyLinkage, "mellis_coro_is_done", module_);
     llvm::BasicBlock* doneBB = llvm::BasicBlock::Create(context_, "entry", doneFn);
     builder_.SetInsertPoint(doneBB);
     llvm::Function* coroDoneIntrin = llvm::Intrinsic::getDeclaration(&module_, llvm::Intrinsic::coro_done);
@@ -127,7 +130,7 @@ bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
     builder_.CreateRet(isDone);
 
     llvm::FunctionType* resumeFnTy = llvm::FunctionType::get(llvm::Type::getVoidTy(context_), {llvm::PointerType::getUnqual(context_)}, false);
-    llvm::Function* resumeFn = llvm::Function::Create(resumeFnTy, llvm::Function::ExternalLinkage, "mellis_coro_resume", module_);
+    llvm::Function* resumeFn = llvm::Function::Create(resumeFnTy, llvm::Function::LinkOnceAnyLinkage, "mellis_coro_resume", module_);
     llvm::BasicBlock* resumeBB = llvm::BasicBlock::Create(context_, "entry", resumeFn);
     builder_.SetInsertPoint(resumeBB);
     llvm::Function* coroResumeIntrin = llvm::Intrinsic::getDeclaration(&module_, llvm::Intrinsic::coro_resume);
@@ -190,8 +193,15 @@ llvm::Type* LLVMIRGenerator::mapType(const Type* type) {
         return llvm::PointerType::getUnqual(context_);
     }
     if (auto* st = dynamic_cast<const StructType*>(type)) {
-        const auto& sym = symTable_.getSymbol(st->structSymbolId);
-        std::string name = std::string(sym.name.str());
+        std::string name = "";
+        if (mvirModule_) {
+            for (const auto& tDecl : mvirModule_->typeDecls) {
+                if (tDecl.id == st->structSymbolId) {
+                    name = tDecl.name.substr(1);
+                    break;
+                }
+            }
+        }
         if (structTypes_.count(name)) return structTypes_[name];
         
         // If not found in structTypes_, we can try to look it up or create opaque
@@ -206,8 +216,46 @@ llvm::Type* LLVMIRGenerator::mapType(const Type* type) {
         return llvm::StructType::get(context_, elements, false);
     }
     if (auto* et = dynamic_cast<const EnumType*>(type)) {
-        // Simple enum for now: { i32 tag, [4 x i64] payload }
-        // This allows storing by value without malloc for MVP.
+        if (mvirModule_) {
+            for (const auto& tDecl : mvirModule_->typeDecls) {
+                if (tDecl.id == et->enumSymbolId && tDecl.isEnum) {
+                    std::string name = tDecl.name.substr(1);
+                    if (structTypes_.count(name)) return structTypes_[name];
+                    
+                    uint64_t maxPayloadSize = 0;
+                    unsigned maxPayloadAlign = 1;
+                    
+                    for (const auto& variant : tDecl.variants) {
+                        std::vector<llvm::Type*> fieldTypes;
+                        for (auto* fTy : variant) {
+                            fieldTypes.push_back(mapType(fTy));
+                        }
+                        if (fieldTypes.empty()) continue;
+                        llvm::StructType* tempStruct = llvm::StructType::get(context_, fieldTypes, false);
+                        uint64_t size = module_.getDataLayout().getTypeAllocSize(tempStruct);
+                        unsigned align = module_.getDataLayout().getABITypeAlign(tempStruct).value();
+                        if (size > maxPayloadSize) maxPayloadSize = size;
+                        if (align > maxPayloadAlign) maxPayloadAlign = align;
+                    }
+                    
+                    llvm::Type* payloadType = nullptr;
+                    if (maxPayloadSize == 0) {
+                        payloadType = llvm::StructType::get(context_); // empty struct
+                    } else {
+                        unsigned alignBits = maxPayloadAlign * 8;
+                        if (alignBits > 64) alignBits = 64; // Fallback for very large alignments
+                        llvm::Type* alignType = llvm::Type::getIntNTy(context_, alignBits);
+                        uint64_t numElements = (maxPayloadSize + maxPayloadAlign - 1) / maxPayloadAlign;
+                        payloadType = llvm::ArrayType::get(alignType, numElements);
+                    }
+                    
+                    llvm::StructType* enumStruct = llvm::StructType::create(context_, name);
+                    enumStruct->setBody({llvm::Type::getInt32Ty(context_), payloadType}, false);
+                    structTypes_[name] = enumStruct;
+                    return enumStruct;
+                }
+            }
+        }
         return llvm::StructType::get(context_, { llvm::Type::getInt32Ty(context_), llvm::ArrayType::get(llvm::Type::getInt64Ty(context_), 4) }, false);
     }
     if (auto* arr = dynamic_cast<const ArrayType*>(type)) {
@@ -226,27 +274,109 @@ llvm::Type* LLVMIRGenerator::mapType(const Type* type) {
     return llvm::Type::getVoidTy(context_);
 }
 
-llvm::Value* LLVMIRGenerator::mapOperand(const mvir::Operand& op) {
-    if (std::holds_alternative<mvir::LocalId>(op)) {
-        const auto& local = std::get<mvir::LocalId>(op);
-        auto it = localValues_.find(local.name);
-        if (it != localValues_.end()) return it->second;
-        std::cerr << "LocalId not found in environment: " << local.name << std::endl;
-        return nullptr;
-    } else if (std::holds_alternative<mvir::GlobalId>(op)) {
-        const auto& global = std::get<mvir::GlobalId>(op);
-        auto it = globalValues_.find(global.name);
-        if (it != globalValues_.end()) return it->second;
+llvm::Value* LLVMIRGenerator::mapOperand(const mvir::Operand& op, llvm::Type* expectedType) {
+    if (const auto* place = mvir::getPlaceIf(op)) {
+        llvm::Value* baseVal = nullptr;
         
-        std::string name = global.name.substr(1);
-        llvm::Function* f = module_.getFunction(name);
-        if (f) return f;
+        if (auto* loc = std::get_if<mvir::LocalId>(&place->base)) {
+            auto it = localValues_.find(loc->name);
+            if (it != localValues_.end()) baseVal = it->second;
+            else {
+                std::cerr << "LocalId not found in environment: " << loc->name << std::endl;
+                return nullptr;
+            }
+        } else if (auto* glob = std::get_if<mvir::GlobalId>(&place->base)) {
+            auto it = globalValues_.find(glob->name);
+            if (it != globalValues_.end()) baseVal = it->second;
+            else {
+                std::string name = glob->name.substr(1);
+                llvm::Function* f = module_.getFunction(name);
+                if (f) baseVal = f;
+                else {
+                    std::cerr << "Global function/value not found: " << name << std::endl;
+                    return nullptr;
+                }
+            }
+        }
+
+        if (!baseVal) return nullptr;
         
-        std::cerr << "Global function/value not found: " << name << std::endl;
-        return nullptr;
+        llvm::Value* current = baseVal;
+        llvm::Type* currentPointeeType = nullptr;
+        // Seed the currentPointeeType from the base local's allocation type
+        if (auto* loc = std::get_if<mvir::LocalId>(&place->base)) {
+            auto it = pointerTypes_.find(loc->name);
+            if (it != pointerTypes_.end()) currentPointeeType = it->second;
+        }
+        
+        for (const auto& proj : place->projections) {
+            if (proj.kind == mvir::ProjectionKind::Deref) {
+                // Load through a pointer. currentPointeeType is the type of what current points to.
+                if (!currentPointeeType) currentPointeeType = llvm::PointerType::getUnqual(context_);
+                current = builder_.CreateLoad(currentPointeeType, current, "deref");
+                // After a deref, currentPointeeType = pointee-of-the-old-pointer (now the loaded value is the ptr).
+                // We don't track further here since we'd need type info — safe fallback.
+                currentPointeeType = nullptr;
+            } else if (proj.kind == mvir::ProjectionKind::Field) {
+                // GEP into struct/tuple at field index.
+                if (!currentPointeeType) {
+                    std::cerr << "[LLVMIRGen] Field projection: unknown aggregate type for base\n";
+                    return nullptr;
+                }
+                current = builder_.CreateStructGEP(currentPointeeType, current,
+                    static_cast<unsigned>(proj.fieldIndex), "fld");
+                // Advance currentPointeeType to the field's element type for chained projections
+                if (auto* st = llvm::dyn_cast<llvm::StructType>(currentPointeeType)) {
+                    if (proj.fieldIndex < st->getNumElements()) {
+                        currentPointeeType = st->getElementType(static_cast<unsigned>(proj.fieldIndex));
+                    } else {
+                        currentPointeeType = nullptr;
+                    }
+                } else {
+                    currentPointeeType = nullptr;
+                }
+            } else if (proj.kind == mvir::ProjectionKind::Index) {
+                // GEP into array at dynamic index stored in indexLocal.
+                if (!currentPointeeType) {
+                    std::cerr << "[LLVMIRGen] Index projection: unknown array type for base\n";
+                    return nullptr;
+                }
+                llvm::Value* idxVal = nullptr;
+                if (proj.indexLocal.has_value()) {
+                    auto it = localValues_.find(proj.indexLocal->name);
+                    if (it != localValues_.end()) {
+                        llvm::Type* i32Ty = llvm::Type::getInt32Ty(context_);
+                        idxVal = builder_.CreateLoad(i32Ty, it->second, "idx");
+                    }
+                }
+                if (!idxVal) idxVal = llvm::ConstantInt::get(llvm::Type::getInt32Ty(context_), 0);
+                llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(context_), 0);
+                current = builder_.CreateGEP(currentPointeeType, current, {zero, idxVal}, "elem");
+                // Advance to element type
+                if (auto* arrTy = llvm::dyn_cast<llvm::ArrayType>(currentPointeeType)) {
+                    currentPointeeType = arrTy->getElementType();
+                } else {
+                    currentPointeeType = nullptr;
+                }
+            }
+        }
+        
+        return current;
+
     } else if (std::holds_alternative<mvir::Number>(op)) {
         const auto& num = std::get<mvir::Number>(op);
-        return llvm::ConstantInt::get(llvm::Type::getInt32Ty(context_), std::stoull(num.value, nullptr, 10), true);
+        if (expectedType && expectedType->isFloatTy()) {
+            return llvm::ConstantFP::get(expectedType, llvm::StringRef(num.value));
+        } else if (expectedType && expectedType->isDoubleTy()) {
+            return llvm::ConstantFP::get(expectedType, llvm::StringRef(num.value));
+        } else if (expectedType && expectedType->isIntegerTy()) {
+            return llvm::ConstantInt::get(expectedType, std::stoull(num.value, nullptr, 10), true);
+        } else {
+            if (num.value.find('.') != std::string::npos) {
+                return llvm::ConstantFP::get(builder_.getDoubleTy(), llvm::StringRef(num.value));
+            }
+            return llvm::ConstantInt::get(llvm::Type::getInt32Ty(context_), std::stoull(num.value, nullptr, 10), true);
+        }
     } else if (std::holds_alternative<mvir::Boolean>(op)) {
         const auto& b = std::get<mvir::Boolean>(op);
         return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context_), b.value ? 1 : 0);
@@ -274,6 +404,21 @@ void LLVMIRGenerator::createFunctionStructure(const mvir::Function* func) {
     for (const auto& block : func->blocks) {
         llvm::BasicBlock* bb = llvm::BasicBlock::Create(context_, block->label.name, llvmFunc);
         blocks_[block->label.name] = bb;
+    }
+}
+
+// Helper to strip references and pointers for GEP
+static const Type* peel(const Type* t) {
+    while (true) {
+        if (auto* r = dynamic_cast<const ReferenceType*>(t)) {
+            t = r->pointee;
+            continue;
+        }
+        if (auto* p = dynamic_cast<const PointerType*>(t)) {
+            t = p->pointee;
+            continue;
+        }
+        return t;
     }
 }
 
@@ -390,14 +535,20 @@ void LLVMIRGenerator::emitFunctionBody(const mvir::Function* func) {
         if (block->terminator) {
             emitTerminator(block->terminator.get());
         } else {
-            builder_.CreateRetVoid();
+            throw std::runtime_error("compilerBug: Basic block '" + block->label.toString() + "' has no terminator");
         }
     }
     currentCoroHdl_ = nullptr;
 }
 
 void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
+    if (!inst) return;
+    std::cerr << "[DEBUG LLVMIRGenerator] emitting instruction type: " << typeid(*inst).name() << std::endl;
+
     if (auto* drop = dynamic_cast<const mvir::DropInst*>(inst)) {
+        if (!drop->type || !drop->type->needsDrop()) {
+            return;
+        }
         // Generate call to Type_drop
         std::string typeName = "unknown";
         if (auto* st = dynamic_cast<const StructType*>(drop->type)) {
@@ -420,32 +571,28 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
     }
     else if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
         llvm::Type* ty = mapType(local->type);
-        llvm::Value* val = builder_.CreateAlloca(ty, nullptr, local->dest.name.substr(1));
-        localValues_[local->dest.name] = val;
+        if (!ty->isVoidTy()) {
+            llvm::Value* val = builder_.CreateAlloca(ty, nullptr, local->dest.name.substr(1));
+            localValues_[local->dest.name] = val;
+            // Track pointee type for opaque-pointer GEP (LLVM 15+)
+            pointerTypes_[local->dest.name] = ty;
+        }
     }
     else if (auto* load = dynamic_cast<const mvir::LoadInst*>(inst)) {
-        llvm::Value* ptr = mapOperand(load->ptr);
         llvm::Type* pointeeTy = mapType(load->type);
-        llvm::Value* val = builder_.CreateLoad(pointeeTy, ptr, load->dest.name.substr(1));
-        localValues_[load->dest.name] = val;
+        if (!pointeeTy->isVoidTy()) {
+            llvm::Value* ptr = mapOperand(load->ptr);
+            llvm::Value* val = builder_.CreateLoad(pointeeTy, ptr, load->dest.name.substr(1));
+            localValues_[load->dest.name] = val;
+        }
     }
     else if (auto* store = dynamic_cast<const mvir::StoreInst*>(inst)) {
-        llvm::Value* val = mapOperand(store->value);
-        llvm::Value* ptr = mapOperand(store->ptr);
-        builder_.CreateStore(val, ptr);
-    }
-    else if (auto* idx = dynamic_cast<const mvir::IndexInst*>(inst)) {
-        llvm::Value* ptr = mapOperand(idx->base);
-        llvm::Type* pointeeTy = mapType(idx->type);
-        llvm::Value* indexVal = mapOperand(idx->index);
-        llvm::Value* res = builder_.CreateGEP(pointeeTy, ptr, indexVal, idx->dest.name.substr(1));
-        localValues_[idx->dest.name] = res;
-    }
-    else if (auto* field = dynamic_cast<const mvir::FieldInst*>(inst)) {
-        llvm::Value* ptr = mapOperand(field->base);
-        llvm::Type* pointeeTy = mapType(field->type);
-        llvm::Value* res = builder_.CreateStructGEP(pointeeTy, ptr, field->index, field->dest.name.substr(1));
-        localValues_[field->dest.name] = res;
+        llvm::Type* expectedType = mapType(store->type);
+        if (!expectedType->isVoidTy()) {
+            llvm::Value* val = mapOperand(store->value, expectedType);
+            llvm::Value* ptr = mapOperand(store->ptr);
+            builder_.CreateStore(val, ptr);
+        }
     }
     else if (auto* castinst = dynamic_cast<const mvir::CastInst*>(inst)) {
         llvm::Value* val = mapOperand(castinst->value);
@@ -476,8 +623,8 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         llvm::Value* baseVal = mapOperand(borrow->base);
         localValues_[borrow->dest.name] = baseVal;
         
-        if (std::holds_alternative<mvir::LocalId>(borrow->base)) {
-            std::string baseName = std::get<mvir::LocalId>(borrow->base).name;
+        if (auto* loc = mvir::getLocalIf(borrow->base)) {
+            std::string baseName = loc->name;
             if (pointerTypes_.count(baseName)) {
                 pointerTypes_[borrow->dest.name] = pointerTypes_[baseName];
             }
@@ -520,13 +667,12 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         llvm::ArrayType* vtableTy = llvm::ArrayType::get(llvm::PointerType::getUnqual(context_), mk->vtableMethods.size());
         
         std::vector<llvm::Constant*> methodPtrs;
-        for (auto methodId : mk->vtableMethods) {
-            if (methodId == kInvalidSymbolID) {
+        for (auto& methodName : mk->vtableMethods) {
+            if (methodName.empty()) {
                 methodPtrs.push_back(llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(context_)));
                 continue;
             }
-            std::string methodName = symTable_.getSymbol(methodId).name.str();
-            llvm::Function* func = module_.getFunction(methodName);
+                        llvm::Function* func = module_.getFunction(methodName);
             if (func) {
                 methodPtrs.push_back(func);
             } else {
@@ -553,10 +699,10 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
     }
     else if (auto* call = dynamic_cast<const mvir::CallInst*>(inst)) {
         llvm::FunctionCallee fcallee;
-        if (std::holds_alternative<mvir::GlobalId>(call->func)) {
-            fcallee = module_.getFunction(std::get<mvir::GlobalId>(call->func).name.substr(1));
+        if (mvir::getGlobalIf(call->func)) {
+            fcallee = module_.getFunction((*mvir::getGlobalIf(call->func)).name.substr(1));
             if (!fcallee) {
-                std::cerr << "Function not found: " << std::get<mvir::GlobalId>(call->func).name << std::endl;
+                std::cerr << "Function not found: " << (*mvir::getGlobalIf(call->func)).name << std::endl;
             }
         } else {
             llvm::Value* calleeVal = mapOperand(call->func);
@@ -571,10 +717,21 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
             llvm::FunctionType* llvmFuncTy = llvm::FunctionType::get(mapType(call->funcType->returnType), paramTys, false);
             fcallee = llvm::FunctionCallee(llvmFuncTy, calleeVal);
         }
-        
+        llvm::FunctionType* fnTy = fcallee.getFunctionType();
         std::vector<llvm::Value*> args;
-        for (const auto& arg : call->args) {
-            args.push_back(mapOperand(arg));
+        for (size_t i = 0; i < call->args.size(); ++i) {
+            llvm::Type* expectedType = nullptr;
+            if (fnTy && i < fnTy->getNumParams()) {
+                expectedType = fnTy->getParamType(i);
+            }
+            llvm::Value* val = mapOperand(call->args[i], expectedType);
+            // ABI Rule: float must be promoted to double when passed to variadic function (...)
+            if (fnTy && fnTy->isVarArg() && i >= fnTy->getNumParams()) {
+                if (val->getType()->isFloatTy()) {
+                    val = builder_.CreateFPExt(val, builder_.getDoubleTy());
+                }
+            }
+            args.push_back(val);
         }
         
         llvm::Value* res = builder_.CreateCall(fcallee, args);
@@ -597,7 +754,11 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         std::vector<llvm::Value*> args;
         args.push_back(dataPtr);
         for (size_t i = 1; i < vcall->args.size(); ++i) {
-            args.push_back(mapOperand(vcall->args[i]));
+            llvm::Type* expectedType = nullptr;
+            if (vcall->methodType && i < vcall->methodType->paramTypes.size()) {
+                expectedType = mapType(vcall->methodType->paramTypes[i]);
+            }
+            args.push_back(mapOperand(vcall->args[i], expectedType));
         }
         
         llvm::FunctionType* fnTy = nullptr;
@@ -723,6 +884,9 @@ void LLVMIRGenerator::emitTerminator(const mvir::Terminator* term) {
         } else {
             builder_.CreateRetVoid();
         }
+    }
+    else if (dynamic_cast<const mvir::UnreachableTerm*>(term)) {
+        builder_.CreateUnreachable();
     }
 }
 

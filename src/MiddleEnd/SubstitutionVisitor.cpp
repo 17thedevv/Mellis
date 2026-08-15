@@ -3,6 +3,7 @@
 #include "mellis/AST/StmtNode.h"
 #include "mellis/AST/ExprNode.h"
 #include "mellis/AST/PatternNode.h"
+#include <iostream>
 
 namespace fl {
 
@@ -10,11 +11,20 @@ std::unique_ptr<TypeNode> SubstitutionVisitor::substituteType(std::unique_ptr<Ty
     if (!type) return nullptr;
 
     if (auto* named = dynamic_cast<NamedTypeNode*>(type.get())) {
+        if (named->segments.size() == 2) {
+            // E.g. T::Item -> check if we have a substitution for it
+            std::string key = GenericSubstitution::projectionKey(std::string(named->segments[0]), std::string(named->segments[1]));
+            if (genericSubstitution.associatedProjections.count(key)) {
+                return genericSubstitution.associatedProjections.at(key)->cloneAs<TypeNode>();
+            }
+        }
         if (!named->segments.empty()) {
             std::string name = std::string(named->segments.back());
-            if (substitutions.count(name)) {
-                // Return a clone of the concrete type!
-                return substitutions[name]->cloneAs<TypeNode>();
+            if (genericSubstitution.typeSubstitutions.count(name)) {
+                std::cerr << "[DEBUG] SubstitutionVisitor: Substituted '" << name << "' with its replacement.\n";
+                return genericSubstitution.typeSubstitutions.at(name)->cloneAs<TypeNode>();
+            } else {
+                std::cerr << "[DEBUG] SubstitutionVisitor: NO substitution found for '" << name << "'.\n";
             }
         }
         for (auto& arg : named->genericArgs) {
@@ -23,6 +33,12 @@ std::unique_ptr<TypeNode> SubstitutionVisitor::substituteType(std::unique_ptr<Ty
     } else if (auto* ptr = dynamic_cast<PointerTypeNode*>(type.get())) {
         ptr->inner = substituteType(std::move(ptr->inner));
     } else if (auto* ref = dynamic_cast<ReferenceTypeNode*>(type.get())) {
+        if (ref->lifetime && !ref->lifetime->name.empty()) {
+            std::string lfName = std::string(ref->lifetime->name);
+            if (genericSubstitution.lifetimeSubstitutions.count(lfName)) {
+                ref->lifetime = genericSubstitution.lifetimeSubstitutions.at(lfName)->cloneAs<LifetimeNode>();
+            }
+        }
         ref->inner = substituteType(std::move(ref->inner));
     } else if (auto* arr = dynamic_cast<ArrayTypeNode*>(type.get())) {
         arr->elementType = substituteType(std::move(arr->elementType));
@@ -68,7 +84,17 @@ void SubstitutionVisitor::visit(ImplDeclNode& n) {
     n.selfType = substituteType(std::move(n.selfType));
     n.traitType = substituteType(std::move(n.traitType));
     n.genericParams.clear(); // A specialized impl is no longer generic!
+    for (auto& at : n.associatedTypes) at->accept(*this);
     for (auto& m : n.methods) m->accept(*this);
+}
+
+void SubstitutionVisitor::visit(TraitDeclNode& n) {
+    for (auto& at : n.associatedTypes) at->accept(*this);
+    for (auto& m : n.methods) m->accept(*this);
+}
+
+void SubstitutionVisitor::visit(TypeAliasDeclNode& n) {
+    n.aliasedType = substituteType(std::move(n.aliasedType));
 }
 
 // ==========================================
@@ -183,6 +209,9 @@ void SubstitutionVisitor::visit(LambdaExpr& n) {
     for (auto& p : n.params) p->accept(*this);
     n.returnType = substituteType(std::move(n.returnType));
     if (n.body) n.body->accept(*this);
+}
+void SubstitutionVisitor::visit(TryExpr& n) {
+    if (n.expr) n.expr->accept(*this);
 }
 void SubstitutionVisitor::visit(AwaitExpr& n) {
     if (n.expr) n.expr->accept(*this);

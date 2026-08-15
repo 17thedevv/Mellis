@@ -71,6 +71,7 @@ namespace fl {
 
         // --- Literals ---
         IDENTIFIER,
+        LIFETIME,
         INTEGER_LITERAL,
         FLOAT_LITERAL,
         CHAR_LITERAL,

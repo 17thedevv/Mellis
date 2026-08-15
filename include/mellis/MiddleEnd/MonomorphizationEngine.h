@@ -1,6 +1,6 @@
 #pragma once
-#include <unordered_map>
-#include <unordered_set>
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include <memory>
@@ -24,7 +24,9 @@ public:
     SymbolID requestSpecialization(
         const FunctionDeclNode* genericTemplate,
         const std::vector<const Type*>& genericArgs,
-        SourceLocation loc
+        SourceLocation loc,
+        const ImplDeclNode* parentImpl = nullptr,
+        const Type* selfType = nullptr
     );
 
     /// Requests a specialized version of a generic struct.
@@ -60,16 +62,16 @@ private:
     static constexpr int kMaxDepth = 64;
 
     // Cache of specialized function mangled names -> SymbolID
-    std::unordered_map<std::string, SymbolID> specializedRegistry;
+    std::map<std::string, SymbolID> specializedRegistry;
     
     // Tracks mangled names of functions currently being specialized to prevent infinite recursion
-    std::unordered_set<std::string> inProgress;
+    std::set<std::string> inProgress;
 
     // Stores the specialized ASTs (the Engine owns them, or they can be injected into the ProgramNode)
     std::vector<std::unique_ptr<DeclNode>> specializedASTs;
 
     // Maps a generic Struct/Enum's SymbolID to its generic Impl blocks
-    std::unordered_map<SymbolID, std::vector<const ImplDeclNode*>> genericImpls;
+    std::map<SymbolID, std::vector<const ImplDeclNode*>> genericImpls;
 };
 
 } // namespace fl

@@ -39,6 +39,10 @@
 
 namespace fl {
 
+struct FunctionInfo {
+    BorrowCheckStatus borrowCheckStatus = BorrowCheckStatus::Unchecked;
+};
+
 class SymbolTable {
 public:
     // ── Construction ─────────────────────────────────────────────────────────
@@ -135,7 +139,21 @@ public:
     /// Convenience: the global scope (always ScopeID 0).
     ScopeID globalScopeId() const { return 0; }
 
+    // ── Auxiliary Data ────────────────────────────────────────────────────────
+
+    FunctionInfo& getFunctionInfo(SymbolID id) { return functionInfos_[id]; }
+    const FunctionInfo& getFunctionInfo(SymbolID id) const {
+        auto it = functionInfos_.find(id);
+        if (it != functionInfos_.end()) {
+            return it->second;
+        }
+        static FunctionInfo defaultInfo;
+        return defaultInfo;
+    }
+
 private:
+    /// Auxiliary function data mapped by SymbolID
+    std::unordered_map<SymbolID, FunctionInfo> functionInfos_;
     /// Arena of all symbols — indexed by SymbolID.
     /// Grows monotonically; IDs are stable indices.
     std::vector<Symbol> arena_;

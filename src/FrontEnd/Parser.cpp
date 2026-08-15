@@ -114,13 +114,34 @@ std::vector<GenericParamNode> Parser::parseGenericParams() {
             do {
                 GenericParamNode param;
                 param.loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
-                Token nameTok = consume(TokenType::IDENTIFIER, "Expected generic parameter name");
-                param.name = nameTok.text;
-                
-                if (match(TokenType::COLON)) {
-                    do {
-                        param.bounds.push_back(parseNamedType());
-                    } while (match(TokenType::PLUS));
+                if (current.type == TokenType::LIFETIME) {
+                    param.kind = GenericParamKind::Lifetime;
+                    param.name = current.text;
+                    advance();
+                    if (match(TokenType::COLON)) {
+                        do {
+                            if (current.type == TokenType::LIFETIME) {
+                                auto ltNode = std::make_unique<LifetimeNode>();
+                                ltNode->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+                                ltNode->name = current.text;
+                                advance();
+                                param.bounds.push_back(std::move(ltNode));
+                            } else {
+                                diag.error(SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset), "Expected lifetime bound for a lifetime parameter");
+                                throw ParseError();
+                            }
+                        } while (match(TokenType::PLUS));
+                    }
+                } else {
+                    param.kind = GenericParamKind::Type;
+                    Token nameTok = consume(TokenType::IDENTIFIER, "Expected generic parameter name or lifetime");
+                    param.name = nameTok.text;
+                    
+                    if (match(TokenType::COLON)) {
+                        do {
+                            param.bounds.push_back(parseNamedType());
+                        } while (match(TokenType::PLUS));
+                    }
                 }
                 params.push_back(std::move(param));
             } while (match(TokenType::COMMA));
@@ -130,12 +151,21 @@ std::vector<GenericParamNode> Parser::parseGenericParams() {
     return params;
 }
 
-std::vector<std::unique_ptr<TypeNode>> Parser::parseGenericArgs() {
+std::vector<std::unique_ptr<TypeNode>> Parser::parseGenericArgs(std::vector<NamedTypeNode::AssociatedBinding>* bindings) {
     std::vector<std::unique_ptr<TypeNode>> args;
     if (match(TokenType::GENERIC_START) || match(TokenType::LESS_THAN)) {
         if (!isGenericEnd(current.type)) {
             do {
-                args.push_back(parseType());
+                if (bindings && current.type == TokenType::IDENTIFIER && peek.type == TokenType::EQUAL) {
+                    Token nameTok = consume(TokenType::IDENTIFIER, "");
+                    consume(TokenType::EQUAL, "");
+                    NamedTypeNode::AssociatedBinding b;
+                    b.name = nameTok.text;
+                    b.type = parseType();
+                    bindings->push_back(std::move(b));
+                } else {
+                    args.push_back(parseType());
+                }
             } while (match(TokenType::COMMA));
         }
         consumeGenericEnd();
@@ -326,8 +356,7 @@ std::unique_ptr<DeclNode> Parser::parseExternDecl() {
 
 std::unique_ptr<ItemNode> Parser::parseDeclaration() {
     auto annots = parseAnnotations();
-    
-    bool isExported = false;
+    Visibility visibility = Visibility::Internal;
     
     bool isFunction = false;
     if (current.type == TokenType::KW_FN || current.type == TokenType::KW_ASYNC) {
@@ -346,7 +375,7 @@ std::unique_ptr<ItemNode> Parser::parseDeclaration() {
     // Check export and extern modifiers first
     bool isExtern = false;
     if (match(TokenType::KW_EXPORT)) {
-        isExported = true;
+        visibility = Visibility::Public;
     } else if (match(TokenType::KW_EXTERN)) {
         isExtern = true;
     }
@@ -369,8 +398,10 @@ std::unique_ptr<ItemNode> Parser::parseDeclaration() {
         decl = parseTypeAliasDecl();
     } else if (current.type == TokenType::KW_MOD) {
         decl = parseModDecl();
+    } else if (current.type == TokenType::KW_MACRO) {
+        decl = parseMacroDecl();
     } else {
-        if (!annots.empty() || isExported || isExtern) {
+        if (!annots.empty() || visibility == Visibility::Public || isExtern) {
             diag.error(SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset), "Annotations or modifiers not attached to a declaration");
             throw ParseError();
         }
@@ -378,13 +409,13 @@ std::unique_ptr<ItemNode> Parser::parseDeclaration() {
     }
     
     if (decl) {
-        decl->isExported = isExported;
+        decl->visibility = visibility;
         decl->annotations = std::move(annots);
         
         if (isExtern) {
             auto extNode = std::make_unique<ExternDeclNode>();
             extNode->loc = decl->loc;
-            extNode->isExported = decl->isExported;
+            extNode->visibility = decl->visibility;
             if (auto funcDecl = dynamic_cast<FunctionDeclNode*>(decl.get())) {
                 decl.release();
                 extNode->func.reset(funcDecl);
@@ -400,7 +431,7 @@ std::unique_ptr<ItemNode> Parser::parseDeclaration() {
 std::unique_ptr<DeclNode> Parser::parseVarDecl() {
     auto varDecl = std::make_unique<VarDeclNode>();
     varDecl->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
-    if (match(TokenType::KW_EXPORT)) varDecl->isExported = true;
+    if (match(TokenType::KW_EXPORT)) varDecl->visibility = Visibility::Public;
     if (match(TokenType::KW_CONST)) varDecl->isMutable = false;
     else { consume(TokenType::KW_DEC, "Expected 'dec' or 'const'"); varDecl->isMutable = true; }
 
@@ -420,7 +451,7 @@ std::unique_ptr<DeclNode> Parser::parseFunctionDecl(bool allowEmptyBody) {
     auto funcDecl = std::make_unique<FunctionDeclNode>();
     funcDecl->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
 
-    if (match(TokenType::KW_EXPORT)) funcDecl->isExported = true;
+    if (match(TokenType::KW_EXPORT)) funcDecl->visibility = Visibility::Public;
     if (match(TokenType::KW_COMPTIME)) funcDecl->isComptime = true;
     if (match(TokenType::KW_ASYNC)) funcDecl->isAsync = true;
     if (match(TokenType::KW_UNSAFE)) funcDecl->isUnsafe = true;
@@ -530,7 +561,7 @@ std::unique_ptr<DeclNode> Parser::parseStructDecl() {
         field->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
         
         if (match(TokenType::KW_EXPORT)) {
-            field->isPublic = true;
+            field->visibility = Visibility::Public;
         }
         
         Token fName = consume(TokenType::IDENTIFIER, "Expected field name");
@@ -597,10 +628,35 @@ std::unique_ptr<DeclNode> Parser::parseTraitDecl() {
     consume(TokenType::L_BRACE, "Expected '{'");
     while (!check(TokenType::R_BRACE) && !check(TokenType::END_OF_FILE)) {
         auto annots = parseAnnotations();
-        bool isExported = match(TokenType::KW_EXPORT);
+        Visibility visibility = match(TokenType::KW_EXPORT) ? Visibility::Public : Visibility::Internal;
+
+        if (match(TokenType::KW_TYPE)) {
+            auto atNode = std::make_unique<TypeAliasDeclNode>();
+            atNode->loc = SourceLocation::fromLineCol(kMainFileID, prev.line, prev.col, prev.byteOffset);
+            atNode->name = consume(TokenType::IDENTIFIER, "Expected associated type name").text;
+            atNode->genericParams = parseGenericParams();
+            if (match(TokenType::COLON)) {
+                do {
+                    if (current.type == TokenType::LIFETIME) {
+                        auto ltNode = std::make_unique<LifetimeNode>();
+                        ltNode->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+                        ltNode->name = current.text;
+                        advance();
+                        atNode->bounds.push_back(std::move(ltNode));
+                    } else {
+                        atNode->bounds.push_back(parseNamedType());
+                    }
+                } while (match(TokenType::PLUS));
+            }
+            consume(TokenType::SEMI, "Expected ';' after associated type declaration");
+            atNode->visibility = visibility;
+            atNode->annotations = std::move(annots);
+            node->associatedTypes.push_back(std::move(atNode));
+            continue;
+        }
 
         auto decl = parseFunctionDecl(true); // Traits have empty bodies
-        decl->isExported = isExported;
+        decl->visibility = visibility;
         decl->annotations = std::move(annots);
 
         auto funcDecl = std::unique_ptr<FunctionDeclNode>(dynamic_cast<FunctionDeclNode*>(decl.release()));
@@ -631,10 +687,24 @@ std::unique_ptr<DeclNode> Parser::parseImplDecl() {
     consume(TokenType::L_BRACE, "Expected '{'");
     while (!check(TokenType::R_BRACE) && !check(TokenType::END_OF_FILE)) {
         auto annots = parseAnnotations();
-        bool isExported = match(TokenType::KW_EXPORT);
+        Visibility visibility = match(TokenType::KW_EXPORT) ? Visibility::Public : Visibility::Internal;
         
+        if (match(TokenType::KW_TYPE)) {
+            auto atNode = std::make_unique<TypeAliasDeclNode>();
+            atNode->loc = SourceLocation::fromLineCol(kMainFileID, prev.line, prev.col, prev.byteOffset);
+            atNode->name = consume(TokenType::IDENTIFIER, "Expected associated type name").text;
+            atNode->genericParams = parseGenericParams();
+            consume(TokenType::EQUAL, "Expected '=' in associated type implementation");
+            atNode->aliasedType = parseType();
+            consume(TokenType::SEMI, "Expected ';' after associated type implementation");
+            atNode->visibility = visibility;
+            atNode->annotations = std::move(annots);
+            node->associatedTypes.push_back(std::move(atNode));
+            continue;
+        }
+
         auto decl = parseFunctionDecl();
-        decl->isExported = isExported;
+        decl->visibility = visibility;
         decl->annotations = std::move(annots);
         
         auto funcDecl = std::unique_ptr<FunctionDeclNode>(dynamic_cast<FunctionDeclNode*>(decl.release()));
@@ -852,6 +922,13 @@ std::unique_ptr<StmtNode> Parser::parseComptimeStatement() {
 // ==========================================
 
 std::unique_ptr<TypeNode> Parser::parseType() {
+    if (current.type == TokenType::LIFETIME) {
+        auto node = std::make_unique<LifetimeNode>();
+        node->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+        node->name = current.text;
+        advance();
+        return node;
+    }
     if (match(TokenType::BANG)) {
         auto node = std::make_unique<NeverTypeNode>();
         node->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
@@ -880,6 +957,13 @@ std::unique_ptr<TypeNode> Parser::parseType() {
     if (match(TokenType::BIT_AND)) {
         auto node = std::make_unique<ReferenceTypeNode>();
         node->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+        if (current.type == TokenType::LIFETIME) {
+            auto lt = std::make_unique<LifetimeNode>();
+            lt->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+            lt->name = current.text;
+            advance();
+            node->lifetime = std::move(lt);
+        }
         node->isMutable = match(TokenType::KW_RW);
         node->inner = parseType();
         return node;
@@ -934,7 +1018,7 @@ std::unique_ptr<TypeNode> Parser::parseNamedType() {
         node->segments.push_back(idTok.text);
         
         if (check(TokenType::GENERIC_START) || check(TokenType::LESS_THAN)) {
-            auto args = parseGenericArgs();
+            auto args = parseGenericArgs(&node->associatedBindings);
             for (auto& arg : args) {
                 node->genericArgs.push_back(std::move(arg));
             }
@@ -1344,6 +1428,12 @@ std::unique_ptr<ExprNode> Parser::parsePostfix(bool allowStructLiteral) {
             } else {
                 break;
             }
+        } else if (match(TokenType::QUESTION)) {
+            // Postfix `?` — Try operator
+            auto tryExpr = std::make_unique<TryExpr>();
+            tryExpr->loc = SourceLocation::fromLineCol(kMainFileID, prev.line, prev.col, prev.byteOffset);
+            tryExpr->expr = std::move(expr);
+            expr = std::move(tryExpr);
         } else {
             break;
         }

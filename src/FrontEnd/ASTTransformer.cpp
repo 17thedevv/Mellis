@@ -206,6 +206,10 @@ void ASTTransformer::visit(AwaitExpr& node) {
     if (node.expr) node.expr = transformExpr(std::move(node.expr));
 }
 
+void ASTTransformer::visit(TryExpr& node) {
+    if (node.expr) node.expr = transformExpr(std::move(node.expr));
+}
+
 void ASTTransformer::visit(SizeofExpr& node) {
     if (node.targetType) node.targetType = transformType(std::move(node.targetType));
 }
@@ -219,6 +223,9 @@ void ASTTransformer::visit(PlaceholderStmt& node) {
 
 void ASTTransformer::visit(BlockStmtNode& node) {
     node.body = transformItemList(std::move(node.body));
+    if (node.tailExpr) {
+        node.tailExpr = transformExpr(std::move(node.tailExpr));
+    }
 }
 
 void ASTTransformer::visit(ExprStmtNode& node) {
@@ -271,7 +278,14 @@ void ASTTransformer::visit(NamedTypeNode& node) {
     }
 }
 
+void ASTTransformer::visit(LifetimeNode& node) {
+}
+
 void ASTTransformer::visit(ReferenceTypeNode& node) {
+    if (node.lifetime) {
+        auto transformed = transformType(std::move(node.lifetime));
+        node.lifetime = std::unique_ptr<LifetimeNode>(static_cast<LifetimeNode*>(transformed.release()));
+    }
     if (node.inner) node.inner = transformType(std::move(node.inner));
 }
 

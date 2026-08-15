@@ -50,9 +50,10 @@ struct MLibHeader {
     char magic[4];             // "MLIB"
     uint16_t formatVersion;    // 1 for v1.0
     uint16_t compilerVersion;  // Specific compiler build version
+    uint16_t mvirVersion;      // 1 for v1.0
     char targetTriple[64];     // Target triple string, null-terminated
     uint8_t moduleUUID[16];    // 128-bit UUID for the module
-    uint64_t moduleHash;       // Hash of the module
+    uint64_t moduleHash;       // Hash of the module (or padding if unused)
     uint64_t timestamp;        // UNIX timestamp of build
     uint32_t flags;            // Flags (Debug, Optimized, Reflection, Compressed, Signed)
     uint32_t sectionCount;     // Number of sections
@@ -112,11 +113,15 @@ struct TypeEntry {
     uint32_t namespaceID;
     uint64_t size;
     uint64_t alignment;
+    uint8_t  visibility;
+    uint32_t moduleID;
 };
 
 struct TraitEntry {
     uint32_t nameStringID;
     uint32_t namespaceID;
+    uint8_t  visibility;
+    uint32_t moduleID;
 };
 
 struct FunctionEntry {
@@ -126,6 +131,8 @@ struct FunctionEntry {
     uint8_t  isVariadic;
     uint8_t  paramCount;
     uint16_t flags;            // reserved
+    uint8_t  visibility;
+    uint32_t moduleID;
 };
 
 // One parameter slot in a function signature.
@@ -167,8 +174,8 @@ struct GenericFunctionIndex {
 
 struct GenericPackageHeader {
     uint32_t functionID;
-    uint16_t parameterCount;
-    uint16_t genericCount;
+    uint16_t typeParamCount;
+    uint16_t lifetimeParamCount;
     uint16_t constraintCount;
     uint16_t flags;
     uint32_t returnTypeID;

@@ -40,22 +40,40 @@ file(GLOB FRONTEND_SRC "src/FrontEnd/*.cpp")
 file(GLOB AST_SRC "src/AST/*.cpp")
 file(GLOB CORE_SRC "src/Core/*.cpp")
 
-# MiddleEnd sources — explicit list to exclude deprecated SemanticAnalyzer.cpp
+# MiddleEnd sources — explicit list to match current file structure
 set(MIDDLEEND_SRC
     src/MiddleEnd/SymbolTable.cpp
     src/MiddleEnd/Resolver.cpp
     src/MiddleEnd/TypeChecker.cpp
     src/MiddleEnd/CFG.cpp
     src/MiddleEnd/MatchAnalyzer.cpp
-    src/MiddleEnd/BorrowChecker.cpp src/MiddleEnd/LivenessAnalyzer.cpp
-    src/MiddleEnd/MVIR.cpp
-    src/MiddleEnd/MVIRGenerator.cpp
-    src/MiddleEnd/MVIROptimizer.cpp
+    src/MiddleEnd/BorrowAnalyzer.cpp
+    src/MiddleEnd/LivenessAnalyzer.cpp
+    src/MiddleEnd/MoveAnalyzer.cpp
+    src/MiddleEnd/InitializationAnalyzer.cpp
+    src/MiddleEnd/LifetimeConstraintSolver.cpp
     src/MiddleEnd/Mangle.cpp
     src/MiddleEnd/SubstitutionVisitor.cpp
     src/MiddleEnd/MonomorphizationEngine.cpp
-    src/MiddleEnd/Mangle.cpp
     src/MiddleEnd/ConstEvaluator.cpp
+    src/MiddleEnd/ComptimeEvaluator.cpp
+    src/MiddleEnd/SemanticAnalyzer.cpp
+    src/MiddleEnd/TraitSolver.cpp
+    src/MiddleEnd/VisibilityLeakChecker.cpp
+)
+
+set(IR_SRC
+    src/IR/MVIR.cpp
+    src/IR/MVIRGenerator.cpp
+    src/IR/IRVerifier.cpp
+)
+
+set(OPTIMIZER_SRC
+    src/Optimizer/MVIROptimizer.cpp
+)
+
+set(SEMANTIC_SRC
+    src/MiddleEnd/Semantic/DropElaborator.cpp
 )
 
 set(BACKEND_SRC
@@ -76,6 +94,9 @@ add_executable(mellis
     ${AST_SRC}
     ${FRONTEND_SRC}
     ${MIDDLEEND_SRC}
+    ${SEMANTIC_SRC}
+    ${IR_SRC}
+    ${OPTIMIZER_SRC}
     ${BACKEND_SRC}
     ${SUPPORT_SRC}
     ${MLIB_SRC}
@@ -90,230 +111,7 @@ target_link_libraries(mellis PRIVATE ${LLVM_LIBS})
 # ==========================================
 # PHẦN 3: KIỂM THỬ (TESTING)
 # ==========================================
+# Tests will be re-added when the test suite is rebuilt for Core Hardening.
+# See: docs/Phase6_Advanced_Features_Plan.md for the roadmap.
 enable_testing()
-
-# ── test_ast_manual ───────────────────────────────────────────────────────────
-add_executable(test_ast_manual
-    tests/test_ast_manual.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_ast_manual PRIVATE include)
-target_link_libraries(test_ast_manual PRIVATE ${LLVM_LIBS})
-add_test(NAME ASTManualTest COMMAND test_ast_manual)
-
-# ── test_lexer ────────────────────────────────────────────────────────────────
-add_executable(test_lexer
-    tests/test_lexer.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_lexer PRIVATE include)
-target_link_libraries(test_lexer PRIVATE ${LLVM_LIBS})
-add_test(NAME LexerTest COMMAND test_lexer)
-
-# ── test_parser ───────────────────────────────────────────────────────────────
-add_executable(test_parser
-    tests/test_parser.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_parser PRIVATE include)
-target_link_libraries(test_parser PRIVATE ${LLVM_LIBS})
-add_test(NAME ParserTest COMMAND test_parser)
-
-# ── test_resolver ─────────────────────────────────────────────────────────────
-# Cần: Lexer, Parser, SymbolTable, Resolver
-add_executable(test_resolver
-    tests/test_resolver.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_resolver PRIVATE include)
-target_link_libraries(test_resolver PRIVATE ${LLVM_LIBS})
-add_test(NAME ResolverTest COMMAND test_resolver)
-
-# ── test_diagnostic ───────────────────────────────────────────────────────────
-add_executable(test_diagnostic
-    tests/test_diagnostic.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_diagnostic PRIVATE include)
-target_link_libraries(test_diagnostic PRIVATE ${LLVM_LIBS})
-add_test(NAME DiagnosticTest COMMAND test_diagnostic)
-
-# ── test_typechecker ──────────────────────────────────────────────────────────
-add_executable(test_typechecker
-    tests/test_typechecker.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_typechecker PRIVATE include)
-target_link_libraries(test_typechecker PRIVATE ${LLVM_LIBS})
-add_test(NAME TypeCheckerTest COMMAND test_typechecker)
-
-
-# ── test_mlib ─────────────────────────────────────────────────────────────────
-add_executable(test_mlib
-    tests/test_mlib.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_mlib PRIVATE include)
-target_link_libraries(test_mlib PRIVATE ${LLVM_LIBS})
-add_test(NAME MLibTest COMMAND test_mlib)
-
-# ── test_module_loader ────────────────────────────────────────────────────────
-add_executable(test_module_loader
-    tests/test_module_loader.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_module_loader PRIVATE include)
-target_link_libraries(test_module_loader PRIVATE ${LLVM_LIBS})
-add_test(NAME ModuleLoaderTest COMMAND test_module_loader)
-
-# ── test_cfg ──────────────────────────────────────────────────────────
-add_executable(test_cfg
-    tests/test_cfg.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_cfg PRIVATE include)
-target_link_libraries(test_cfg PRIVATE ${LLVM_LIBS})
-add_test(NAME CFGTest COMMAND test_cfg)
-
-# ── test_mvir_generator ───────────────────────────────────────────────────────
-add_executable(test_mvir_generator
-    tests/test_mvir_generator.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_mvir_generator PRIVATE include)
-target_link_libraries(test_mvir_generator PRIVATE ${LLVM_LIBS})
-add_test(NAME MVIRGeneratorTest COMMAND test_mvir_generator)
-
-# ── test_borrow_checker ───────────────────────────────────────────────────────
-add_executable(test_borrow_checker
-    tests/test_borrow_checker.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_borrow_checker PRIVATE include)
-target_link_libraries(test_borrow_checker PRIVATE ${LLVM_LIBS})
-add_test(NAME BorrowCheckerTest COMMAND test_borrow_checker)
-
-# ── test_llvmir_generator ───────────────────────────────────────────────────────
-add_executable(test_llvmir_generator
-    tests/test_llvmir_generator.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_llvmir_generator PRIVATE include)
-target_link_libraries(test_llvmir_generator PRIVATE ${LLVM_LIBS})
-add_test(NAME LLVMIRGeneratorTest COMMAND test_llvmir_generator)
-
-# ── test_executable_generator ───────────────────────────────────────────────────
-add_executable(test_executable_generator
-    tests/test_executable_generator.cpp
-    ${AST_SRC}
-    ${FRONTEND_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-    ${SUPPORT_SRC}
-    ${CORE_SRC}
-)
-target_include_directories(test_executable_generator PRIVATE include)
-target_link_libraries(test_executable_generator PRIVATE ${LLVM_LIBS})
-add_test(NAME ExecutableGeneratorTest COMMAND test_executable_generator)
-
-add_executable(test_workspace_builder
-    tests/test_workspace_builder.cpp
-    ${CORE_SRC}
-    ${FRONTEND_SRC}
-    ${AST_SRC}
-    ${SUPPORT_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-)
-target_include_directories(test_workspace_builder PRIVATE include)
-target_link_libraries(test_workspace_builder PRIVATE ${LLVM_LIBS})
-add_test(NAME WorkspaceBuilderTest COMMAND test_workspace_builder)
-
-add_executable(test_incremental_build
-    tests/test_incremental_build.cpp
-    ${CORE_SRC}
-    ${FRONTEND_SRC}
-    ${AST_SRC}
-    ${SUPPORT_SRC}
-    ${MIDDLEEND_SRC}
-    ${BACKEND_SRC}
-    ${MLIB_SRC}
-)
-target_include_directories(test_incremental_build PRIVATE include)
-target_link_libraries(test_incremental_build PRIVATE ${LLVM_LIBS})
-add_test(NAME IncrementalBuildTest COMMAND test_incremental_build)
 

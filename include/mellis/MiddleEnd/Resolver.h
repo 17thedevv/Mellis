@@ -31,7 +31,7 @@ public:
 
     /// Performs symbol resolution on the given AST root.
     /// Returns true if resolution succeeded without errors.
-    bool resolve(ASTNode* root);
+    bool resolve(ASTNode* root, ScopeID parentScope = 0);
 
     /// Number of resolution errors.
     size_t errorCount() const { return diag_.errorCount(); }

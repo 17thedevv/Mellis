@@ -1,0 +1,35 @@
+; ModuleID = 'consumer.ms'
+source_filename = "consumer.ms"
+
+define i32 @main() {
+entry0:
+  %"0" = call i32 @identity_int_32(i32 42)
+  ret i32 %"0"
+}
+
+define i32 @identity_int_32(i32 %"0") {
+entry0:
+  %"1" = alloca i32, align 4
+  store i32 %"0", ptr %"1", align 4
+  %"2" = load i32, ptr %"1", align 4
+  ret i32 %"2"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }

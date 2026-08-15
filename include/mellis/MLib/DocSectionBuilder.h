@@ -29,7 +29,11 @@ public:
 
 private:
     StringTableBuilder& stringTable;
-    std::vector<DocEntry> entries;
+    struct InternalDocEntry {
+        uint32_t symbolID;
+        std::string docComment;
+    };
+    std::vector<InternalDocEntry> entries;
 };
 
 // DocSectionReader: parses a Doc Section and resolves StringIDs

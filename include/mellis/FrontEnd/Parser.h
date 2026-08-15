@@ -56,7 +56,7 @@ private:
 
     // Generics
     std::vector<GenericParamNode> parseGenericParams();
-    std::vector<std::unique_ptr<TypeNode>> parseGenericArgs();
+    std::vector<std::unique_ptr<TypeNode>> parseGenericArgs(std::vector<NamedTypeNode::AssociatedBinding>* bindings = nullptr);
     void consumeGenericEnd();
 
     // Statements

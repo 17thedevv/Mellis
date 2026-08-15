@@ -88,7 +88,7 @@ static void walkExternalTree(SymbolTable& st,
         bool anyExported = false;
         std::string_view localName = tree.alias.empty() ? leafName : tree.alias;
         for (auto symId : optSym) {
-            if (!st.getSymbol(symId).isExported) {
+            if (st.getSymbol(symId).visibility != Visibility::Public) {
                 continue;
             }
             anyExported = true;

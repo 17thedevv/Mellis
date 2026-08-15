@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <variant>
-#include "mellis/MiddleEnd/MVIR.h"
+#include "mellis/IR/MVIR.h"
 
 namespace fl {
 

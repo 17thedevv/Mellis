@@ -32,10 +32,24 @@ public:
     ASTNode* cloneImpl() const override;
 };
 
+class LifetimeNode : public TypeNode {
+public:
+    std::string_view name;
+    SymbolID symbolId = kInvalidSymbolID;
+    void accept(TypeVisitor& v) override;
+    void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
+};
+
 class NamedTypeNode : public TypeNode {
 public:
+    struct AssociatedBinding {
+        std::string_view name;
+        std::unique_ptr<TypeNode> type;
+    };
     std::vector<std::string_view>          segments;
     std::vector<std::unique_ptr<TypeNode>> genericArgs;
+    std::vector<AssociatedBinding>         associatedBindings;
     SymbolID                               symbolId = kInvalidSymbolID;
     void accept(TypeVisitor& v) override;
     void accept(ASTVisitor& v) override { }
@@ -45,6 +59,7 @@ public:
 class ReferenceTypeNode : public TypeNode {
 public:
     bool                      isMutable;
+    std::unique_ptr<LifetimeNode> lifetime;
     std::unique_ptr<TypeNode> inner;
     void accept(TypeVisitor& v) override;
     void accept(ASTVisitor& v) override { }

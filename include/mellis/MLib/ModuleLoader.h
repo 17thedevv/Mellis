@@ -105,7 +105,8 @@ private:
                              uint64_t sectionOffset, uint64_t sectionSize,
                              const std::vector<char>& strings,
                              ScopeID virtualScope,
-                             std::string_view moduleName);
+                             std::string_view moduleName,
+                             const uint8_t moduleUUID[16]);
 
 public:
     // Exposes parsed generic Impl blocks for MonomorphizationEngine.
@@ -113,7 +114,10 @@ public:
     std::vector<std::pair<SymbolID, class ImplDeclNode*>> getInjectedGenericImpls() const {
         return injectedImpls_;
     }
-
+    
+    std::vector<std::unique_ptr<class DeclNode>> takeInjectedGenerics() {
+        return std::move(injectedGenerics_);
+    }
 private:
     std::vector<std::unique_ptr<class DeclNode>> injectedGenerics_;
     std::vector<std::pair<SymbolID, class ImplDeclNode*>> injectedImpls_;

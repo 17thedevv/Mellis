@@ -1,0 +1,34 @@
+; ModuleID = 'consumer.ms'
+source_filename = "consumer.ms"
+
+%Pair_int_32_int_32 = type { i32, i32 }
+
+define i32 @main() {
+entry0:
+  %"0" = alloca %Pair_int_32_int_32, align 8
+  %"1" = alloca %Pair_int_32_int_32, align 8
+  store i32 1, ptr %"1", align 4
+  store i32 2, ptr %"1", align 4
+  %"2" = load %Pair_int_32_int_32, ptr %"1", align 4
+  store %Pair_int_32_int_32 %"2", ptr %"0", align 4
+  ret i32 0
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
