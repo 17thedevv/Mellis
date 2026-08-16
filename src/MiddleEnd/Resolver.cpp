@@ -253,11 +253,14 @@ public:
 
     void visit(EnumVariantNode& node) override { 
         node.symbolId = sm.declare(node.name, SymbolKind::EnumVariant, node.loc, &node);
+        int fieldIdx = 0;
         for (auto& f : node.fields) {
-            std::cout << "DEBUG: f->name.length() = " << f->name.length() << std::endl;
             if (!f->name.empty()) {
                 f->symbolId = sm.declare(f->name, SymbolKind::StructField, f->loc, f.get());
+            } else {
+                f->symbolId = sm.declare("__field_" + std::to_string(fieldIdx), SymbolKind::StructField, f->loc, f.get());
             }
+            fieldIdx++;
         }
     }
 
@@ -1004,7 +1007,9 @@ public:
     void visit(IdentifierPatternNode& node) override { 
         // Pattern binding creates a new variable in the current scope
         if (!node.segments.empty()) {
-            node.symbolId = sm.declare(node.segments[0], currentVarKind, node.loc, &node);
+            if (node.symbolId == kInvalidSymbolID) {
+                node.symbolId = sm.declare(node.segments[0], currentVarKind, node.loc, &node);
+            }
         }
     }
     void visit(EnumPatternNode& node) override { 

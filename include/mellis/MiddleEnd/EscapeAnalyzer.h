@@ -76,6 +76,7 @@ private:
     
     // Track lambda nodes by their symbol/type to build the closure graph
     void markEscape(ExprNode* expr);
+    void markNestedClosuresEscaping(const Type* type, SourceLocation loc);
     void markClosureEscaping(ClosureType* closureTy, SourceLocation loc);
     void propagateNestedCaptures(ClosureType* closureTy, SourceLocation loc);
     void checkBorrowEscape(const ClosureType* closureTy, SourceLocation loc);

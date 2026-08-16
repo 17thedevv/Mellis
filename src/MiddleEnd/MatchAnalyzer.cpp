@@ -152,10 +152,22 @@ std::unique_ptr<DecisionNode> compileMatrix(
                 auto extractNode = std::make_unique<ExtractNode>();
                 extractNode->placeStr = headPlace;
                 extractNode->variantId = ctor.variantId;
+                extractNode->variantIdx = i;
+
+                const Type* variantTy = typeChecker.typeOf(enumDecl->variants[i]->symbolId);
+                const FunctionType* variantFnTy = dynamic_cast<const FunctionType*>(variantTy);
 
                 for (size_t fIdx = 0; fIdx < enumDecl->variants[i]->fields.size(); ++fIdx) {
-                    auto& fDecl = enumDecl->variants[i]->fields[fIdx];
-                    newColTypes.push_back(typeChecker.typeOf(fDecl->symbolId));
+                    const Type* fieldTy = typeChecker.getContext().getUnknown();
+                    if (variantFnTy && fIdx < variantFnTy->paramTypes.size()) {
+                        fieldTy = variantFnTy->paramTypes[fIdx];
+                    } else {
+                        auto& fDecl = enumDecl->variants[i]->fields[fIdx];
+                        if (fDecl->symbolId != kInvalidSymbolID) {
+                            fieldTy = typeChecker.typeOf(fDecl->symbolId);
+                        }
+                    }
+                    newColTypes.push_back(fieldTy);
                     std::string newPlace = headPlace + "_v" + std::to_string(ctor.variantId) + "_f" + std::to_string(fIdx);
                     newPlaces.push_back(newPlace);
                     extractNode->bindNames.push_back(newPlace);
@@ -187,7 +199,7 @@ std::unique_ptr<DecisionNode> compileMatrix(
                     }
                 }
                 extractNode->next = std::move(childNode);
-                switchNode->cases.push_back({ctor.variantId, std::move(extractNode)});
+                switchNode->cases.push_back({ctor.variantId, i, std::move(extractNode)});
             }
             if (!allExhaustive) switchNode->fallback = std::make_unique<FailureNode>();
             return switchNode;

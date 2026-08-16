@@ -102,6 +102,10 @@ std::string PtrOffsetInst::toString() const {
     return dest.toString() + " = ptroffset " + mvir::toString(ptr) + " by " + mvir::toString(offset) + " : " + formatType(elementType);
 }
 
+std::string PtrDiffInst::toString() const {
+    return dest.toString() + " = ptrdiff " + mvir::toString(left) + " and " + mvir::toString(right) + " : " + formatType(elementType);
+}
+
 std::string SizeofInst::toString() const {
     return dest.toString() + " = sizeof " + formatType(targetType);
 }
@@ -177,7 +181,11 @@ std::string MakeTraitObjectInst::toString() const {
 }
 
 std::string MakeSliceInst::toString() const {
-    return dest.toString() + " = make_slice ptr: " + mvir::toString(basePtr) + ", len: " + mvir::toString(length);
+    return "%" + dest.name + " = make_slice " + mvir::toString(basePtr) + ", " + mvir::toString(length);
+}
+
+std::string BoundsCheckInst::toString() const {
+    return "bounds_check " + mvir::toString(index) + ", " + mvir::toString(length);
 }
 
 std::string CallInst::toString() const {

@@ -64,6 +64,19 @@ bool MethodResolver::probe(const Type* receiverType, const std::string& name, Me
                     outMethod.traitId = cand.traitId;
                     outMethod.implNode = sol.implNode;
                     
+                    if (outMethod.implNode) {
+                        if (auto* implDecl = dynamic_cast<const ImplDeclNode*>(outMethod.implNode)) {
+                            for (const auto& m : implDecl->methods) {
+                                if (m->name == name) {
+                                    if (m->symbolId < typeTable.size() && typeTable[m->symbolId]) {
+                                        outMethod.type = dynamic_cast<const FunctionType*>(typeTable[m->symbolId]);
+                                        if (outMethod.type) return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     const Type* substitutedMethodType = cand.methodType;
                     if (outMethod.isTraitMethod && cand.methodType && !cand.methodType->paramTypes.empty()) {
                         const Type* firstParam = cand.methodType->paramTypes[0];

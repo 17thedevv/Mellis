@@ -110,6 +110,7 @@ namespace fl {
         KW_MOVE,
         KW_MATCH,
         KW_RW,
+        KW_MUT,
         KW_TRUE,
         KW_FALSE,
         KW_TYPE,

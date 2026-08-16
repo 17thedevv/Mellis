@@ -133,10 +133,29 @@ void EscapeAnalyzer::markEscape(ExprNode* expr) {
         // We can look up the symbol type in the type table/context.
         if (auto* cTy = dynamic_cast<const ClosureType*>(ident->inferredType)) {
             markClosureEscaping(const_cast<ClosureType*>(cTy), expr->loc);
+        } else if (ident->inferredType) {
+            markNestedClosuresEscaping(ident->inferredType, expr->loc);
         }
+    } else if (expr->inferredType) {
+        markNestedClosuresEscaping(expr->inferredType, expr->loc);
     }
+}
 
-    // TODO: Handle returning struct/tuple containing closures
+void EscapeAnalyzer::markNestedClosuresEscaping(const Type* type, SourceLocation loc) {
+    if (!type) return;
+    if (auto* cTy = dynamic_cast<const ClosureType*>(type)) {
+        markClosureEscaping(const_cast<ClosureType*>(cTy), loc);
+    } else if (auto* tupTy = dynamic_cast<const TupleType*>(type)) {
+        for (const auto* elemTy : tupTy->elements) {
+            markNestedClosuresEscaping(elemTy, loc);
+        }
+    } else if (auto* structTy = dynamic_cast<const StructType*>(type)) {
+        // Deep nested tracking within structs requires resolving field types,
+        // which might not be trivially available here without context.
+        // Assuming the explicit closure returns are primarily what we track now.
+    } else if (auto* arrTy = dynamic_cast<const ArrayType*>(type)) {
+        markNestedClosuresEscaping(arrTy->elementType, loc);
+    }
 }
 
 void EscapeAnalyzer::markClosureEscaping(ClosureType* closureTy, SourceLocation loc) {

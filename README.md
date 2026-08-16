@@ -1,4 +1,4 @@
-# Mellis Compiler (FDLang)
+# Mellis Compiler (FDLang) - Version 1.0
 
 Mellis là một trình biên dịch (compiler) dành cho ngôn ngữ **FDLang**, được thiết kế hướng tới ngôn ngữ lập trình hệ thống (System Programming Language) hiện đại, hiệu năng cao, và an toàn. Trình biên dịch sử dụng kiến trúc phân tầng chuyên nghiệp, tạo ra mã trung gian (MVIR) riêng biệt và biên dịch ra mã máy (Native Machine Code) thông qua backend **LLVM**.
 

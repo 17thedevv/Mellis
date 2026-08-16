@@ -34,7 +34,8 @@ struct FailureNode : public DecisionNode {
 
 struct SwitchTagNode : public DecisionNode {
     std::string placeStr;
-    std::vector<std::pair<SymbolID, std::unique_ptr<DecisionNode>>> cases;
+    // pair of variantId, variantIdx, child node
+    std::vector<std::tuple<SymbolID, size_t, std::unique_ptr<DecisionNode>>> cases;
     std::unique_ptr<DecisionNode> fallback;
     
     SwitchTagNode() : DecisionNode(DecisionKind::SwitchTag) {}
@@ -51,6 +52,7 @@ struct SwitchLitNode : public DecisionNode {
 struct ExtractNode : public DecisionNode {
     std::string placeStr;
     SymbolID variantId;
+    size_t variantIdx;
     std::vector<std::string> bindNames;
     std::unique_ptr<DecisionNode> next;
 

@@ -147,11 +147,11 @@ std::string toString(const Operand& op);
 
 enum class Opcode : uint8_t {
     // Memory
-    Local, HeapAlloc, HeapFree, Load, Store, Borrow, Cast, Drop, Sizeof, Alignof, PtrOffset,
+    Local, HeapAlloc, HeapFree, Load, Store, Borrow, Cast, Drop, Sizeof, Alignof, PtrOffset, PtrDiff,
     // ALU
     Alu, Unary,
     // Extract
-    Extract, TupleExtract, Tag, Variant, MakeTraitObject, MakeSlice, Call, VirtualCall, Await,
+    Extract, TupleExtract, Tag, Variant, MakeTraitObject, MakeSlice, Call, VirtualCall, Await, BoundsCheck,
     // Terminators
     Jump, Branch, Switch, Ret, Unreachable
 };
@@ -244,11 +244,23 @@ struct DropInst : public Instruction {
 
 struct PtrOffsetInst : public Instruction {
     Opcode getOpcode() const override { return Opcode::PtrOffset; }
-    PtrOffsetInst(LocalId d, Operand p, Operand o, const Type* t) : dest(std::move(d)), ptr(std::move(p)), offset(std::move(o)), elementType(t) {}
     LocalId dest;
     Operand ptr;
     Operand offset;
     const Type* elementType;
+
+    PtrOffsetInst(LocalId d, Operand p, Operand o, const Type* t) : dest(d), ptr(std::move(p)), offset(std::move(o)), elementType(t) {}
+    std::string toString() const override;
+};
+
+struct PtrDiffInst : public Instruction {
+    Opcode getOpcode() const override { return Opcode::PtrDiff; }
+    LocalId dest;
+    Operand left;
+    Operand right;
+    const Type* elementType;
+
+    PtrDiffInst(LocalId d, Operand l, Operand r, const Type* t) : dest(d), left(std::move(l)), right(std::move(r)), elementType(t) {}
     std::string toString() const override;
 };
 
@@ -378,6 +390,16 @@ struct MakeSliceInst : public Instruction {
 
     MakeSliceInst(LocalId d, Operand b, Operand l)
         : dest(std::move(d)), basePtr(std::move(b)), length(std::move(l)) {}
+    std::string toString() const override;
+};
+
+struct BoundsCheckInst : public Instruction {
+    Opcode getOpcode() const override { return Opcode::BoundsCheck; }
+    Operand index;
+    Operand length;
+
+    BoundsCheckInst(Operand idx, Operand len)
+        : index(std::move(idx)), length(std::move(len)) {}
     std::string toString() const override;
 };
 

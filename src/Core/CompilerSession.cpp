@@ -298,6 +298,8 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     IRVerifier irVerifier(diag_, &snapshot);
     auto verifResult = irVerifier.verify(*mvirModule);
     if (!verifResult.ok) {
+        std::cout << "\n=== MVIR (Verification Failed) ===\n";
+        std::cout << mvirModule->toString() << "\n";
         diag_.error(SourceLocation::invalid(), "MVIR Verification failed: " + verifResult.error);
         diag_.flush();
         return false;

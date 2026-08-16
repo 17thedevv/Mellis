@@ -429,6 +429,34 @@ void MVIRGenerator::visit(BinaryExpr& node) {
         return;
     }
 
+    if (node.intrinsic != IntrinsicKind::None) {
+        std::optional<mvir::LocalId> dest = std::nullopt;
+        if (evalMode_ == EvalMode::RValue) {
+            dest = nextLocal();
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(*dest));
+        } else {
+            dest = nextLocal();
+        }
+
+        const Type* objTy = typeChecker_.getContext().unificationTable.deepResolve(node.left->inferredType, typeChecker_.getContext());
+        const Type* elemTy = objTy->unwrapAlias();
+        if (auto* ptrTy = dynamic_cast<const PointerType*>(elemTy)) elemTy = ptrTy->pointee;
+        else if (auto* refTy = dynamic_cast<const ReferenceType*>(elemTy)) elemTy = refTy->pointee;
+
+        if (node.intrinsic == IntrinsicKind::PtrDiff) {
+            currentBlock_->instructions.push_back(std::make_unique<mvir::PtrDiffInst>(*dest, left, right, elemTy));
+        } else {
+            mvir::Operand offset = right;
+            if (node.intrinsic == IntrinsicKind::PtrSub) {
+                mvir::LocalId negOffset = nextLocal();
+                currentBlock_->instructions.push_back(std::make_unique<mvir::UnaryInst>(negOffset, mvir::UnaryOp::Negate, offset));
+                offset = mvir::Operand(mvir::Place(negOffset));
+            }
+            currentBlock_->instructions.push_back(std::make_unique<mvir::PtrOffsetInst>(*dest, left, offset, elemTy));
+        }
+        return;
+    }
+
     mvir::AluOp op;
     if (node.op == BinaryOp::Add) op = mvir::AluOp::Add;
     else if (node.op == BinaryOp::Sub) op = mvir::AluOp::Sub;
@@ -556,6 +584,7 @@ void MVIRGenerator::visit(EnumDeclNode& node) {
     }
     if (isGenericTemplate) return;
 
+    std::cout << "[DEBUG MVIRGenerator] EnumDeclNode " << node.name << " symbolId=" << node.symbolId << std::endl;
     const Type* etType = typeChecker_.typeOf(node.symbolId);
     if (auto et = dynamic_cast<const EnumType*>(etType)) {
         mvir::TypeDecl decl;
@@ -1221,6 +1250,9 @@ void MVIRGenerator::visit(IndexExpr& node) {
         if (evalMode_ == EvalMode::RValue) {
             dest = nextLocal();
             lastEvaluatedOperand_ = mvir::Operand(mvir::Place(*dest));
+        } else {
+            dest = nextLocal();
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(*dest));
         }
         
         const auto& sym = table_.getSymbol(node.opResolution.methodId);
@@ -1228,21 +1260,9 @@ void MVIRGenerator::visit(IndexExpr& node) {
         mvir::Operand callee(mvir::Place(mvir::GlobalId{"@" + calleeName}));
         std::vector<mvir::Operand> args = {base, indexOp};
         
-        mvir::LocalId retLocal = nextLocal();
         currentBlock_->instructions.push_back(
-            std::make_unique<mvir::CallInst>(retLocal, callee, args)
+            std::make_unique<mvir::CallInst>(dest, callee, args)
         );
-        
-        // trait method returns &T or &mut T. If we are in RValue mode, we must dereference it!
-        // wait! FDLang Index method returns a reference? Yes, usually Index returns &Output and IndexMut returns &mut Output.
-        // If we evaluate in RValue mode, we should Load it.
-        if (evalMode_ == EvalMode::RValue) {
-            currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(
-                *dest, node.inferredType, mvir::Operand(mvir::Place(retLocal))
-            ));
-        } else {
-            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(retLocal));
-        }
         return;
     }
 
@@ -1281,26 +1301,7 @@ void MVIRGenerator::visit(IndexExpr& node) {
     }
     
     if (hasLen) {
-        mvir::LocalId cmpRes = nextLocal();
-        // Check if index >= length
-        currentBlock_->instructions.push_back(std::make_unique<mvir::AluInst>(cmpRes, mvir::AluOp::Ge, indexOp, lenOp));
-        
-        mvir::LabelId failLbl = nextLabel("bounds_fail");
-        mvir::LabelId okLbl = nextLabel("bounds_ok");
-        
-        terminateBlock(std::make_unique<mvir::BranchTerm>(mvir::Operand(mvir::Place(cmpRes)), failLbl, okLbl));
-        
-        startBlock(failLbl);
-        // Call __mellis_bounds_fail (we don't pass args yet, just call a generic external fail function)
-        std::vector<mvir::Operand> failArgs = { indexOp, lenOp };
-        currentBlock_->instructions.push_back(std::make_unique<mvir::CallInst>(
-            std::nullopt, 
-            mvir::Operand(mvir::Place(mvir::GlobalId{"@__mellis_bounds_fail"})), 
-            failArgs, nullptr
-        ));
-        terminateBlock(std::make_unique<mvir::UnreachableTerm>());
-        
-        startBlock(okLbl);
+        currentBlock_->instructions.push_back(std::make_unique<mvir::BoundsCheckInst>(indexOp, lenOp));
     }
 
     if (auto* base = mvir::getPlaceIf(basePtr)) {
@@ -1739,9 +1740,11 @@ void MVIRGenerator::compileDecisionTree(DecisionNode* node, std::unordered_map<s
             auto* sNode = static_cast<SuccessNode*>(node);
             for (auto& bind : sNode->bindings) {
                 mvir::LocalId varPtr = nextLocal();
-                // We need the type. But we can't easily get it here. 
-                // Wait! bindings maps SymbolID -> string. We have typeChecker_.typeOf(symbolId)
                 const Type* varTy = typeChecker_.typeOf(bind.first);
+                std::cout << "[DEBUG MVIR] SuccessNode binding: symbolId=" << bind.first << " placeStr=" << bind.second << "\n";
+                if (places.find(bind.second) == places.end()) {
+                    std::cout << "[DEBUG MVIR] FATAL: placeStr not found in places map!\n";
+                }
                 pushLocalInst(std::make_unique<mvir::LocalInst>(varPtr, varTy));
                 currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(varTy, places[bind.second], varPtr));
                 varAllocas_[bind.first] = varPtr;
@@ -1767,18 +1770,9 @@ void MVIRGenerator::compileDecisionTree(DecisionNode* node, std::unordered_map<s
             
             for (size_t i = 0; i < sNode->cases.size(); ++i) {
                 auto& cas = sNode->cases[i];
-                // we need to know the index of the variant. The cas.first is the variant SymbolID.
-                // we can map it back to index... Wait, TagInst returns the index! We don't have the index here easily unless ExtractNode or Variant gives it.
-                // In MVIRGenerator previously:
-                // We looked up EnumDeclNode to get variantIdx from variantSymbolId.
-                size_t variantIdx = 0;
-                auto enumSym = table_.getSymbol(cas.first);
-                if (enumSym.kind == SymbolKind::Enum && enumSym.decl) {
-                    auto* enumDecl = static_cast<EnumDeclNode*>(enumSym.decl);
-                    for (size_t v = 0; v < enumDecl->variants.size(); ++v) {
-                        if (enumDecl->variants[v]->symbolId == cas.first) { variantIdx = v; break; }
-                    }
-                }
+                SymbolID variantId = std::get<0>(cas);
+                size_t variantIdx = std::get<1>(cas);
+                DecisionNode* childNode = std::get<2>(cas).get();
                 
                 mvir::LocalId cmpRes = nextLocal();
                 currentBlock_->instructions.push_back(std::make_unique<mvir::AluInst>(cmpRes, mvir::AluOp::Eq, tagVal, mvir::Number{std::to_string(variantIdx)}));
@@ -1789,7 +1783,7 @@ void MVIRGenerator::compileDecisionTree(DecisionNode* node, std::unordered_map<s
                 terminateBlock(std::make_unique<mvir::BranchTerm>(mvir::Operand(mvir::Place(cmpRes)), matchLbl, nextTestLbl));
                 
                 startBlock(matchLbl);
-                compileDecisionTree(cas.second.get(), places, armLabels, fallbackLbl);
+                compileDecisionTree(childNode, places, armLabels, fallbackLbl);
                 
                 startBlock(nextTestLbl);
             }
@@ -1805,25 +1799,22 @@ void MVIRGenerator::compileDecisionTree(DecisionNode* node, std::unordered_map<s
             auto* eNode = static_cast<ExtractNode*>(node);
             mvir::Operand subjectOp = places[eNode->placeStr];
             
-            size_t variantIdx = 0;
+            size_t variantIdx = eNode->variantIdx;
             if (eNode->variantId != kInvalidSymbolID) {
-                auto enumSym = table_.getSymbol(eNode->variantId);
-                if (enumSym.kind == SymbolKind::Enum && enumSym.decl) {
-                    auto* enumDecl = static_cast<EnumDeclNode*>(enumSym.decl);
-                    for (size_t v = 0; v < enumDecl->variants.size(); ++v) {
-                        if (enumDecl->variants[v]->symbolId == eNode->variantId) { variantIdx = v; break; }
+                const Type* variantTy = typeChecker_.typeOf(eNode->variantId);
+                const FunctionType* variantFnTy = dynamic_cast<const FunctionType*>(variantTy);
+                
+                std::vector<const Type*> payloadTypes;
+                if (variantFnTy) {
+                    for (size_t fIdx = 0; fIdx < variantFnTy->paramTypes.size(); ++fIdx) {
+                        payloadTypes.push_back(variantFnTy->paramTypes[fIdx]);
                     }
-                    
-                    std::vector<const Type*> payloadTypes;
-                    for (auto& f : enumDecl->variants[variantIdx]->fields) {
-                        payloadTypes.push_back(typeChecker_.typeOf(f->symbolId));
-                    }
-                    
-                    for (size_t i = 0; i < eNode->bindNames.size(); ++i) {
-                        mvir::LocalId fieldVal = nextLocal();
-                        currentBlock_->instructions.push_back(std::make_unique<mvir::ExtractInst>(fieldVal, subjectOp, payloadTypes, variantIdx, i));
-                        places[eNode->bindNames[i]] = mvir::Operand(mvir::Place(fieldVal));
-                    }
+                }
+                
+                for (size_t i = 0; i < eNode->bindNames.size(); ++i) {
+                    mvir::LocalId fieldVal = nextLocal();
+                    currentBlock_->instructions.push_back(std::make_unique<mvir::ExtractInst>(fieldVal, subjectOp, payloadTypes, variantIdx, i));
+                    places[eNode->bindNames[i]] = mvir::Operand(mvir::Place(fieldVal));
                 }
             } else {
                 // Tuple extract

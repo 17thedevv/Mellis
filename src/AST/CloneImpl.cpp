@@ -39,7 +39,7 @@ ASTNode* VarDeclNode::cloneImpl() const {
     copy->annotations = cloneAnnotations(this->annotations);
     copy->visibility = this->visibility;
     copy->name = this->name;
-    copy->symbolId = this->symbolId;
+    copy->symbolId = kInvalidSymbolID;
     copy->isMutable = this->isMutable;
     if (this->typeAnnot) {
         copy->typeAnnot = this->typeAnnot->cloneAs<TypeNode>();
@@ -220,7 +220,7 @@ ASTNode* IdentifierExpr::cloneImpl() const {
     copy->isConstant = this->isConstant;
     
     copy->segments = this->segments;
-    copy->resolvedSymbol = this->resolvedSymbol;
+    copy->resolvedSymbol = kInvalidSymbolID;
     copy->overloadCandidates = this->overloadCandidates;
     for (const auto& arg : this->genericArgs) {
         copy->genericArgs.push_back(arg->cloneAs<TypeNode>());
@@ -608,6 +608,7 @@ ASTNode* TupleLiteralExpr::cloneImpl() const {
 }
 
 ASTNode* MatchExpr::cloneImpl() const {
+    std::cout << "[DEBUG] MatchExpr::cloneImpl called!" << std::endl;
       auto copy = new MatchExpr();
       copy->loc = this->loc;
       copy->inferredType = this->inferredType;
@@ -647,7 +648,7 @@ ASTNode* MatchExpr::cloneImpl() const {
       copy->inferredType = this->inferredType;
       copy->action = this->action;
       copy->segments = this->segments;
-      copy->symbolId = this->symbolId;
+      copy->symbolId = kInvalidSymbolID;
       return copy;
   }
   
@@ -662,6 +663,7 @@ ASTNode* MatchExpr::cloneImpl() const {
           if (f) copy->fields.push_back(f->cloneAs<PatternNode>());
           else copy->fields.push_back(nullptr);
       }
+      std::cout << "[DEBUG] EnumPatternNode clone fields size: " << copy->fields.size() << std::endl;
       return copy;
   }
   

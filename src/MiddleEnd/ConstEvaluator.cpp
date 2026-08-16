@@ -9,22 +9,27 @@ namespace fl {
 
 std::optional<int64_t> ConstEvaluator::evaluate(ExprNode* expr, SymbolTable* symbolTable) {
     if (!expr) return std::nullopt;
+    
+    std::cout << "[DEBUG] ConstEvaluator evaluating expr of type: " << typeid(*expr).name() << "\n";
 
     // 1. Trường hợp là số nguyên trực tiếp (Integer Literal)
     if (auto* lit = dynamic_cast<LiteralExpr*>(expr)) {
+        std::cout << "[DEBUG] ConstEvaluator LiteralExpr kind: " << static_cast<int>(lit->kind) << "\n";
         if (lit->kind == LiteralKind::Integer) {
-            // Prefer explicitly-set variant values first
+            // 1. If we have rawText, parse it directly (Parser only sets rawText)
+            if (!lit->rawText.empty()) {
+                try {
+                    int64_t val = static_cast<int64_t>(std::stoull(std::string(lit->rawText)));
+                    return val;
+                } catch (const std::exception& e) {
+                }
+            }
+            // 2. Fallback to variant value if rawText is not available or parsing failed
             if (auto* i64 = std::get_if<int64_t>(&lit->value)) {
                 return *i64;
             }
             if (auto* u64 = std::get_if<uint64_t>(&lit->value)) {
                 return static_cast<int64_t>(*u64);
-            }
-            // Fallback: Parser may only set rawText; parse it directly
-            if (!lit->rawText.empty()) {
-                try {
-                    return static_cast<int64_t>(std::stoull(std::string(lit->rawText)));
-                } catch (...) {}
             }
         }
         return std::nullopt;

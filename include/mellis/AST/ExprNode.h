@@ -27,6 +27,14 @@ enum class ValueCategory : uint8_t {
     LValue,
 };
 
+enum class IntrinsicKind : uint8_t {
+    None,
+    PtrAdd,
+    PtrSub,
+    PtrOffset,
+    PtrDiff,
+};
+
 class ExprNode : public ASTNode {
 public:
     const Type* inferredType = nullptr;
@@ -94,6 +102,7 @@ public:
     std::unique_ptr<ExprNode> right;
     SymbolID                  overloadedMethodId = kInvalidSymbolID;
     OperatorResolution        opResolution;
+    IntrinsicKind             intrinsic = IntrinsicKind::None;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };
@@ -135,12 +144,7 @@ public:
     ASTNode* cloneImpl() const override;
 };
 
-enum class IntrinsicKind : uint8_t {
-    None,
-    PtrAdd,
-    PtrSub,
-    PtrOffset,
-};
+
 
 class MethodCallExpr : public ExprNode {
 public:

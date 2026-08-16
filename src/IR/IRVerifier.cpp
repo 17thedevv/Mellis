@@ -226,6 +226,10 @@ IRVerificationResult IRVerifier::verifyDominance(const mvir::Function& function)
                 definedLocals.insert(static_cast<const mvir::HeapAllocInst*>(inst.get())->dest.toString());
             } else if (opcode == mvir::Opcode::Await) {
                 definedLocals.insert(static_cast<const mvir::AwaitInst*>(inst.get())->dest.toString());
+            } else if (opcode == mvir::Opcode::PtrOffset) {
+                definedLocals.insert(static_cast<const mvir::PtrOffsetInst*>(inst.get())->dest.toString());
+            } else if (opcode == mvir::Opcode::PtrDiff) {
+                definedLocals.insert(static_cast<const mvir::PtrDiffInst*>(inst.get())->dest.toString());
             }
         }
     }
@@ -279,6 +283,14 @@ IRVerificationResult IRVerifier::verifyDominance(const mvir::Function& function)
                     if (!res.ok) break;
                     res = checkOperand(arg, "VirtualCallInst");
                 }
+            } else if (opcode == mvir::Opcode::PtrOffset) {
+                auto* poff = static_cast<const mvir::PtrOffsetInst*>(inst.get());
+                res = checkOperand(poff->ptr, "PtrOffsetInst");
+                if (res.ok) res = checkOperand(poff->offset, "PtrOffsetInst");
+            } else if (opcode == mvir::Opcode::PtrDiff) {
+                auto* pdiff = static_cast<const mvir::PtrDiffInst*>(inst.get());
+                res = checkOperand(pdiff->left, "PtrDiffInst");
+                if (res.ok) res = checkOperand(pdiff->right, "PtrDiffInst");
             }
             if (!res.ok) return res;
         }

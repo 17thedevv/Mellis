@@ -1,5 +1,5 @@
 fn make_adder(x: int_32) -> fn(int_32) -> int_32 {
-    return |y: int_32| {
+    return |y: int_32| -> int_32 {
         return x + y;
     };
 }

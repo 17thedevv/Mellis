@@ -128,6 +128,7 @@ static const std::unordered_map<std::string_view, TokenType> kKeywords = {
     {"move", TokenType::KW_MOVE},
     {"match", TokenType::KW_MATCH},
     {"rw", TokenType::KW_RW},
+    {"mut", TokenType::KW_MUT},
     {"true", TokenType::KW_TRUE},
     {"false", TokenType::KW_FALSE},
     {"type", TokenType::KW_TYPE},

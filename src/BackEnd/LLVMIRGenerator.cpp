@@ -202,7 +202,8 @@ llvm::Constant* LLVMIRGenerator::buildConstant(const mvir::ConstantValue& cv, co
         case mvir::ConstantValue::Kind::String: {
             return llvm::ConstantDataArray::getString(context_, cv.sVal, false); // cv.sVal already has null terminator
         }
-        // TODO: Array, Tuple, Struct
+        // Complex types (Array, Tuple, Struct) are not represented as ConstantValue
+        // in MVIR. They are constructed dynamically via allocas and StoreInst.
         default:
             return nullptr;
     }
@@ -824,6 +825,22 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         res->setName(ptroff->dest.name.substr(1));
         localValues_[ptroff->dest.name] = res;
     }
+    else if (auto* ptrdiff = dynamic_cast<const mvir::PtrDiffInst*>(inst)) {
+        llvm::Value* leftVal = mapOperand(ptrdiff->left);
+        llvm::Value* rightVal = mapOperand(ptrdiff->right);
+        llvm::Type* elemTy = mapType(ptrdiff->elementType);
+        
+        llvm::Value* leftInt = builder_.CreatePtrToInt(leftVal, builder_.getInt64Ty());
+        llvm::Value* rightInt = builder_.CreatePtrToInt(rightVal, builder_.getInt64Ty());
+        llvm::Value* diff = builder_.CreateSub(leftInt, rightInt);
+        
+        uint64_t elemSize = module_.getDataLayout().getTypeAllocSize(elemTy);
+        llvm::Value* elemSizeVal = builder_.getInt64(elemSize);
+        llvm::Value* res = builder_.CreateExactSDiv(diff, elemSizeVal);
+        
+        res->setName(ptrdiff->dest.name.substr(1));
+        localValues_[ptrdiff->dest.name] = res;
+    }
     else if (auto* alu = dynamic_cast<const mvir::AluInst*>(inst)) {
         llvm::Value* left = mapOperand(alu->left);
         llvm::Value* right = mapOperand(alu->right);
@@ -907,6 +924,42 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         fatPtr = builder_.CreateInsertValue(fatPtr, lenVal, 1);
 
         localValues_[ms->dest.name] = fatPtr;
+    }
+    else if (auto* bounds = dynamic_cast<const mvir::BoundsCheckInst*>(inst)) {
+        llvm::Value* idxVal = mapOperand(bounds->index);
+        llvm::Value* lenVal = mapOperand(bounds->length);
+        
+        // Ensure both are the same integer type, e.g. i64
+        if (idxVal->getType()->isIntegerTy(32)) {
+            idxVal = builder_.CreateZExt(idxVal, llvm::Type::getInt64Ty(context_));
+        }
+        if (lenVal->getType()->isIntegerTy(32)) {
+            lenVal = builder_.CreateZExt(lenVal, llvm::Type::getInt64Ty(context_));
+        }
+        
+        llvm::Value* cond = builder_.CreateICmpUGE(idxVal, lenVal, "bounds_cmp");
+        
+        // We will create two basic blocks: bounds_fail and bounds_ok
+        llvm::Function* currentFunc = builder_.GetInsertBlock()->getParent();
+        llvm::BasicBlock* failBB = llvm::BasicBlock::Create(context_, "bounds_fail", currentFunc);
+        llvm::BasicBlock* okBB = llvm::BasicBlock::Create(context_, "bounds_ok", currentFunc);
+        
+        builder_.CreateCondBr(cond, failBB, okBB);
+        
+        // Fail Block
+        builder_.SetInsertPoint(failBB);
+        
+        // If __mellis_bounds_fail is not declared in module, declare it
+        llvm::FunctionCallee failFunc = module_.getFunction("__mellis_bounds_fail");
+        if (!failFunc) {
+            llvm::FunctionType* ft = llvm::FunctionType::get(llvm::Type::getVoidTy(context_), { llvm::Type::getInt64Ty(context_), llvm::Type::getInt64Ty(context_) }, false);
+            failFunc = module_.getOrInsertFunction("__mellis_bounds_fail", ft);
+        }
+        builder_.CreateCall(failFunc, { idxVal, lenVal });
+        builder_.CreateUnreachable();
+        
+        // Ok Block
+        builder_.SetInsertPoint(okBB);
     }
     else if (auto* call = dynamic_cast<const mvir::CallInst*>(inst)) {
         llvm::FunctionCallee fcallee;

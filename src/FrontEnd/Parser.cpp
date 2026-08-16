@@ -481,17 +481,42 @@ std::unique_ptr<DeclNode> Parser::parseFunctionDecl(bool allowEmptyBody) {
             if (match(TokenType::DOT_DOT_DOT)) {
                 funcDecl->isVariadic = true;
                 break; // '...' must be the last parameter
-            } else if (check(TokenType::KW_SELF_VAL)) {
+            } else if (check(TokenType::KW_SELF_VAL) || 
+                       (check(TokenType::BIT_AND) && (peek.type == TokenType::KW_SELF_VAL || 
+                                                       (peek.type == TokenType::KW_MUT) ||
+                                                       (peek.type == TokenType::KW_RW)))) {
                 param->isSelf = true;
-                param->name = current.text;
-                advance();
+                param->name = "self";
+                
+                bool isRef = false;
+                bool isMut = false;
+                if (match(TokenType::BIT_AND)) {
+                    isRef = true;
+                    if (match(TokenType::KW_MUT) || match(TokenType::KW_RW)) {
+                        isMut = true;
+                    }
+                    consume(TokenType::KW_SELF_VAL, "Expected 'self' after '&' or '&mut'");
+                } else {
+                    param->name = current.text;
+                    advance();
+                }
+
                 if (match(TokenType::COLON)) {
                     param->type = parseType();
                 } else {
                     auto selfType = std::make_unique<NamedTypeNode>();
                     selfType->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
                     selfType->segments.push_back("Self");
-                    param->type = std::move(selfType);
+                    
+                    if (isRef) {
+                        auto refType = std::make_unique<ReferenceTypeNode>();
+                        refType->loc = selfType->loc;
+                        refType->inner = std::move(selfType);
+                        refType->isMutable = isMut;
+                        param->type = std::move(refType);
+                    } else {
+                        param->type = std::move(selfType);
+                    }
                 }
             } else {
                 Token pName = consume(TokenType::IDENTIFIER, "Expected parameter name");
@@ -1001,6 +1026,10 @@ std::unique_ptr<TypeNode> Parser::parseType() {
         node->elementType = parseType();
         if (match(TokenType::COMMA)) {
             node->size = parseExpression(true);
+            std::cout << "[DEBUG] Parser parsed array size, size ptr is " << node->size.get() << "\n";
+        } else if (match(TokenType::SEMI)) {
+            node->size = parseExpression(true);
+            std::cout << "[DEBUG] Parser parsed array size with semicolon, size ptr is " << node->size.get() << "\n";
         }
         consume(TokenType::R_BRACKET, "Expected ']' after array type");
         return node;

@@ -150,6 +150,7 @@ void SubstitutionVisitor::visit(ComptimeStmtNode& n) {
 // ==========================================
 
 void SubstitutionVisitor::visit(IdentifierExpr& n) {
+    n.resolvedSymbol = kInvalidSymbolID;
     for (auto& arg : n.genericArgs) {
         arg = substituteType(std::move(arg));
     }

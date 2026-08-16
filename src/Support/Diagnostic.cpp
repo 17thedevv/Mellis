@@ -107,8 +107,6 @@ Diagnostic& DiagnosticEngine::fatal(SourceLocation loc, std::string msg, std::st
 ///   - Source snippet + caret (^) underline
 ///   - Error codes ("error[E0042]")
 ///   - Sorted output (errors before notes)
-///   - TODO(DiagnosticConsumer): dispatch to consumer->handleDiagnostic()
-///     instead of writing directly to stderr.
 void DiagnosticEngine::flush() const {
     if (consumers_.empty()) {
         // Fallback or warning if no consumer is registered
