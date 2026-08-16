@@ -74,6 +74,10 @@ void InitializationAnalyzer::transferInstruction(const mvir::Instruction& inst, 
         Place localPlace(mvir::Operand(mvir::Place(localInst->dest)));
         state.initStateMap[localPlace.toString()] = InitState::Uninitialized;
     }
+    else if (auto* heapAlloc = dynamic_cast<const mvir::HeapAllocInst*>(&inst)) {
+        Place destPlace(mvir::Operand(mvir::Place(heapAlloc->dest)));
+        state.initStateMap[destPlace.toString()] = InitState::Initialized;
+    }
     else if (auto* borrow = dynamic_cast<const mvir::BorrowInst*>(&inst)) {
         Place basePlace = resolvePlace(borrow->base, state);
         checkAccess(basePlace, fakeLoc, state);

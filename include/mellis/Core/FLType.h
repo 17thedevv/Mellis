@@ -335,16 +335,24 @@ public:
 // -----------------------------------------------------------------------------
 // Function Type (param types -> return type)
 // -----------------------------------------------------------------------------
+
+enum class EscapeBehavior {
+    NonEscaping, // The parameter (e.g., closure) does not escape the function scope
+    Escaping     // The parameter may be stored or returned, outliving the function call
+};
+
 class FunctionType : public Type {
 public:
     std::vector<std::string> paramNames;
     std::vector<const Type*> paramTypes;
+    std::vector<EscapeBehavior> paramEscapeBehaviors; // Same length as paramTypes
     const Type* returnType;
     bool isCallSite;
     bool isVariadic;
     
     FunctionType(std::vector<std::string> names, std::vector<const Type*> params, const Type* ret, bool callSite = false, bool variadic = false)
-        : paramNames(std::move(names)), paramTypes(std::move(params)), returnType(ret), isCallSite(callSite), isVariadic(variadic) {}
+        : paramNames(std::move(names)), paramTypes(std::move(params)), paramEscapeBehaviors(params.size(), EscapeBehavior::Escaping), returnType(ret), isCallSite(callSite), isVariadic(variadic) {}
+
         
     TypeKind getKind() const override { return TypeKind::Function; }
     std::string toString() const override {
@@ -376,20 +384,53 @@ public:
 // -----------------------------------------------------------------------------
 // Closure Type (Anonymous struct for lambdas)
 // -----------------------------------------------------------------------------
+enum class CaptureMode : uint8_t {
+    Copy,
+    Borrow,
+    BorrowMut,
+    Move
+};
+
+enum class CaptureSource : uint8_t {
+    Direct,
+    ParentCapture
+};
+
+struct CaptureInfo {
+    SymbolID      symbolId;
+    CaptureMode   mode;
+    CaptureSource source;
+    const Type*   sourceType = nullptr; // Original type of the captured variable
+    const Type*   envType    = nullptr; // Type stored in the closure environment (T, &'a T, &'a rw T)
+};
+
+enum class ClosureStorageKind { Stack, Heap, None };
+
 class ClosureType : public Type {
 public:
     SymbolID structSymbolId; // ID of the anonymous struct
     SymbolID generatedFuncId;
     const FunctionType* signature;
-    std::vector<SymbolID> capturedSymbols;
+    std::vector<CaptureInfo> captures;
     
     // Memory layout matches a StructType:
     std::vector<const Type*> fieldTypes; // First field is func ptr, remaining are captured vars
     
-    ClosureType(SymbolID structId, SymbolID funcId, const FunctionType* sig, std::vector<SymbolID> captures)
-        : structSymbolId(structId), generatedFuncId(funcId), signature(sig), capturedSymbols(std::move(captures)) {}
+    ClosureType(SymbolID structId, SymbolID funcId, const FunctionType* sig, std::vector<CaptureInfo> caps)
+        : structSymbolId(structId), generatedFuncId(funcId), signature(sig), captures(std::move(caps)) {}
+
         
     TypeKind getKind() const override { return TypeKind::Closure; }
+    
+    bool needsDrop() const override {
+        for (const auto& cap : captures) {
+            if (cap.envType && cap.envType->needsDrop()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     std::string toString() const override {
         return "[closure@" + std::to_string(structSymbolId) + "]";
     }
@@ -398,6 +439,15 @@ public:
             return structSymbolId == o->structSymbolId;
         }
         return false;
+    }
+    
+    // Default isCopy to true if all captures are copyable (Stack closures).
+    // Note: BorrowAnalyzer/MoveChecker will OVERRIDE this for Heap closures (which are Move-Only).
+    bool isCopy() const override {
+        for (const auto& cap : captures) {
+            if (cap.envType && !cap.envType->isCopy()) return false;
+        }
+        return true;
     }
 };
 

@@ -39,6 +39,7 @@ ASTNode* VarDeclNode::cloneImpl() const {
     copy->annotations = cloneAnnotations(this->annotations);
     copy->visibility = this->visibility;
     copy->name = this->name;
+    copy->symbolId = this->symbolId;
     copy->isMutable = this->isMutable;
     if (this->typeAnnot) {
         copy->typeAnnot = this->typeAnnot->cloneAs<TypeNode>();
@@ -55,6 +56,7 @@ ASTNode* ParamDeclNode::cloneImpl() const {
     copy->annotations = cloneAnnotations(this->annotations);
     copy->visibility = this->visibility;
     copy->name = this->name;
+    copy->symbolId = this->symbolId;
     copy->isVariadic = this->isVariadic;
     copy->isSelf = this->isSelf;
     if (this->type) {
@@ -183,6 +185,8 @@ ASTNode* IdentifierExpr::cloneImpl() const {
     copy->isConstant = this->isConstant;
     
     copy->segments = this->segments;
+    copy->resolvedSymbol = this->resolvedSymbol;
+    copy->overloadCandidates = this->overloadCandidates;
     for (const auto& arg : this->genericArgs) {
         copy->genericArgs.push_back(arg->cloneAs<TypeNode>());
     }
@@ -584,6 +588,15 @@ ASTNode* LambdaExpr::cloneImpl() const {
     copy->inferredType = this->inferredType;
     copy->valueCategory = this->valueCategory;
     copy->isConstant = this->isConstant;
+    for (const auto& p : this->params) {
+        copy->params.push_back(std::unique_ptr<ParamDeclNode>(static_cast<ParamDeclNode*>(p->cloneImpl())));
+    }
+    if (this->returnType) copy->returnType = std::unique_ptr<TypeNode>(static_cast<TypeNode*>(this->returnType->cloneImpl()));
+    if (this->body) copy->body = std::unique_ptr<StmtNode>(static_cast<StmtNode*>(this->body->cloneImpl()));
+    copy->captures = this->captures;
+    copy->generatedStructId = this->generatedStructId;
+    copy->generatedFuncId = this->generatedFuncId;
+    copy->isMove = this->isMove;
     return copy;
 }
 

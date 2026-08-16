@@ -435,8 +435,15 @@ std::unique_ptr<DeclNode> Parser::parseVarDecl() {
     if (match(TokenType::KW_CONST)) varDecl->isMutable = false;
     else { consume(TokenType::KW_DEC, "Expected 'dec' or 'const'"); varDecl->isMutable = true; }
 
-    Token nameTok = consume(TokenType::IDENTIFIER, "Expected variable name");
-    varDecl->name = nameTok.text;
+    varDecl->pattern = parsePattern();
+    
+    // Fallback variable name for backward compatibility with simple binding patterns
+    if (auto bindPat = dynamic_cast<fl::IdentifierPatternNode*>(varDecl->pattern.get())) {
+        varDecl->name = bindPat->segments.back(); // Assuming single segment for simple var decls
+    } else {
+        varDecl->name = "<pattern>";
+    }
+
     if (match(TokenType::COLON)) varDecl->typeAnnot = parseType();
     
     if (match(TokenType::EQUAL)) {
@@ -855,9 +862,14 @@ std::unique_ptr<StmtNode> Parser::parseForStatement() {
         }
         consume(TokenType::R_PAREN, "Expected ')' after for update");
     } else {
-        Token ident = consume(TokenType::IDENTIFIER, "Expected loop variable");
-        forStmt->bindingName = ident.text;
-        consume(TokenType::KW_IN, "Expected 'in' after loop variable");
+        forStmt->pattern = parsePattern();
+        // Fallback for bindingName
+        if (auto bindPat = dynamic_cast<fl::IdentifierPatternNode*>(forStmt->pattern.get())) {
+            forStmt->bindingName = bindPat->segments.back();
+        } else {
+            forStmt->bindingName = "<pattern>";
+        }
+        consume(TokenType::KW_IN, "Expected 'in' after loop pattern");
         forStmt->iterable = parseExpression(true);
         consume(TokenType::R_PAREN, "Expected ')' after for condition");
         forStmt->kind = ForKind::ForEach;
@@ -922,6 +934,21 @@ std::unique_ptr<StmtNode> Parser::parseComptimeStatement() {
 // ==========================================
 
 std::unique_ptr<TypeNode> Parser::parseType() {
+    if (match(TokenType::KW_FN)) {
+        auto node = std::make_unique<FunctionTypeNode>();
+        node->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+        consume(TokenType::L_PAREN, "Expected '(' in function type parameters");
+        if (!check(TokenType::R_PAREN)) {
+            do {
+                node->params.push_back(parseType());
+            } while (match(TokenType::COMMA));
+        }
+        consume(TokenType::R_PAREN, "Expected ')' after function type parameters");
+        if (match(TokenType::ARROW)) {
+            node->returnType = parseType();
+        }
+        return node;
+    }
     if (current.type == TokenType::LIFETIME) {
         auto node = std::make_unique<LifetimeNode>();
         node->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
@@ -1503,6 +1530,22 @@ std::unique_ptr<ExprNode> Parser::parseMatchExpr() {
 
 std::unique_ptr<PatternNode> Parser::parsePattern() {
 
+    if (check(TokenType::L_PAREN)) {
+        consume(TokenType::L_PAREN, "");
+        auto tuplePat = std::make_unique<TuplePatternNode>();
+        if (!check(TokenType::R_PAREN)) {
+            do {
+                if (match(TokenType::DOT_DOT)) {
+                    tuplePat->hasRest = true;
+                    break;
+                }
+                tuplePat->elements.push_back(parsePattern());
+            } while (match(TokenType::COMMA));
+        }
+        consume(TokenType::R_PAREN, "Expected ')' for tuple pattern");
+        return tuplePat;
+    }
+    
     if (check(TokenType::IDENTIFIER)) {
         Token tok = current;
         advance();
@@ -1515,20 +1558,47 @@ std::unique_ptr<PatternNode> Parser::parsePattern() {
                 Token seg = consume(TokenType::IDENTIFIER, "Expected identifier");
                 pat->segments.push_back(seg.text);
             }
-            if (pat->segments.size() > 1 || check(TokenType::L_PAREN)) {
-                // It's an Enum pattern (Variant)
-                auto enumPat = std::make_unique<EnumPatternNode>();
-                enumPat->path = std::move(pat->segments);
-                if (check(TokenType::L_PAREN)) {
-                    consume(TokenType::L_PAREN, "");
-                    if (!check(TokenType::R_PAREN)) {
+            if (pat->segments.size() > 1 || check(TokenType::L_PAREN) || check(TokenType::L_BRACE)) {
+                if (check(TokenType::L_BRACE)) {
+                    auto structPat = std::make_unique<StructPatternNode>();
+                    structPat->path = std::move(pat->segments);
+                    consume(TokenType::L_BRACE, "");
+                    if (!check(TokenType::R_BRACE)) {
                         do {
-                            enumPat->fields.push_back(parsePattern());
+                            if (match(TokenType::DOT_DOT)) {
+                                structPat->hasRest = true;
+                                break;
+                            }
+                            StructPatternField field;
+                            Token fieldName = consume(TokenType::IDENTIFIER, "Expected field name in struct pattern");
+                            field.name = fieldName.text;
+                            if (match(TokenType::COLON)) {
+                                field.pattern = parsePattern();
+                            } else {
+                                auto idPat = std::make_unique<IdentifierPatternNode>();
+                                idPat->segments.push_back(field.name);
+                                field.pattern = std::move(idPat);
+                            }
+                            structPat->fields.push_back(std::move(field));
                         } while (match(TokenType::COMMA));
                     }
-                    consume(TokenType::R_PAREN, "Expected ')'");
+                    consume(TokenType::R_BRACE, "Expected '}' after struct pattern");
+                    return structPat;
+                } else {
+                    // It's an Enum pattern (Variant)
+                    auto enumPat = std::make_unique<EnumPatternNode>();
+                    enumPat->path = std::move(pat->segments);
+                    if (check(TokenType::L_PAREN)) {
+                        consume(TokenType::L_PAREN, "");
+                        if (!check(TokenType::R_PAREN)) {
+                            do {
+                                enumPat->fields.push_back(parsePattern());
+                            } while (match(TokenType::COMMA));
+                        }
+                        consume(TokenType::R_PAREN, "Expected ')'");
+                    }
+                    return enumPat;
                 }
-                return enumPat;
             }
             return pat;
         }
@@ -1547,6 +1617,9 @@ std::unique_ptr<PatternNode> Parser::parsePattern() {
 std::unique_ptr<ExprNode> Parser::parseLambdaExpr() {
     auto lambda = std::make_unique<LambdaExpr>();
     lambda->loc = SourceLocation::fromLineCol(kMainFileID, current.line, current.col, current.byteOffset);
+    if (match(TokenType::KW_MOVE)) {
+        lambda->isMove = true;
+    }
     consume(TokenType::BIT_OR, "Expected '|'"); // Note: we use BIT_OR for lambda. Lexer might tokenize it as `|`.
     
     if (!check(TokenType::BIT_OR)) {
@@ -1561,18 +1634,28 @@ std::unique_ptr<ExprNode> Parser::parseLambdaExpr() {
         } while (match(TokenType::COMMA));
     }
     consume(TokenType::BIT_OR, "Expected '|'");
+    consume(TokenType::ARROW, "Expected '->' after lambda parameters");
     
-    if (match(TokenType::ARROW)) {
+    ParserState bookmark = saveState();
+    bool parsedTypeAndBlock = false;
+    
+    try {
         lambda->returnType = parseType();
+        if (check(TokenType::L_BRACE)) {
+            lambda->body = parseBlockStatement();
+            parsedTypeAndBlock = true;
+        } else {
+            restoreState(bookmark);
+        }
+    } catch (const ParseError&) {
+        restoreState(bookmark);
     }
     
-    if (check(TokenType::L_BRACE)) {
-        lambda->body = parseBlockStatement();
-    } else {
+    if (!parsedTypeAndBlock) {
         auto expr = parseExpression(true);
-        auto stmt = std::make_unique<ExprStmtNode>();
-        stmt->expr = std::move(expr);
-        lambda->body = std::move(stmt);
+        auto block = std::make_unique<BlockStmtNode>();
+        block->tailExpr = std::move(expr);
+        lambda->body = std::move(block);
     }
     return lambda;
 }
@@ -1631,7 +1714,7 @@ std::unique_ptr<ExprNode> Parser::parsePrimary(bool allowStructLiteral) {
     if (check(TokenType::KW_MATCH)) {
         return parseMatchExpr();
     }
-    if (check(TokenType::BIT_OR)) {
+    if (check(TokenType::KW_MOVE) || check(TokenType::BIT_OR)) {
         return parseLambdaExpr();
     }
     if (match(TokenType::L_BRACKET)) {

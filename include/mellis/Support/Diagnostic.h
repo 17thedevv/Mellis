@@ -151,6 +151,20 @@ public:
     /// Useful in test harnesses that reuse a single engine across test cases.
     void reset();
 
+    struct DiagnosticState {
+        size_t errorCount;
+        size_t warningCount;
+        size_t diagCount;
+    };
+    DiagnosticState saveState() const {
+        return {errorCount_, warningCount_, diagnostics_.size()};
+    }
+    void restoreState(const DiagnosticState& state) {
+        errorCount_ = state.errorCount;
+        warningCount_ = state.warningCount;
+        diagnostics_.resize(state.diagCount);
+    }
+
 private:
     std::vector<Diagnostic> diagnostics_;
     std::vector<std::shared_ptr<DiagnosticConsumer>> consumers_;

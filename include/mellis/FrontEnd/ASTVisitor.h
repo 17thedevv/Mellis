@@ -158,6 +158,7 @@ public:
     virtual void visit(IdentifierPatternNode&) = 0;
     virtual void visit(EnumPatternNode&)       = 0;
     virtual void visit(TuplePatternNode&)      = 0;
+    virtual void visit(class StructPatternNode&) = 0;
 };
 
 } // namespace fl

@@ -204,5 +204,6 @@ public:
     void visit(IdentifierPatternNode& node) override { shouldVisit(node); }
     void visit(EnumPatternNode& node) override { shouldVisit(node); }
     void visit(TuplePatternNode& node) override { shouldVisit(node); }
+    void visit(StructPatternNode& node) override { shouldVisit(node); }
 };
 }

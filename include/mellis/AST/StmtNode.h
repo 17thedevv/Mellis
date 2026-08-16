@@ -10,6 +10,7 @@ namespace fl {
 
 class ExprNode;
 class Type;
+class PatternNode;
 
 class StmtNode : public ItemNode {};
 
@@ -62,6 +63,7 @@ class ForStmtNode : public StmtNode {
 public:
     ForKind kind;
     std::string_view               bindingName;
+    std::unique_ptr<PatternNode>   pattern;
     SymbolID                       bindingId = kInvalidSymbolID;
     SymbolID                       iterMethodId = kInvalidSymbolID;
     SymbolID                       nextMethodId = kInvalidSymbolID;

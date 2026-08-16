@@ -222,6 +222,8 @@ IRVerificationResult IRVerifier::verifyDominance(const mvir::Function& function)
                 if (static_cast<const mvir::VirtualCallInst*>(inst.get())->dest) {
                     definedLocals.insert(static_cast<const mvir::VirtualCallInst*>(inst.get())->dest->toString());
                 }
+            } else if (opcode == mvir::Opcode::HeapAlloc) {
+                definedLocals.insert(static_cast<const mvir::HeapAllocInst*>(inst.get())->dest.toString());
             } else if (opcode == mvir::Opcode::Await) {
                 definedLocals.insert(static_cast<const mvir::AwaitInst*>(inst.get())->dest.toString());
             }
@@ -461,7 +463,7 @@ IRVerificationResult IRVerifier::verifySemanticClosure(const mvir::Module& modul
                 if (auto* loc = dynamic_cast<const mvir::LocalInst*>(inst.get())) {
                     auto r = verifyTypeSemanticClosure(loc->type, instCtx + " LocalInst");
                     if (!r.ok) return r;
-                    if (loc->dest.symbolId != 0 && loc->dest.symbolId >= snapshot_->getSymbolTable().symbolCount()) {
+                    if (loc->dest.symbolId != fl::kInvalidSymbolID && loc->dest.symbolId >= snapshot_->getSymbolTable().symbolCount()) {
                         return {false, instCtx + " dest symbolId " + std::to_string(loc->dest.symbolId) + " unresolved"};
                     }
                 } else if (auto* ld = dynamic_cast<const mvir::LoadInst*>(inst.get())) {

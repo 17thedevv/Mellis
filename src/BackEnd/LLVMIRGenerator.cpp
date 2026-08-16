@@ -8,8 +8,9 @@
 
 namespace fl {
 
-LLVMIRGenerator::LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module, TraitObjectLayoutBuilder& layoutBuilder)
-    : context_(context), module_(module), builder_(context), layoutBuilder_(layoutBuilder) {}
+LLVMIRGenerator::LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module, TraitObjectLayoutBuilder& layoutBuilder,
+                                 std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap)
+    : context_(context), module_(module), builder_(context), layoutBuilder_(layoutBuilder), closureStorageMap_(closureStorageMap) {}
 
 bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
     mvirModule_ = mvirModule;
@@ -165,13 +166,19 @@ bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
 
     // std::cout << "[LLVMGen] Coroutines built." << std::endl;
     std::error_code EC;
-    llvm::raw_fd_ostream os("llvm.ir", EC);
+    llvm::raw_fd_ostream os_file("llvm.ir", EC);
     if (!EC) {
-        module_.print(os, nullptr);
-        os.flush();
+        module_.print(os_file, nullptr);
+        os_file.flush();
     }
-    bool broken = llvm::verifyModule(module_, &llvm::errs());
-    return !broken;
+    std::string errStr;
+    llvm::raw_string_ostream os(errStr);
+    if (llvm::verifyModule(module_, &os)) {
+        os.flush();
+        std::cerr << "[LLVM Verify Error]\n" << errStr << "\n";
+        return false;
+    }
+    return true;
 }
 
 llvm::Type* LLVMIRGenerator::mapType(const Type* type) {
@@ -341,12 +348,13 @@ llvm::Value* LLVMIRGenerator::mapOperand(const mvir::Operand& op, llvm::Type* ex
         
         for (const auto& proj : place->projections) {
             if (proj.kind == mvir::ProjectionKind::Deref) {
-                // Load through a pointer. currentPointeeType is the type of what current points to.
-                if (!currentPointeeType) currentPointeeType = llvm::PointerType::getUnqual(context_);
-                current = builder_.CreateLoad(currentPointeeType, current, "deref");
-                // After a deref, currentPointeeType = pointee-of-the-old-pointer (now the loaded value is the ptr).
-                // We don't track further here since we'd need type info — safe fallback.
-                currentPointeeType = nullptr;
+                current = builder_.CreateLoad(llvm::PointerType::getUnqual(context_), current, "deref");
+                // For FDLang, if currentPointeeType was a pointer, we don't know the pointee type.
+                // But if currentPointeeType is already the StructType (set by custom pointerTypes_ tracking),
+                // we preserve it so Field projection works!
+                if (currentPointeeType && currentPointeeType->isPointerTy()) {
+                    currentPointeeType = nullptr;
+                }
             } else if (proj.kind == mvir::ProjectionKind::Field || proj.kind == mvir::ProjectionKind::TupleIndex) {
                 // GEP into struct/tuple at field index.
                 if (!currentPointeeType) {
@@ -584,9 +592,61 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
     std::cerr << "[DEBUG LLVMIRGenerator] emitting instruction type: " << typeid(*inst).name() << std::endl;
 
     if (auto* drop = dynamic_cast<const mvir::DropInst*>(inst)) {
-        if (!drop->type || !drop->type->needsDrop()) {
+        if (!drop->type) return;
+
+        bool isHeapClosure = false;
+        const ClosureType* closTy = nullptr;
+        if (auto* ptrTy = dynamic_cast<const PointerType*>(drop->type)) {
+            if ((closTy = dynamic_cast<const ClosureType*>(ptrTy->pointee))) {
+                auto it = closureStorageMap_.find(closTy);
+                if (it != closureStorageMap_.end() && it->second == ClosureStorageKind::Heap) {
+                    isHeapClosure = true;
+                }
+            }
+        }
+        
+        if (!drop->type->needsDrop() && !isHeapClosure) {
             return;
         }
+
+        if (isHeapClosure) {
+            llvm::Value* closurePtr = mapOperand(drop->value);
+            llvm::Value* heapPtr = builder_.CreateLoad(builder_.getPtrTy(), closurePtr, "heap_clos.drop.load");
+
+            llvm::Type* llvmClosTy = mapType(closTy);
+            for (size_t i = 0; i < closTy->captures.size(); ++i) {
+                if (closTy->captures[i].envType && closTy->captures[i].envType->needsDrop()) {
+                    llvm::Value* fieldPtr = builder_.CreateStructGEP(llvmClosTy, heapPtr, i + 1);
+                    
+                    const Type* capTy = closTy->captures[i].envType;
+                    std::string capTypeName = "unknown";
+                    if (auto* st = dynamic_cast<const StructType*>(capTy)) {
+                        capTypeName = "Struct" + std::to_string(st->structSymbolId);
+                    } else if (auto* et = dynamic_cast<const EnumType*>(capTy)) {
+                        capTypeName = "Enum" + std::to_string(et->enumSymbolId);
+                    }
+                    std::string capDropFnName = capTypeName + "_drop";
+                    llvm::Function* capDropFn = module_.getFunction(capDropFnName);
+                    if (!capDropFn) {
+                        for (auto& f : module_) {
+                            if (f.getName().starts_with("drop_") && f.arg_size() == 1) {
+                                capDropFn = &f;
+                                break;
+                            }
+                        }
+                    }
+                    if (!capDropFn) {
+                        llvm::Type* voidTy = llvm::Type::getVoidTy(context_);
+                        llvm::Type* ptrTy = llvm::PointerType::getUnqual(context_);
+                        llvm::FunctionType* fnTy = llvm::FunctionType::get(voidTy, {ptrTy}, false);
+                        capDropFn = llvm::Function::Create(fnTy, llvm::Function::ExternalLinkage, capDropFnName, &module_);
+                    }
+                    builder_.CreateCall(capDropFn, {fieldPtr});
+                }
+            }
+            return;
+        }
+
         // Generate call to Type_drop
         std::string typeName = "unknown";
         if (auto* st = dynamic_cast<const StructType*>(drop->type)) {
@@ -598,6 +658,14 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         
         llvm::Function* dropFn = module_.getFunction(dropFnName);
         if (!dropFn) {
+            for (auto& f : module_) {
+                if (f.getName().starts_with("drop_") && f.arg_size() == 1) {
+                    dropFn = &f;
+                    break;
+                }
+            }
+        }
+        if (!dropFn) {
             llvm::Type* voidTy = llvm::Type::getVoidTy(context_);
             llvm::Type* ptrTy = llvm::PointerType::getUnqual(context_);
             llvm::FunctionType* fnTy = llvm::FunctionType::get(voidTy, {ptrTy}, false);
@@ -606,13 +674,53 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         
         llvm::Value* val = mapOperand(drop->value);
         builder_.CreateCall(dropFn, {val});
-    }    else if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
+    }    
+    else if (auto* heapAlloc = dynamic_cast<const mvir::HeapAllocInst*>(inst)) {
+        llvm::Type* ty = mapType(heapAlloc->type);
+        if (!ty->isVoidTy()) {
+            // Get size of type
+            uint64_t size = module_.getDataLayout().getTypeAllocSize(ty);
+            
+            llvm::Function* mallocFn = module_.getFunction("malloc");
+            if (!mallocFn) {
+                llvm::FunctionType* mallocTy = llvm::FunctionType::get(builder_.getPtrTy(), {builder_.getInt64Ty()}, false);
+                mallocFn = llvm::Function::Create(mallocTy, llvm::Function::ExternalLinkage, "malloc", &module_);
+            }
+            
+            llvm::Value* sizeVal = llvm::ConstantInt::get(builder_.getInt64Ty(), size);
+            llvm::Value* ptr = builder_.CreateCall(mallocFn, {sizeVal}, heapAlloc->dest.name.substr(1) + "_malloc");
+            
+            if (localValues_.count(heapAlloc->dest.name)) {
+                builder_.CreateStore(ptr, localValues_[heapAlloc->dest.name]);
+            } else {
+                localValues_[heapAlloc->dest.name] = ptr;
+                pointerTypes_[heapAlloc->dest.name] = ty;
+            }
+        }
+    }
+    else if (auto* heapFree = dynamic_cast<const mvir::HeapFreeInst*>(inst)) {
+        llvm::Value* val = mapOperand(heapFree->ptr);
+        llvm::Value* heapPtr = builder_.CreateLoad(builder_.getPtrTy(), val, "heap_free.load");
+        llvm::Function* freeFn = module_.getFunction("free");
+        if (!freeFn) {
+            llvm::FunctionType* freeTy = llvm::FunctionType::get(llvm::Type::getVoidTy(context_), {builder_.getPtrTy()}, false);
+            freeFn = llvm::Function::Create(freeTy, llvm::Function::ExternalLinkage, "free", &module_);
+        }
+        builder_.CreateCall(freeFn, {heapPtr});
+    }
+    else if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
         llvm::Type* ty = mapType(local->type);
         if (!ty->isVoidTy()) {
             llvm::Value* val = builder_.CreateAlloca(ty, nullptr, local->dest.name.substr(1));
             localValues_[local->dest.name] = val;
-            // Track pointee type for opaque-pointer GEP (LLVM 15+)
-            pointerTypes_[local->dest.name] = ty;
+            
+            llvm::Type* pointeeTy = ty;
+            if (auto* pTy = dynamic_cast<const PointerType*>(local->type)) {
+                pointeeTy = mapType(pTy->pointee);
+            } else if (auto* rTy = dynamic_cast<const ReferenceType*>(local->type)) {
+                pointeeTy = mapType(rTy->pointee);
+            }
+            pointerTypes_[local->dest.name] = pointeeTy;
         }
     }
     else if (auto* load = dynamic_cast<const mvir::LoadInst*>(inst)) {

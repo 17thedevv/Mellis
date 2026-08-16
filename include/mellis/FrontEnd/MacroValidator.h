@@ -77,6 +77,7 @@ public:
     void visit(IdentifierPatternNode& node) override;
     void visit(EnumPatternNode& node) override;
     void visit(TuplePatternNode& node) override;
+    void visit(StructPatternNode& node) override;
     void visit(MacroDeclNode& node) override;
     void visit(MacroCallExpr& node) override;
     void visit(MacroCallStmt& node) override;

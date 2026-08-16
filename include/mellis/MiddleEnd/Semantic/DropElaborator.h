@@ -8,9 +8,11 @@ namespace fl {
 
 class DropElaborator {
     mvir::Module* module_;
+    std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap_;
 
 public:
-    explicit DropElaborator(mvir::Module* module) : module_(module) {}
+    explicit DropElaborator(mvir::Module* module, std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap) 
+        : module_(module), closureStorageMap_(closureStorageMap) {}
 
     void run();
 

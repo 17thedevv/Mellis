@@ -39,6 +39,7 @@ The frontend, middle-end, and `.mlib` serialization systems are highly structure
 ## 4. Known Issues & Missing Features
 - **Standard Library**: We lack a standard library for file I/O, heap-allocated strings (`String`), core utilities, and an async Executor.
 - **Advanced Syntax (Phase 8)**: The frontend parses `async`/`await`, `lambda`, `comptime`, and `unsafe`, but the backend needs further polishing for full runtime execution.
+- **Escaping Closures (Phase 6.3)**: Closure environments currently default to stack allocation. An escape analysis pass is needed to move environments to the heap when a closure outlives its creating scope.
 
 ## 5. Next Steps (Phase 8)
 We are moving to build the **Ecosystem & Standard Library** and finalize advanced backend features.

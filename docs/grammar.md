@@ -380,7 +380,7 @@ unit_literal  ::= "(" ")"
 
 // --- STRUCT LITERAL, LAMBDA, SIZEOF ---
 struct_literal ::= type_path "{" (IDENTIFIER ":" expression ("," IDENTIFIER ":" expression)* ","?)? "}"
-lambda_expr    ::= "|" (IDENTIFIER (":" type)? ("," IDENTIFIER (":" type)?)* ","?)? "|" ("->" type)? (expression | block_stmt)
+lambda_expr    ::= "move"? "|" (IDENTIFIER (":" type)? ("," IDENTIFIER (":" type)?)* ","?)? "|" "->" (type block_stmt | expression)
 sizeof_expr    ::= KW_SIZEOF "(" type ")"
 alignof_expr   ::= KW_ALIGNOF "(" type ")"
 

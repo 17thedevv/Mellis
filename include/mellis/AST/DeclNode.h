@@ -13,6 +13,7 @@ class TypeNode;
 class ExprNode;
 class BlockStmtNode;
 class FunctionDeclNode;
+class PatternNode;
 
 struct AnnotationArg {
     std::string key;                 // Tùy chọn (VD: "name" trong name="c")
@@ -38,6 +39,7 @@ public:
 class VarDeclNode : public DeclNode {
 public:
     std::string_view              name;
+    std::unique_ptr<PatternNode>  pattern;
     std::unique_ptr<TypeNode>     typeAnnot;
     std::unique_ptr<ExprNode>     initializer;
     bool                          isMutable;

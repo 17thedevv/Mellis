@@ -15,8 +15,9 @@ class PatternNode;
 struct DecisionNode;
 
 class MVIRGenerator : public ASTVisitor {
+    friend class PatternLowerer;
 public:
-    explicit MVIRGenerator(SymbolTable& symTable, TypeChecker& typeChecker);
+    explicit MVIRGenerator(SymbolTable& symTable, TypeChecker& typeChecker, std::unordered_map<const Type*, ClosureStorageKind>& storageMap);
 
     /// Generate MVIR for the given program.
     std::unique_ptr<mvir::Module> generate(ProgramNode& program);
@@ -76,6 +77,7 @@ public:
 private:
     SymbolTable& table_;
     TypeChecker& typeChecker_;
+    std::unordered_map<const Type*, ClosureStorageKind>& storageMap_;
     TraitObjectLayoutBuilder layoutBuilder_;
 
     bool isUnsafeContext_ = false;
@@ -102,6 +104,7 @@ private:
     
 
     std::unordered_map<SymbolID, mvir::LocalId> varAllocas_;
+    std::unordered_set<SymbolID> borrowedCaptures_;
 
     struct LoopTarget {
         mvir::LabelId stepLbl;

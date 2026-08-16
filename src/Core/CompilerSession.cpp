@@ -18,6 +18,7 @@
 #include "mellis/MLib/ModuleLoader.h"
 #include "mellis/MLib/MLibMetadataCache.h"
 #include "mellis/MiddleEnd/Resolver.h"
+#include "mellis/MiddleEnd/EscapeAnalyzer.h"
 #include "mellis/MiddleEnd/MatchAnalyzer.h"
 #include "mellis/MiddleEnd/ComptimeEvaluator.h"
 #include "mellis/IR/MVIRGenerator.h"
@@ -271,10 +272,19 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     }
     if (verbose) std::cout << "[6.2] MatchAnalyzer thanh cong!" << std::endl;
 
+    // ── Phase 5.5: Escape Analysis ──────────────────────────────────────────
+    if (verbose) std::cout << "[6.3] Phan tich Escape (EscapeAnalyzer)..." << std::endl;
+    EscapeAnalyzer escapeAnalyzer(typeContext_, symbolTable_, diag_, closureStorageMap_);
+    escapeAnalyzer.analyze(ast.get());
+    if (diag_.hasErrors()) {
+        diag_.flush();
+        return false;
+    }
+    
     // ── Phase 6: MVIR Generation ──────────────────────────────────────────────
     if (verbose) std::cout << "[7] Sinh MVIR (MVIRGenerator)..." << std::endl;
     std::cerr << "[PHASE] MVIRGenerator starting" << std::endl;
-    MVIRGenerator mvirGen(symbolTable_, typeChecker);
+    MVIRGenerator mvirGen(symbolTable_, typeChecker, closureStorageMap_);
     auto mvirModule = mvirGen.generate(*prog);
     std::cerr << "[PHASE] MVIRGenerator done" << std::endl;
     if (!mvirModule) {
@@ -315,7 +325,7 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
 
     // ── Phase 7: Semantic Analysis ───────────────────────────────────────────
     if (verbose) std::cout << "[8.1] Phan tich Ngu nghia (SemanticAnalyzer)..." << std::endl;
-    SemanticAnalyzer semanticAnalyzer(mvirModule.get(), diag_, symbolTable_);
+    SemanticAnalyzer semanticAnalyzer(mvirModule.get(), diag_, symbolTable_, closureStorageMap_);
     bool semanticOk = semanticAnalyzer.analyze();
     if (!semanticOk) {
         diag_.error(SourceLocation::invalid(), "SemanticAnalyzer that bai.");
@@ -327,12 +337,14 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     // ── Phase 8: LLVM IR Generation ──────────────────────────────────────────
     llvm::LLVMContext llvmContext;
     llvm::Module llvmModule(filepath, llvmContext);
-    
     TraitObjectLayoutBuilder layoutBuilder(symbolTable_);
-    LLVMIRGenerator llvmGen(llvmContext, llvmModule, layoutBuilder);
+    LLVMIRGenerator llvmGen(llvmContext, llvmModule, layoutBuilder, closureStorageMap_);
     bool llvmOk = llvmGen.generate(mvirModule.get());
-    // llvmModule.print(llvm::errs(), nullptr);
     
+    std::cout << "\n=== FORCE DUMP LLVM IR ===\n";
+    llvmModule.print(llvm::outs(), nullptr);
+    llvm::outs().flush();
+
     if (!llvmOk) {
         diag_.error(SourceLocation::invalid(), "Loi trong qua trinh sinh LLVM IR.");
         diag_.flush();

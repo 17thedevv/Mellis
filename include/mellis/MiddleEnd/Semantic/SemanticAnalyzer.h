@@ -13,10 +13,12 @@ class SemanticAnalyzer {
     const mvir::Module* module_;
     DiagnosticEngine& diag_;
     SymbolTable& symTable_;
+    std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap_;
 
 public:
-    SemanticAnalyzer(const mvir::Module* module, DiagnosticEngine& diag, SymbolTable& symTable)
-        : module_(module), diag_(diag), symTable_(symTable) {}
+    SemanticAnalyzer(const mvir::Module* module, DiagnosticEngine& diag, SymbolTable& symTable,
+                     std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap)
+        : module_(module), diag_(diag), symTable_(symTable), closureStorageMap_(closureStorageMap) {}
 
     bool analyze();
 };

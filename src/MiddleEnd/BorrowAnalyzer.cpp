@@ -99,7 +99,7 @@ void BorrowAnalyzer::transferInstruction(const mvir::Instruction& inst, BorrowSt
     }
     else if (auto* load = dynamic_cast<const mvir::LoadInst*>(&inst)) {
         std::vector<Place> srcPlaces = resolvePlace(load->ptr, state);
-        bool isMove = load->type && !load->type->isCopy();
+        bool isMove = load->type && !isCopy(load->type);
         for (const auto& srcPlace : srcPlaces) {
             checkAccess(srcPlace, isMove /* isMut */, fakeLoc, state);
         }
@@ -134,7 +134,7 @@ void BorrowAnalyzer::transferInstruction(const mvir::Instruction& inst, BorrowSt
             if (auto* locId = mvir::getLocalIf(arg)) {
                 bool isMove = false;
                 if (call->funcType && i < call->funcType->paramTypes.size()) {
-                    isMove = !call->funcType->paramTypes[i]->isCopy();
+                    isMove = !isCopy(call->funcType->paramTypes[i]);
                 }
                 for (const auto& p : resolvePlace(mvir::Operand(mvir::Place(*locId)), state)) {
                     checkAccess(p, isMove, fakeLoc, state);
@@ -151,7 +151,7 @@ void BorrowAnalyzer::transferInstruction(const mvir::Instruction& inst, BorrowSt
             if (auto* locId = mvir::getLocalIf(arg)) {
                 bool isMove = false;
                 if (vcall->methodType && i < vcall->methodType->paramTypes.size()) {
-                    isMove = !vcall->methodType->paramTypes[i]->isCopy();
+                    isMove = !isCopy(vcall->methodType->paramTypes[i]);
                 }
                 for (const auto& p : resolvePlace(mvir::Operand(mvir::Place(*locId)), state)) checkAccess(p, isMove, fakeLoc, state);
             }

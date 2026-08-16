@@ -26,6 +26,22 @@ private:
     // Đồng bộ hoá sau lỗi để tiếp tục phân tích
     void synchronize();
 
+    struct ParserState {
+        Lexer::LexerState lexerState;
+        DiagnosticEngine::DiagnosticState diagState;
+        Token current;
+        Token peek;
+        Token prev;
+    };
+    ParserState saveState() const { return {lexer.saveState(), diag.saveState(), current, peek, prev}; }
+    void restoreState(const ParserState& state) {
+        lexer.restoreState(state.lexerState);
+        diag.restoreState(state.diagState);
+        current = state.current;
+        peek = state.peek;
+        prev = state.prev;
+    }
+
     // --- Các hàm thao tác con trỏ Token ---
     void advance();
     bool check(TokenType type) const;

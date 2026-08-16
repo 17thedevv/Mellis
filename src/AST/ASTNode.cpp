@@ -68,6 +68,7 @@ void LiteralPatternNode::accept(PatternVisitor& v) { v.visit(*this); }
 void IdentifierPatternNode::accept(PatternVisitor& v) { v.visit(*this); }
 void EnumPatternNode::accept(PatternVisitor& v) { v.visit(*this); }
 void TuplePatternNode::accept(PatternVisitor& v) { v.visit(*this); }
+void StructPatternNode::accept(PatternVisitor& v) { v.visit(*this); }
 void MethodCallExpr::accept(ASTVisitor& v) { v.visit(*this); }
 void PlaceholderExpr::accept(ASTVisitor& v) { v.visit(*this); }
 void PlaceholderStmt::accept(ASTVisitor& v) { v.visit(*this); }

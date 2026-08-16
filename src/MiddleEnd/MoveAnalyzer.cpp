@@ -89,7 +89,8 @@ void MoveAnalyzer::transferInstruction(const mvir::Instruction& inst, MoveStateD
         if (auto* locId = mvir::getLocalIf(store->value)) {
             Place srcPlace = resolvePlace(mvir::Operand(mvir::Place(*locId)), state);
             checkAccess(srcPlace, fakeLoc, state);
-            if (!store->type->isCopy()) {
+            if (!isCopy(store->type)) {
+                std::cerr << "[DEBUG MoveAnalyzer] " << srcPlace.toString() << " is marked MOVED in StoreInst!" << std::endl;
                 state.stateMap[srcPlace.toString()] = MoveState::Moved;
             }
         }
@@ -102,12 +103,13 @@ void MoveAnalyzer::transferInstruction(const mvir::Instruction& inst, MoveStateD
                 Place srcPlace = resolvePlace(mvir::Operand(mvir::Place(*locId)), state);
                 checkAccess(srcPlace, fakeLoc, state);
                 
-                bool isCopy = false;
+                bool isCopyVal = false;
                 if (call->funcType && i < call->funcType->paramTypes.size()) {
-                    isCopy = call->funcType->paramTypes[i]->isCopy();
+                    isCopyVal = isCopy(call->funcType->paramTypes[i]);
                 }
                 
-                if (!isCopy) {
+                if (!isCopyVal) {
+                    std::cerr << "[DEBUG MoveAnalyzer] " << srcPlace.toString() << " is marked MOVED in CallInst!" << std::endl;
                     state.stateMap[srcPlace.toString()] = MoveState::Moved;
                 }
             }
@@ -130,11 +132,11 @@ void MoveAnalyzer::transferInstruction(const mvir::Instruction& inst, MoveStateD
                 Place srcPlace = resolvePlace(mvir::Operand(mvir::Place(*locId)), state);
                 checkAccess(srcPlace, fakeLoc, state);
                 
-                bool isCopy = false;
+                bool isCopyVal = false;
                 if (vcall->methodType && i < vcall->methodType->paramTypes.size()) {
-                    isCopy = vcall->methodType->paramTypes[i]->isCopy();
+                    isCopyVal = isCopy(vcall->methodType->paramTypes[i]);
                 }
-                if (!isCopy) {
+                if (!isCopyVal) {
                     state.stateMap[srcPlace.toString()] = MoveState::Moved;
                 }
             }

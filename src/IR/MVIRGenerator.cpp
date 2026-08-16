@@ -11,8 +11,8 @@
 
 namespace fl {
 
-MVIRGenerator::MVIRGenerator(SymbolTable& symTable, TypeChecker& typeChecker)
-    : table_(symTable), typeChecker_(typeChecker), layoutBuilder_(symTable) {}
+MVIRGenerator::MVIRGenerator(SymbolTable& symTable, TypeChecker& typeChecker, std::unordered_map<const Type*, ClosureStorageKind>& storageMap)
+    : table_(symTable), typeChecker_(typeChecker), layoutBuilder_(symTable), storageMap_(storageMap) {}
 
 std::unique_ptr<mvir::Module> MVIRGenerator::generate(ProgramNode& program) {
     module_ = std::make_unique<mvir::Module>();
@@ -126,6 +126,16 @@ void MVIRGenerator::visit(VarDeclNode& node) {
     // 2. If initialized, evaluate RHS and store: store val, %id
 
     const Type* varType = typeChecker_.typeOf(node.symbolId);
+    varType = typeChecker_.getContext().unificationTable.deepResolve(varType, typeChecker_.getContext());
+    std::cerr << "[DEBUG] VarDeclNode type kind: " << (varType ? (int)varType->getKind() : -1) << std::endl;
+    if (auto* closureTy = dynamic_cast<const ClosureType*>(varType)) {
+        if (storageMap_[closureTy] == ClosureStorageKind::Heap) {
+            std::cerr << "[DEBUG] VarDeclNode is Heap!" << std::endl;
+            varType = typeChecker_.getContext().getPointerType(closureTy, false);
+        } else {
+            std::cerr << "[DEBUG] VarDeclNode is NOT Heap!" << std::endl;
+        }
+    }
 
     // S7.2: Embed semantic identity — symbolId for uniqueness, expansionId for hygiene
     mvir::LocalId ptr = nextLocal(node.symbolId, node.expansionID);
@@ -140,9 +150,17 @@ void MVIRGenerator::visit(VarDeclNode& node) {
 
     if (node.initializer) {
         mvir::Operand initVal = evaluateRValue(*node.initializer);
+        const Type* assignType = typeChecker_.typeOf(node.symbolId);
+        assignType = typeChecker_.getContext().unificationTable.deepResolve(assignType, typeChecker_.getContext());
+        if (auto* closureTy = dynamic_cast<const ClosureType*>(assignType)) {
+            if (storageMap_[closureTy] == ClosureStorageKind::Heap) {
+                assignType = typeChecker_.getContext().getPointerType(closureTy, false);
+            }
+        }
+
         if (currentBlock_->terminator == nullptr) {
             currentBlock_->instructions.push_back(
-                std::make_unique<mvir::StoreInst>(varType, initVal, ptr)
+                std::make_unique<mvir::StoreInst>(assignType, initVal, ptr)
             );
         }
     }
@@ -157,8 +175,16 @@ void MVIRGenerator::visit(AssignExpr& node) {
     mvir::Operand val = evaluateRValue(*node.value);
     mvir::Operand ptr = evaluateLValue(*node.lvalue);
 
+    const Type* assignType = node.lvalue->inferredType;
+    assignType = typeChecker_.getContext().unificationTable.deepResolve(assignType, typeChecker_.getContext());
+    if (auto* closureTy = dynamic_cast<const ClosureType*>(assignType)) {
+        if (storageMap_[closureTy] == ClosureStorageKind::Heap) {
+            assignType = typeChecker_.getContext().getPointerType(closureTy, false);
+        }
+    }
+
     currentBlock_->instructions.push_back(
-        std::make_unique<mvir::StoreInst>(node.lvalue->inferredType, val, ptr)
+        std::make_unique<mvir::StoreInst>(assignType, val, ptr)
     );
     
     lastEvaluatedOperand_ = ptr;
@@ -322,14 +348,28 @@ void MVIRGenerator::visit(IdentifierExpr& node) {
     }
     mvir::LocalId ptr = varAllocas_[node.resolvedSymbol];
 
+    if (borrowedCaptures_.count(node.resolvedSymbol)) {
+        mvir::LocalId loadedPtr = nextLocal();
+        const Type* refTy = typeChecker_.getContext().getPointerType(node.inferredType, false);
+        currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(loadedPtr, refTy, ptr));
+        ptr = loadedPtr;
+    }
+
     if (evalMode_ == EvalMode::LValue) {
         // Return pointer directly
         lastEvaluatedOperand_ = mvir::Operand(mvir::Place(ptr));
     } else {
         // Evaluate to value
         mvir::LocalId dest = nextLocal();
+        const Type* loadType = node.inferredType;
+        loadType = typeChecker_.getContext().unificationTable.deepResolve(loadType, typeChecker_.getContext());
+        if (auto* closureTy = dynamic_cast<const ClosureType*>(loadType)) {
+            if (storageMap_[closureTy] == ClosureStorageKind::Heap) {
+                loadType = typeChecker_.getContext().getPointerType(closureTy, false);
+            }
+        }
         currentBlock_->instructions.push_back(
-            std::make_unique<mvir::LoadInst>(dest, node.inferredType, ptr)
+            std::make_unique<mvir::LoadInst>(dest, loadType, ptr)
         );
         lastEvaluatedOperand_ = mvir::Operand(mvir::Place(dest));
     }
@@ -863,19 +903,35 @@ void MVIRGenerator::visit(CallExpr& node) {
     if (node.isClosureCall) {
         mvir::Operand closureVal = evaluateRValue(*node.callee);
         const ClosureType* closTy = dynamic_cast<const ClosureType*>(node.callee->inferredType);
+        bool isHeap = storageMap_[closTy] == ClosureStorageKind::Heap;
+        const Type* varType = isHeap ? static_cast<const Type*>(typeChecker_.getContext().getPointerType(closTy, false)) : static_cast<const Type*>(closTy);
         
         mvir::LocalId closurePtr = nextLocal();
-        pushLocalInst(std::make_unique<mvir::LocalInst>(closurePtr, closTy));
-        currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(closTy, closureVal, closurePtr));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(closurePtr, varType));
+        currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(varType, closureVal, closurePtr));
         
         mvir::Place place2(closurePtr);
+        if (isHeap) {
+            place2.projections.push_back(mvir::Projection{mvir::ProjectionKind::Deref, 0, std::nullopt});
+        }
         place2.projections.push_back(mvir::Projection{mvir::ProjectionKind::Field, 0, std::nullopt});
         
         mvir::LocalId funcPtr = nextLocal();
         currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(funcPtr, typeChecker_.getContext().getPointerType(closTy->signature, false), mvir::Operand(place2)));
         
         callee = mvir::Operand(mvir::Place(funcPtr));
-        args.insert(args.begin(), mvir::Operand(mvir::Place(closurePtr)));
+        // The closure pointer argument should be dereferenced for heap closures?
+        // Wait, the closure pointer argument is passed as a pointer to the struct!
+        // If it's a Heap closure, the struct pointer is what is inside closurePtr!
+        // Wait! In `LambdaExpr`, the lambda takes a pointer to the struct!
+        // So we MUST load the pointer from closurePtr and pass THAT!
+        if (isHeap) {
+            mvir::LocalId loadedPtr = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(loadedPtr, static_cast<const Type*>(typeChecker_.getContext().getPointerType(closTy, false)), closurePtr));
+            args.insert(args.begin(), mvir::Operand(mvir::Place(loadedPtr)));
+        } else {
+            args.insert(args.begin(), mvir::Operand(mvir::Place(closurePtr)));
+        }
     } else {
         if (auto* ident = dynamic_cast<IdentifierExpr*>(node.callee.get())) {
             if (ident->resolvedSymbol != kInvalidSymbolID) {
@@ -1375,12 +1431,17 @@ void MVIRGenerator::visit(LambdaExpr& node) {
     std::string funcName = sym.mangledName.empty() ? std::string(sym.name.str()) : sym.mangledName;
     
     mvir::Function* outerFunction = currentFunction_;
-    mvir::BasicBlock* outerBlock = currentBlock_;
+    auto outerBlock = currentBlock_;
     auto outerVarAllocas = varAllocas_;
+    auto outerBorrowedCaptures = borrowedCaptures_;
+    auto outerScopeStack = scopeStack_;
+    size_t outerLocalId = nextLocalId_;
+    size_t outerLabelId = nextLabelId_;
     
     resetFunctionState();
+    scopeStack_.clear();
     
-    auto func = std::make_unique<mvir::Function>(mvir::GlobalId{"@" + funcName, kInvalidSymbolID}, closureTy->signature->returnType);
+    auto func = std::make_unique<mvir::Function>(mvir::GlobalId{"@" + funcName, node.generatedFuncId}, closureTy->signature->returnType);
     currentFunction_ = func.get();
     
     mvir::LocalId envArgId = nextLocal();
@@ -1396,13 +1457,21 @@ void MVIRGenerator::visit(LambdaExpr& node) {
     
     startBlock(nextLabel("entry"));
     
-    mvir::LocalId envPtr = nextLocal();
-    pushLocalInst(std::make_unique<mvir::LocalInst>(envPtr, typeChecker_.getContext().getPointerType(closureTy, false)));
-    currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(typeChecker_.getContext().getPointerType(closureTy, false), envArgId, envPtr));
+    scopeStack_.push_back({});
     
-    for (size_t i = 0; i < closureTy->capturedSymbols.size(); ++i) {
-        auto capSym = closureTy->capturedSymbols[i];
-        const Type* capTy = typeChecker_.typeOf(capSym);
+    mvir::LocalId envPtr = nextLocal();
+    const Type* envPtrType = typeChecker_.getContext().getPointerType(closureTy, false);
+    pushLocalInst(std::make_unique<mvir::LocalInst>(envPtr, envPtrType));
+    currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(envPtrType, envArgId, envPtr));
+    scopeStack_.back().push_back({envPtr, envPtrType}); // Restored: lambda owns the environment for FnOnce semantics.
+    
+    for (size_t i = 0; i < closureTy->captures.size(); ++i) {
+        auto capSym = closureTy->captures[i].symbolId;
+        const Type* capTy = closureTy->captures[i].envType;
+        
+        if (closureTy->captures[i].mode == CaptureMode::Borrow || closureTy->captures[i].mode == CaptureMode::BorrowMut) {
+            borrowedCaptures_.insert(capSym);
+        }
         
         mvir::LocalId capAlloca = nextLocal();
         pushLocalInst(std::make_unique<mvir::LocalInst>(capAlloca, capTy));
@@ -1414,6 +1483,8 @@ void MVIRGenerator::visit(LambdaExpr& node) {
         mvir::LocalId val = nextLocal();
         currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(val, capTy, mvir::Operand(place)));
         currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(capTy, val, capAlloca));
+        
+        // Do NOT push capAlloca to scopeStack, to prevent double-drop of captures in the lambda body.
     }
     
     for (size_t i = 0; i < node.params.size(); ++i) {
@@ -1425,42 +1496,100 @@ void MVIRGenerator::visit(LambdaExpr& node) {
         
         mvir::LocalId argId = currentFunction_->params[i + 1].id;
         currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(pType, argId, ptr));
+        
+        scopeStack_.back().push_back({ptr, pType});
     }
     
     if (node.body) {
         node.body->accept(*this);
     }
     
-    terminateBlock(std::make_unique<mvir::RetTerm>());
+    if (currentBlock_ && currentBlock_->terminator == nullptr) {
+        std::cerr << "[DEBUG MVIRGenerator] ClosureExpr block needs terminator! emitting drops for size=" << scopeStack_.size() << std::endl;
+        emitDropsForScopes(0);
+        if (closureTy->signature->returnType && closureTy->signature->returnType->getKind() != TypeKind::Void) {
+            terminateBlock(std::make_unique<mvir::RetTerm>(lastEvaluatedOperand_));
+        } else {
+            terminateBlock(std::make_unique<mvir::RetTerm>());
+        }
+    } else {
+        std::cerr << "[DEBUG MVIRGenerator] ClosureExpr block already has terminator?!" << std::endl;
+    }
+    
+    scopeStack_.pop_back();
     
     currentFunction_ = outerFunction;
     currentBlock_ = outerBlock;
     varAllocas_ = outerVarAllocas;
+    borrowedCaptures_ = outerBorrowedCaptures;
+    scopeStack_ = outerScopeStack;
+    nextLocalId_ = outerLocalId;
+    nextLabelId_ = outerLabelId;
     
     if (currentFunction_) {
         mvir::LocalId structPtr = nextLocal();
-        pushLocalInst(std::make_unique<mvir::LocalInst>(structPtr, closureTy));
+        bool isHeap = storageMap_[closureTy] == ClosureStorageKind::Heap;
+        if (isHeap) {
+            pushLocalInst(std::make_unique<mvir::LocalInst>(structPtr, typeChecker_.getContext().getPointerType(closureTy, false)));
+            currentBlock_->instructions.push_back(std::make_unique<mvir::HeapAllocInst>(structPtr, closureTy));
+        } else {
+            pushLocalInst(std::make_unique<mvir::LocalInst>(structPtr, closureTy));
+        }
         
         mvir::Place place1(structPtr);
+        if (isHeap) {
+            place1.projections.push_back(mvir::Projection{mvir::ProjectionKind::Deref, 0, std::nullopt});
+        }
         place1.projections.push_back(mvir::Projection{mvir::ProjectionKind::Field, 0, std::nullopt});
         currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(typeChecker_.getContext().getPointerType(closureTy->signature, false), mvir::GlobalId{"@" + funcName}, mvir::Operand(place1)));
         
-        for (size_t i = 0; i < closureTy->capturedSymbols.size(); ++i) {
-            auto capSym = closureTy->capturedSymbols[i];
-            const Type* capTy = typeChecker_.typeOf(capSym);
+        for (size_t i = 0; i < closureTy->captures.size(); ++i) {
+            auto capSym = closureTy->captures[i].symbolId;
+            const Type* capTy = closureTy->captures[i].envType;
             
             mvir::LocalId capAlloca = outerVarAllocas[capSym];
-            mvir::LocalId capVal = nextLocal();
-            currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(capVal, capTy, capAlloca));
+            mvir::Operand capValOp;
+
+            if (closureTy->captures[i].mode == CaptureMode::Borrow || closureTy->captures[i].mode == CaptureMode::BorrowMut) {
+                if (outerBorrowedCaptures.count(capSym)) {
+                    mvir::LocalId capVal = nextLocal();
+                    currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(capVal, capTy, capAlloca));
+                    capValOp = mvir::Operand(mvir::Place(capVal));
+                } else {
+                    capValOp = mvir::Operand(mvir::Place(capAlloca));
+                }
+            } else {
+                mvir::LocalId capVal = nextLocal();
+                if (outerBorrowedCaptures.count(capSym)) {
+                    mvir::LocalId loadedPtr = nextLocal();
+                    const Type* refTy = typeChecker_.getContext().getPointerType(capTy, false);
+                    currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(loadedPtr, refTy, capAlloca));
+                    currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(capVal, capTy, loadedPtr));
+                } else {
+                    currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(capVal, capTy, capAlloca));
+                }
+                capValOp = mvir::Operand(mvir::Place(capVal));
+            }
             
             mvir::Place place2(structPtr);
+            if (isHeap) {
+                place2.projections.push_back(mvir::Projection{mvir::ProjectionKind::Deref, 0, std::nullopt});
+            }
             place2.projections.push_back(mvir::Projection{mvir::ProjectionKind::Field, i + 1, std::nullopt});
-            currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(capTy, capVal, mvir::Operand(place2)));
+            currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(capTy, capValOp, mvir::Operand(place2)));
         }
         
-        mvir::LocalId res = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(res, closureTy, structPtr));
-        lastEvaluatedOperand_ = mvir::Operand(mvir::Place(res));
+        if (isHeap) {
+            // Heap closures are handled as pointers, so we evaluate the variable holding the pointer
+            mvir::LocalId res = nextLocal();
+            const Type* ptrTy = typeChecker_.getContext().getPointerType(closureTy, false);
+            currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(res, ptrTy, structPtr));
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(res));
+        } else {
+            mvir::LocalId res = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(res, closureTy, structPtr));
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(res));
+        }
     }
 }
 void MVIRGenerator::compileDecisionTree(DecisionNode* node, std::unordered_map<std::string, mvir::Operand>& places, const std::vector<mvir::LabelId>& armLabels, mvir::LabelId fallbackLbl) {

@@ -37,6 +37,22 @@ private:
 public:
     explicit Lexer(std::string_view sourceCode);
     
+    struct LexerState {
+        uint32_t position;
+        uint32_t line;
+        uint32_t col;
+        uint32_t startLine;
+        uint32_t startCol;
+    };
+    LexerState saveState() const { return {position, line_, col_, startLine_, startCol_}; }
+    void restoreState(const LexerState& state) {
+        position = state.position;
+        line_ = state.line;
+        col_ = state.col;
+        startLine_ = state.startLine;
+        startCol_ = state.startCol;
+    }
+
     // Hàm cốt lõi: Parser sẽ gọi hàm này liên tục để lấy Token
     Token nextToken(); 
 };

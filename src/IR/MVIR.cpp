@@ -69,6 +69,14 @@ std::string LocalInst::toString() const {
     return dest.toString() + " = local " + formatType(type);
 }
 
+std::string HeapAllocInst::toString() const {
+    return dest.toString() + " = heap_alloc " + formatType(type);
+}
+
+std::string HeapFreeInst::toString() const {
+    return "heap_free " + mvir::toString(ptr);
+}
+
 std::string LoadInst::toString() const {
     return dest.toString() + " = load " + formatType(type) + " " + mvir::toString(ptr);
 }

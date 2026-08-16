@@ -25,11 +25,24 @@ struct MoveStateData {
 class MoveAnalyzer : public DataflowPass<MoveStateData> {
     const mvir::Module* module_;
     DiagnosticEngine& diag_;
+    std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap_;
     bool hasError_ = false;
 
 public:
-    MoveAnalyzer(const mvir::Module* module, DiagnosticEngine& diag)
-        : module_(module), diag_(diag) {}
+    MoveAnalyzer(const mvir::Module* module, DiagnosticEngine& diag, 
+                 std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap)
+        : module_(module), diag_(diag), closureStorageMap_(closureStorageMap) {}
+
+    bool isCopy(const Type* t) const {
+        if (!t) return false;
+        if (auto* closureTy = dynamic_cast<const ClosureType*>(t)) {
+            if (closureStorageMap_.find(closureTy) != closureStorageMap_.end() && 
+                closureStorageMap_.at(closureTy) == ClosureStorageKind::Heap) {
+                return false; // Heap closures are Move-Only
+            }
+        }
+        return t->isCopy();
+    }
 
     bool analyzeFunction(const mvir::Function& func) {
         hasError_ = false;

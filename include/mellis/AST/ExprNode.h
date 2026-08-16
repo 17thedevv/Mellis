@@ -237,14 +237,23 @@ public:
     ASTNode* cloneImpl() const override;
 };
 
+struct LambdaCaptureRef {
+    SymbolID symbolId;
+    
+    bool operator==(const LambdaCaptureRef& other) const {
+        return symbolId == other.symbolId;
+    }
+};
+
 class LambdaExpr : public ExprNode {
 public:
     std::vector<std::unique_ptr<ParamDeclNode>> params;
     std::unique_ptr<TypeNode>                   returnType;
     std::unique_ptr<StmtNode>                   body;
-    std::vector<SymbolID>                       capturedSymbols;
+    std::vector<LambdaCaptureRef>               captures;
     SymbolID                                    generatedStructId = kInvalidSymbolID;
     SymbolID                                    generatedFuncId = kInvalidSymbolID;
+    bool                                        isMove = false;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };

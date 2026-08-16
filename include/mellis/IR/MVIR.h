@@ -145,7 +145,7 @@ std::string toString(const Operand& op);
 
 enum class Opcode : uint8_t {
     // Memory
-    Local, Load, Store, Borrow, Cast, Drop, Sizeof, Alignof,
+    Local, HeapAlloc, HeapFree, Load, Store, Borrow, Cast, Drop, Sizeof, Alignof,
     // ALU
     Alu, Unary,
     // Extract
@@ -169,6 +169,23 @@ struct LocalInst : public Instruction {
     const Type* type;
 
     LocalInst(LocalId d, const Type* t) : dest(std::move(d)), type(t) {}
+    std::string toString() const override;
+};
+
+struct HeapAllocInst : public Instruction {
+    Opcode getOpcode() const override { return Opcode::HeapAlloc; }
+    LocalId dest;
+    const Type* type;
+
+    HeapAllocInst(LocalId d, const Type* t) : dest(std::move(d)), type(t) {}
+    std::string toString() const override;
+};
+
+struct HeapFreeInst : public Instruction {
+    Opcode getOpcode() const override { return Opcode::HeapFree; }
+    Operand ptr;
+
+    HeapFreeInst(Operand p) : ptr(std::move(p)) {}
     std::string toString() const override;
 };
 

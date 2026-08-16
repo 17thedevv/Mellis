@@ -329,6 +329,13 @@ bool TypeChecker::check(ASTNode* root, ModuleID currentModule) {
             if (traitTy) {
                 // implementedTraits[selfType].insert(traitTy->traitId);
                 const auto& sym = table.getSymbol(traitTy->traitId);
+                
+                if (sym.name == "Drop") {
+                    if (auto* st = dynamic_cast<StructType*>(const_cast<Type*>(selfType))) {
+                        st->hasDrop = true;
+                    }
+                }
+                
                 bool isDuplicate = false;
                 if (sym.kind == SymbolKind::Trait && sym.decl) {
                     // DUPLICATE IMPL CHECK
@@ -434,7 +441,12 @@ bool TypeChecker::check(ASTNode* root, ModuleID currentModule) {
         void visit(StructInitExpr& node) override {}
         void visit(MatchExpr& node) override {}
         void visit(TryExpr& node) override {}
-        void visit(LambdaExpr& node) override {}
+        void visit(LambdaExpr& node) override {
+            if (node.body) node.body->accept(*this);
+            std::vector<CaptureInfo> semCaptures;
+            auto* closureTy = const_cast<ClosureType*>(ctx.create<ClosureType>(node.generatedStructId, node.generatedFuncId, nullptr, semCaptures));
+            node.inferredType = closureTy;
+        }
         void visit(AwaitExpr& node) override {
             if (node.expr) node.expr->accept(*this);
           }
@@ -637,6 +649,7 @@ bool TypeChecker::check(ASTNode* root, ModuleID currentModule) {
             node.inferredType = expectedType;
         }
         
+        void visit(StructPatternNode& node) override {}
         void visit(IdentifierPatternNode& node) override {
             if (node.symbolId != kInvalidSymbolID) {
                 typeTable[node.symbolId] = expectedType;
@@ -1370,9 +1383,11 @@ bool TypeChecker::check(ASTNode* root, ModuleID currentModule) {
             node.generatedStructId = table.declareSymbol(Identifier("__Closure_" + std::to_string(reinterpret_cast<uintptr_t>(&node))), SymbolKind::Struct, table.globalScopeId(), node.loc, nullptr);
             node.generatedFuncId = table.declareSymbol(Identifier("__LambdaFunc_" + std::to_string(reinterpret_cast<uintptr_t>(&node))), SymbolKind::Function, table.globalScopeId(), node.loc, nullptr);
             
-            auto* closureTy = const_cast<ClosureType*>(ctx.create<ClosureType>(node.generatedStructId, node.generatedFuncId, sig, node.capturedSymbols));
+            std::vector<CaptureInfo> semCaptures;
+            auto* closureTy = const_cast<ClosureType*>(ctx.create<ClosureType>(node.generatedStructId, node.generatedFuncId, sig, semCaptures));
             closureTy->fieldTypes.push_back(ctx.getPointerType(sig, false)); // First field is func ptr
-            for (auto capId : node.capturedSymbols) {
+            for (auto capRef : node.captures) {
+                auto capId = capRef.symbolId;
                 const Type* capTy = typeTable[capId];
                 if (!capTy) capTy = ctx.getUnknown();
                 closureTy->fieldTypes.push_back(capTy);
@@ -1761,6 +1776,10 @@ bool TypeChecker::check(ASTNode* root, ModuleID currentModule) {
               TypeResolver& resolver;
           public:
               PatternResolverVisitor(TypeResolver& r) : resolver(r) {}
+              void visit(StructPatternNode& node) override { 
+                  resolver.resolve(node.inferredType, node.loc);
+                  for (auto& f : node.fields) if (f.pattern) f.pattern->accept(*this);
+              }
               void visit(WildcardPatternNode& node) override { resolver.resolve(node.inferredType, node.loc); }
               void visit(LiteralPatternNode& node) override { resolver.resolve(node.inferredType, node.loc); }
               void visit(IdentifierPatternNode& node) override { resolver.resolve(node.inferredType, node.loc); }
@@ -2246,7 +2265,74 @@ bool TypeChecker::check(ASTNode* root, ModuleID currentModule) {
             if (node.expr) node.expr->accept(*this);
             resolve(node.inferredType, node.loc);
         }
-        void visit(LambdaExpr& node) override {}
+        void visit(LambdaExpr& node) override {
+            if (node.body) node.body->accept(*this);
+            auto* closureTy = const_cast<ClosureType*>(dynamic_cast<const ClosureType*>(node.inferredType));
+            if (!closureTy) return;
+            struct Usage { bool read=false, mutate=false, consume=false; };
+            std::unordered_map<SymbolID, Usage> usage;
+            std::function<void(ASTNode*, bool)> analyzeUsage = [&](ASTNode* n, bool isMutateCtx) {
+                if (!n) return;
+                if (auto* id = dynamic_cast<IdentifierExpr*>(n)) {
+                    usage[id->resolvedSymbol].read = true;
+                    if (isMutateCtx) usage[id->resolvedSymbol].mutate = true;
+                } else if (auto* call = dynamic_cast<CallExpr*>(n)) {
+                    if (auto* calleeId = dynamic_cast<IdentifierExpr*>(call->callee.get())) {
+                        if (table.getSymbol(calleeId->resolvedSymbol).name == "consume") {
+                            if (call->args.size() == 1) {
+                                if (auto* argId = dynamic_cast<IdentifierExpr*>(call->args[0].value.get())) usage[argId->resolvedSymbol].consume = true;
+                            }
+                        }
+                    }
+                    analyzeUsage(call->callee.get(), false);
+                    for (auto& arg : call->args) if (arg.value) analyzeUsage(arg.value.get(), false);
+                } else if (auto* assign = dynamic_cast<AssignExpr*>(n)) {
+                    analyzeUsage(assign->lvalue.get(), true);
+                    analyzeUsage(assign->value.get(), false);
+                } else if (auto* bin = dynamic_cast<BinaryExpr*>(n)) {
+                    analyzeUsage(bin->left.get(), false);
+                    analyzeUsage(bin->right.get(), false);
+                } else if (auto* block = dynamic_cast<BlockStmtNode*>(n)) {
+                    for (auto& s : block->body) analyzeUsage(s.get(), false);
+                    if (block->tailExpr) analyzeUsage(block->tailExpr.get(), false);
+                } else if (auto* exprStmt = dynamic_cast<ExprStmtNode*>(n)) {
+                    if (exprStmt->expr) analyzeUsage(exprStmt->expr.get(), false);
+                } else if (auto* decl = dynamic_cast<VarDeclNode*>(n)) {
+                    if (decl->initializer) analyzeUsage(decl->initializer.get(), false);
+                } else if (auto* fa = dynamic_cast<MemberExpr*>(n)) {
+                    analyzeUsage(fa->object.get(), isMutateCtx);
+                }
+            };
+            if (node.body) analyzeUsage(node.body.get(), false);
+            auto isTypeCopyable = [](const Type* t) {
+                if (!t) return false;
+                auto k = t->getKind();
+                return k == TypeKind::Primitive || k == TypeKind::Pointer || k == TypeKind::Function || k == TypeKind::Tuple || k == TypeKind::Unknown;
+            };
+            closureTy->captures.clear();
+            closureTy->fieldTypes.clear();
+            closureTy->fieldTypes.push_back(ctx.getPointerType(closureTy->signature, false));
+            for (auto& capRef : node.captures) {
+                SymbolID capId = capRef.symbolId;
+                const Type* capTy = typeTable[capId];
+                if (!capTy) capTy = ctx.getUnknown();
+                CaptureMode mode = CaptureMode::Borrow;
+                auto& u = usage[capId];
+                if (node.isMove) {
+                    mode = isTypeCopyable(capTy) ? CaptureMode::Copy : CaptureMode::Move;
+                } else {
+                    if (u.consume) mode = CaptureMode::Move;
+                    else if (u.mutate) mode = CaptureMode::BorrowMut;
+                    else if (isTypeCopyable(capTy) && u.read && !u.mutate && !u.consume) mode = CaptureMode::Copy;
+                    else mode = CaptureMode::Borrow;
+                }
+                const Type* envType = capTy;
+                if (mode == CaptureMode::Borrow) envType = ctx.getPointerType(capTy, false);
+                else if (mode == CaptureMode::BorrowMut) envType = ctx.getPointerType(capTy, true);
+                closureTy->captures.push_back(CaptureInfo{capId, mode, CaptureSource::Direct, capTy, envType});
+                closureTy->fieldTypes.push_back(envType);
+            }
+        }
         void visit(AwaitExpr& node) override {
             if (node.expr) node.expr->accept(*this);
             resolve(node.inferredType, node.loc);

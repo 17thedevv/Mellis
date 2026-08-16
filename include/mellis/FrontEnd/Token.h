@@ -107,6 +107,7 @@ namespace fl {
         KW_UNSAFE,
         KW_USE,
         KW_AS,
+        KW_MOVE,
         KW_MATCH,
         KW_RW,
         KW_TRUE,
@@ -117,10 +118,9 @@ namespace fl {
         KW_AWAIT,
         KW_ASYNC,
         KW_COMPTIME,
+        KW_PRINT,
         KW_SELF_VAL, // self
         KW_SELF_TYP, // Self
-        
-        KW_PRINT, // Giữ lại cho testing hiện tại
     };
 
     class Token {

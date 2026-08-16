@@ -27,8 +27,13 @@ public:
     }
 
     DiagnosticEngine& getDiagnostics() { return diag_; }
+    
+    // Maps a ClosureType to its determined storage kind
+    std::unordered_map<const Type*, ClosureStorageKind>& getClosureStorageMap() { return closureStorageMap_; }
 
 private:
+    std::unordered_map<const Type*, ClosureStorageKind> closureStorageMap_;
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Compilation Artifacts & State
     // ─────────────────────────────────────────────────────────────────────────────

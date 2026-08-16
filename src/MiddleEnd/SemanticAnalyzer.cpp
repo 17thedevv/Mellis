@@ -16,14 +16,14 @@ bool SemanticAnalyzer::analyze() {
             continue; 
         }
 
-        MoveAnalyzer moveAnalyzer(module_, diag_);
+        MoveAnalyzer moveAnalyzer(module_, diag_, closureStorageMap_);
         if (!moveAnalyzer.analyzeFunction(*func)) {
             overallSuccess = false;
             // Stop early
             continue;
         }
 
-        BorrowAnalyzer borrowAnalyzer(module_, diag_, symTable_);
+        BorrowAnalyzer borrowAnalyzer(module_, diag_, symTable_, closureStorageMap_);
         if (!borrowAnalyzer.analyzeFunction(*func)) {
             overallSuccess = false;
             continue;
@@ -31,7 +31,7 @@ bool SemanticAnalyzer::analyze() {
     }
 
     if (overallSuccess) {
-        DropElaborator dropElab(const_cast<mvir::Module*>(module_));
+        DropElaborator dropElab(const_cast<mvir::Module*>(module_), closureStorageMap_);
         dropElab.run();
     }
     return overallSuccess;

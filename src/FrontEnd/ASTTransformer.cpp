@@ -343,6 +343,12 @@ void ASTTransformer::visit(TuplePatternNode& node) {
     }
 }
 
+void ASTTransformer::visit(StructPatternNode& node) {
+    for (auto& field : node.fields) {
+        if (field.pattern) field.pattern = transformPattern(std::move(field.pattern));
+    }
+}
+
 void ASTTransformer::visit(MacroDeclNode& node) {
     // DO NOT transform the body of a MacroDeclNode, because its body is a template!
     // Expanding macros inside a template before instantiation is wrong, as placeholders are unbound.

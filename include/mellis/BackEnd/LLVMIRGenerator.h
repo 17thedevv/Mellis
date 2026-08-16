@@ -30,7 +30,8 @@ namespace fl {
 
 class LLVMIRGenerator {
 public:
-    explicit LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module, TraitObjectLayoutBuilder& layoutBuilder);
+    explicit LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module, TraitObjectLayoutBuilder& layoutBuilder,
+                             std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap);
 
     /// Generate LLVM IR from the given MVIR module.
     ///
@@ -43,6 +44,7 @@ private:
     llvm::IRBuilder<> builder_;
     const mvir::Module* mvirModule_ = nullptr;
     TraitObjectLayoutBuilder& layoutBuilder_;
+    std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap_;
     // ── Environments ─────────────────────────────────────────────────────────
     
     // Maps MVIR LocalId ("%0") to the allocated LLVM Value.

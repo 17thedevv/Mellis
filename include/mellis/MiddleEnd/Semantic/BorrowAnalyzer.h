@@ -35,14 +35,27 @@ class BorrowAnalyzer : public DataflowPass<BorrowStateData> {
     const mvir::Module* module_;
     DiagnosticEngine& diag_;
     SymbolTable& symTable_;
+    std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap_;
     bool hasError_ = false;
     size_t nextLoanId_ = 0;
     LivenessInfo liveness_;
     std::unordered_map<const mvir::Terminator*, const mvir::BasicBlock*> termToBlock_;
 
 public:
-    BorrowAnalyzer(const mvir::Module* module, DiagnosticEngine& diag, SymbolTable& symTable)
-        : module_(module), diag_(diag), symTable_(symTable) {}
+    BorrowAnalyzer(const mvir::Module* module, DiagnosticEngine& diag, SymbolTable& symTable,
+                   std::unordered_map<const Type*, ClosureStorageKind>& closureStorageMap)
+        : module_(module), diag_(diag), symTable_(symTable), closureStorageMap_(closureStorageMap) {}
+
+    bool isCopy(const Type* t) const {
+        if (!t) return false;
+        if (auto* closureTy = dynamic_cast<const ClosureType*>(t)) {
+            if (closureStorageMap_.find(closureTy) != closureStorageMap_.end() && 
+                closureStorageMap_.at(closureTy) == ClosureStorageKind::Heap) {
+                return false; // Heap closures are Move-Only
+            }
+        }
+        return t->isCopy();
+    }
 
     bool analyzeFunction(const mvir::Function& func) {
         if (func.name.symbolId != 0) {

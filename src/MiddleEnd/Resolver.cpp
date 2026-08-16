@@ -163,7 +163,16 @@ public:
 
     // --- Declarations ---
     void visit(VarDeclNode& node) override { 
-        node.symbolId = sm.declare(node.name, SymbolKind::Variable, node.loc, &node);
+        if (node.pattern) {
+            if (auto bind = dynamic_cast<IdentifierPatternNode*>(node.pattern.get())) {
+                bind->symbolId = sm.declare(bind->segments.back(), SymbolKind::Variable, node.loc, &node);
+                node.symbolId = bind->symbolId;
+            } else {
+                sm.diag.error(node.loc, "Global variable declaration cannot use destructuring pattern.");
+            }
+        } else {
+            node.symbolId = sm.declare(node.name, SymbolKind::Variable, node.loc, &node);
+        }
         // We do not visit the initializer in Pass 1
     }
 
@@ -525,10 +534,12 @@ public:
 
     // --- Declarations ---
     void visit(VarDeclNode& node) override { 
-        // Local variables are declared sequentially in Pass 2
-        // If it's a global variable, it was already declared in Pass 1, but declare() handles redeclaration.
-        // Wait, if it's global, we don't want to re-declare it.
-        if (node.symbolId == kInvalidSymbolID) {
+        if (node.pattern) {
+            node.pattern->accept(static_cast<PatternVisitor&>(*this));
+            if (auto idPat = dynamic_cast<IdentifierPatternNode*>(node.pattern.get())) {
+                node.symbolId = idPat->symbolId;
+            }
+        } else if (node.symbolId == kInvalidSymbolID) {
             node.symbolId = sm.declare(node.name, SymbolKind::Variable, node.loc, &node);
         }
         if (node.typeAnnot) node.typeAnnot->accept(static_cast<TypeVisitor&>(*this));
@@ -703,7 +714,12 @@ public:
         } else {
             if (node.iterable) node.iterable->accept(static_cast<ASTVisitor&>(*this));
             sm.enterExistingScope(node.bodyScopeId);
-            if (node.bindingId == kInvalidSymbolID) {
+            if (node.pattern) {
+                node.pattern->accept(static_cast<PatternVisitor&>(*this));
+                if (auto idPat = dynamic_cast<IdentifierPatternNode*>(node.pattern.get())) {
+                    node.bindingId = idPat->symbolId;
+                }
+            } else if (node.bindingId == kInvalidSymbolID) {
                 node.bindingId = sm.declare(node.bindingName, SymbolKind::Variable, node.loc, &node);
             }
             if (node.body) node.body->accept(static_cast<ASTVisitor&>(*this));
@@ -758,6 +774,27 @@ public:
             if (node.segments.size() > 0 && node.segments.back() == "c") {
                 std::cerr << "[DEBUG] Resolver: finalIds size for 'c' is " << finalIds.size() << "\n";
             }
+            
+            // --- Closure Capture Detection ---
+            if (finalIds.size() == 1 && !activeLambdas.empty()) {
+                SymbolID resolvedId = finalIds[0];
+                const auto& sym = sm.table.getSymbol(resolvedId);
+                if (sym.kind == SymbolKind::Variable || sym.kind == SymbolKind::Parameter) {
+                    // Propagate capture up the closure chain
+                    for (auto& [lambdaDepth, lambdaNode] : activeLambdas) {
+                        if (sym.declaredDepth < lambdaDepth) {
+                            bool alreadyCaptured = false;
+                            for (auto& c : lambdaNode->captures) {
+                                if (c.symbolId == resolvedId) { alreadyCaptured = true; break; }
+                            }
+                            if (!alreadyCaptured) {
+                                lambdaNode->captures.push_back(LambdaCaptureRef{resolvedId});
+                            }
+                        }
+                    }
+                }
+            }
+            // ---------------------------------
         }
         for (auto& arg : node.genericArgs) {
             if (arg) arg->accept(static_cast<TypeVisitor&>(*this));
@@ -952,6 +989,20 @@ public:
     }
     void visit(TuplePatternNode& node) override { 
         for (auto& p : node.elements) { p->accept(static_cast<PatternVisitor&>(*this)); }
+    }
+    void visit(StructPatternNode& node) override {
+        // Struct name (path)
+        if (!node.path.empty()) {
+            auto symIds = sm.resolvePath(node.path, node.loc);
+            if (!symIds.empty()) {
+                node.structSymbolId = symIds[0];
+            }
+        }
+        for (auto& f : node.fields) {
+            if (f.pattern) {
+                f.pattern->accept(static_cast<PatternVisitor&>(*this));
+            }
+        }
     }
 };
 

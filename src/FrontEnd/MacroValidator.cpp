@@ -329,6 +329,12 @@ void MacroValidator::visit(TuplePatternNode& node) {
     }
 }
 
+void MacroValidator::visit(StructPatternNode& node) {
+    for (const auto& f : node.fields) {
+        if (f.pattern) f.pattern->accept(static_cast<PatternVisitor&>(*this));
+    }
+}
+
 void MacroValidator::visit(MacroDeclNode& node) {
     if (node.body) node.body->accept(*this);
 }

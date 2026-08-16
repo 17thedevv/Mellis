@@ -47,6 +47,7 @@ set(MIDDLEEND_SRC
     src/MiddleEnd/TypeChecker.cpp
     src/MiddleEnd/CFG.cpp
     src/MiddleEnd/MatchAnalyzer.cpp
+    src/MiddleEnd/EscapeAnalyzer.cpp
     src/MiddleEnd/BorrowAnalyzer.cpp
     src/MiddleEnd/LivenessAnalyzer.cpp
     src/MiddleEnd/MoveAnalyzer.cpp

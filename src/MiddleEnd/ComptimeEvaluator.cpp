@@ -131,7 +131,7 @@ void ComptimeEvaluator::visit(IdentifierExpr& node) {
         std::string varName(node.segments.front());
         ComptimeValue val = currentEnv_->get(varName);
         if (val.isError()) {
-            diag_.error(node.loc, "Undefined comptime variable: " + varName);
+            // diag_.error(node.loc, "Undefined comptime variable: " + varName);
         }
         lastResult_ = val;
     } else {
