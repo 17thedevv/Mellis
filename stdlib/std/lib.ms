@@ -1,2 +1,2 @@
 // Standard Library Entry
-pub use io;
+export use io;
