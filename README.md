@@ -21,6 +21,12 @@ Mellis là một trình biên dịch (compiler) dành cho ngôn ngữ **FDLang**
 - `src/MLib/`: Hệ thống nạp (Loader) và sinh (Generator) metadata thư viện.
 - `src/Support/`: Các tiện ích dùng chung (Diagnostic Engine, OSUtils, v.v.).
 
+## 📖 Tài liệu Tham khảo (Documentation)
+
+- [Language Reference](file:///d:/fdlang/docs/LanguageReference.md): Khái quát tất cả tính năng của ngôn ngữ Mellis (Primitive types, Control Flow, Structs, Enums & Pattern Matching, Traits & Generics, Borrowing, Closures, Macros...).
+- [Architecture](file:///d:/fdlang/docs/architecture.md): Cấu trúc kiến trúc nội bộ của Mellis Compiler.
+- [MVIR](file:///d:/fdlang/docs/MVIR.md): Đặc tả mã trung gian Mellis Virtual Intermediate Representation.
+
 ## 🛠️ Hướng dẫn Build
 
 Mellis yêu cầu trình biên dịch C++20 và bộ thư viện **LLVM 18+** được cấu hình trên máy tính.
