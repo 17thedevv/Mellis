@@ -535,6 +535,14 @@ bool TypeChecker::check(ASTNode* root, ModuleID currentModule) {
                 if (node.segments[0] == "string") { evaluatedType = ctx.getPrimitive(BuiltinKind::Str); return; }
             }
             if (node.symbolId != kInvalidSymbolID) {
+                // Resolve alias chain first
+                SymbolID resolvedId = node.symbolId;
+                while (resolvedId != kInvalidSymbolID && table.getSymbol(resolvedId).kind == SymbolKind::Alias) {
+                    resolvedId = table.getSymbol(resolvedId).aliasTo;
+                }
+                if (resolvedId != kInvalidSymbolID) {
+                    node.symbolId = resolvedId;
+                }
                 const auto& sym = table.getSymbol(node.symbolId);
                 std::vector<const Type*> args;
                 for (auto& argNode : node.genericArgs) {

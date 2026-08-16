@@ -171,6 +171,7 @@ struct UseTreeNode {
 class UseDeclNode : public DeclNode {
 public:
     UseTreeNode tree;
+    bool isResolvedExternal = false;
     void accept(ASTVisitor& v) override;
 };
 

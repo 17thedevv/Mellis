@@ -496,6 +496,7 @@ public:
         }
     }
     void visit(UseDeclNode& node) override {
+        if (node.isResolvedExternal) return;
         processUseTree(node.tree, {});
     }
 

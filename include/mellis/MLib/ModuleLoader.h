@@ -38,13 +38,15 @@ class ModuleLoader {
 public:
     ModuleLoader(SymbolTable& symbolTable,
                  DiagnosticEngine& diag,
+                 const std::string& mainFileDir,
                  MacroRegistry* macroRegistry = nullptr,
                  const std::vector<std::string>& extraLibraryPaths = {});
 
-    // Load an external module by name (e.g. "std").
-    // - If already loaded, returns cached VirtualScopeID immediately (O(1)).
-    // - If not found in any library path, emits an error and returns kInvalidScopeID.
-    ScopeID loadModule(std::string_view moduleName, SourceLocation loc);
+    // Load an external module by resolving the longest valid path prefix.
+    // - Returns cached VirtualScopeID immediately if loaded.
+    // - Sets `matchedSegments` to how many elements in `path` were consumed as the module path.
+    // - If not found, emits an error and returns kInvalidScopeID.
+    ScopeID loadModule(const std::vector<std::string_view>& path, SourceLocation loc, size_t& matchedSegments);
 
     // Check if a module has already been loaded (cache hit).
     bool isLoaded(std::string_view moduleName) const;
@@ -53,15 +55,22 @@ public:
     std::vector<std::string> getLoadedPaths() const;
 
 private:
+    enum class ModuleState { NotLoaded, Loading, Loaded, Failed };
+    struct ModuleRecord {
+        ModuleState state = ModuleState::NotLoaded;
+        ScopeID scopeID = 0; // kInvalidScopeID usually 0, but we assume 0 is invalid here
+    };
+
     SymbolTable& symbolTable;
     DiagnosticEngine& diag;
+    std::string mainFileDir;
     MacroRegistry* macroRegistry;
     std::vector<std::string> searchPaths;
-    std::unordered_map<std::string, ScopeID> loadedModules;
+    std::unordered_map<std::string, ModuleRecord> moduleRecords_;
     std::vector<std::string> loadedMLibPaths_;
 
-    // Search libraryPaths for "<moduleName>.mlib". Returns "" if not found.
-    std::string findMLibFile(std::string_view moduleName) const;
+    // Search for "<moduleName>.ms" and "<moduleName>.mlib", auto-compile .ms, return path to .mlib
+    std::string resolveModulePath(std::string_view moduleName, SourceLocation loc);
 
     // Read the file into memory and parse Header + Metadata sections only.
     // Registers all exported Functions, Types, and Traits into virtualScope.

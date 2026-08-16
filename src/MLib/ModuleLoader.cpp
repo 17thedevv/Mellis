@@ -8,6 +8,7 @@
 #include "mellis/FrontEnd/Lexer.h"
 #include "mellis/FrontEnd/Parser.h"
 #include "mellis/FrontEnd/MacroRegistry.h"
+#include "mellis/Core/CompilerSession.h" // For child compilation
 #include <iostream>
 #include <fstream>
 #include <cstring>
@@ -23,34 +24,41 @@ using namespace mlib;
 // Constructor
 // ─────────────────────────────────────────────────────────────────────────────
 
-ModuleLoader::ModuleLoader(SymbolTable& symbolTable, DiagnosticEngine& diag, MacroRegistry* macroRegistry, const std::vector<std::string>& extraLibraryPaths)
-    : symbolTable(symbolTable), diag(diag), macroRegistry(macroRegistry) {
+ModuleLoader::ModuleLoader(SymbolTable& symbolTable, DiagnosticEngine& diag, const std::string& mainFileDir, MacroRegistry* macroRegistry, const std::vector<std::string>& extraLibraryPaths)
+    : symbolTable(symbolTable), diag(diag), mainFileDir(mainFileDir), macroRegistry(macroRegistry) {
     namespace fs = std::filesystem;
 
-    // 1. Local project (future FDLang package manager)
+    // 1. Current Module Directory
+    if (!mainFileDir.empty()) {
+        searchPaths.push_back(mainFileDir);
+    }
+
+    // 2. Project Root (fallback to CWD)
     std::error_code ec;
     fs::path cwd = fs::current_path(ec);
     if (!ec) {
-        searchPaths.push_back((cwd / ".fd_modules").string());
-        // For development convenience:
+        searchPaths.push_back(cwd.string());
         searchPaths.push_back((cwd / "lib").string());
+        searchPaths.push_back((cwd / "libs").string());
+        if (!mainFileDir.empty()) {
+            searchPaths.push_back((fs::path(mainFileDir) / "lib").string());
+        }
     }
 
-    // 2. Command Line (extra paths passed via CompilerSession)
+    // 3. Explicit -L paths
     for (const auto& path : extraLibraryPaths) {
         searchPaths.push_back(path);
     }
 
-    // 3. Environment Variable
+    // 4. Environment Variable
     if (const char* envPath = std::getenv("MELLIS_PATH")) {
         searchPaths.push_back(envPath);
     }
 
-    // 4. Sysroot (Default Fallback)
+    // 5. Sysroot
     std::string exePath = OSUtils::getExecutablePath();
     std::string sysroot = OSUtils::getParentDirectory(exePath, 2); // go up from bin/
     searchPaths.push_back((fs::path(sysroot) / "lib").string());
-    // Also add next to the executable (for simple layout: mellis.exe and lib/ in same dir)
     searchPaths.push_back((fs::path(OSUtils::getParentDirectory(exePath, 1)) / "lib").string());
 }
 
@@ -59,39 +67,77 @@ ModuleLoader::ModuleLoader(SymbolTable& symbolTable, DiagnosticEngine& diag, Mac
 // ─────────────────────────────────────────────────────────────────────────────
 
 bool ModuleLoader::isLoaded(std::string_view moduleName) const {
-    return loadedModules.count(std::string(moduleName)) > 0;
+    auto it = moduleRecords_.find(std::string(moduleName));
+    return it != moduleRecords_.end() && it->second.state == ModuleState::Loaded;
 }
 
 std::vector<std::string> ModuleLoader::getLoadedPaths() const {
     return loadedMLibPaths_;
 }
 
-ScopeID ModuleLoader::loadModule(std::string_view moduleName, SourceLocation loc) {
-    std::string key(moduleName);
-
-    // Cache hit: return the existing virtual scope immediately.
-    auto it = loadedModules.find(key);
-    if (it != loadedModules.end()) {
-        return it->second;
+ScopeID ModuleLoader::loadModule(const std::vector<std::string_view>& path, SourceLocation loc, size_t& matchedSegments) {
+    if (path.empty()) return kInvalidScopeID;
+    
+    // We try to match the longest prefix.
+    // e.g. path = ["graphics", "renderer", "ping"]
+    // We try "graphics/renderer/ping", then "graphics/renderer", then "graphics"
+    std::string moduleName;
+    std::string mlibPath;
+    
+    for (size_t i = path.size(); i > 0; --i) {
+        moduleName = "";
+        for (size_t j = 0; j < i; ++j) {
+            if (j > 0) moduleName += "/";
+            moduleName += std::string(path[j]);
+        }
+        
+        std::string resolved = resolveModulePath(moduleName, loc);
+        if (!resolved.empty()) {
+            mlibPath = resolved;
+            matchedSegments = i;
+            break;
+        }
     }
-
-    // Find the .mlib file on disk.
-    std::string path = findMLibFile(moduleName);
-    if (path.empty()) {
-        diag.error(loc, "Cannot find module '" + key + "' in library paths.");
+    
+    if (mlibPath.empty()) {
+        moduleName = std::string(path[0]);
+        for(size_t j = 1; j < path.size(); ++j) { moduleName += "/" + std::string(path[j]); }
+        diag.error(loc, "Cannot find module matching path '" + moduleName + "' in library paths.");
         return kInvalidScopeID;
     }
+    
+    // Use the matched moduleName as key
+    std::string key = moduleName;
+
+    auto it = moduleRecords_.find(key);
+    if (it != moduleRecords_.end()) {
+        if (it->second.state == ModuleState::Loading) {
+            diag.error(loc, "Circular import detected for module '" + key + "'.");
+            return kInvalidScopeID;
+        }
+        if (it->second.state == ModuleState::Loaded) {
+            return it->second.scopeID;
+        }
+        if (it->second.state == ModuleState::Failed) {
+            return kInvalidScopeID;
+        }
+    }
+
+    moduleRecords_[key] = {ModuleState::Loading, kInvalidScopeID};
 
     // Create the virtual scope for this module.
-    ScopeID virtualScope = symbolTable.createVirtualModuleScope(moduleName);
-    loadedModules[key] = virtualScope;
-
+    // Use the last segment as the scope name
+    std::string scopeName = std::string(path[matchedSegments - 1]);
+    ScopeID virtualScope = symbolTable.createVirtualModuleScope(scopeName);
+    
     // Parse only Header + Metadata — no MVIR, no ObjectCode.
     try {
-        parseMLibMetadata(path, virtualScope, nullptr, moduleName);
-        loadedMLibPaths_.push_back(path);
+        parseMLibMetadata(mlibPath, virtualScope, nullptr, moduleName);
+        loadedMLibPaths_.push_back(mlibPath);
+        moduleRecords_[key] = {ModuleState::Loaded, virtualScope};
     } catch (const std::exception& ex) {
         diag.error(loc, std::string("Failed to load module '") + key + "': " + ex.what());
+        moduleRecords_[key] = {ModuleState::Failed, kInvalidScopeID};
         return kInvalidScopeID;
     }
 
@@ -99,25 +145,64 @@ ScopeID ModuleLoader::loadModule(std::string_view moduleName, SourceLocation loc
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// File Resolution
+// File Resolution & Internal Compilation
 // ─────────────────────────────────────────────────────────────────────────────
 
-std::string ModuleLoader::findMLibFile(std::string_view moduleName) const {
-    std::string filename = std::string(moduleName) + ".mlib";
+std::string ModuleLoader::resolveModulePath(std::string_view moduleName, SourceLocation loc) {
+    namespace fs = std::filesystem;
+    std::string relPath = std::string(moduleName);
+    std::string msName = relPath + ".ms";
+    std::string mlibName = relPath + ".mlib";
+    
+    std::string foundMsPath;
+    std::string foundMlibPath;
+    
     for (const auto& dir : searchPaths) {
-        // Simple concatenation. In production, use std::filesystem::path.
-        std::string fullPath = dir;
-        if (!fullPath.empty() && fullPath.back() != '/' && fullPath.back() != '\\') {
-            fullPath += "/";
-        }
-        fullPath += filename;
-
-        // Use OSUtils instead of fstream to just check existence, it's faster
-        if (OSUtils::fileExists(fullPath)) {
-            return fullPath;
+        fs::path msPath = fs::path(dir) / msName;
+        fs::path mlibPath = fs::path(dir) / mlibName;
+        
+        bool hasMs = fs::exists(msPath);
+        bool hasMlib = fs::exists(mlibPath);
+        
+        if (hasMs || hasMlib) {
+            foundMsPath = hasMs ? msPath.string() : "";
+            foundMlibPath = hasMlib ? mlibPath.string() : "";
+            break; // Stop at highest priority tier
         }
     }
-    return "";
+    
+    if (foundMsPath.empty() && foundMlibPath.empty()) {
+        return "";
+    }
+    
+    bool needCompile = false;
+    if (foundMlibPath.empty()) {
+        needCompile = true;
+        // Output .mlib next to .ms
+        foundMlibPath = foundMsPath.substr(0, foundMsPath.find_last_of('.')) + ".mlib";
+    } else if (!foundMsPath.empty()) {
+        // Compare timestamps
+        std::error_code ec1, ec2;
+        auto msTime = fs::last_write_time(foundMsPath, ec1);
+        auto mlibTime = fs::last_write_time(foundMlibPath, ec2);
+        if (!ec1 && !ec2 && msTime > mlibTime) {
+            needCompile = true;
+        }
+    }
+    
+    if (needCompile) {
+        std::cout << "[ModuleLoader] Compiling dependency " << foundMsPath << "..." << std::endl;
+        CompilerSession childSession;
+        // Don't recurse extraLibraryPaths excessively, just pass them
+        childSession.setLibraryPaths(searchPaths); 
+        bool ok = childSession.compile(foundMsPath, false, 0, true);
+        if (!ok) {
+            diag.error(loc, "Failed to compile dependency: " + foundMsPath);
+            return "";
+        }
+    }
+    
+    return foundMlibPath;
 }
 
 

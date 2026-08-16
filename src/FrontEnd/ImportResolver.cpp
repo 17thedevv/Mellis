@@ -133,13 +133,17 @@ void ImportResolver::visit(UseDeclNode& node) {
     if (isLocalModule(symbolTable_, rootName)) return;
 
     // External path: ask ModuleLoader for the virtual scope.
-    ScopeID virtualScope = moduleLoader_.loadModule(rootName, tree.loc);
+    size_t matchedSegments = 0;
+    ScopeID virtualScope = moduleLoader_.loadModule(tree.segments, tree.loc, matchedSegments);
     if (virtualScope == kInvalidScopeID) return; // error already emitted
 
-    // Register an alias for the top-level module name itself in local scope.
-    // (so `std` can be used as `std::Vec` in expressions)
+    node.isResolvedExternal = true;
+
+    // Register an alias for the top-level matched module name in local scope.
+    // Use the last matched segment as the module alias name (e.g., `math::vector` -> `vector`).
+    std::string_view matchedModuleName = tree.segments[matchedSegments - 1];
     {
-        Identifier moduleIdent(rootName);
+        Identifier moduleIdent(matchedModuleName);
         if (!symbolTable_.containsInScope(moduleIdent, currentScope_)) {
             // Declare as ExternalModule kind so Resolver knows to look it up
             // in its virtual scope rather than walking the scope chain.
@@ -147,8 +151,7 @@ void ImportResolver::visit(UseDeclNode& node) {
                 moduleIdent, SymbolKind::ExternalModule, currentScope_,
                 tree.loc, nullptr);
             if (modSymID != kInvalidSymbolID) {
-                // Store the virtual scope ID as mlibSymbolID (reusing the field
-                // to carry scope information to TypeChecker).
+                // Store the virtual scope ID as mlibSymbolID
                 symbolTable_.getMutableSymbol(modSymID).mlibSymbolID =
                     static_cast<uint32_t>(virtualScope);
                 symbolTable_.getMutableSymbol(modSymID).isExternal = true;
@@ -157,16 +160,16 @@ void ImportResolver::visit(UseDeclNode& node) {
     }
 
     // Now walk the sub-tree to register individual symbol aliases.
-    // Build a starting path that skips the root module name.
     UseTreeNode subtree = tree;
-    subtree.segments.clear(); // strip root; the virtualScope IS the root
+    // Strip the matched segments from the subtree
+    subtree.segments.erase(subtree.segments.begin(), subtree.segments.begin() + matchedSegments);
 
     // If there are no further children/segments, we've imported the whole
     // module (just the name is enough for qualified access).
-    if (tree.children.empty() && tree.segments.size() == 1) return;
+    if (tree.children.empty() && subtree.segments.empty()) return;
 
     walkExternalTree(symbolTable_, diag_, currentScope_, virtualScope,
-                     tree, {});
+                     subtree, {});
 }
 
 } // namespace fl

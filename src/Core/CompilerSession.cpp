@@ -148,7 +148,7 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     
     // ── Phase 1.3: Import & Macro Resolution ─────────────────────
     if (verbose) std::cout << "[1.3] Phan giai Import & Macro..." << std::endl;
-    ModuleLoader moduleLoader(symbolTable_, diag_, &macroRegistry, libraryPaths_);
+    ModuleLoader moduleLoader(symbolTable_, diag_, mainFileDir.string(), &macroRegistry, libraryPaths_);
     ImportResolver importResolver(diag_, symbolTable_, moduleLoader);
     MacroResolver macroResolver(macroRegistry, diag_);
     if (ast) {
@@ -362,23 +362,33 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     if (emitLib) {
         if (verbose) std::cout << "[9] Tao file thu vien (MLibGenerator)..." << std::endl;
         
-        std::string outName = filepath;
-        size_t lastDot = outName.find_last_of('.');
+        std::string finalOutName = filepath;
+        size_t lastDot = finalOutName.find_last_of('.');
         if (lastDot != std::string::npos) {
-            outName = outName.substr(0, lastDot);
+            finalOutName = finalOutName.substr(0, lastDot);
         }
-        outName += ".mlib";
+        finalOutName += ".mlib";
+        
+        std::string tempOutName = finalOutName + ".tmp";
 
         fl::SemanticSnapshot snapshot(typeChecker.getTypeTable(), typeContext_, symbolTable_);
         fl::MLibGenerator mlibGen(diag_, snapshot, macroRegistry, sourceCode);
-        bool mlibOk = mlibGen.generate(&llvmModule, outName);
+        bool mlibOk = mlibGen.generate(&llvmModule, tempOutName);
         if (!mlibOk) {
             diag_.error(SourceLocation::invalid(), "Tao file thu vien that bai.");
             diag_.flush();
             return false;
         }
 
-        if (verbose) std::cout << "[10] Thanh cong! File dau ra: " << outName << std::endl;
+        std::error_code ec;
+        std::filesystem::rename(tempOutName, finalOutName, ec);
+        if (ec) {
+            diag_.error(SourceLocation::invalid(), "Failed to rename temp mlib: " + ec.message());
+            diag_.flush();
+            return false;
+        }
+
+        if (verbose) std::cout << "[10] Thanh cong! File dau ra: " << finalOutName << std::endl;
         return true;
     }
 
