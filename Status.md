@@ -108,11 +108,11 @@ Language Core v1.0 đã khóa Semantic Foundation. Các mục tiêu dưới đâ
 | Ưu tiên | Hạng mục | Scope cần hoàn thiện (Core 100%) |
 |---------|----------|----------------------------------|
 | ✅ | **Parser** | Tuple indexing, `for-in` (Hoàn thành - Target 1) |
-| 1 (Target 2) | **Enum + Pattern Matching** | Payload lowering, nested match, exhaustiveness |
-| 2 (Target 3) | **Array/Slice** | Slice semantics, indexing, bounds checking |
-| 3 (Target 4) | **Pointer/Reference** | Borrow rules edge cases, alias/mutation checks |
-| 4 (Target 4) | **Generics & Traits** | Struct/enum/generic edge cases, Bounds, Static Dispatch |
-| 5 (Target 5) | **Diagnostics** | Line/col, snippet, consistency |
+| ✅ (Target 2) | **Enum + Pattern Matching** | Payload lowering, nested match, exhaustiveness |
+| ✅ (Target 3) | **Array/Slice** | Slice semantics, indexing, bounds checking |
+| ✅ (Target 4) | **Pointer/Reference** | Borrow rules edge cases, alias/mutation checks |
+| ✅ (Target 4) | **Generics & Traits** | `dyn Trait`, Unified Trait Solver, Bounds, Static/Dynamic Dispatch |
+| ✅ (Target 5) | **Diagnostics & Trait Semantics** | Semantic hardening, Missing Method, Ambiguity, Snippet, Error Code |
 
 *(Lưu ý: `dyn Trait` (Dynamic Dispatch VTable), `String` heap-allocated, và Async Executor được tách riêng sang Phase 8 (Ecosystem) vì chúng không thuộc Semantic Core nền tảng).*
 
@@ -160,9 +160,9 @@ Phase 1 — AST                   ██████████  100% ✅
 Phase 2 — Resolver              ██████████  100% ✅
 Phase 2 — Type System           ██████████  100% ✅
 Phase 2 — TypeChecker Core      ██████████  100% ✅
-Phase 2 — TypeChecker Generics  █████████░   95% (Edge cases)
-Phase 2 — TypeChecker Traits    █████████░   95% (Static Dispatch)
-Phase 2 — Borrow Checker        █████████░   90% (Alias/Mutation edge cases)
+Phase 2 — TypeChecker Generics  ██████████  100% ✅
+Phase 2 — TypeChecker Traits    ██████████  100% ✅
+Phase 2 — Borrow Checker        ██████████  100% ✅
 Phase 2 — Semantic Fingerprint  ██████████  100% ✅
 Phase 2 — MVIR Generator        ██████████  100% ✅
 
@@ -170,7 +170,7 @@ Phase 3 — LLVM IR Generator     ██████████  100% ✅
 Phase 3 — MLib Generator        ██████████  100% ✅
 Phase 3 — Executable Gen        ██████████  100% ✅
 
-Diagnostic Engine               ████████░░   80% (Line/col, snippet)
+Diagnostic Engine               ██████████  100% ✅
 ────────────────────────────────────────────────────
-Tổng thể v1.0 Language Core     █████████░  ~95% HARDENING IN PROGRESS
+Tổng thể v1.0 Language Core     ██████████  100% (Core Frozen)
 ```

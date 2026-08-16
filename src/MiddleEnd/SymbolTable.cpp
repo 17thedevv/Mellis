@@ -1,4 +1,5 @@
 #include "mellis/MiddleEnd/SymbolTable.h"
+#include <iostream>
 #include <cassert>
 #include <cstring>
 
@@ -25,8 +26,9 @@ SymbolTable::SymbolTable() {
     });
 
     const char* builtins[] = {
+        "uint_4",
         "uint_8", "uint_16", "uint_32", "uint_64", "uint_128",
-        "int_8", "int_16", "int_32", "int_64", "int_128",
+        "int_4","int_8", "int_16", "int_32", "int_64", "int_128",
         "float_32", "float_64", "bool", "char", "str"
     };
     for (const char* name : builtins) {
@@ -91,6 +93,8 @@ SymbolID SymbolTable::declareSymbol(const Identifier& name,
     // Register this name in the scope's binding table.
     // Precondition: caller verified no duplicate via containsInScope().
     scopes_[scope].bindings.emplace(name, newId);
+
+    std::cerr << "[DEBUG SymbolTable] declareSymbol id=" << newId << " name='" << name.str() << "' kind=" << (int)kind << " scope=" << scope << std::endl;
 
     return newId;
 }

@@ -18,6 +18,7 @@
 #include <memory>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 #include "mellis/Core/Types.h"
 #include "mellis/AST/TypeNode.h" // For BuiltinKind
 
@@ -502,21 +503,35 @@ public:
 // -----------------------------------------------------------------------------
 class TraitObjectType : public Type {
 public:
-    SymbolID traitId;
+    std::vector<SymbolID> traitIds;
+    Lifetime lifetime;
     
-    explicit TraitObjectType(SymbolID id) : traitId(id) {}
+    explicit TraitObjectType(std::vector<SymbolID> ids, Lifetime lt = {}) 
+        : traitIds(std::move(ids)), lifetime(std::move(lt)) {}
     
     TypeKind getKind() const override { return TypeKind::TraitObject; }
     std::string toString() const override {
-        return "dyn Trait<" + std::to_string(traitId) + ">";
+        std::string s = "dyn ";
+        for (size_t i = 0; i < traitIds.size(); ++i) {
+            s += "Trait<" + std::to_string(traitIds[i]) + ">";
+            if (i + 1 < traitIds.size()) s += " + ";
+        }
+        if (lifetime.kind != LifetimeKind::Anonymous && lifetime.kind != LifetimeKind::Static) { // Static/Anonymous handle differently or show always? Let's just show if named/static
+             if (lifetime.kind == LifetimeKind::Static) s += " + 'static";
+             else if (lifetime.kind == LifetimeKind::Named) s += " + '" + lifetime.name;
+        }
+        return s;
     }
     bool equals(const Type* other) const override {
         if (auto* o = dynamic_cast<const TraitObjectType*>(other)) {
-            return traitId == o->traitId;
+            if (traitIds.size() != o->traitIds.size()) return false;
+            for (size_t i = 0; i < traitIds.size(); ++i) {
+                if (traitIds[i] != o->traitIds[i]) return false;
+            }
+            return lifetime == o->lifetime;
         }
         return false;
     }
-
     // DST constraint: dyn Trait is NOT sized
     bool isSized() const override { return false; }
 };
@@ -628,7 +643,7 @@ public:
     
     TypeKind getKind() const override { return TypeKind::GenericParam; }
     std::string toString() const override {
-        return std::string(name);
+        return std::string(name) + " (" + std::to_string(paramId) + ")";
     }
     bool equals(const Type* other) const override {
         if (auto* o = dynamic_cast<const GenericParamType*>(other)) {
@@ -909,13 +924,20 @@ public:
         return create<TraitType>(id, std::move(bindings));
     }
     
-    const TraitObjectType* getTraitObjectType(SymbolID id) {
+    const TraitObjectType* getTraitObjectType(std::vector<SymbolID> ids, Lifetime lt = {}) {
+        std::sort(ids.begin(), ids.end());
         for (auto& t : arena_) {
             if (auto* tr = dynamic_cast<TraitObjectType*>(t.get())) {
-                if (tr->traitId == id) return tr;
+                if (tr->traitIds.size() == ids.size() && tr->lifetime == lt) {
+                    bool match = true;
+                    for (size_t i = 0; i < ids.size(); ++i) {
+                        if (tr->traitIds[i] != ids[i]) { match = false; break; }
+                    }
+                    if (match) return tr;
+                }
             }
         }
-        return create<TraitObjectType>(id);
+        return create<TraitObjectType>(std::move(ids), std::move(lt));
     }
     
     const FunctionType* getFunctionType(std::vector<std::string> paramNames, std::vector<const Type*> paramTypes, const Type* returnType, bool isCallSite = false, bool isVariadic = false) {

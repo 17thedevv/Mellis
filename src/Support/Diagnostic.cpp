@@ -41,48 +41,47 @@ constexpr std::string_view severityLabel(DiagSeverity sev) {
 // DiagnosticEngine — Reporting
 // =============================================================================
 
-void DiagnosticEngine::report(DiagSeverity sev, SourceLocation loc,
-                               std::string msg) {
+Diagnostic& DiagnosticEngine::report(DiagSeverity sev, SourceLocation loc,
+                               std::string msg, std::string code) {
     // Deduplicate identical errors
-    for (const auto& d : diagnostics_) {
+    for (auto& d : diagnostics_) {
         if (d.severity == sev && d.location.line == loc.line && 
             d.location.column == loc.column && d.message == msg) {
-            return; // Skip duplicate
+            return d; // Return existing duplicate to allow adding notes to it
         }
     }
     
-    diagnostics_.push_back({sev, loc, std::move(msg)});
+    diagnostics_.push_back({sev, loc, std::move(code), std::move(msg), {}});
 
     switch (sev) {
         case DiagSeverity::Warning:
             ++warningCount_;
             break;
         case DiagSeverity::Error:
-            ++errorCount_;
-            break;
         case DiagSeverity::Fatal:
             ++errorCount_;
             break;
         case DiagSeverity::Note:
             break;
     }
+    return diagnostics_.back();
 }
 
 void DiagnosticEngine::note(SourceLocation loc, std::string msg) {
     report(DiagSeverity::Note, loc, std::move(msg));
 }
 
-void DiagnosticEngine::warning(SourceLocation loc, std::string msg) {
-    report(DiagSeverity::Warning, loc, std::move(msg));
+Diagnostic& DiagnosticEngine::warning(SourceLocation loc, std::string msg, std::string code) {
+    return report(DiagSeverity::Warning, loc, std::move(msg), std::move(code));
 }
 
-void DiagnosticEngine::error(SourceLocation loc, std::string msg) {
+Diagnostic& DiagnosticEngine::error(SourceLocation loc, std::string msg, std::string code) {
     std::cerr << "[DEBUG] DiagnosticEngine::error called: " << msg << "\n";
-    report(DiagSeverity::Error, loc, std::move(msg));
+    return report(DiagSeverity::Error, loc, std::move(msg), std::move(code));
 }
 
-void DiagnosticEngine::fatal(SourceLocation loc, std::string msg) {
-    report(DiagSeverity::Fatal, loc, std::move(msg));
+Diagnostic& DiagnosticEngine::fatal(SourceLocation loc, std::string msg, std::string code) {
+    return report(DiagSeverity::Fatal, loc, std::move(msg), std::move(code));
 }
 
 // =============================================================================

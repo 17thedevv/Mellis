@@ -328,7 +328,8 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     llvm::LLVMContext llvmContext;
     llvm::Module llvmModule(filepath, llvmContext);
     
-    LLVMIRGenerator llvmGen(llvmContext, llvmModule);
+    TraitObjectLayoutBuilder layoutBuilder(symbolTable_);
+    LLVMIRGenerator llvmGen(llvmContext, llvmModule, layoutBuilder);
     bool llvmOk = llvmGen.generate(mvirModule.get());
     // llvmModule.print(llvm::errs(), nullptr);
     

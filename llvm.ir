@@ -1,19 +1,105 @@
-; ModuleID = 'D:\fdlang\tests\sprint7\e2_visibility_generic_leak.ms'
-source_filename = "D:\\fdlang\\tests\\sprint7\\e2_visibility_generic_leak.ms"
+; ModuleID = 'test_dyn_trait_dispatch.ms'
+source_filename = "test_dyn_trait_dispatch.ms"
 
-%PrivateStruct = type { i32 }
+%Circle = type { i32 }
+%Square = type { i32 }
 
-define %PrivateStruct @expose_private() {
+@__vtable_struct_26_for_dyn_18 = private constant [5 x ptr] [ptr null, ptr null, ptr null, ptr @draw_29, ptr @area_32]
+@__vtable_struct_35_for_dyn_18 = private constant [5 x ptr] [ptr null, ptr null, ptr null, ptr @draw_38, ptr @area_41]
+
+define void @draw_29(ptr %"0") {
 entry0:
-  %"0" = alloca %PrivateStruct, align 8
-  %fld = getelementptr inbounds %PrivateStruct, ptr %"0", i32 0, i32 0
-  store i32 10, ptr %fld, align 4
-  %"1" = load %PrivateStruct, ptr %"0", align 4
-  ret %PrivateStruct %"1"
+  %"1" = alloca ptr, align 8
+  store ptr %"0", ptr %"1", align 8
+  ret void
+}
+
+define i32 @area_32(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  store ptr %"0", ptr %"1", align 8
+  %"2" = load ptr, ptr %"1", align 8
+  %fld = getelementptr inbounds %Circle, ptr %"2", i32 0, i32 0
+  %"3" = load i32, ptr %fld, align 4
+  %"4" = load ptr, ptr %"1", align 8
+  %fld1 = getelementptr inbounds %Circle, ptr %"4", i32 0, i32 0
+  %"5" = load i32, ptr %fld1, align 4
+  %"6" = mul i32 %"3", %"5"
+  %"7" = mul i32 %"6", 3
+  ret i32 %"7"
+}
+
+define void @draw_38(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  store ptr %"0", ptr %"1", align 8
+  ret void
+}
+
+define i32 @area_41(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  store ptr %"0", ptr %"1", align 8
+  %"2" = load ptr, ptr %"1", align 8
+  %fld = getelementptr inbounds %Square, ptr %"2", i32 0, i32 0
+  %"3" = load i32, ptr %fld, align 4
+  %"4" = load ptr, ptr %"1", align 8
+  %fld1 = getelementptr inbounds %Square, ptr %"4", i32 0, i32 0
+  %"5" = load i32, ptr %fld1, align 4
+  %"6" = mul i32 %"3", %"5"
+  ret i32 %"6"
 }
 
 define i32 @main() {
 entry0:
+  %"0" = alloca %Circle, align 8
+  %"1" = alloca %Square, align 8
+  %"2" = alloca { ptr, ptr }, align 8
+  %"5" = alloca { ptr, ptr }, align 8
+  %"8" = alloca i32, align 4
+  %"11" = alloca i32, align 4
+  %fld = getelementptr inbounds %Circle, ptr %"0", i32 0, i32 0
+  store i32 10, ptr %fld, align 4
+  %fld1 = getelementptr inbounds %Square, ptr %"1", i32 0, i32 0
+  store i32 5, ptr %fld1, align 4
+  %0 = insertvalue { ptr, ptr } undef, ptr %"0", 0
+  %1 = insertvalue { ptr, ptr } %0, ptr @__vtable_struct_26_for_dyn_18, 1
+  store { ptr, ptr } %1, ptr %"2", align 8
+  %2 = insertvalue { ptr, ptr } undef, ptr %"1", 0
+  %3 = insertvalue { ptr, ptr } %2, ptr @__vtable_struct_35_for_dyn_18, 1
+  store { ptr, ptr } %3, ptr %"5", align 8
+  %"9" = load { ptr, ptr }, ptr %"2", align 8
+  %4 = extractvalue { ptr, ptr } %"9", 0
+  %5 = extractvalue { ptr, ptr } %"9", 1
+  %6 = getelementptr ptr, ptr %5, i32 4
+  %7 = load ptr, ptr %6, align 8
+  %"10" = call i32 %7(ptr %4)
+  store i32 %"10", ptr %"8", align 4
+  %"12" = load { ptr, ptr }, ptr %"5", align 8
+  %8 = extractvalue { ptr, ptr } %"12", 0
+  %9 = extractvalue { ptr, ptr } %"12", 1
+  %10 = getelementptr ptr, ptr %9, i32 4
+  %11 = load ptr, ptr %10, align 8
+  %"13" = call i32 %11(ptr %8)
+  store i32 %"13", ptr %"11", align 4
+  %"14" = load i32, ptr %"8", align 4
+  %"15" = icmp ne i32 %"14", 300
+  br i1 %"15", label %then1, label %merge2
+
+then1:                                            ; preds = %entry0
+  %"16" = load i32, ptr %"8", align 4
+  ret i32 %"16"
+
+merge2:                                           ; preds = %entry0
+  %"17" = load i32, ptr %"11", align 4
+  %"18" = icmp ne i32 %"17", 25
+  br i1 %"18", label %then3, label %merge4
+
+then3:                                            ; preds = %merge2
+  %"19" = load i32, ptr %"11", align 4
+  ret i32 %"19"
+
+merge4:                                           ; preds = %merge2
   ret i32 0
 }
 

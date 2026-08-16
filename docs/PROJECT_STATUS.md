@@ -4,7 +4,8 @@
 **FDLang** is a custom compiled language featuring a professional-grade compiler architecture heavily inspired by Rust and C++. The core philosophy is **Strict Separation of Concerns (SoC)** and clean, senior-level code.
 
 ## 2. Current Architecture & State
-The frontend, middle-end, and `.mlib` serialization systems are highly structured. The Language Core v1.0 is officially **frozen** and currently passing **100% of tests (18/18)**.
+Mellis v1.0 — Semantic Foundation Frozen / Core Hardening in Progress
+The frontend, middle-end, and `.mlib` serialization systems are highly structured. The Language Core v1.0 is currently passing **100% of tests (18/18)**, and we are working to reach 100% semantic completion.
 
 - **FrontEnd (`Lexer`, `Parser`)**: 
   - Supports struct, enum, trait, impl, match expressions, and standard control flow (`if`, `while`, `for`, `break`, `continue`).
@@ -28,6 +29,7 @@ The frontend, middle-end, and `.mlib` serialization systems are highly structure
 - **MVIRGenerator & LLVM Backend**: Fully implemented and passing compilation to native executables (`.exe`).
 - **Traits & Generics (Monomorphization)**: Fully implemented.
 - **VTable & Dynamic Dispatch (`dyn Trait`)**: Fully operational.
+- **Trait Semantic Hardening & Diagnostics**: Comprehensive implementation validation (missing methods, signature mismatch, duplicate impls), ambiguity resolution, and advanced multi-note diagnostic reporting with strict Error Codes (e.g., `E-TRAIT-AMBIGUOUS`).
 - **Sprint 7 Final (Production-grade Infrastructure)**:
   - Deep Visibility Checks (Preventing export leakages).
   - Structural Semantic Hashing (FNV-1a) replacing brittle string-based comparisons.

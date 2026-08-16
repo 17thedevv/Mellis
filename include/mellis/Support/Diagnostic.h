@@ -60,12 +60,24 @@ enum class DiagSeverity {
 // Diagnostic
 // =============================================================================
 
+struct DiagnosticNote {
+    SourceLocation location;
+    std::string message;
+};
+
 /// A single recorded compiler diagnostic.
-/// Immutable after construction — created by DiagnosticEngine::report().
+/// Created by DiagnosticEngine::report(). Can be mutated to add notes.
 struct Diagnostic {
     DiagSeverity   severity;
     SourceLocation location;
+    std::string    code;
     std::string    message;
+    std::vector<DiagnosticNote> notes;
+
+    Diagnostic& addNote(SourceLocation loc, std::string msg) {
+        notes.push_back({loc, std::move(msg)});
+        return *this;
+    }
 };
 
 // =============================================================================
@@ -76,7 +88,8 @@ struct Diagnostic {
 ///
 /// Usage:
 ///   DiagnosticEngine diag;
-///   diag.error(loc, "Bien 'x' chua duoc khai bao.");
+///   diag.error(loc, "Bien 'x' chua duoc khai bao.", "E-VAR-UNRESOLVED")
+///       .addNote(prevLoc, "Truoc do khai bao o day");
 ///   if (diag.hasErrors()) { diag.flush(); return; }
 ///
 /// Lifetime: one engine per compilation (driver owns it).
@@ -91,15 +104,15 @@ public:
     // ── Reporting API ─────────────────────────────────────────────────────────
 
     /// Generic report — prefer the typed helpers below.
-    void report(DiagSeverity sev, SourceLocation loc, std::string msg);
+    Diagnostic& report(DiagSeverity sev, SourceLocation loc, std::string msg, std::string code = "");
 
     void note   (SourceLocation loc, std::string msg);
-    void warning(SourceLocation loc, std::string msg);
-    void error  (SourceLocation loc, std::string msg);
+    Diagnostic& warning(SourceLocation loc, std::string msg, std::string code = "");
+    Diagnostic& error  (SourceLocation loc, std::string msg, std::string code = "");
 
     /// Fatal: records the diagnostic, then marks the engine as fatally errored.
     /// Callers should check hasErrors() / return early after calling fatal().
-    void fatal  (SourceLocation loc, std::string msg);
+    Diagnostic& fatal  (SourceLocation loc, std::string msg, std::string code = "");
 
     // ── Query ─────────────────────────────────────────────────────────────────
 

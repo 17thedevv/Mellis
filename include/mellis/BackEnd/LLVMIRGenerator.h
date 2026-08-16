@@ -17,6 +17,7 @@
 
 #include "mellis/IR/MVIR.h"
 #include "mellis/MiddleEnd/SymbolTable.h"
+#include "mellis/MiddleEnd/ABI/TraitObjectLayout.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
@@ -29,7 +30,7 @@ namespace fl {
 
 class LLVMIRGenerator {
 public:
-    explicit LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module);
+    explicit LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module, TraitObjectLayoutBuilder& layoutBuilder);
 
     /// Generate LLVM IR from the given MVIR module.
     ///
@@ -41,6 +42,7 @@ private:
     llvm::Module& module_;
     llvm::IRBuilder<> builder_;
     const mvir::Module* mvirModule_ = nullptr;
+    TraitObjectLayoutBuilder& layoutBuilder_;
     // ── Environments ─────────────────────────────────────────────────────────
     
     // Maps MVIR LocalId ("%0") to the allocated LLVM Value.

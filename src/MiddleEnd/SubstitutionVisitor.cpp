@@ -19,12 +19,21 @@ std::unique_ptr<TypeNode> SubstitutionVisitor::substituteType(std::unique_ptr<Ty
             }
         }
         if (!named->segments.empty()) {
-            std::string name = std::string(named->segments.back());
-            if (genericSubstitution.typeSubstitutions.count(name)) {
-                std::cerr << "[DEBUG] SubstitutionVisitor: Substituted '" << name << "' with its replacement.\n";
-                return genericSubstitution.typeSubstitutions.at(name)->cloneAs<TypeNode>();
+            std::string baseName = std::string(named->segments[0]);
+            if (genericSubstitution.typeSubstitutions.count(baseName)) {
+                std::cerr << "[DEBUG] SubstitutionVisitor: Substituted '" << baseName << "' with its replacement.\n";
+                auto* subNode = genericSubstitution.typeSubstitutions.at(baseName).get();
+                if (named->segments.size() == 1) {
+                    return subNode->cloneAs<TypeNode>();
+                } else if (auto* subNamed = dynamic_cast<NamedTypeNode*>(subNode)) {
+                    auto newNamed = subNamed->cloneAs<NamedTypeNode>();
+                    for (size_t i = 1; i < named->segments.size(); ++i) {
+                        newNamed->segments.push_back(named->segments[i]);
+                    }
+                    return newNamed;
+                }
             } else {
-                std::cerr << "[DEBUG] SubstitutionVisitor: NO substitution found for '" << name << "'.\n";
+                std::cerr << "[DEBUG] SubstitutionVisitor: NO substitution found for '" << baseName << "'.\n";
             }
         }
         for (auto& arg : named->genericArgs) {

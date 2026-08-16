@@ -40,8 +40,12 @@ public:
         }
 
         if (loc.line != 0) {
-            // First line: error: message
-            std::cerr << BOLD << color << label << ": " << RESET << BOLD << d.message << RESET << "\n";
+            // First line: error[E-CODE]: message
+            std::cerr << BOLD << color << label;
+            if (!d.code.empty()) {
+                std::cerr << "[" << d.code << "]";
+            }
+            std::cerr << ": " << RESET << BOLD << d.message << RESET << "\n";
             // Second line:  --> filename:line:col
             std::cerr << " " << BLUE << "--> " << RESET << filename << ":" << loc.line << ":" << loc.column << "\n";
             
@@ -81,8 +85,22 @@ public:
                     std::cerr << BOLD << color << "^" << RESET << "\n";
                 }
             }
+            
+            // Print notes
+            for (const auto& note : d.notes) {
+                std::cerr << "  " << BLUE << "=" << RESET << BOLD << " note: " << RESET << note.message << "\n";
+                if (note.location.line != 0) {
+                     std::string noteFilename = "mellis";
+                     if (sourceMgr_ && note.location.file != SourceManager::kInvalidFileID) {
+                         noteFilename = sourceMgr_->getFilepath(note.location.file);
+                     }
+                     std::cerr << "   " << BLUE << "--> " << RESET << noteFilename << ":" << note.location.line << ":" << note.location.column << "\n";
+                }
+            }
         } else {
-            std::cerr << filename << ": " << BOLD << color << label << ": " << RESET << BOLD << d.message << RESET << "\n";
+            std::cerr << filename << ": " << BOLD << color << label;
+            if (!d.code.empty()) std::cerr << "[" << d.code << "]";
+            std::cerr << ": " << RESET << BOLD << d.message << RESET << "\n";
         }
     }
 };

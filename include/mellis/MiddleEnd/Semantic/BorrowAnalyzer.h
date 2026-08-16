@@ -18,7 +18,7 @@ struct Loan {
 
 struct BorrowStateData {
     std::vector<Loan> activeLoans;
-    std::unordered_map<std::string, Place> placeMap;
+    std::unordered_map<std::string, std::vector<Place>> placeMap;
 
     bool operator==(const BorrowStateData& other) const {
         if (activeLoans.size() != other.activeLoans.size()) return false;
@@ -70,9 +70,12 @@ public:
     void transferTerminator(const mvir::Terminator& term, BorrowStateData& state) override;
     bool merge(BorrowStateData& dest, const BorrowStateData& src) override;
     void initEntryState(const mvir::Function& func, BorrowStateData& state) override;
+    void run(const mvir::Function& func) {
+        DataflowPass<BorrowStateData>::run(func);
+    }
 
 private:
-    Place resolvePlace(const mvir::Operand& op, const BorrowStateData& state) const;
+    std::vector<Place> resolvePlace(const mvir::Operand& op, const BorrowStateData& state) const;
     void checkAccess(const Place& place, bool isMut, SourceLocation loc, const BorrowStateData& state);
     void issueLoan(const Place& place, bool isMut, const std::string& refId, SourceLocation loc, BorrowStateData& state);
 };

@@ -9,6 +9,7 @@
 #include "mellis/MiddleEnd/SymbolTable.h"
 #include "mellis/Support/Diagnostic.h"
 #include "mellis/MLib/MLibMetadataCache.h"
+#include "mellis/MiddleEnd/MethodResolver.h"
 #include "mellis/MiddleEnd/LifetimeConstraintSolver.h"
 #include <vector>
 #include <unordered_map>
@@ -33,32 +34,12 @@ public:
 
     void registerImpl(const ImplDeclNode* implNode);
     bool implementsTrait(const Type* type, SymbolID traitId, const std::vector<const Type*>& genericArgs = {}) const;
-
-
-    struct MethodInfo {
-        SymbolID methodId;
-        const FunctionType* type;
-    };
-
-    bool resolveMethod(const Type* receiverType, const std::string& name, MethodInfo& outMethod, ModuleID callerModuleID = 0);
-
-    struct MethodCandidate {
-        enum Kind { Trait, Inherent };
-        Kind kind;
-        SymbolID traitId;
-        const ImplDeclNode* inherentImplNode;
-        SymbolID methodId; // Original method symbol ID (from TraitDecl or ImplDecl)
-        const FunctionType* methodType; // Original method type
-    };
-
-    class MethodResolver {
-        std::unordered_map<std::string, std::vector<MethodCandidate>> candidates;
-    public:
-        void addTraitMethod(const std::string& name, SymbolID traitId, SymbolID methodId, const FunctionType* type);
-        void addInherentMethod(const std::string& name, const ImplDeclNode* implNode, SymbolID methodId, const FunctionType* type);
-        
-        bool probe(const Type* receiverType, const std::string& name, MethodInfo& outMethod, TraitSolver& solver, TypeContext& ctx, MonomorphizationEngine* monoEngine, SymbolTable& table, const std::vector<const Type*>& typeTable, ModuleID callerModuleID = 0);
-    };
+    void registerMethod(SymbolID traitId, const std::string& name, SymbolID methodId, const FunctionType* type);
+    
+    const Type* resolveAssociatedType(const Type* selfType, SymbolID traitId, const std::string& assocName) {
+        // Find the trait bounds if traitId is kInvalidSymbolID, but wait, the caller can just use the traitSolver_ directly!
+        return traitSolver_.resolveAssociatedType(selfType, traitId, assocName);
+    }
 
     MethodResolver& getMethodResolver() { return methodResolver_; }
     TraitSolver& getTraitSolver() { return traitSolver_; }
@@ -73,8 +54,8 @@ private:
     MonomorphizationEngine* monoEngine_;
     MLibMetadataCache* metadataCache_ = nullptr;
     std::vector<const Type*> typeTable_;
-    mutable TraitSolver traitSolver_;
     MethodResolver methodResolver_;
+    mutable TraitSolver traitSolver_;
     LifetimeConstraintSolver lifetimeSolver_; ///< S7.1: per-check() lifetime constraint accumulator
 };
 

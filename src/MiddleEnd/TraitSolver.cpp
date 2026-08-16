@@ -1,12 +1,17 @@
 #include "mellis/MiddleEnd/TraitSolver.h"
 #include "mellis/AST/DeclNode.h"
+#include "mellis/MiddleEnd/SymbolTable.h"
+#include "mellis/Support/Diagnostic.h"
+#include "mellis/MiddleEnd/Semantic/ObjectSafety.h"
+#include "mellis/MiddleEnd/MethodResolver.h"
 #include <iostream>
 #include <cassert>
 #include <unordered_map>
 
 namespace fl {
 
-TraitSolver::TraitSolver(TypeContext& ctx) : ctx_(ctx) {}
+TraitSolver::TraitSolver(TypeContext& ctx, SymbolTable& table, DiagnosticEngine& diag, const std::vector<const Type*>& typeTable, MethodResolver& methodResolver) 
+    : ctx_(ctx), table_(table), diag_(diag), typeTable_(typeTable), methodResolver_(methodResolver) {}
 
 void TraitSolver::addClause(TraitClause clause) {
     clauses_.push_back(std::move(clause));
@@ -88,7 +93,7 @@ const Type* TraitSolver::instantiateWithFreshVars(const Type* type, const std::u
     return type;
 }
 
-Solution TraitSolver::solve(const TraitGoal& goal) {
+Solution TraitSolver::solve(const Goal& goal) {
     // Top-level solve
     return solveRecursive(goal, 0);
 }
@@ -191,13 +196,102 @@ bool TraitSolver::unify(const Type* expected, const Type* actual) {
     return false;
 }
 
-Solution TraitSolver::solveRecursive(const TraitGoal& goal, size_t depth) {
-    if (depth > 64) {
+Solution TraitSolver::solveRecursive(const Goal& goal, size_t depth) {
+        if (depth > 64) {
         // Prevent infinite recursion (e.g. self-referential impls)
-        return {SolverResult::Failed, nullptr};
+        return {SolverResult::Failure, nullptr};
     }
 
-    std::cerr << "[DEBUG TraitSolver] Solving goal: self=" << goal.selfType->toString() << " traitId=" << goal.traitId << std::endl;
+    std::cerr << "[DEBUG TraitSolver] Solving goal: kind=" << (int)goal.kind << " self=" << (goal.selfType ? goal.selfType->toString() : "null") << " traitId=" << goal.traitId << std::endl;
+
+    if (goal.kind == GoalKind::ObjectSafety) {
+        if (ObjectSafety::isObjectSafe(goal.traitId, ctx_, table_, typeTable_, diag_, {})) {
+            return {SolverResult::Success, nullptr};
+        }
+        return {SolverResult::Failure, nullptr};
+    }
+
+    if (goal.kind == GoalKind::MethodResolution) {
+        const auto& cands = methodResolver_.getCandidates();
+        auto it = cands.find(goal.methodName);
+        if (it == cands.end()) return {SolverResult::Failure, nullptr};
+
+        std::vector<SymbolID> matchedMethods;
+        Solution firstMatch;
+        bool found = false;
+
+        // Pass 1: Inherent methods (direct match)
+        for (const auto& cand : it->second) {
+            if (cand.traitId != kInvalidSymbolID) continue; // Skip trait methods
+            if (!cand.inherentImplNode) continue;
+            
+            auto optSelfId = table_.lookup(Identifier(std::string("Self")), cand.inherentImplNode->bodyScopeId);
+            if (optSelfId.empty()) continue;
+            
+            const Type* implTargetType = typeTable_[optSelfId[0]]; 
+            if (!implTargetType) continue;
+            
+            if (goal.selfType->equals(implTargetType)) {
+                matchedMethods.push_back(cand.methodId);
+                if (!found) {
+                    firstMatch = {SolverResult::Success, cand.inherentImplNode, {}, cand.methodId, false, 0};
+                    found = true;
+                }
+            }
+        }
+
+        // Pass 2: Trait methods
+        for (const auto& cand : it->second) {
+            if (cand.traitId == kInvalidSymbolID) continue; // Skip inherent methods
+            
+            const Type* baseType = goal.selfType;
+            if (auto* ref = dynamic_cast<const ReferenceType*>(baseType)) baseType = ref->pointee;
+            else if (auto* ptr = dynamic_cast<const PointerType*>(baseType)) baseType = ptr->pointee;
+
+            Goal traitGoal;
+            traitGoal.kind = GoalKind::Trait;
+            traitGoal.selfType = baseType;
+            traitGoal.traitId = cand.traitId;
+
+            Solution sol = solveRecursive(traitGoal, depth + 1);
+            if (sol.result == SolverResult::Success) {
+                bool isDyn = (dynamic_cast<const TraitObjectType*>(baseType) != nullptr);
+                matchedMethods.push_back(cand.methodId);
+                if (!found) {
+                    firstMatch = {SolverResult::Success, sol.implNode, {}, cand.methodId, isDyn, 0};
+                    found = true;
+                }
+            }
+        }
+
+        if (matchedMethods.size() > 1) {
+            Solution ambig;
+            ambig.result = SolverResult::Ambiguous;
+            ambig.ambiguousMethods = matchedMethods;
+            return ambig;
+        } else if (found) {
+            return firstMatch;
+        }
+
+        return {SolverResult::Failure, nullptr};
+    }
+
+    if (goal.kind == GoalKind::Projection) {
+        return {SolverResult::Failure, nullptr};
+    }
+
+    // Auto-implement traits for their own Trait Objects
+    if (goal.kind == GoalKind::Trait) {
+        if (auto* traitObjTy = dynamic_cast<const TraitObjectType*>(goal.selfType)) {
+            for (auto id : traitObjTy->traitIds) {
+                if (id == goal.traitId) {
+                    return {SolverResult::Success, nullptr};
+                }
+            }
+        }
+    }
+
+    // For GoalKind::Trait
     // 1. Try to satisfy from environment (assumed bounds)
     for (const auto& bound : env_) {
         std::cerr << "[DEBUG TraitSolver]   Checking env bound: self=" << bound.selfType->toString() << " traitId=" << bound.traitId << std::endl;
@@ -214,14 +308,15 @@ Solution TraitSolver::solveRecursive(const TraitGoal& goal, size_t depth) {
         if (ok) {
             // Environment matches completely!
             std::cerr << "[DEBUG TraitSolver]     -> MATCHED env bound!" << std::endl;
-            return {SolverResult::Proven, nullptr};
+            return {SolverResult::Success, nullptr};
         } else {
             ctx_.unificationTable.rollback(snap);
         }
     }
 
     // 2. Try to satisfy from global clauses (impl blocks)
-    int successfulCandidates = 0;
+    std::vector<const ImplDeclNode*> successfulImpls;
+    std::vector<const Type*> firstInstArgs;
 
     for (const auto& clause : clauses_) {
         if (clause.traitId != goal.traitId) continue;
@@ -248,38 +343,40 @@ Solution TraitSolver::solveRecursive(const TraitGoal& goal, size_t depth) {
             // Unification succeeded! Now we must prove all obligations
             bool allProven = true;
             for (const auto& obl : clause.obligations) {
-                TraitGoal instObl = obl;
+                Goal instObl = obl;
                 instObl.selfType = instantiateWithFreshVars(obl.selfType, freshVars);
                 for (size_t i = 0; i < instObl.genericArgs.size(); ++i) {
                     instObl.genericArgs[i] = instantiateWithFreshVars(obl.genericArgs[i], freshVars);
                 }
                 
-                if (solveRecursive(instObl, depth + 1).result != SolverResult::Proven) {
+                if (solveRecursive(instObl, depth + 1).result != SolverResult::Success) {
                     allProven = false;
                     break;
                 }
             }
             if (allProven) {
-                successfulCandidates++;
-                // Stop early on first match?
-                // Real trait solvers might check for ambiguity if multiple impls match,
-                // but we will just return Proven for now to keep it simpler.
-                
-                std::vector<const Type*> instArgs;
-                for (SymbolID id : clause.genericParamIds) {
-                    instArgs.push_back(ctx_.unificationTable.deepResolve(freshVars[id], ctx_));
+                successfulImpls.push_back(clause.implNode);
+                if (successfulImpls.size() == 1) {
+                    for (SymbolID id : clause.genericParamIds) {
+                        firstInstArgs.push_back(ctx_.unificationTable.deepResolve(freshVars[id], ctx_));
+                    }
                 }
-                return {SolverResult::Proven, clause.implNode, instArgs};
-
             }
         }
         
         ctx_.unificationTable.rollback(snap);
     }
+    
+    if (successfulImpls.size() == 1) {
+        return {SolverResult::Success, successfulImpls[0], firstInstArgs};
+    } else if (successfulImpls.size() > 1) {
+        Solution ambig;
+        ambig.result = SolverResult::Ambiguous;
+        ambig.ambiguousCandidates = successfulImpls;
+        return ambig;
+    }
 
-    if (successfulCandidates == 0) return {SolverResult::Failed, nullptr};
-    if (successfulCandidates == 1) return {SolverResult::Proven, nullptr};
-    return {SolverResult::Ambiguous, nullptr};
+    return {SolverResult::Failure, nullptr};
 }
 
 const Type* TraitSolver::resolveAssociatedType(const Type* selfType, SymbolID traitId, const std::string& assocName, std::function<const Type*(const TypeNode*)> evaluateFn) {
@@ -306,6 +403,15 @@ const Type* TraitSolver::resolveAssociatedType(const Type* selfType, SymbolID tr
         printf("[DEBUG TraitSolver]   trying clause with selfType=%s (instSelf=%s): unified=%d\n", clause.selfType->toString().c_str(), instSelf->toString().c_str(), unified);
 
         if (unified) {
+            if (clause.associatedBindings.count(assocName)) {
+                const Type* resolved = clause.associatedBindings.at(assocName);
+                resolved = instantiateWithFreshVars(resolved, freshVars);
+                resolved = ctx_.unificationTable.deepResolve(resolved, ctx_);
+                ctx_.unificationTable.commit(snap);
+                printf("[DEBUG TraitSolver]     -> resolved to %s\n", resolved->toString().c_str());
+                return resolved;
+            }
+
             // Look up the associated type binding in this impl
             for (const auto& at : clause.implNode->associatedTypes) {
                 if (at && std::string(at->name) == assocName && at->aliasedType) {

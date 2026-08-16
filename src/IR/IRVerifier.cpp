@@ -179,6 +179,9 @@ IRVerificationResult IRVerifier::verifyDominance(const mvir::Function& function)
     // Let's implement a global def-use check.
     
     std::unordered_set<std::string> definedLocals;
+    for (const auto& param : function.params) {
+        definedLocals.insert(param.id.toString());
+    }
 
     // First pass: collect all definitions. (Strict dominance requires CFG analysis, 
     // but for now we just verify no use before def in a linear scan if CFG is a DAG, 

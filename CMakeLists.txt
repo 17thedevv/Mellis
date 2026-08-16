@@ -59,6 +59,7 @@ set(MIDDLEEND_SRC
     src/MiddleEnd/ComptimeEvaluator.cpp
     src/MiddleEnd/SemanticAnalyzer.cpp
     src/MiddleEnd/TraitSolver.cpp
+    src/MiddleEnd/MethodResolver.cpp
     src/MiddleEnd/VisibilityLeakChecker.cpp
 )
 
@@ -74,6 +75,11 @@ set(OPTIMIZER_SRC
 
 set(SEMANTIC_SRC
     src/MiddleEnd/Semantic/DropElaborator.cpp
+    src/MiddleEnd/Semantic/ObjectSafety.cpp
+)
+
+set(ABI_SRC
+    src/MiddleEnd/ABI/TraitObjectLayout.cpp
 )
 
 set(BACKEND_SRC
@@ -95,6 +101,7 @@ add_executable(mellis
     ${FRONTEND_SRC}
     ${MIDDLEEND_SRC}
     ${SEMANTIC_SRC}
+    ${ABI_SRC}
     ${IR_SRC}
     ${OPTIMIZER_SRC}
     ${BACKEND_SRC}

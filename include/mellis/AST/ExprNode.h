@@ -217,10 +217,14 @@ struct MatchArmNode {
     std::unique_ptr<StmtNode>    body;
 };
 
+struct DecisionNode;
+
 class MatchExpr : public ExprNode {
 public:
     std::unique_ptr<ExprNode>  subject;
     std::vector<MatchArmNode>  arms;
+    std::shared_ptr<DecisionNode> decisionTree; // Resolved by MatchAnalyzer
+
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };

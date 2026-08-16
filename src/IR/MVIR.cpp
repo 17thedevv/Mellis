@@ -27,6 +27,8 @@ std::string formatType(const Type* type) {
 std::string Projection::toString() const {
     if (kind == ProjectionKind::Field) {
         return "." + std::to_string(fieldIndex);
+    } else if (kind == ProjectionKind::TupleIndex) {
+        return "." + std::to_string(fieldIndex);
     } else if (kind == ProjectionKind::Index) {
         if (indexLocal) return "[" + indexLocal->toString() + "]";
         return "[?]";
@@ -149,14 +151,21 @@ std::string VariantInst::toString() const {
     }
     return res;
 }
+std::string TupleExtractInst::toString() const {
+    return dest.toString() + " = tuple_extract " + mvir::toString(tuple) + " [" + std::to_string(index) + "]";
+}
 std::string MakeTraitObjectInst::toString() const {
-    std::string res = dest.toString() + " = make_trait_object " + mvir::toString(value) + " from " + formatType(concreteType) + " to " + formatType(targetType) + " vtable: [";
+    std::string res = dest.toString() + " = make_trait_object " + mvir::toString(value) + " from " + formatType(concreteType) + " to " + formatType(targetType) + " vtable: " + vtableMangledName + " [";
     for (size_t i = 0; i < vtableMethods.size(); ++i) {
         res += vtableMethods[i];
         if (i + 1 < vtableMethods.size()) res += ", ";
     }
     res += "]";
     return res;
+}
+
+std::string MakeSliceInst::toString() const {
+    return dest.toString() + " = make_slice ptr: " + mvir::toString(basePtr) + ", len: " + mvir::toString(length);
 }
 
 std::string CallInst::toString() const {

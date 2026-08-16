@@ -4,6 +4,7 @@
 #include "mellis/MiddleEnd/SymbolTable.h"
 #include "mellis/MiddleEnd/TypeChecker.h"
 #include "mellis/IR/MVIR.h"
+#include "mellis/MiddleEnd/ABI/TraitObjectLayout.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -11,6 +12,7 @@
 namespace fl {
 
 class PatternNode;
+struct DecisionNode;
 
 class MVIRGenerator : public ASTVisitor {
 public:
@@ -74,6 +76,7 @@ public:
 private:
     SymbolTable& table_;
     TypeChecker& typeChecker_;
+    TraitObjectLayoutBuilder layoutBuilder_;
 
     bool isUnsafeContext_ = false;
     bool isComptimeContext_ = false;
@@ -120,12 +123,13 @@ private:
     void terminateBlock(std::unique_ptr<mvir::Terminator> term);
     void startBlock(mvir::LabelId label);
     
+    void pushLocalInst(std::unique_ptr<mvir::LocalInst> inst);
+    
     void resetFunctionState();
     mvir::Operand evaluateLValue(ExprNode& expr);
     mvir::Operand evaluateRValue(ExprNode& expr);
 
-    void compilePattern(PatternNode* pattern, mvir::Operand subject, mvir::LabelId successLbl, mvir::LabelId failLbl);
-    void compilePatternList(const std::vector<PatternNode*>& patterns, const std::vector<mvir::Operand>& subjects, size_t index, mvir::LabelId successLbl, mvir::LabelId failLbl);
+    void compileDecisionTree(DecisionNode* node, std::unordered_map<std::string, mvir::Operand>& places, const std::vector<mvir::LabelId>& armLabels, mvir::LabelId fallbackLbl);
 };
 
 } // namespace fl

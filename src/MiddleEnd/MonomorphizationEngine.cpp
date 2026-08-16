@@ -51,6 +51,23 @@ static std::unique_ptr<TypeNode> typeToAST(const Type* type, const SymbolTable& 
                 node->segments.push_back(gp->name);
                 return node;
             }
+            if (auto* ltTy = dynamic_cast<const LifetimeType*>(type)) {
+                auto node = std::make_unique<LifetimeNode>();
+                if (ltTy->lt.kind == LifetimeKind::Static) {
+                    node->name = "'static";
+                } else if (ltTy->lt.kind == LifetimeKind::Anonymous) {
+                    node->name = "'_";
+                } else {
+                    // String literal from interned or just keep it?
+                    // Actually ltTy->lt.name is std::string, but node->name is std::string_view.
+                    // We might need to copy it or leak it, but for now we just assign it. 
+                    // To be safe we should use a global string pool or just leak it.
+                    // Let's use new std::string to ensure lifetime, but memory leak is okay for this compiler phase during monomorphization.
+                    auto* str = new std::string(ltTy->lt.name);
+                    node->name = *str;
+                }
+                return node;
+            }
             throw std::runtime_error("Unsupported type kind for AST conversion in Monomorphization Engine: " + std::to_string(static_cast<int>(type->getKind())));
     }
 }
@@ -132,8 +149,24 @@ SymbolID MonomorphizationEngine::requestSpecialization(
 
     // 7. Prepare Substitution Map
     GenericSubstitution subs;
-    for (size_t i = 0; i < genericTemplate->genericParams.size() && i < genericArgs.size(); ++i) {
-        subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+    size_t argIdx = 0;
+    for (size_t i = 0; i < genericTemplate->genericParams.size(); ++i) {
+        if (argIdx < genericArgs.size()) {
+            std::string paramName = std::string(genericTemplate->genericParams[i].name);
+            auto astNode = typeToAST(genericArgs[argIdx], symTable);
+            
+            if (genericTemplate->genericParams[i].kind == GenericParamKind::Type) {
+                subs.typeSubstitutions[paramName] = std::move(astNode);
+                std::cerr << "[DEBUG] Setting type substitution for '" << paramName << "' to a concrete type.\n";
+            } else if (genericTemplate->genericParams[i].kind == GenericParamKind::Lifetime) {
+                if (auto* ltNode = dynamic_cast<LifetimeNode*>(astNode.get())) {
+                    std::unique_ptr<LifetimeNode> ownedLt(static_cast<LifetimeNode*>(astNode.release()));
+                    subs.lifetimeSubstitutions[paramName] = std::move(ownedLt);
+                    std::cerr << "[DEBUG] Setting lifetime substitution for '" << paramName << "'.\n";
+                }
+            }
+            argIdx++;
+        }
     }
 
     // 8. Run SubstitutionVisitor
@@ -141,10 +174,9 @@ SymbolID MonomorphizationEngine::requestSpecialization(
     visitor.substitute(*specializedAST);
 
     // 9. Re-run Resolver & TypeChecker
-    // We assume resolver and typeChecker have `resolve` and `check` methods taking ASTNode*
-    // In actual implementation, they might need to be hooked up to the Global Scope
-    resolver.resolve(specializedAST.get());
-    typeChecker.check(specializedAST.get());
+    const Symbol& origSym = symTable.getSymbol(genericTemplate->symbolId);
+    resolver.resolve(specializedAST.get(), origSym.declaredInScope);
+    typeChecker.check(specializedAST.get(), origSym.moduleID);
 
     // 10. Register
     SymbolID newId = specializedAST->symbolId;
@@ -190,18 +222,41 @@ SymbolID MonomorphizationEngine::requestStructSpecialization(
     specializedAST->genericParams.clear();
 
     GenericSubstitution subs;
-    for (size_t i = 0; i < genericTemplate->genericParams.size() && i < genericArgs.size(); ++i) {
-        subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+    size_t argIdx = 0;
+    for (size_t i = 0; i < genericTemplate->genericParams.size(); ++i) {
+        if (argIdx < genericArgs.size()) {
+            std::string paramName = std::string(genericTemplate->genericParams[i].name);
+            auto astNode = typeToAST(genericArgs[argIdx], symTable);
+            
+            if (genericTemplate->genericParams[i].kind == GenericParamKind::Type) {
+                subs.typeSubstitutions[paramName] = std::move(astNode);
+            } else if (genericTemplate->genericParams[i].kind == GenericParamKind::Lifetime) {
+                if (auto* ltNode = dynamic_cast<LifetimeNode*>(astNode.get())) {
+                    std::unique_ptr<LifetimeNode> ownedLt(static_cast<LifetimeNode*>(astNode.release()));
+                    subs.lifetimeSubstitutions[paramName] = std::move(ownedLt);
+                }
+            }
+            argIdx++;
+        }
     }
 
     SubstitutionVisitor visitor(std::move(subs));
     visitor.substitute(*specializedAST);
 
-    resolver.resolve(specializedAST.get());
-    typeChecker.check(specializedAST.get());
+    const Symbol& origSym = symTable.getSymbol(genericTemplate->symbolId);
+    resolver.resolve(specializedAST.get(), origSym.declaredInScope);
+    typeChecker.check(specializedAST.get(), origSym.moduleID);
 
     SymbolID newId = specializedAST->symbolId;
     insertedIt->second = newId;
+    
+    // Set originalTemplateId on the new StructType
+    const Type* specType = typeChecker.typeOf(newId);
+    if (auto* mutSt = const_cast<StructType*>(dynamic_cast<const StructType*>(specType))) {
+        mutSt->originalTemplateId = genericTemplate->symbolId;
+        mutSt->specializedArgs = genericArgs;
+    }
+    
     inProgress.erase(stableMangledName);
     specializedASTs.push_back(std::move(specializedAST));
 
@@ -214,14 +269,25 @@ SymbolID MonomorphizationEngine::requestStructSpecialization(
             
             GenericSubstitution implSubs;
             for (size_t i = 0; i < implNode->genericParams.size() && i < genericArgs.size(); ++i) {
-                implSubs.typeSubstitutions[std::string(implNode->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+                std::string paramName = std::string(implNode->genericParams[i].name);
+                auto astNode = typeToAST(genericArgs[i], symTable);
+                
+                if (implNode->genericParams[i].kind == GenericParamKind::Type) {
+                    implSubs.typeSubstitutions[paramName] = std::move(astNode);
+                } else if (implNode->genericParams[i].kind == GenericParamKind::Lifetime) {
+                    if (auto* ltNode = dynamic_cast<LifetimeNode*>(astNode.get())) {
+                        std::unique_ptr<LifetimeNode> ownedLt(static_cast<LifetimeNode*>(astNode.release()));
+                        implSubs.lifetimeSubstitutions[paramName] = std::move(ownedLt);
+                    }
+                }
             }
             
             SubstitutionVisitor implVisitor(std::move(implSubs));
             implVisitor.substitute(*specializedImpl);
             
-            resolver.resolve(specializedImpl.get());
-            typeChecker.check(specializedImpl.get());
+            const Symbol& origSym = symTable.getSymbol(genericTemplate->symbolId);
+            resolver.resolve(specializedImpl.get(), origSym.declaredInScope);
+            typeChecker.check(specializedImpl.get(), origSym.moduleID);
             
             specializedASTs.push_back(std::move(specializedImpl));
         }
@@ -243,9 +309,11 @@ SymbolID MonomorphizationEngine::requestEnumSpecialization(
     currentDepth++;
 
     std::string mangledName = Mangle::mangleStruct(genericTemplate->name, genericArgs, symTable);
+    std::cerr << "[DEBUG] IN requestEnumSpecialization! mangledName=" << mangledName << std::endl;
 
     auto it = specializedRegistry.find(mangledName);
     if (it != specializedRegistry.end()) {
+        std::cerr << "[DEBUG] Already specialized: " << it->second << std::endl;
         currentDepth--;
         return it->second;
     }
@@ -265,15 +333,22 @@ SymbolID MonomorphizationEngine::requestEnumSpecialization(
     specializedAST->genericParams.clear();
 
     GenericSubstitution subs;
-    for (size_t i = 0; i < genericTemplate->genericParams.size() && i < genericArgs.size(); ++i) {
-        subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[i], symTable);
+    size_t argIdx = 0;
+    for (size_t i = 0; i < genericTemplate->genericParams.size(); ++i) {
+        if (genericTemplate->genericParams[i].kind == GenericParamKind::Type) {
+            if (argIdx < genericArgs.size()) {
+                subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[argIdx], symTable);
+                argIdx++;
+            }
+        }
     }
 
     SubstitutionVisitor visitor(std::move(subs));
     visitor.substitute(*specializedAST);
 
-    resolver.resolve(specializedAST.get());
-    typeChecker.check(specializedAST.get());
+    const Symbol& origSym = symTable.getSymbol(genericTemplate->symbolId);
+    resolver.resolve(specializedAST.get(), origSym.declaredInScope);
+    typeChecker.check(specializedAST.get(), origSym.moduleID);
 
     SymbolID newId = specializedAST->symbolId;
     insertedIt->second = newId;

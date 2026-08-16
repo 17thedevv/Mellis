@@ -28,7 +28,8 @@ Type Player {
     stat: PlayerStats;
 
 
-    // lỗi cú pháp
+    // không lỗi về syntax nhưng mục đích hàm này
+    // là static method thì viết như này sẽ thanh instance method
     act create(stat: PlayerStats) -> Player {
         p = alloc Player;
         p.stat = stat;
@@ -37,11 +38,12 @@ Type Player {
     act takedamage(dmg: int) -> void{
         this.hp -= dmg
         if this.hp <= 0 {
-            this.hp = 0
+            this.hp = 0;
         }
     }
 }
 
+//static method
 Player::create = (stat: PlayerStats) => {
     p = alloc Player;
     p.stat = stat;
@@ -49,6 +51,7 @@ Player::create = (stat: PlayerStats) => {
 };
 
 // hoặc có thể viết
+// static method
 Player::create(stat: PlayerStats) -> Player {
     p = alloc Player;
     p.stat = stat;
@@ -82,7 +85,7 @@ act Player.move(){
 }
 
 
-
+// instance method
 Player.die = CharactorDie;
 
 act main(args: str[]){

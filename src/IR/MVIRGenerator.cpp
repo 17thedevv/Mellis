@@ -5,13 +5,14 @@
 #include "mellis/AST/DeclNode.h"
 #include "mellis/AST/ProgramNode.h"
 #include "mellis/AST/PatternNode.h"
+#include "mellis/MiddleEnd/Semantic/DecisionTree.h"
 #include <cassert>
 #include <iostream>
 
 namespace fl {
 
 MVIRGenerator::MVIRGenerator(SymbolTable& symTable, TypeChecker& typeChecker)
-    : table_(symTable), typeChecker_(typeChecker) {}
+    : table_(symTable), typeChecker_(typeChecker), layoutBuilder_(symTable) {}
 
 std::unique_ptr<mvir::Module> MVIRGenerator::generate(ProgramNode& program) {
     module_ = std::make_unique<mvir::Module>();
@@ -50,6 +51,25 @@ void MVIRGenerator::startBlock(mvir::LabelId label) {
     auto bb = std::make_unique<mvir::BasicBlock>(std::move(label));
     currentBlock_ = bb.get();
     currentFunction_->blocks.push_back(std::move(bb));
+}
+
+void MVIRGenerator::pushLocalInst(std::unique_ptr<mvir::LocalInst> inst) {
+    if (currentFunction_ && !currentFunction_->blocks.empty()) {
+        auto& entryBlock = currentFunction_->blocks.front();
+        std::cerr << "[DEBUG pushLocalInst] Inserting LocalInst for " << inst->dest.name << " into entry block " << entryBlock->label.name << std::endl;
+        
+        // Find the canonical position: after all existing LocalInsts
+        auto it = entryBlock->instructions.begin();
+        while (it != entryBlock->instructions.end() && dynamic_cast<mvir::LocalInst*>(it->get())) {
+            ++it;
+        }
+        
+        entryBlock->instructions.insert(it, std::move(inst));
+    } else if (currentBlock_) {
+        std::cerr << "[DEBUG pushLocalInst] Fallback to currentBlock_ " << currentBlock_->label.name << std::endl;
+        // Fallback if no function context (shouldn't happen in normal AST, but just in case)
+        currentBlock_->instructions.push_back(std::move(inst));
+    }
 }
 
 void MVIRGenerator::resetFunctionState() {
@@ -109,9 +129,7 @@ void MVIRGenerator::visit(VarDeclNode& node) {
 
     // S7.2: Embed semantic identity — symbolId for uniqueness, expansionId for hygiene
     mvir::LocalId ptr = nextLocal(node.symbolId, node.expansionID);
-    currentBlock_->instructions.push_back(
-        std::make_unique<mvir::LocalInst>(ptr, varType)
-    );
+    pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, varType));
 
     // Save pointer location to mapping
     varAllocas_[node.symbolId] = ptr;
@@ -122,9 +140,11 @@ void MVIRGenerator::visit(VarDeclNode& node) {
 
     if (node.initializer) {
         mvir::Operand initVal = evaluateRValue(*node.initializer);
-        currentBlock_->instructions.push_back(
-            std::make_unique<mvir::StoreInst>(varType, initVal, ptr)
-        );
+        if (currentBlock_->terminator == nullptr) {
+            currentBlock_->instructions.push_back(
+                std::make_unique<mvir::StoreInst>(varType, initVal, ptr)
+            );
+        }
     }
 }
 
@@ -406,7 +426,7 @@ void MVIRGenerator::visit(FunctionDeclNode& node) {
         auto& p = node.params[i];
         const Type* pType = typeChecker_.typeOf(p->symbolId);
         mvir::LocalId ptr = nextLocal(p->symbolId, p->expansionID);
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(ptr, pType));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, pType));
         varAllocas_[p->symbolId] = ptr;
 
         scopeStack_.back().push_back({ptr, pType});
@@ -561,24 +581,28 @@ void MVIRGenerator::visit(ForStmtNode& node) {
         // ── Pre-allocate all LocalInsts in the current (entry) block ──────────
         // MVIR Verifier requires all LocalInst to be in the entry block.
         mvir::LocalId idxLoc = nextLocal();
-        currentBlock_->instructions.push_back(
-            std::make_unique<mvir::LocalInst>(idxLoc, i32Type)
-        );
+        pushLocalInst(std::make_unique<mvir::LocalInst>(idxLoc, i32Type));
         currentBlock_->instructions.push_back(
             std::make_unique<mvir::StoreInst>(i32Type, mvir::Number{"0"}, idxLoc)
         );
 
         // Pre-alloc for idxLocal2 (holds a copy of current index for GEP)
         mvir::LocalId idxLocal2 = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(idxLocal2, i32Type));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(idxLocal2, i32Type));
+        // Zero-initialize to satisfy InitializationAnalyzer (loop join-point flow)
+        currentBlock_->instructions.push_back(
+            std::make_unique<mvir::StoreInst>(i32Type, mvir::Number{"0"}, mvir::Operand(mvir::Place(idxLocal2)))
+        );
 
         // Pre-alloc binding variable if present
         mvir::LocalId varAlloca;
         if (node.bindingId != kInvalidSymbolID && arrType) {
             varAlloca = nextLocal();
             varAllocas_[node.bindingId] = varAlloca;
+            pushLocalInst(std::make_unique<mvir::LocalInst>(varAlloca, arrType->elementType));
+            // Zero-initialize to satisfy InitializationAnalyzer at loop join-points
             currentBlock_->instructions.push_back(
-                std::make_unique<mvir::LocalInst>(varAlloca, arrType->elementType)
+                std::make_unique<mvir::StoreInst>(arrType->elementType, mvir::Number{"0"}, mvir::Operand(mvir::Place(varAlloca)))
             );
         }
 
@@ -643,12 +667,134 @@ void MVIRGenerator::visit(ForStmtNode& node) {
         // End
         startBlock(endLbl);
 
-    } else if (node.iterMethodId != kInvalidSymbolID) {
-        throw std::runtime_error("compilerBug: Trait-based Iterator MVIR lowering not fully implemented yet");
-    } else {
-        throw std::runtime_error("compilerBug: ForEach iterable is not Array/Slice and has no iterMethodId");
-    }
-}
+    } else if (node.nextMethodId != kInvalidSymbolID) {
+        // ── Trait-based Iterator path ────────────────────────────────────────
+        // Protocol:
+        //   1. If iterMethodId is valid: call iter(iterable) → iterator
+        //   2. Loop: call next(iterator_ptr) → Option<T>
+        //   3. Read tag: None (tag=0) → break, Some(x) → unwrap + body
+
+        const Type* iterableTy = node.iterable->inferredType;
+        const Type* iteratorTy = iterableTy; // Default: iterable IS the iterator
+
+        // Step 1: If there is a separate iter() call, invoke it to obtain an iterator
+        mvir::LocalId iteratorAlloca = nextLocal();
+        if (node.iterMethodId != kInvalidSymbolID) {
+            const auto& iterSym = table_.getSymbol(node.iterMethodId);
+            std::string iterName = iterSym.mangledName.empty() ? std::string(iterSym.name.str()) : iterSym.mangledName;
+            mvir::Operand iterablePtr = evaluateLValue(*node.iterable);
+            mvir::LocalId iterAddrRef = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::BorrowInst>(iterAddrRef, false, iterablePtr));
+
+            // Infer iterator type from method return type
+            if (auto* fnTy = dynamic_cast<const FunctionType*>(typeChecker_.typeOf(node.iterMethodId))) {
+                iteratorTy = fnTy->returnType;
+            }
+            pushLocalInst(std::make_unique<mvir::LocalInst>(iteratorAlloca, iteratorTy));
+
+            mvir::LocalId iterResult = nextLocal();
+            mvir::Operand callee{mvir::Place{mvir::GlobalId{"@" + iterName}}};
+            currentBlock_->instructions.push_back(std::make_unique<mvir::CallInst>(
+                std::optional<mvir::LocalId>{iterResult},
+                callee,
+                std::vector<mvir::Operand>{mvir::Operand(mvir::Place(iterAddrRef))}
+            ));
+            currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(
+                iteratorTy, mvir::Operand(mvir::Place(iterResult)), mvir::Operand(mvir::Place(iteratorAlloca))
+            ));
+        } else {
+            // The iterable is itself the iterator; just take its address
+            pushLocalInst(std::make_unique<mvir::LocalInst>(iteratorAlloca, iteratorTy));
+            mvir::Operand iterablePtr = evaluateLValue(*node.iterable);
+            mvir::LocalId iterVal = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(iterVal, iteratorTy, iterablePtr));
+            currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(iteratorTy, mvir::Operand(mvir::Place(iterVal)), mvir::Operand(mvir::Place(iteratorAlloca))));
+        }
+
+        // Determine element type from next() return type: Option<T> → T
+        const Type* elementType = typeChecker_.getContext().getUnknown();
+        if (auto* fnTy = dynamic_cast<const FunctionType*>(typeChecker_.typeOf(node.nextMethodId))) {
+            if (auto* optTy = dynamic_cast<const EnumType*>(fnTy->returnType)) {
+                if (!optTy->genericArgs.empty()) {
+                    elementType = optTy->genericArgs[0];
+                }
+            }
+        }
+
+        // Pre-alloc binding variable
+        mvir::LocalId varAlloca;
+        if (node.bindingId != kInvalidSymbolID) {
+            varAlloca = nextLocal();
+            varAllocas_[node.bindingId] = varAlloca;
+            pushLocalInst(std::make_unique<mvir::LocalInst>(varAlloca, elementType));
+        }
+
+        // Pre-alloc Option<T> result for next()
+        const Type* nextReturnTy = typeChecker_.getContext().getUnknown();
+        if (auto* fnTy = dynamic_cast<const FunctionType*>(typeChecker_.typeOf(node.nextMethodId))) {
+            nextReturnTy = fnTy->returnType;
+        }
+        mvir::LocalId optionAlloca = nextLocal();
+        pushLocalInst(std::make_unique<mvir::LocalInst>(optionAlloca, nextReturnTy));
+
+        mvir::LabelId condLbl = nextLabel("foriter_cond");
+        mvir::LabelId bodyLbl = nextLabel("foriter_body");
+        mvir::LabelId stepLbl = nextLabel("foriter_step");
+        mvir::LabelId endLbl  = nextLabel("foriter_end");
+
+        terminateBlock(std::make_unique<mvir::JumpTerm>(condLbl));
+
+        // Condition: call next(&iterator) → Option<T>; read tag; branch on Some vs None
+        startBlock(condLbl);
+        {
+            const auto& nextSym = table_.getSymbol(node.nextMethodId);
+            std::string nextName = nextSym.mangledName.empty() ? std::string(nextSym.name.str()) : nextSym.mangledName;
+            mvir::LocalId iterRef = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::BorrowInst>(iterRef, true, mvir::Operand(mvir::Place(iteratorAlloca))));
+            mvir::LocalId optionResult = nextLocal();
+            mvir::Operand callee{mvir::Place{mvir::GlobalId{"@" + nextName}}};
+            currentBlock_->instructions.push_back(std::make_unique<mvir::CallInst>(
+                std::optional<mvir::LocalId>{optionResult},
+                callee,
+                std::vector<mvir::Operand>{mvir::Operand(mvir::Place(iterRef))}
+            ));
+            currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(nextReturnTy, mvir::Operand(mvir::Place(optionResult)), mvir::Operand(mvir::Place(optionAlloca))));
+
+            // Read the discriminant tag: 0 = None, 1 = Some
+            mvir::LocalId tagLocal = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::TagInst>(tagLocal, mvir::Operand(mvir::Place(optionResult))));
+            // Some = tag 1; branch to body if tag != 0
+            mvir::LocalId isSome = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::AluInst>(isSome, mvir::AluOp::Ne, mvir::Operand(mvir::Place(tagLocal)), mvir::Number{"0"}));
+            terminateBlock(std::make_unique<mvir::BranchTerm>(mvir::Operand(mvir::Place(isSome)), bodyLbl, endLbl));
+        }
+
+        // Body: unwrap Some(x), assign to binding, execute loop body
+        startBlock(bodyLbl);
+        {
+            if (node.bindingId != kInvalidSymbolID) {
+                // Extract payload from Option<T>: variant=1 (Some), field=0
+                mvir::LocalId optionVal = nextLocal();
+                currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(optionVal, nextReturnTy, mvir::Operand(mvir::Place(optionAlloca))));
+                mvir::LocalId elemVal = nextLocal();
+                std::vector<const Type*> payloadTypes{elementType};
+                currentBlock_->instructions.push_back(std::make_unique<mvir::ExtractInst>(elemVal, mvir::Operand(mvir::Place(optionVal)), payloadTypes, 1, 0));
+                currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(elementType, mvir::Operand(mvir::Place(elemVal)), mvir::Operand(mvir::Place(varAlloca))));
+            }
+        }
+        loopTargets_.push_back({stepLbl, endLbl});
+        if (node.body) node.body->accept(*this);
+        loopTargets_.pop_back();
+        terminateBlock(std::make_unique<mvir::JumpTerm>(stepLbl));
+
+        // Step: just jump back to cond (next() is called in cond block)
+        startBlock(stepLbl);
+        terminateBlock(std::make_unique<mvir::JumpTerm>(condLbl));
+
+        // End
+        startBlock(endLbl);
+    } // end else if (nextMethodId)
+} // end visit(ForStmtNode)
 void MVIRGenerator::visit(BreakStmtNode&) {
     if (!loopTargets_.empty()) {
         terminateBlock(std::make_unique<mvir::JumpTerm>(loopTargets_.back().endLbl));
@@ -719,7 +865,7 @@ void MVIRGenerator::visit(CallExpr& node) {
         const ClosureType* closTy = dynamic_cast<const ClosureType*>(node.callee->inferredType);
         
         mvir::LocalId closurePtr = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(closurePtr, closTy));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(closurePtr, closTy));
         currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(closTy, closureVal, closurePtr));
         
         mvir::Place place2(closurePtr);
@@ -877,15 +1023,10 @@ void MVIRGenerator::visit(MethodCallExpr& node) {
 
     if (auto* traitObjTy = dynamic_cast<const TraitObjectType*>(objTy)) {
         size_t methodIndex = 0;
-        const auto& sym = table_.getSymbol(traitObjTy->traitId);
-        if (sym.decl && sym.kind == SymbolKind::Trait) {
-            auto* traitDecl = static_cast<const TraitDeclNode*>(sym.decl);
-            for (size_t i = 0; i < traitDecl->methods.size(); ++i) {
-                if (traitDecl->methods[i]->name == node.methodName) {
-                    methodIndex = i;
-                    break;
-                }
-            }
+        const auto& layout = layoutBuilder_.getOrCreateLayout(traitObjTy);
+        auto it = layout.methodSlots.find(node.resolvedFn);
+        if (it != layout.methodSlots.end()) {
+            methodIndex = it->second;
         }
         
         const Type* methodTy = typeChecker_.typeOf(node.resolvedFn);
@@ -925,8 +1066,50 @@ void MVIRGenerator::visit(IndexExpr& node) {
     
     // Build index projection
     mvir::LocalId idxAlloca = nextLocal();
-    currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(idxAlloca, node.index->inferredType));
+    pushLocalInst(std::make_unique<mvir::LocalInst>(idxAlloca, node.index->inferredType));
     currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(node.index->inferredType, indexOp, mvir::Operand(mvir::Place(idxAlloca))));
+
+    // Bounds check
+    const Type* realBaseTy = typeChecker_.getContext().unificationTable.deepResolve(node.base->inferredType, typeChecker_.getContext());
+    if (auto* refTy = dynamic_cast<const ReferenceType*>(realBaseTy)) {
+        realBaseTy = typeChecker_.getContext().unificationTable.deepResolve(refTy->pointee, typeChecker_.getContext());
+    }
+    
+    mvir::Operand lenOp;
+    bool hasLen = false;
+    if (auto* arrTy = dynamic_cast<const ArrayType*>(realBaseTy)) {
+        lenOp = mvir::Number{std::to_string(arrTy->length)};
+        hasLen = true;
+    } else if (dynamic_cast<const SliceType*>(realBaseTy)) {
+        mvir::LocalId lenLocal = nextLocal();
+        currentBlock_->instructions.push_back(std::make_unique<mvir::TupleExtractInst>(
+            lenLocal, basePtr, 1, typeChecker_.getContext().getPrimitive(BuiltinKind::U64)));
+        lenOp = mvir::Operand(mvir::Place(lenLocal));
+        hasLen = true;
+    }
+    
+    if (hasLen) {
+        mvir::LocalId cmpRes = nextLocal();
+        // Check if index >= length
+        currentBlock_->instructions.push_back(std::make_unique<mvir::AluInst>(cmpRes, mvir::AluOp::Ge, indexOp, lenOp));
+        
+        mvir::LabelId failLbl = nextLabel("bounds_fail");
+        mvir::LabelId okLbl = nextLabel("bounds_ok");
+        
+        terminateBlock(std::make_unique<mvir::BranchTerm>(mvir::Operand(mvir::Place(cmpRes)), failLbl, okLbl));
+        
+        startBlock(failLbl);
+        // Call __mellis_bounds_fail (we don't pass args yet, just call a generic external fail function)
+        std::vector<mvir::Operand> failArgs = { indexOp, lenOp };
+        currentBlock_->instructions.push_back(std::make_unique<mvir::CallInst>(
+            std::nullopt, 
+            mvir::Operand(mvir::Place(mvir::GlobalId{"@__mellis_bounds_fail"})), 
+            failArgs, nullptr
+        ));
+        terminateBlock(std::make_unique<mvir::UnreachableTerm>());
+        
+        startBlock(okLbl);
+    }
 
     if (auto* base = mvir::getPlaceIf(basePtr)) {
         mvir::Place place(*base);
@@ -973,7 +1156,7 @@ void MVIRGenerator::visit(TupleIndexExpr& node) {
 
     mvir::Operand objPtr = lastEvaluatedOperand_;
     mvir::Place place(*mvir::getPlaceIf(objPtr));
-    place.projections.push_back(mvir::Projection{mvir::ProjectionKind::Field, static_cast<size_t>(node.index), std::nullopt});
+    place.projections.push_back(mvir::Projection{mvir::ProjectionKind::TupleIndex, static_cast<size_t>(node.index), std::nullopt});
     
     if (evalMode_ == EvalMode::LValue) {
         lastEvaluatedOperand_ = mvir::Operand(place);
@@ -994,25 +1177,39 @@ void MVIRGenerator::visit(CastExpr& node) {
     else if (auto* ptrTy = dynamic_cast<const PointerType*>(innerTy)) innerTy = ptrTy->pointee;
     
     if (auto* traitObjTy = dynamic_cast<const TraitObjectType*>(innerTy)) {
-        std::vector<std::string> vtableMethods;
-        const auto& sym = table_.getSymbol(traitObjTy->traitId);
-        if (sym.decl && sym.kind == SymbolKind::Trait) {
-            auto* traitDecl = static_cast<const TraitDeclNode*>(sym.decl);
-            const Type* concreteTy = node.expr->inferredType;
-            if (auto* refTy = dynamic_cast<const ReferenceType*>(concreteTy)) concreteTy = refTy->pointee;
-            else if (auto* ptrTy = dynamic_cast<const PointerType*>(concreteTy)) concreteTy = ptrTy->pointee;
-            
-            for (const auto& method : traitDecl->methods) {
-                TypeChecker::MethodInfo mInfo;
-                if (typeChecker_.resolveMethod(concreteTy, std::string(method->name), mInfo)) {
-                    vtableMethods.push_back(std::string(table_.getSymbol(mInfo.methodId).name.str()));
-                } else {
-                    vtableMethods.push_back("");
+        const Type* concreteTy = node.expr->inferredType;
+        if (auto* refTy = dynamic_cast<const ReferenceType*>(concreteTy)) concreteTy = refTy->pointee;
+        else if (auto* ptrTy = dynamic_cast<const PointerType*>(concreteTy)) concreteTy = ptrTy->pointee;
+
+        std::string vtableMangled = layoutBuilder_.getVTableMangledName(concreteTy, traitObjTy);
+        const auto& layout = layoutBuilder_.getOrCreateLayout(traitObjTy);
+        std::vector<std::string> vtableMethods(layout.slotOrder.size(), "");
+        for (size_t i = 0; i < layout.slotOrder.size(); ++i) {
+            SymbolID traitMethodId = layout.slotOrder[i];
+            const auto& traitMethodSym = table_.getSymbol(traitMethodId);
+            std::string traitMethodName = std::string(traitMethodSym.name.str());
+            MethodInfo mInfo;
+            if (typeChecker_.getMethodResolver().probe(concreteTy, traitMethodName, mInfo, typeChecker_.getTraitSolver(), typeChecker_.getContext(), table_, typeChecker_.getTypeTable())) {
+                SymbolID targetMethodId = mInfo.id;
+                if (mInfo.implNode) {
+                    if (auto* implNode = dynamic_cast<const ImplDeclNode*>(mInfo.implNode)) {
+                        for (auto& m : implNode->methods) {
+                            if (std::string(m->name) == traitMethodName) {
+                                targetMethodId = m->symbolId;
+                                break;
+                            }
+                        }
+                    }
                 }
+                const auto& mSym = table_.getSymbol(targetMethodId);
+                vtableMethods[i] = mSym.mangledName.empty() ? std::string(mSym.name.str()) : mSym.mangledName;
+            } else {
+                std::cerr << "[FATAL MVIR Cast] PROBE FAILED for method " << traitMethodName << " on type " << concreteTy->toString() << std::endl;
             }
         }
+        
         currentBlock_->instructions.push_back(
-            std::make_unique<mvir::MakeTraitObjectInst>(dest, val, node.expr->inferredType, targetTy, std::move(vtableMethods)));
+            std::make_unique<mvir::MakeTraitObjectInst>(dest, val, node.expr->inferredType, targetTy, std::move(vtableMangled), std::move(vtableMethods)));
         lastEvaluatedOperand_ = mvir::Operand(mvir::Place(dest));
         return;
     }
@@ -1031,26 +1228,62 @@ void MVIRGenerator::visit(UnsizeCastExpr& node) {
     else if (auto* ptrTy = dynamic_cast<const PointerType*>(targetTy)) targetTy = ptrTy->pointee;
     
     if (auto* traitObjTy = dynamic_cast<const TraitObjectType*>(targetTy)) {
-        const auto& sym = table_.getSymbol(traitObjTy->traitId);
-        if (sym.decl && sym.kind == SymbolKind::Trait) {
-            auto* traitDecl = static_cast<const TraitDeclNode*>(sym.decl);
-            const Type* concreteTy = node.expr->inferredType;
-            if (auto* refTy = dynamic_cast<const ReferenceType*>(concreteTy)) concreteTy = refTy->pointee;
-            else if (auto* ptrTy = dynamic_cast<const PointerType*>(concreteTy)) concreteTy = ptrTy->pointee;
-            
-            for (const auto& method : traitDecl->methods) {
-                TypeChecker::MethodInfo mInfo;
-                if (typeChecker_.resolveMethod(concreteTy, std::string(method->name), mInfo)) {
-                    vtableMethods.push_back(std::string(table_.getSymbol(mInfo.methodId).name.str()));
+        const Type* concreteTy = node.expr->inferredType;
+        if (auto* refTy = dynamic_cast<const ReferenceType*>(concreteTy)) concreteTy = refTy->pointee;
+        else if (auto* ptrTy = dynamic_cast<const PointerType*>(concreteTy)) concreteTy = ptrTy->pointee;
+        
+        std::string vtableMangled = layoutBuilder_.getVTableMangledName(concreteTy, traitObjTy);
+        const auto& layout = layoutBuilder_.getOrCreateLayout(traitObjTy);
+        std::vector<std::string> vtableMethods(layout.slotOrder.size(), "");
+        for (size_t i = 0; i < layout.slotOrder.size(); ++i) {
+            SymbolID traitMethodId = layout.slotOrder[i];
+            const auto& traitMethodSym = table_.getSymbol(traitMethodId);
+            std::string traitMethodName = std::string(traitMethodSym.name.str());
+            MethodInfo mInfo;
+            if (typeChecker_.getMethodResolver().probe(node.expr->inferredType, traitMethodName, mInfo, typeChecker_.getTraitSolver(), typeChecker_.getContext(), table_, typeChecker_.getTypeTable())) {
+                SymbolID targetMethodId = mInfo.id;
+                if (mInfo.implNode) {
+                    if (auto* implNode = dynamic_cast<const ImplDeclNode*>(mInfo.implNode)) {
+                        std::cerr << "[DEBUG] ImplDecl found! methods count: " << implNode->methods.size() << std::endl;
+                        for (auto& m : implNode->methods) {
+                            std::cerr << "   [DEBUG] Impl method: '" << m->name << "', matching with '" << traitMethodName << "'" << std::endl;
+                            if (std::string(m->name) == traitMethodName) {
+                                targetMethodId = m->symbolId;
+                                break;
+                            }
+                        }
+                    } else {
+                        std::cerr << "[DEBUG] mInfo.implNode is NOT ImplDeclNode! It is at " << mInfo.implNode << std::endl;
+                    }
                 } else {
-                    vtableMethods.push_back("");
+                    std::cerr << "[DEBUG] mInfo.implNode is NULL!" << std::endl;
                 }
+                const auto& mSym = table_.getSymbol(targetMethodId);
+                vtableMethods[i] = mSym.mangledName.empty() ? std::string(mSym.name.str()) : mSym.mangledName;
+            } else {
+                std::cerr << "[FATAL MVIR UnsizeCast] PROBE FAILED for method " << traitMethodName << " on type " << node.expr->inferredType->toString() << std::endl;
             }
+        }
+        
+        currentBlock_->instructions.push_back(
+            std::make_unique<mvir::MakeTraitObjectInst>(dest, val, node.expr->inferredType, node.targetTypePtr, std::move(vtableMangled), std::move(vtableMethods)));
+        lastEvaluatedOperand_ = mvir::Operand(mvir::Place(dest));
+        return;
+        const Type* srcTy = node.expr->inferredType;
+        /* TRIGGER REBUILD */ ;
+        if (auto* refTy = dynamic_cast<const ReferenceType*>(srcTy)) srcTy = refTy->pointee;
+        else if (auto* ptrTy = dynamic_cast<const PointerType*>(srcTy)) srcTy = ptrTy->pointee;
+
+        if (auto* arrTy = dynamic_cast<const ArrayType*>(srcTy)) {
+            mvir::Operand lenOp = mvir::Number{std::to_string(arrTy->length)};
+            currentBlock_->instructions.push_back(std::make_unique<mvir::MakeSliceInst>(dest, val, lenOp));
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(dest));
+            return;
         }
     }
 
-    currentBlock_->instructions.push_back(
-        std::make_unique<mvir::MakeTraitObjectInst>(dest, val, node.expr->inferredType, node.targetTypePtr, std::move(vtableMethods)));
+    // Fallback if anything goes wrong
+    currentBlock_->instructions.push_back(std::make_unique<mvir::CastInst>(dest, val, node.targetTypePtr));
     lastEvaluatedOperand_ = mvir::Operand(mvir::Place(dest));
 }
 void MVIRGenerator::visit(ArrayLiteralExpr& node) {
@@ -1058,12 +1291,12 @@ void MVIRGenerator::visit(ArrayLiteralExpr& node) {
     if (!arrTy) return;
 
     mvir::LocalId ptr = nextLocal();
-    currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(ptr, arrTy));
+    pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, arrTy));
 
     for (size_t i = 0; i < node.elements.size(); ++i) {
         mvir::Operand val = evaluateRValue(*node.elements[i]);
         mvir::LocalId idxPtr = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(idxPtr, typeChecker_.getContext().getPrimitive(BuiltinKind::I32)));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(idxPtr, typeChecker_.getContext().getPrimitive(BuiltinKind::I32)));
         currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(typeChecker_.getContext().getPrimitive(BuiltinKind::I32), mvir::Operand(mvir::Number{std::to_string(i)}), mvir::Operand(mvir::Place(idxPtr))));
         
         mvir::Place place(ptr);
@@ -1084,7 +1317,7 @@ void MVIRGenerator::visit(TupleLiteralExpr& node) {
     if (!tupTy) return;
 
     mvir::LocalId ptr = nextLocal();
-    currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(ptr, tupTy));
+    pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, tupTy));
 
     for (size_t i = 0; i < node.elements.size(); ++i) {
         mvir::Operand val = evaluateRValue(*node.elements[i]);
@@ -1106,7 +1339,7 @@ void MVIRGenerator::visit(StructInitExpr& node) {
     if (!st) return;
 
     mvir::LocalId ptr = nextLocal();
-    currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(ptr, st));
+    pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, st));
 
     const auto& sym = table_.getSymbol(st->structSymbolId);
     if (sym.kind == SymbolKind::Struct && sym.decl) {
@@ -1164,7 +1397,7 @@ void MVIRGenerator::visit(LambdaExpr& node) {
     startBlock(nextLabel("entry"));
     
     mvir::LocalId envPtr = nextLocal();
-    currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(envPtr, typeChecker_.getContext().getPointerType(closureTy, false)));
+    pushLocalInst(std::make_unique<mvir::LocalInst>(envPtr, typeChecker_.getContext().getPointerType(closureTy, false)));
     currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(typeChecker_.getContext().getPointerType(closureTy, false), envArgId, envPtr));
     
     for (size_t i = 0; i < closureTy->capturedSymbols.size(); ++i) {
@@ -1172,7 +1405,7 @@ void MVIRGenerator::visit(LambdaExpr& node) {
         const Type* capTy = typeChecker_.typeOf(capSym);
         
         mvir::LocalId capAlloca = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(capAlloca, capTy));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(capAlloca, capTy));
         varAllocas_[capSym] = capAlloca;
         
         mvir::Place place(envArgId);
@@ -1187,7 +1420,7 @@ void MVIRGenerator::visit(LambdaExpr& node) {
         auto& p = node.params[i];
         const Type* pType = typeChecker_.typeOf(p->symbolId);
         mvir::LocalId ptr = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(ptr, pType));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, pType));
         varAllocas_[p->symbolId] = ptr;
         
         mvir::LocalId argId = currentFunction_->params[i + 1].id;
@@ -1206,7 +1439,7 @@ void MVIRGenerator::visit(LambdaExpr& node) {
     
     if (currentFunction_) {
         mvir::LocalId structPtr = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(structPtr, closureTy));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(structPtr, closureTy));
         
         mvir::Place place1(structPtr);
         place1.projections.push_back(mvir::Projection{mvir::ProjectionKind::Field, 0, std::nullopt});
@@ -1230,94 +1463,114 @@ void MVIRGenerator::visit(LambdaExpr& node) {
         lastEvaluatedOperand_ = mvir::Operand(mvir::Place(res));
     }
 }
-void MVIRGenerator::compilePattern(PatternNode* pattern, mvir::Operand subject, mvir::LabelId successLbl, mvir::LabelId failLbl) {
-    if (!pattern) {
-        terminateBlock(std::make_unique<mvir::JumpTerm>(successLbl));
+void MVIRGenerator::compileDecisionTree(DecisionNode* node, std::unordered_map<std::string, mvir::Operand>& places, const std::vector<mvir::LabelId>& armLabels, mvir::LabelId fallbackLbl) {
+    if (!node) {
+        terminateBlock(std::make_unique<mvir::JumpTerm>(fallbackLbl));
         return;
     }
-    if (dynamic_cast<WildcardPatternNode*>(pattern)) {
-        terminateBlock(std::make_unique<mvir::JumpTerm>(successLbl));
-    } else if (auto* id = dynamic_cast<IdentifierPatternNode*>(pattern)) {
-        mvir::LocalId varPtr = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(varPtr, id->inferredType));
-        currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(id->inferredType, subject, varPtr));
-        varAllocas_[id->symbolId] = varPtr;
-        terminateBlock(std::make_unique<mvir::JumpTerm>(successLbl));
-    } else if (auto* lit = dynamic_cast<LiteralPatternNode*>(pattern)) {
-        mvir::Operand litOp = mvir::Number{std::string(lit->lit->rawText)};
-        if (lit->lit->kind == LiteralKind::Bool) litOp = mvir::Boolean{std::string(lit->lit->rawText) == "true"};
-        
-        mvir::LocalId cmpRes = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::AluInst>(cmpRes, mvir::AluOp::Eq, subject, litOp));
-        terminateBlock(std::make_unique<mvir::BranchTerm>(mvir::Operand(mvir::Place(cmpRes)), successLbl, failLbl));
-    } else if (auto* enumPat = dynamic_cast<EnumPatternNode*>(pattern)) {
-        size_t variantIdx = 0;
-        if (auto* enumType = dynamic_cast<const EnumType*>(enumPat->inferredType)) {
-            auto enumSym = table_.getSymbol(enumType->enumSymbolId);
-            if (enumSym.kind == SymbolKind::Enum && enumSym.decl) {
-                auto* enumDecl = static_cast<EnumDeclNode*>(enumSym.decl);
-                for (size_t i = 0; i < enumDecl->variants.size(); ++i) {
-                    if (enumDecl->variants[i]->symbolId == enumPat->variantSymbolId) {
-                        variantIdx = i; break;
+    
+    switch (node->kind) {
+        case DecisionKind::Success: {
+            auto* sNode = static_cast<SuccessNode*>(node);
+            for (auto& bind : sNode->bindings) {
+                mvir::LocalId varPtr = nextLocal();
+                // We need the type. But we can't easily get it here. 
+                // Wait! bindings maps SymbolID -> string. We have typeChecker_.typeOf(symbolId)
+                const Type* varTy = typeChecker_.typeOf(bind.first);
+                pushLocalInst(std::make_unique<mvir::LocalInst>(varPtr, varTy));
+                currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(varTy, places[bind.second], varPtr));
+                varAllocas_[bind.first] = varPtr;
+            }
+            terminateBlock(std::make_unique<mvir::JumpTerm>(armLabels[sNode->armIndex]));
+            break;
+        }
+        case DecisionKind::Failure: {
+            terminateBlock(std::make_unique<mvir::JumpTerm>(fallbackLbl));
+            break;
+        }
+        case DecisionKind::SwitchTag: {
+            auto* sNode = static_cast<SwitchTagNode*>(node);
+            mvir::Operand subjectOp = places[sNode->placeStr];
+            
+            mvir::LocalId tagPtr = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::TagInst>(tagPtr, subjectOp));
+            mvir::Operand tagVal = mvir::Operand(mvir::Place(tagPtr));
+            
+            // Build switch cascade
+            // For now, since MVIR doesn't have SwitchTerm, we build a chain of Branches
+            mvir::LabelId currentLbl = currentBlock_->label;
+            
+            for (size_t i = 0; i < sNode->cases.size(); ++i) {
+                auto& cas = sNode->cases[i];
+                // we need to know the index of the variant. The cas.first is the variant SymbolID.
+                // we can map it back to index... Wait, TagInst returns the index! We don't have the index here easily unless ExtractNode or Variant gives it.
+                // In MVIRGenerator previously:
+                // We looked up EnumDeclNode to get variantIdx from variantSymbolId.
+                size_t variantIdx = 0;
+                auto enumSym = table_.getSymbol(cas.first);
+                if (enumSym.kind == SymbolKind::Enum && enumSym.decl) {
+                    auto* enumDecl = static_cast<EnumDeclNode*>(enumSym.decl);
+                    for (size_t v = 0; v < enumDecl->variants.size(); ++v) {
+                        if (enumDecl->variants[v]->symbolId == cas.first) { variantIdx = v; break; }
                     }
                 }
+                
+                mvir::LocalId cmpRes = nextLocal();
+                currentBlock_->instructions.push_back(std::make_unique<mvir::AluInst>(cmpRes, mvir::AluOp::Eq, tagVal, mvir::Number{std::to_string(variantIdx)}));
+                
+                mvir::LabelId matchLbl = nextLabel("match_tag_" + std::to_string(variantIdx));
+                mvir::LabelId nextTestLbl = nextLabel("match_tag_next");
+                
+                terminateBlock(std::make_unique<mvir::BranchTerm>(mvir::Operand(mvir::Place(cmpRes)), matchLbl, nextTestLbl));
+                
+                startBlock(matchLbl);
+                compileDecisionTree(cas.second.get(), places, armLabels, fallbackLbl);
+                
+                startBlock(nextTestLbl);
             }
+            compileDecisionTree(sNode->fallback.get(), places, armLabels, fallbackLbl);
+            break;
         }
-        
-        mvir::LocalId tagPtr = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::TagInst>(tagPtr, subject));
-        mvir::Operand tagVal = mvir::Operand(mvir::Place(tagPtr));
-        
-        mvir::LabelId extractLbl = nextLabel("match_extract");
-        
-        mvir::LocalId cmpRes = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::AluInst>(cmpRes, mvir::AluOp::Eq, tagVal, mvir::Number{std::to_string(variantIdx)}));
-        terminateBlock(std::make_unique<mvir::BranchTerm>(mvir::Operand(mvir::Place(cmpRes)), extractLbl, failLbl));
-        
-        startBlock(extractLbl);
-        
-        std::vector<const Type*> payloadTypes;
-        std::vector<PatternNode*> subPatterns;
-        std::vector<mvir::Operand> subSubjects;
-        
-        for (size_t i = 0; i < enumPat->fields.size(); ++i) {
-            payloadTypes.push_back(enumPat->fields[i]->inferredType);
-            subPatterns.push_back(enumPat->fields[i].get());
+        case DecisionKind::SwitchLit: {
+            auto* sNode = static_cast<SwitchLitNode*>(node);
+            compileDecisionTree(sNode->fallback.get(), places, armLabels, fallbackLbl);
+            break;
         }
-        
-        for (size_t i = 0; i < enumPat->fields.size(); ++i) {
-            mvir::LocalId fieldVal = nextLocal();
-            currentBlock_->instructions.push_back(std::make_unique<mvir::ExtractInst>(fieldVal, subject, payloadTypes, variantIdx, i));
-            subSubjects.push_back(mvir::Operand(mvir::Place(fieldVal)));
+        case DecisionKind::Extract: {
+            auto* eNode = static_cast<ExtractNode*>(node);
+            mvir::Operand subjectOp = places[eNode->placeStr];
+            
+            size_t variantIdx = 0;
+            if (eNode->variantId != kInvalidSymbolID) {
+                auto enumSym = table_.getSymbol(eNode->variantId);
+                if (enumSym.kind == SymbolKind::Enum && enumSym.decl) {
+                    auto* enumDecl = static_cast<EnumDeclNode*>(enumSym.decl);
+                    for (size_t v = 0; v < enumDecl->variants.size(); ++v) {
+                        if (enumDecl->variants[v]->symbolId == eNode->variantId) { variantIdx = v; break; }
+                    }
+                    
+                    std::vector<const Type*> payloadTypes;
+                    for (auto& f : enumDecl->variants[variantIdx]->fields) {
+                        payloadTypes.push_back(typeChecker_.typeOf(f->symbolId));
+                    }
+                    
+                    for (size_t i = 0; i < eNode->bindNames.size(); ++i) {
+                        mvir::LocalId fieldVal = nextLocal();
+                        currentBlock_->instructions.push_back(std::make_unique<mvir::ExtractInst>(fieldVal, subjectOp, payloadTypes, variantIdx, i));
+                        places[eNode->bindNames[i]] = mvir::Operand(mvir::Place(fieldVal));
+                    }
+                }
+            } else {
+                // Tuple extract
+            }
+            
+            compileDecisionTree(eNode->next.get(), places, armLabels, fallbackLbl);
+            break;
         }
-        
-        compilePatternList(subPatterns, subSubjects, 0, successLbl, failLbl);
-    } else if (auto* tup = dynamic_cast<TuplePatternNode*>(pattern)) {
-        std::vector<PatternNode*> subPatterns;
-        std::vector<mvir::Operand> subSubjects;
-        // Not full tuple support, but structure is here
-        for (size_t i = 0; i < tup->elements.size(); ++i) {
-            subPatterns.push_back(tup->elements[i].get());
-            // Should extract tuple fields
-        }
-        compilePatternList(subPatterns, subSubjects, 0, successLbl, failLbl);
-    } else {
-        terminateBlock(std::make_unique<mvir::JumpTerm>(failLbl));
     }
 }
 
-void MVIRGenerator::compilePatternList(const std::vector<PatternNode*>& patterns, const std::vector<mvir::Operand>& subjects, size_t index, mvir::LabelId successLbl, mvir::LabelId failLbl) {
-    if (index >= patterns.size() || index >= subjects.size()) {
-        terminateBlock(std::make_unique<mvir::JumpTerm>(successLbl));
-        return;
-    }
-    
-    mvir::LabelId nextFieldLbl = nextLabel("match_next_field");
-    compilePattern(patterns[index], subjects[index], nextFieldLbl, failLbl);
-    
-    startBlock(nextFieldLbl);
-    compilePatternList(patterns, subjects, index + 1, successLbl, failLbl);
-}
+
 
 void MVIRGenerator::visit(MatchExpr& node) {
     mvir::Operand subj = evaluateRValue(*node.subject);
@@ -1327,24 +1580,25 @@ void MVIRGenerator::visit(MatchExpr& node) {
     mvir::LocalId resultPtr = mvir::LocalId{""};
     if (node.inferredType && node.inferredType->getKind() != TypeKind::Unknown && node.inferredType->getKind() != TypeKind::Void) {
         resultPtr = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LocalInst>(resultPtr, node.inferredType));
+        pushLocalInst(std::make_unique<mvir::LocalInst>(resultPtr, node.inferredType));
     }
 
-    std::vector<mvir::LabelId> armFailLabels;
+    std::unordered_map<std::string, mvir::Operand> places;
+    places["subject"] = subj;
+
+    std::vector<mvir::LabelId> armLabels;
     for (size_t i = 0; i < node.arms.size(); ++i) {
-        armFailLabels.push_back(nextLabel("match_arm_fail_" + std::to_string(i)));
+        armLabels.push_back(nextLabel("match_arm_" + std::to_string(i)));
     }
-    
     mvir::LabelId unreachableLbl = nextLabel("match_unreachable");
+    
+    compileDecisionTree(node.decisionTree.get(), places, armLabels, unreachableLbl);
+
+    bool hasJumpsToEnd = false;
 
     for (size_t i = 0; i < node.arms.size(); ++i) {
         auto& arm = node.arms[i];
-        mvir::LabelId armSuccessLbl = nextLabel("match_arm_success_" + std::to_string(i));
-        mvir::LabelId armFailLbl = (i + 1 < node.arms.size()) ? armFailLabels[i + 1] : unreachableLbl;
-        
-        compilePattern(arm.pattern.get(), subj, armSuccessLbl, armFailLbl);
-        
-        startBlock(armSuccessLbl);
+        startBlock(armLabels[i]);
         if (arm.body) {
             arm.body->accept(*this);
             if (!resultPtr.name.empty()) {
@@ -1360,21 +1614,22 @@ void MVIRGenerator::visit(MatchExpr& node) {
         }
         if (currentBlock_->terminator == nullptr) {
             terminateBlock(std::make_unique<mvir::JumpTerm>(endLbl));
-        }
-        
-        if (i + 1 < node.arms.size()) {
-            startBlock(armFailLbl); // Start the failure block for this arm, which the next arm will compile into!
+            hasJumpsToEnd = true;
         }
     }
     
     startBlock(unreachableLbl);
     terminateBlock(std::make_unique<mvir::UnreachableTerm>());
     
-    startBlock(endLbl);
-    if (!resultPtr.name.empty()) {
-        mvir::LocalId finalRes = nextLocal();
-        currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(finalRes, node.inferredType, resultPtr));
-        lastEvaluatedOperand_ = mvir::Operand(mvir::Place(finalRes));
+    if (hasJumpsToEnd) {
+        startBlock(endLbl);
+        if (!resultPtr.name.empty()) {
+            mvir::LocalId finalRes = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(finalRes, node.inferredType, resultPtr));
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(finalRes));
+        } else {
+            lastEvaluatedOperand_ = mvir::Operand{};
+        }
     } else {
         lastEvaluatedOperand_ = mvir::Operand{};
     }

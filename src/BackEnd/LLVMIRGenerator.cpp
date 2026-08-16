@@ -8,8 +8,8 @@
 
 namespace fl {
 
-LLVMIRGenerator::LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module)
-    : context_(context), module_(module), builder_(context) {}
+LLVMIRGenerator::LLVMIRGenerator(llvm::LLVMContext& context, llvm::Module& module, TraitObjectLayoutBuilder& layoutBuilder)
+    : context_(context), module_(module), builder_(context), layoutBuilder_(layoutBuilder) {}
 
 bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
     mvirModule_ = mvirModule;
@@ -209,12 +209,16 @@ llvm::Type* LLVMIRGenerator::mapType(const Type* type) {
     if (auto* ptr = dynamic_cast<const PointerType*>(type)) {
         if (dynamic_cast<const TraitObjectType*>(ptr->pointee)) {
             return llvm::StructType::get(context_, { llvm::PointerType::getUnqual(context_), llvm::PointerType::getUnqual(context_) });
+        } else if (dynamic_cast<const SliceType*>(ptr->pointee)) {
+            return llvm::StructType::get(context_, { llvm::PointerType::getUnqual(context_), llvm::Type::getInt64Ty(context_) });
         }
         return llvm::PointerType::getUnqual(context_);
     }
     if (auto* ref = dynamic_cast<const ReferenceType*>(type)) {
         if (dynamic_cast<const TraitObjectType*>(ref->pointee)) {
             return llvm::StructType::get(context_, { llvm::PointerType::getUnqual(context_), llvm::PointerType::getUnqual(context_) });
+        } else if (dynamic_cast<const SliceType*>(ref->pointee)) {
+            return llvm::StructType::get(context_, { llvm::PointerType::getUnqual(context_), llvm::Type::getInt64Ty(context_) });
         }
         return llvm::PointerType::getUnqual(context_);
     }
@@ -343,14 +347,15 @@ llvm::Value* LLVMIRGenerator::mapOperand(const mvir::Operand& op, llvm::Type* ex
                 // After a deref, currentPointeeType = pointee-of-the-old-pointer (now the loaded value is the ptr).
                 // We don't track further here since we'd need type info — safe fallback.
                 currentPointeeType = nullptr;
-            } else if (proj.kind == mvir::ProjectionKind::Field) {
+            } else if (proj.kind == mvir::ProjectionKind::Field || proj.kind == mvir::ProjectionKind::TupleIndex) {
                 // GEP into struct/tuple at field index.
                 if (!currentPointeeType) {
-                    std::cerr << "[LLVMIRGen] Field projection: unknown aggregate type for base\n";
+                    std::cerr << "[LLVMIRGen] Field/Tuple projection: unknown aggregate type for base\n";
                     return nullptr;
                 }
+                const char* projName = (proj.kind == mvir::ProjectionKind::TupleIndex) ? "tidx" : "fld";
                 current = builder_.CreateStructGEP(currentPointeeType, current,
-                    static_cast<unsigned>(proj.fieldIndex), "fld");
+                    static_cast<unsigned>(proj.fieldIndex), projName);
                 // Advance currentPointeeType to the field's element type for chained projections
                 if (auto* st = llvm::dyn_cast<llvm::StructType>(currentPointeeType)) {
                     if (proj.fieldIndex < st->getNumElements()) {
@@ -423,6 +428,13 @@ void LLVMIRGenerator::createFunctionStructure(const mvir::Function* func) {
     size_t idx = 0;
     for (auto& arg : llvmFunc->args()) {
         localValues_[func->params[idx].id.name] = &arg;
+        
+        if (auto* refTy = dynamic_cast<const ReferenceType*>(func->params[idx].type)) {
+            pointerTypes_[func->params[idx].id.name] = mapType(refTy->pointee);
+        } else if (auto* pTy = dynamic_cast<const PointerType*>(func->params[idx].type)) {
+            pointerTypes_[func->params[idx].id.name] = mapType(pTy->pointee);
+        }
+        
         arg.setName(func->params[idx].id.name.substr(1));
         idx++;
     }
@@ -594,8 +606,7 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         
         llvm::Value* val = mapOperand(drop->value);
         builder_.CreateCall(dropFn, {val});
-    }
-    else if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
+    }    else if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
         llvm::Type* ty = mapType(local->type);
         if (!ty->isVoidTy()) {
             llvm::Value* val = builder_.CreateAlloca(ty, nullptr, local->dest.name.substr(1));
@@ -608,8 +619,19 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         llvm::Type* pointeeTy = mapType(load->type);
         if (!pointeeTy->isVoidTy()) {
             llvm::Value* ptr = mapOperand(load->ptr);
+            if (!ptr) std::cerr << "[FATAL] mapOperand returned nullptr for LoadInst ptr!" << std::endl;
             llvm::Value* val = builder_.CreateLoad(pointeeTy, ptr, load->dest.name.substr(1));
             localValues_[load->dest.name] = val;
+            
+            if (auto* refTy = dynamic_cast<const ReferenceType*>(load->type)) {
+                pointerTypes_[load->dest.name] = mapType(refTy->pointee);
+            } else if (auto* pTy = dynamic_cast<const PointerType*>(load->type)) {
+                pointerTypes_[load->dest.name] = mapType(pTy->pointee);
+            }
+
+            std::cerr << "[DEBUG] Added LoadInst dest to localValues: " << load->dest.name << " (type: " << val->getType()->getTypeID() << ")" << std::endl;
+        } else {
+            std::cerr << "[DEBUG] LoadInst pointeeTy is Void, NOT added: " << load->dest.name << std::endl;
         }
     }
     else if (auto* store = dynamic_cast<const mvir::StoreInst*>(inst)) {
@@ -690,38 +712,55 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         llvm::Value* val = mapOperand(mk->value);
         llvm::StructType* fatPtrTy = llvm::StructType::get(context_, { llvm::PointerType::getUnqual(context_), llvm::PointerType::getUnqual(context_) });
         
-        llvm::ArrayType* vtableTy = llvm::ArrayType::get(llvm::PointerType::getUnqual(context_), mk->vtableMethods.size());
+        size_t totalSlots = 3 + mk->vtableMethods.size();
+        llvm::ArrayType* vtableTy = llvm::ArrayType::get(llvm::PointerType::getUnqual(context_), totalSlots);
         
         std::vector<llvm::Constant*> methodPtrs;
+        methodPtrs.push_back(llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(context_))); // 0: Size
+        methodPtrs.push_back(llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(context_))); // 1: Align
+        methodPtrs.push_back(llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(context_))); // 2: Drop
+
         for (auto& methodName : mk->vtableMethods) {
             if (methodName.empty()) {
                 methodPtrs.push_back(llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(context_)));
                 continue;
             }
-                        llvm::Function* func = module_.getFunction(methodName);
+            llvm::Function* func = module_.getFunction(methodName);
             if (func) {
                 methodPtrs.push_back(func);
             } else {
+                std::cerr << "[FATAL LLVMIR] Cannot find VTABLE method: '" << methodName << "'" << std::endl;
                 methodPtrs.push_back(llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(context_)));
             }
         }
         llvm::Constant* vtableInit = llvm::ConstantArray::get(vtableTy, methodPtrs);
         
-        std::string vtableName = "vtable." + mk->concreteType->toString() + "." + mk->targetType->toString();
-        std::replace(vtableName.begin(), vtableName.end(), ' ', '_');
-        std::replace(vtableName.begin(), vtableName.end(), '&', 'r');
-        std::replace(vtableName.begin(), vtableName.end(), '*', 'p');
+        std::string vtableName = mk->vtableMangledName;
         
         llvm::GlobalVariable* vtableGlobal = module_.getNamedGlobal(vtableName);
         if (!vtableGlobal) {
             vtableGlobal = new llvm::GlobalVariable(module_, vtableTy, true, llvm::GlobalValue::PrivateLinkage, vtableInit, vtableName);
         }
         
-        llvm::Value* fatPtr = llvm::UndefValue::get(fatPtrTy);
-        fatPtr = builder_.CreateInsertValue(fatPtr, val, {0});
-        fatPtr = builder_.CreateInsertValue(fatPtr, vtableGlobal, {1});
+        llvm::Value* fatPtr = builder_.CreateInsertValue(llvm::UndefValue::get(fatPtrTy), val, 0);
+        fatPtr = builder_.CreateInsertValue(fatPtr, vtableGlobal, 1);
         
         localValues_[mk->dest.name] = fatPtr;
+    }
+    else if (auto* ms = dynamic_cast<const mvir::MakeSliceInst*>(inst)) {
+        llvm::Value* ptrVal = mapOperand(ms->basePtr);
+        llvm::Value* lenVal = mapOperand(ms->length);
+
+        // lenVal is i64 or i32 in MVIR, ensure it's i64 for the fat pointer struct
+        if (lenVal->getType()->isIntegerTy(32)) {
+            lenVal = builder_.CreateZExt(lenVal, llvm::Type::getInt64Ty(context_));
+        }
+
+        llvm::StructType* fatPtrTy = llvm::StructType::get(context_, { llvm::PointerType::getUnqual(context_), llvm::Type::getInt64Ty(context_) });
+        llvm::Value* fatPtr = builder_.CreateInsertValue(llvm::UndefValue::get(fatPtrTy), ptrVal, 0);
+        fatPtr = builder_.CreateInsertValue(fatPtr, lenVal, 1);
+
+        localValues_[ms->dest.name] = fatPtr;
     }
     else if (auto* call = dynamic_cast<const mvir::CallInst*>(inst)) {
         llvm::FunctionCallee fcallee;
@@ -858,7 +897,9 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
           llvm::Value* fieldPtr = builder_.CreateStructGEP(payloadTy, payloadPtr, extractInst->fieldIndex);
           llvm::Value* res = builder_.CreateLoad(fieldTypes[extractInst->fieldIndex], fieldPtr, extractInst->dest.name.substr(1));
           localValues_[extractInst->dest.name] = res;
-      }
+    } else {
+        std::cerr << "[DEBUG] Instruction NOT handled by any if-else block!" << std::endl;
+    }
 }
 
 void LLVMIRGenerator::emitTerminator(const mvir::Terminator* term) {

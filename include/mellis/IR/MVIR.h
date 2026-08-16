@@ -86,6 +86,7 @@ struct Boolean {
 
 enum class ProjectionKind {
     Field,
+    TupleIndex,
     Index,
     Deref
 };
@@ -148,7 +149,7 @@ enum class Opcode : uint8_t {
     // ALU
     Alu, Unary,
     // Extract
-    Extract, Tag, Variant, MakeTraitObject, Call, VirtualCall, Await,
+    Extract, TupleExtract, Tag, Variant, MakeTraitObject, MakeSlice, Call, VirtualCall, Await,
     // Terminators
     Jump, Branch, Switch, Ret, Unreachable
 };
@@ -293,6 +294,18 @@ struct ExtractInst : public Instruction {
     std::string toString() const override;
 };
 
+struct TupleExtractInst : public Instruction {
+    Opcode getOpcode() const override { return Opcode::TupleExtract; }
+    LocalId dest;
+    Operand tuple;
+    size_t index;
+    const Type* elementType;
+
+    TupleExtractInst(LocalId d, Operand t, size_t idx, const Type* elTy)
+        : dest(std::move(d)), tuple(std::move(t)), index(idx), elementType(elTy) {}
+    std::string toString() const override;
+};
+
 struct TagInst : public Instruction {
     Opcode getOpcode() const override { return Opcode::Tag; }
     LocalId dest;
@@ -320,10 +333,22 @@ struct MakeTraitObjectInst : public Instruction {
     Operand value;
     const Type* concreteType;
     const Type* targetType;
+    std::string vtableMangledName;
     std::vector<std::string> vtableMethods;
 
-    MakeTraitObjectInst(LocalId d, Operand v, const Type* c, const Type* t, std::vector<std::string> methods) 
-        : dest(std::move(d)), value(std::move(v)), concreteType(c), targetType(t), vtableMethods(std::move(methods)) {}
+    MakeTraitObjectInst(LocalId d, Operand v, const Type* c, const Type* t, std::string vtableName, std::vector<std::string> methods) 
+        : dest(std::move(d)), value(std::move(v)), concreteType(c), targetType(t), vtableMangledName(std::move(vtableName)), vtableMethods(std::move(methods)) {}
+    std::string toString() const override;
+};
+
+struct MakeSliceInst : public Instruction {
+    Opcode getOpcode() const override { return Opcode::MakeSlice; }
+    LocalId dest;
+    Operand basePtr;
+    Operand length;
+
+    MakeSliceInst(LocalId d, Operand b, Operand l)
+        : dest(std::move(d)), basePtr(std::move(b)), length(std::move(l)) {}
     std::string toString() const override;
 };
 

@@ -89,8 +89,10 @@ static void canonicalizeType(const Type* type, std::ostringstream& out, const Se
         }
         case TypeKind::TraitObject: {
             auto tro = static_cast<const TraitObjectType*>(type);
-            const Symbol& sym = snapshot.getSymbolTable().getSymbol(tro->traitId);
-            out << sym.name.view() << ";";
+            for (auto id : tro->traitIds) {
+                const Symbol& sym = snapshot.getSymbolTable().getSymbol(id);
+                out << sym.name.view() << ";";
+            }
             break;
         }
         case TypeKind::Function: {

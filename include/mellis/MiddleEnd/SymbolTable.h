@@ -151,9 +151,27 @@ public:
         return defaultInfo;
     }
 
+    // ── Trait Method Mapping ──────────────────────────────────────────────────
+
+    void registerTraitMethod(SymbolID traitId, SymbolID methodId) {
+        traitMethods_[traitId].push_back(methodId);
+    }
+
+    const std::vector<SymbolID>& getTraitMethods(SymbolID traitId) const {
+        auto it = traitMethods_.find(traitId);
+        if (it != traitMethods_.end()) {
+            return it->second;
+        }
+        static std::vector<SymbolID> empty;
+        return empty;
+    }
+
 private:
     /// Auxiliary function data mapped by SymbolID
     std::unordered_map<SymbolID, FunctionInfo> functionInfos_;
+    
+    std::unordered_map<SymbolID, std::vector<SymbolID>> traitMethods_;
+
     /// Arena of all symbols — indexed by SymbolID.
     /// Grows monotonically; IDs are stable indices.
     std::vector<Symbol> arena_;

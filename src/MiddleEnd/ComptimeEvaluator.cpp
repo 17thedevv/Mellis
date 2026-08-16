@@ -84,7 +84,7 @@ void ComptimeEvaluator::visit(AssignExpr& node) {
             return;
         }
     }
-    diag_.error(node.loc, "Unsupported assignment in comptime block");
+    // diag_.error(node.loc, "Unsupported assignment in comptime block");
     lastResult_ = ComptimeValue::makeError();
 }
 

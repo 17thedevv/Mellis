@@ -231,7 +231,9 @@ public:
 
     void visit(EnumVariantNode& node) override { 
         node.symbolId = sm.declare(node.name, SymbolKind::EnumVariant, node.loc, &node);
-        // Do not visit tupleTypes in Pass 1, only declare the symbol
+        for (auto& f : node.fields) {
+            f->symbolId = sm.declare(f->name, SymbolKind::StructField, f->loc, f.get());
+        }
     }
 
     void visit(TraitDeclNode& node) override { 
@@ -750,20 +752,9 @@ public:
                 }
                 if (id != kInvalidSymbolID) {
                     finalIds.push_back(id);
-                    auto& sym = sm.table.getSymbol(id);
-                    if (sym.kind == SymbolKind::Variable || sym.kind == SymbolKind::Parameter) {
-                        for (auto& pair : activeLambdas) {
-                            if (sym.declaredDepth < pair.first) {
-                                auto& caps = pair.second->capturedSymbols;
-                                if (std::find(caps.begin(), caps.end(), id) == caps.end()) {
-                                    caps.push_back(id);
-                                }
-                            }
-                        }
-                    }
                 }
             }
-            node.overloadCandidates = finalIds; 
+            node.overloadCandidates = finalIds;
             if (node.segments.size() > 0 && node.segments.back() == "c") {
                 std::cerr << "[DEBUG] Resolver: finalIds size for 'c' is " << finalIds.size() << "\n";
             }
