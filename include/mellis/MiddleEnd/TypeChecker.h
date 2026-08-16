@@ -33,7 +33,7 @@ public:
     void setMetadataCache(MLibMetadataCache* cache) { metadataCache_ = cache; }
 
     void registerImpl(const ImplDeclNode* implNode);
-    bool implementsTrait(const Type* type, SymbolID traitId, const std::vector<const Type*>& genericArgs = {}) const;
+    SolverResult implementsTrait(const Type* type, SymbolID traitId, const std::vector<const Type*>& genericArgs = {}) const;
     void registerMethod(SymbolID traitId, const std::string& name, SymbolID methodId, const FunctionType* type);
     
     const Type* resolveAssociatedType(const Type* selfType, SymbolID traitId, const std::string& assocName) {

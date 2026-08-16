@@ -4,64 +4,37 @@
 // ComptimeEvaluator - Evaluates AST nodes at compile-time.
 // =============================================================================
 #pragma once
-#include "mellis/FrontEnd/ASTVisitor.h"
+#include "mellis/AST/ASTNode.h"
+#include "mellis/AST/ExprNode.h"
+#include "mellis/MiddleEnd/SymbolTable.h"
+#include "mellis/IR/ConstantValue.h"
 #include "mellis/Support/Diagnostic.h"
-#include <variant>
-#include <string>
+#include "mellis/FrontEnd/ASTVisitor.h"
+#include <optional>
 #include <unordered_map>
-#include <memory>
+#include <string>
 
 namespace fl {
 
 class ExprNode;
 
-// Represents a value evaluated at compile time.
-struct ComptimeValue {
-    enum class Kind {
-        Void,
-        Int,
-        Float,
-        Bool,
-        String,
-        Error
-    };
-
-    Kind kind = Kind::Void;
-    union {
-        int64_t iVal;
-        double fVal;
-        bool bVal;
-    };
-    std::string sVal; // For string literals
-
-    ComptimeValue() : kind(Kind::Void) {}
-    static ComptimeValue makeInt(int64_t v) { ComptimeValue val; val.kind = Kind::Int; val.iVal = v; return val; }
-    static ComptimeValue makeFloat(double v) { ComptimeValue val; val.kind = Kind::Float; val.fVal = v; return val; }
-    static ComptimeValue makeBool(bool v) { ComptimeValue val; val.kind = Kind::Bool; val.bVal = v; return val; }
-    static ComptimeValue makeString(const std::string& v) { ComptimeValue val; val.kind = Kind::String; val.sVal = v; return val; }
-    static ComptimeValue makeVoid() { return ComptimeValue(); }
-    static ComptimeValue makeError() { ComptimeValue val; val.kind = Kind::Error; return val; }
-
-    bool isError() const { return kind == Kind::Error; }
-};
-
 class ComptimeEnvironment {
 public:
     ComptimeEnvironment(ComptimeEnvironment* parent = nullptr) : parent_(parent) {}
 
-    void set(const std::string& name, const ComptimeValue& val) {
+    void set(const std::string& name, const mvir::ConstantValue& val) {
         variables_[name] = val;
     }
     
-    ComptimeValue get(const std::string& name) const {
+    mvir::ConstantValue get(const std::string& name) const {
         auto it = variables_.find(name);
         if (it != variables_.end()) return it->second;
         if (parent_) return parent_->get(name);
-        return ComptimeValue::makeError();
+        return mvir::ConstantValue::makeError();
     }
 
     ComptimeEnvironment* parent_ = nullptr;
-    std::unordered_map<std::string, ComptimeValue> variables_;
+    std::unordered_map<std::string, mvir::ConstantValue> variables_;
 };
 
 class ComptimeEvaluator : public ASTVisitor {
@@ -72,7 +45,9 @@ public:
 
     void visit(ProgramNode& node) override;
     
-    // Visitor methods for evaluating nodes
+    // Evaluate a specific expression node and return its value
+    mvir::ConstantValue evaluateExpr(ExprNode* expr);
+    
     void visit(ComptimeStmtNode& node) override;
     void visit(BlockStmtNode& node) override;
     void visit(VarDeclNode& node) override;
@@ -123,17 +98,14 @@ public:
     void visit(SizeofExpr&) override {}
     void visit(AlignofExpr&) override {}
 
-    // Evaluate a specific expression node and return its value
-    ComptimeValue evaluateExpr(ExprNode* expr);
-
 private:
     DiagnosticEngine& diag_;
     ComptimeEnvironment* currentEnv_ = nullptr;
-    ComptimeValue lastResult_; // Used to pass values back from visit()
+    mvir::ConstantValue lastResult_; // Used to pass values back from visit()
     
-    ComptimeValue popResult() {
-        ComptimeValue res = lastResult_;
-        lastResult_ = ComptimeValue::makeVoid();
+    mvir::ConstantValue popResult() {
+        mvir::ConstantValue res = lastResult_;
+        lastResult_ = mvir::ConstantValue::makeVoid();
         return res;
     }
 };

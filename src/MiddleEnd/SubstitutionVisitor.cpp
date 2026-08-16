@@ -88,6 +88,12 @@ void SubstitutionVisitor::visit(StructDeclNode& n) {
 void SubstitutionVisitor::visit(StructFieldNode& n) {
     n.type = substituteType(std::move(n.type));
 }
+void SubstitutionVisitor::visit(EnumDeclNode& n) {
+    for (auto& v : n.variants) v->accept(*this);
+}
+void SubstitutionVisitor::visit(EnumVariantNode& n) {
+    for (auto& f : n.fields) f->accept(*this);
+}
 
 void SubstitutionVisitor::visit(ImplDeclNode& n) {
     n.selfType = substituteType(std::move(n.selfType));
@@ -209,11 +215,11 @@ void SubstitutionVisitor::visit(StructInitExpr& n) {
     }
 }
 void SubstitutionVisitor::visit(MatchExpr& n) {
-    if (n.subject) n.subject->accept(*this);
-    for (auto& arm : n.arms) {
-        if (arm.body) arm.body->accept(*this);
-    }
-}
+      if (n.subject) n.subject->accept(*this);
+      for (auto& arm : n.arms) {
+          if (arm.body) arm.body->accept(*this);
+      }
+  }
 void SubstitutionVisitor::visit(LambdaExpr& n) {
     for (auto& p : n.params) p->accept(*this);
     n.returnType = substituteType(std::move(n.returnType));

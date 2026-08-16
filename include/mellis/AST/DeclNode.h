@@ -113,6 +113,7 @@ public:
     std::vector<std::unique_ptr<ParamDeclNode>>  fields;
     SymbolID                                     symbolId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class EnumDeclNode : public DeclNode {
@@ -122,6 +123,7 @@ public:
     std::vector<std::unique_ptr<EnumVariantNode>>  variants;
     ScopeID                                        bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
+    ASTNode* cloneImpl() const override;
 };
 
 class TypeAliasDeclNode;
@@ -184,6 +186,7 @@ public:
     std::vector<GenericParamNode>          genericParams;
     std::vector<std::unique_ptr<TypeNode>> bounds;
     std::unique_ptr<TypeNode>              aliasedType;
+    ScopeID                                bodyScopeId = kInvalidSymbolID;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };

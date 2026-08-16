@@ -58,7 +58,7 @@ void ComptimeEvaluator::visit(BlockStmtNode& node) {
 void ComptimeEvaluator::visit(VarDeclNode& node) {
     if (node.isMutable) return;
 
-    ComptimeValue val = ComptimeValue::makeVoid();
+    mvir::ConstantValue val = mvir::ConstantValue::makeVoid();
     if (node.initializer) {
         val = evaluateExpr(node.initializer.get());
     }
@@ -75,7 +75,7 @@ void ComptimeEvaluator::visit(VarDeclNode& node) {
 
 void ComptimeEvaluator::visit(AssignExpr& node) {
     if (auto* idNode = dynamic_cast<IdentifierExpr*>(node.lvalue.get())) {
-        ComptimeValue val = evaluateExpr(node.value.get());
+        mvir::ConstantValue val = evaluateExpr(node.value.get());
         if (!val.isError() && currentEnv_ && !idNode->segments.empty()) {
             std::string varName(idNode->segments.front());
             // Note: A strict interpreter should check if the variable exists and is mutable
@@ -85,7 +85,7 @@ void ComptimeEvaluator::visit(AssignExpr& node) {
         }
     }
     // diag_.error(node.loc, "Unsupported assignment in comptime block");
-    lastResult_ = ComptimeValue::makeError();
+    lastResult_ = mvir::ConstantValue::makeError();
 }
 
 void ComptimeEvaluator::visit(ExprStmtNode& node) {
@@ -99,18 +99,18 @@ void ComptimeEvaluator::visit(LiteralExpr& node) {
         case LiteralKind::Integer: {
             int64_t v = 0;
             std::from_chars(node.rawText.data(), node.rawText.data() + node.rawText.size(), v);
-            lastResult_ = ComptimeValue::makeInt(v);
+            lastResult_ = mvir::ConstantValue::makeInt(v);
             break;
         }
         case LiteralKind::Float: {
             double v = 0.0;
             // Use std::stod for simple double parsing since from_chars for double requires newer C++ versions or specific compiler flags
             v = std::stod(std::string(node.rawText));
-            lastResult_ = ComptimeValue::makeFloat(v);
+            lastResult_ = mvir::ConstantValue::makeFloat(v);
             break;
         }
         case LiteralKind::Bool: {
-            lastResult_ = ComptimeValue::makeBool(node.rawText == "true");
+            lastResult_ = mvir::ConstantValue::makeBool(node.rawText == "true");
             break;
         }
         case LiteralKind::Str:
@@ -118,10 +118,10 @@ void ComptimeEvaluator::visit(LiteralExpr& node) {
         case LiteralKind::Char:
         case LiteralKind::Byte:
         case LiteralKind::ByteStr:
-            lastResult_ = ComptimeValue::makeString(std::string(node.rawText));
+            lastResult_ = mvir::ConstantValue::makeString(std::string(node.rawText));
             break;
         default:
-            lastResult_ = ComptimeValue::makeError();
+            lastResult_ = mvir::ConstantValue::makeError();
             break;
     }
 }
@@ -129,59 +129,59 @@ void ComptimeEvaluator::visit(LiteralExpr& node) {
 void ComptimeEvaluator::visit(IdentifierExpr& node) {
     if (currentEnv_ && !node.segments.empty()) {
         std::string varName(node.segments.front());
-        ComptimeValue val = currentEnv_->get(varName);
+        mvir::ConstantValue val = currentEnv_->get(varName);
         if (val.isError()) {
             // diag_.error(node.loc, "Undefined comptime variable: " + varName);
         }
         lastResult_ = val;
     } else {
-        lastResult_ = ComptimeValue::makeError();
+        lastResult_ = mvir::ConstantValue::makeError();
     }
 }
 
 void ComptimeEvaluator::visit(BinaryExpr& node) {
-    ComptimeValue left = evaluateExpr(node.left.get());
-    ComptimeValue right = evaluateExpr(node.right.get());
+    mvir::ConstantValue left = evaluateExpr(node.left.get());
+    mvir::ConstantValue right = evaluateExpr(node.right.get());
 
     if (left.isError() || right.isError()) {
-        lastResult_ = ComptimeValue::makeError();
+        lastResult_ = mvir::ConstantValue::makeError();
         return;
     }
 
-    if (left.kind == ComptimeValue::Kind::Int && right.kind == ComptimeValue::Kind::Int) {
+    if (left.kind == mvir::ConstantValue::Kind::Int && right.kind == mvir::ConstantValue::Kind::Int) {
         int64_t l = left.iVal;
         int64_t r = right.iVal;
         switch (node.op) {
-            case BinaryOp::Add: lastResult_ = ComptimeValue::makeInt(l + r); break;
-            case BinaryOp::Sub: lastResult_ = ComptimeValue::makeInt(l - r); break;
-            case BinaryOp::Mul: lastResult_ = ComptimeValue::makeInt(l * r); break;
+            case BinaryOp::Add: lastResult_ = mvir::ConstantValue::makeInt(l + r); break;
+            case BinaryOp::Sub: lastResult_ = mvir::ConstantValue::makeInt(l - r); break;
+            case BinaryOp::Mul: lastResult_ = mvir::ConstantValue::makeInt(l * r); break;
             case BinaryOp::Div: 
                 if (r == 0) {
                     diag_.error(node.loc, "Division by zero in comptime evaluation");
-                    lastResult_ = ComptimeValue::makeError();
+                    lastResult_ = mvir::ConstantValue::makeError();
                 } else {
-                    lastResult_ = ComptimeValue::makeInt(l / r); 
+                    lastResult_ = mvir::ConstantValue::makeInt(l / r); 
                 }
                 break;
             default:
                 diag_.error(node.loc, "Unsupported binary operator for integers in comptime");
-                lastResult_ = ComptimeValue::makeError();
+                lastResult_ = mvir::ConstantValue::makeError();
         }
-    } else if (left.kind == ComptimeValue::Kind::Float && right.kind == ComptimeValue::Kind::Float) {
+    } else if (left.kind == mvir::ConstantValue::Kind::Float && right.kind == mvir::ConstantValue::Kind::Float) {
         double l = left.fVal;
         double r = right.fVal;
         switch (node.op) {
-            case BinaryOp::Add: lastResult_ = ComptimeValue::makeFloat(l + r); break;
-            case BinaryOp::Sub: lastResult_ = ComptimeValue::makeFloat(l - r); break;
-            case BinaryOp::Mul: lastResult_ = ComptimeValue::makeFloat(l * r); break;
-            case BinaryOp::Div: lastResult_ = ComptimeValue::makeFloat(l / r); break;
+            case BinaryOp::Add: lastResult_ = mvir::ConstantValue::makeFloat(l + r); break;
+            case BinaryOp::Sub: lastResult_ = mvir::ConstantValue::makeFloat(l - r); break;
+            case BinaryOp::Mul: lastResult_ = mvir::ConstantValue::makeFloat(l * r); break;
+            case BinaryOp::Div: lastResult_ = mvir::ConstantValue::makeFloat(l / r); break;
             default:
                 diag_.error(node.loc, "Unsupported binary operator for floats in comptime");
-                lastResult_ = ComptimeValue::makeError();
+                lastResult_ = mvir::ConstantValue::makeError();
         }
     } else {
         diag_.error(node.loc, "Type mismatch or unsupported types in comptime binary expression");
-        lastResult_ = ComptimeValue::makeError();
+        lastResult_ = mvir::ConstantValue::makeError();
     }
 }
 
@@ -192,8 +192,8 @@ void ComptimeEvaluator::visit(FunctionDeclNode& node) {
     }
 }
 
-ComptimeValue ComptimeEvaluator::evaluateExpr(ExprNode* expr) {
-    if (!expr) return ComptimeValue::makeVoid();
+mvir::ConstantValue ComptimeEvaluator::evaluateExpr(ExprNode* expr) {
+    if (!expr) return mvir::ConstantValue::makeVoid();
     expr->accept(*this);
     return popResult();
 }

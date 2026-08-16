@@ -55,7 +55,8 @@ enum class SolverResult {
     Success,
     Failure,
     Ambiguous,
-    Incomplete
+    Incomplete,
+    Overflow
 };
 
 struct Solution {

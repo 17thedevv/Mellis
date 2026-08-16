@@ -17,6 +17,8 @@
 
 #include "mellis/Core/SourceLocation.h"
 #include "mellis/Core/FLType.h"
+#include "mellis/IR/ConstantValue.h"
+#include "mellis/AST/ASTNode.h" // For Visibility
 #include <string>
 #include <vector>
 #include <memory>
@@ -145,7 +147,7 @@ std::string toString(const Operand& op);
 
 enum class Opcode : uint8_t {
     // Memory
-    Local, HeapAlloc, HeapFree, Load, Store, Borrow, Cast, Drop, Sizeof, Alignof,
+    Local, HeapAlloc, HeapFree, Load, Store, Borrow, Cast, Drop, Sizeof, Alignof, PtrOffset,
     // ALU
     Alu, Unary,
     // Extract
@@ -237,6 +239,16 @@ struct DropInst : public Instruction {
     const Type* type;
 
     DropInst(Operand v, const Type* t) : value(std::move(v)), type(t) {}
+    std::string toString() const override;
+};
+
+struct PtrOffsetInst : public Instruction {
+    Opcode getOpcode() const override { return Opcode::PtrOffset; }
+    PtrOffsetInst(LocalId d, Operand p, Operand o, const Type* t) : dest(std::move(d)), ptr(std::move(p)), offset(std::move(o)), elementType(t) {}
+    LocalId dest;
+    Operand ptr;
+    Operand offset;
+    const Type* elementType;
     std::string toString() const override;
 };
 
@@ -509,11 +521,19 @@ struct TypeDecl {
     std::string toString() const;
 };
 
+enum class GlobalKind {
+    Const,
+    Static
+};
+
 struct GlobalDecl {
-    GlobalId name;
+    GlobalId id;
     const Type* type;
-    std::string stringLiteral;
+    GlobalKind kind;
+    ConstantValue initializer;
+    Visibility visibility = Visibility::Internal;
     std::string toString() const;
+    bool isMutable() const { return kind == GlobalKind::Static; }
 };
 
 struct Module {

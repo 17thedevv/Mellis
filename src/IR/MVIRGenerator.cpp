@@ -6,13 +6,15 @@
 #include "mellis/AST/ProgramNode.h"
 #include "mellis/AST/PatternNode.h"
 #include "mellis/MiddleEnd/Semantic/DecisionTree.h"
+#include "mellis/MiddleEnd/ComptimeEvaluator.h"
+#include "mellis/Support/Diagnostic.h"
 #include <cassert>
 #include <iostream>
 
 namespace fl {
 
-MVIRGenerator::MVIRGenerator(SymbolTable& symTable, TypeChecker& typeChecker, std::unordered_map<const Type*, ClosureStorageKind>& storageMap)
-    : table_(symTable), typeChecker_(typeChecker), layoutBuilder_(symTable), storageMap_(storageMap) {}
+MVIRGenerator::MVIRGenerator(SymbolTable& symTable, DiagnosticEngine& diag, TypeChecker& typeChecker, std::unordered_map<const Type*, ClosureStorageKind>& storageMap)
+    : table_(symTable), diag_(diag), typeChecker_(typeChecker), layoutBuilder_(symTable), storageMap_(storageMap) {}
 
 std::unique_ptr<mvir::Module> MVIRGenerator::generate(ProgramNode& program) {
     module_ = std::make_unique<mvir::Module>();
@@ -135,6 +137,24 @@ void MVIRGenerator::visit(VarDeclNode& node) {
         } else {
             std::cerr << "[DEBUG] VarDeclNode is NOT Heap!" << std::endl;
         }
+    }
+
+    if (!currentFunction_) {
+        // Global Declaration
+        mvir::GlobalDecl globalDecl;
+        globalDecl.id = mvir::GlobalId{"@" + std::string(node.name)};
+        globalDecl.type = varType;
+        globalDecl.kind = node.isMutable ? mvir::GlobalKind::Static : mvir::GlobalKind::Const;
+        globalDecl.visibility = node.visibility;
+        
+        if (node.initializer) {
+            DiagnosticEngine diag;
+            ComptimeEvaluator eval(diag);
+            globalDecl.initializer = eval.evaluateExpr(node.initializer.get());
+        }
+        
+        module_->globalDecls.push_back(globalDecl);
+        return;
     }
 
     // S7.2: Embed semantic identity — symbolId for uniqueness, expansionId for hygiene
@@ -282,8 +302,9 @@ void MVIRGenerator::visit(LiteralExpr& node) {
         mvir::GlobalId gid{globalIdStr};
 
         mvir::GlobalDecl globalDecl;
-        globalDecl.name = gid;
+        globalDecl.id = gid;
         globalDecl.type = node.inferredType;
+        globalDecl.kind = mvir::GlobalKind::Const;
         
         std::string rawStr = std::string(node.rawText);
         if (rawStr.length() >= 2 && rawStr.front() == '"' && rawStr.back() == '"') {
@@ -308,7 +329,7 @@ void MVIRGenerator::visit(LiteralExpr& node) {
             }
         }
         
-        globalDecl.stringLiteral = unescaped + '\0'; // Add null terminator
+        globalDecl.initializer = mvir::ConstantValue::makeString(unescaped + '\0'); // Add null terminator
         module_->globalDecls.push_back(globalDecl);
         
         lastEvaluatedOperand_ = mvir::Operand(mvir::Place(gid));
@@ -320,6 +341,17 @@ void MVIRGenerator::visit(LiteralExpr& node) {
 void MVIRGenerator::visit(IdentifierExpr& node) {
     if (node.resolvedSymbol != kInvalidSymbolID) {
         const auto& sym = table_.getSymbol(node.resolvedSymbol);
+        if (sym.kind == SymbolKind::Const || sym.kind == SymbolKind::Static) {
+            mvir::GlobalId globalId{"@" + std::string(sym.name.str())};
+            if (evalMode_ == EvalMode::RValue) {
+                mvir::LocalId dest = nextLocal();
+                currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(dest, node.inferredType, globalId));
+                lastEvaluatedOperand_ = mvir::Operand(mvir::Place(dest));
+            } else {
+                lastEvaluatedOperand_ = mvir::Operand(mvir::Place(globalId));
+            }
+            return;
+        }
         if (sym.kind == SymbolKind::EnumVariant) {
             size_t variantIdx = 0;
             const Type* enumTy = node.inferredType;
@@ -344,7 +376,7 @@ void MVIRGenerator::visit(IdentifierExpr& node) {
 
     if (!varAllocas_.count(node.resolvedSymbol)) {
         std::cerr << "Missing symbolId in varAllocas_: " << node.segments.back() << " (ID: " << node.resolvedSymbol << ")\n";
-        assert(false && "Identifier symbolId not allocated");
+        diag_.ice(node.loc, "Identifier symbolId not allocated");
     }
     mvir::LocalId ptr = varAllocas_[node.resolvedSymbol];
 
@@ -379,14 +411,14 @@ void MVIRGenerator::visit(BinaryExpr& node) {
     mvir::Operand left = evaluateRValue(*node.left);
     mvir::Operand right = evaluateRValue(*node.right);
 
-    if (node.overloadedMethodId != kInvalidSymbolID) {
+    if (node.opResolution.isTraitMethod) {
         std::optional<mvir::LocalId> dest = std::nullopt;
         if (evalMode_ == EvalMode::RValue) {
             dest = nextLocal();
             lastEvaluatedOperand_ = mvir::Operand(mvir::Place(*dest));
         }
         
-        const auto& sym = table_.getSymbol(node.overloadedMethodId);
+        const auto& sym = table_.getSymbol(node.opResolution.methodId);
         std::string calleeName = sym.mangledName.empty() ? std::string(sym.name.str()) : sym.mangledName;
         mvir::Operand callee(mvir::Place(mvir::GlobalId{"@" + calleeName}));
         std::vector<mvir::Operand> args = {left, right};
@@ -408,7 +440,7 @@ void MVIRGenerator::visit(BinaryExpr& node) {
     else if (node.op == BinaryOp::Gt) op = mvir::AluOp::Gt;
     else if (node.op == BinaryOp::Ge) op = mvir::AluOp::Ge;
     else {
-        assert(false && "Unknown binary operator");
+        diag_.ice(node.loc, "Unknown binary operator");
         op = mvir::AluOp::Add;
     }
 
@@ -495,6 +527,15 @@ void MVIRGenerator::visit(FunctionDeclNode& node) {
 void MVIRGenerator::visit(ParamDeclNode&) {}
 
 void MVIRGenerator::visit(StructDeclNode& node) {
+    bool isGenericTemplate = false;
+    for (const auto& gp : node.genericParams) {
+        if (!gp.name.empty() && gp.name[0] != '\'') {
+            isGenericTemplate = true;
+            break;
+        }
+    }
+    if (isGenericTemplate) return;
+
     const Type* stType = typeChecker_.typeOf(node.symbolId);
     if (auto st = dynamic_cast<const StructType*>(stType)) {
         mvir::TypeDecl decl;
@@ -506,6 +547,15 @@ void MVIRGenerator::visit(StructDeclNode& node) {
 }
 void MVIRGenerator::visit(StructFieldNode&) {}
 void MVIRGenerator::visit(EnumDeclNode& node) {
+    bool isGenericTemplate = false;
+    for (const auto& gp : node.genericParams) {
+        if (!gp.name.empty() && gp.name[0] != '\'') {
+            isGenericTemplate = true;
+            break;
+        }
+    }
+    if (isGenericTemplate) return;
+
     const Type* etType = typeChecker_.typeOf(node.symbolId);
     if (auto et = dynamic_cast<const EnumType*>(etType)) {
         mvir::TypeDecl decl;
@@ -851,6 +901,26 @@ void MVIRGenerator::visit(UnsafeStmtNode& node) {
 void MVIRGenerator::visit(ComptimeStmtNode&) {}
 
 void MVIRGenerator::visit(UnaryExpr& node) {
+    if (node.opResolution.isTraitMethod) {
+        mvir::Operand op = evaluateRValue(*node.operand);
+        
+        std::optional<mvir::LocalId> dest = std::nullopt;
+        if (evalMode_ == EvalMode::RValue) {
+            dest = nextLocal();
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(*dest));
+        }
+        
+        const auto& sym = table_.getSymbol(node.opResolution.methodId);
+        std::string calleeName = sym.mangledName.empty() ? std::string(sym.name.str()) : sym.mangledName;
+        mvir::Operand callee(mvir::Place(mvir::GlobalId{"@" + calleeName}));
+        std::vector<mvir::Operand> args = {op};
+        
+        currentBlock_->instructions.push_back(
+            std::make_unique<mvir::CallInst>(dest, callee, args)
+        );
+        return;
+    }
+
     if (node.op == UnaryOp::Ref || node.op == UnaryOp::RefMut) {
         auto oldMode = evalMode_;
         evalMode_ = EvalMode::LValue;
@@ -1028,17 +1098,14 @@ void MVIRGenerator::visit(CallExpr& node) {
     );
 }
 
-void MVIRGenerator::visit(MethodCallExpr& node) {
-    std::vector<mvir::Operand> args;
-    
-    // Auto-reference the receiver if the method expects a reference
+mvir::Operand MVIRGenerator::evaluateAutoRefReceiver(ExprNode& object, SymbolID methodId) {
     bool needsAutoRef = false;
     bool isMutRef = false;
-    if (node.resolvedFn != kInvalidSymbolID) {
-        if (auto* fnTy = dynamic_cast<const FunctionType*>(typeChecker_.typeOf(node.resolvedFn))) {
+    if (methodId != kInvalidSymbolID) {
+        if (auto* fnTy = dynamic_cast<const FunctionType*>(typeChecker_.typeOf(methodId))) {
             if (!fnTy->paramTypes.empty()) {
                 if (auto* refTy = dynamic_cast<const ReferenceType*>(fnTy->paramTypes[0])) {
-                    if (node.object->inferredType && node.object->inferredType->getKind() != TypeKind::Reference) {
+                    if (object.inferredType && object.inferredType->getKind() != TypeKind::Reference) {
                         needsAutoRef = true;
                         isMutRef = refTy->isMutable;
                     }
@@ -1050,7 +1117,7 @@ void MVIRGenerator::visit(MethodCallExpr& node) {
     if (needsAutoRef) {
         auto oldMode = evalMode_;
         evalMode_ = EvalMode::LValue;
-        node.object->accept(*this);
+        object.accept(*this);
         evalMode_ = oldMode;
 
         mvir::Operand addr = lastEvaluatedOperand_;
@@ -1058,10 +1125,46 @@ void MVIRGenerator::visit(MethodCallExpr& node) {
         currentBlock_->instructions.push_back(std::make_unique<mvir::BorrowInst>(
             dest, isMutRef, addr
         ));
-        args.push_back(mvir::Operand(mvir::Place(dest)));
+        return mvir::Operand(mvir::Place(dest));
     } else {
-        args.push_back(evaluateRValue(*node.object)); // Receiver is the first argument
+        return evaluateRValue(object);
     }
+}
+
+void MVIRGenerator::visit(MethodCallExpr& node) {
+    if (node.intrinsic != IntrinsicKind::None) {
+        mvir::Operand base = evaluateRValue(*node.object);
+        mvir::Operand offset = evaluateRValue(*node.args[0].value);
+        
+        std::optional<mvir::LocalId> dest = std::nullopt;
+        if (evalMode_ == EvalMode::RValue) {
+            dest = nextLocal();
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(*dest));
+        } else {
+            // Should not happen for arithmetic
+            dest = nextLocal();
+        }
+        
+        if (node.intrinsic == IntrinsicKind::PtrSub) {
+            mvir::LocalId negOffset = nextLocal();
+            currentBlock_->instructions.push_back(std::make_unique<mvir::UnaryInst>(negOffset, mvir::UnaryOp::Negate, offset));
+            offset = mvir::Operand(mvir::Place(negOffset));
+        }
+        
+        const Type* objTy = typeChecker_.getContext().unificationTable.deepResolve(node.object->inferredType, typeChecker_.getContext());
+        const Type* elemTy = objTy->unwrapAlias();
+        if (auto* ptrTy = dynamic_cast<const PointerType*>(elemTy)) {
+            elemTy = ptrTy->pointee;
+        } else if (auto* refTy = dynamic_cast<const ReferenceType*>(elemTy)) {
+            elemTy = refTy->pointee;
+        }
+        
+        currentBlock_->instructions.push_back(std::make_unique<mvir::PtrOffsetInst>(*dest, base, offset, elemTy));
+        return;
+    }
+
+    std::vector<mvir::Operand> args;
+    args.push_back(evaluateAutoRefReceiver(*node.object, node.resolvedFn));
 
     for (auto& arg : node.args) {
         args.push_back(evaluateRValue(*arg.value));
@@ -1110,6 +1213,39 @@ void MVIRGenerator::visit(MethodCallExpr& node) {
     );
 }
 void MVIRGenerator::visit(IndexExpr& node) {
+    if (node.opResolution.isTraitMethod) {
+        mvir::Operand base = evaluateAutoRefReceiver(*node.base, node.opResolution.methodId);
+        mvir::Operand indexOp = evaluateRValue(*node.index);
+        
+        std::optional<mvir::LocalId> dest = std::nullopt;
+        if (evalMode_ == EvalMode::RValue) {
+            dest = nextLocal();
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(*dest));
+        }
+        
+        const auto& sym = table_.getSymbol(node.opResolution.methodId);
+        std::string calleeName = sym.mangledName.empty() ? std::string(sym.name.str()) : sym.mangledName;
+        mvir::Operand callee(mvir::Place(mvir::GlobalId{"@" + calleeName}));
+        std::vector<mvir::Operand> args = {base, indexOp};
+        
+        mvir::LocalId retLocal = nextLocal();
+        currentBlock_->instructions.push_back(
+            std::make_unique<mvir::CallInst>(retLocal, callee, args)
+        );
+        
+        // trait method returns &T or &mut T. If we are in RValue mode, we must dereference it!
+        // wait! FDLang Index method returns a reference? Yes, usually Index returns &Output and IndexMut returns &mut Output.
+        // If we evaluate in RValue mode, we should Load it.
+        if (evalMode_ == EvalMode::RValue) {
+            currentBlock_->instructions.push_back(std::make_unique<mvir::LoadInst>(
+                *dest, node.inferredType, mvir::Operand(mvir::Place(retLocal))
+            ));
+        } else {
+            lastEvaluatedOperand_ = mvir::Operand(mvir::Place(retLocal));
+        }
+        return;
+    }
+
     auto oldMode = evalMode_;
     bool isRef = node.base->inferredType->getKind() == TypeKind::Reference || 
                  node.base->inferredType->getKind() == TypeKind::Pointer;

@@ -234,7 +234,7 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     std::cerr << "[PHASE] Injecting specialized ASTs..." << std::endl;
 
     auto* prog = dynamic_cast<ProgramNode*>(ast.get());
-    assert(prog);
+    if (!prog) diag_.ice(SourceLocation::invalid(), "Root AST node is not a ProgramNode");
 
     // -- Phase 4.5: Inject Specialized ASTs --
     if (verbose) std::cout << "[6.05] Tiem cac ham/struct/enum chuyen biet hoa vao AST..." << std::endl;
@@ -284,7 +284,7 @@ bool CompilerSession::compile(const std::string& filepath, bool verbose, int opt
     // ── Phase 6: MVIR Generation ──────────────────────────────────────────────
     if (verbose) std::cout << "[7] Sinh MVIR (MVIRGenerator)..." << std::endl;
     std::cerr << "[PHASE] MVIRGenerator starting" << std::endl;
-    MVIRGenerator mvirGen(symbolTable_, typeChecker, closureStorageMap_);
+    MVIRGenerator mvirGen(symbolTable_, diag_, typeChecker, closureStorageMap_);
     auto mvirModule = mvirGen.generate(*prog);
     std::cerr << "[PHASE] MVIRGenerator done" << std::endl;
     if (!mvirModule) {

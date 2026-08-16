@@ -98,6 +98,10 @@ std::string DropInst::toString() const {
     return "drop " + mvir::toString(value) + " : " + formatType(type);
 }
 
+std::string PtrOffsetInst::toString() const {
+    return dest.toString() + " = ptroffset " + mvir::toString(ptr) + " by " + mvir::toString(offset) + " : " + formatType(elementType);
+}
+
 std::string SizeofInst::toString() const {
     return dest.toString() + " = sizeof " + formatType(targetType);
 }
@@ -315,7 +319,7 @@ std::string TypeDecl::toString() const {
 }
 
 std::string GlobalDecl::toString() const {
-    return name.toString() + " = global " + formatType(type) + " " + stringLiteral;
+    return id.toString() + " = global " + (isMutable() ? "mut " : "") + formatType(type) + " " + initializer.toString();
 }
 
 std::string Module::toString() const {

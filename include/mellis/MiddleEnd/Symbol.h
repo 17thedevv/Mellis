@@ -46,7 +46,8 @@ enum class BorrowCheckStatus : uint8_t {
 // SymbolKind — what a Symbol represents
 // =============================================================================
 enum class SymbolKind : uint8_t {
-    Variable,     // dec x
+    Variable,     // dec x (local)
+    Static,       // dec x (global)
     Const,        // const x
     Parameter,    // fn foo(x: i32)
     Function,     // fn foo()

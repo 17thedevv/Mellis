@@ -8,7 +8,7 @@
 namespace fl {
 
 // Helper to convert a semantic Type back to a TypeNode AST for the SubstitutionVisitor
-static std::unique_ptr<TypeNode> typeToAST(const Type* type, const SymbolTable& symTable) {
+static std::unique_ptr<TypeNode> typeToAST(const Type* type, const SymbolTable& symTable, DiagnosticEngine& diag) {
     if (!type) return nullptr;
     
     switch (type->getKind()) {
@@ -25,7 +25,7 @@ static std::unique_ptr<TypeNode> typeToAST(const Type* type, const SymbolTable& 
             node->segments.push_back(sym.name.view());
             node->symbolId = s->structSymbolId;
             for (const auto* arg : s->genericArgs) {
-                node->genericArgs.push_back(typeToAST(arg, symTable));
+                node->genericArgs.push_back(typeToAST(arg, symTable, diag));
             }
             return node;
         }
@@ -33,17 +33,42 @@ static std::unique_ptr<TypeNode> typeToAST(const Type* type, const SymbolTable& 
             auto* pt = dynamic_cast<const PointerType*>(type);
             auto node = std::make_unique<PointerTypeNode>();
             node->isMutable = pt->isMutable;
-            node->inner = typeToAST(pt->pointee, symTable);
+            node->inner = typeToAST(pt->pointee, symTable, diag);
             return node;
         }
         case TypeKind::Reference: {
             auto* rt = dynamic_cast<const ReferenceType*>(type);
             auto node = std::make_unique<ReferenceTypeNode>();
             node->isMutable = rt->isMutable;
-            node->inner = typeToAST(rt->pointee, symTable);
+            node->inner = typeToAST(rt->pointee, symTable, diag);
             return node;
         }
-        // ... Enum, Tuple, Array can be mapped similarly
+        case TypeKind::Enum: {
+            auto* e = dynamic_cast<const EnumType*>(type);
+            auto node = std::make_unique<NamedTypeNode>();
+            const Symbol& sym = symTable.getSymbol(e->enumSymbolId);
+            node->segments.push_back(sym.name.view());
+            node->symbolId = e->enumSymbolId;
+            for (const auto* arg : e->genericArgs) {
+                node->genericArgs.push_back(typeToAST(arg, symTable, diag));
+            }
+            return node;
+        }
+        case TypeKind::Tuple: {
+            auto* t = dynamic_cast<const TupleType*>(type);
+            auto node = std::make_unique<TupleTypeNode>();
+            for (const auto* arg : t->elements) {
+                node->elements.push_back(typeToAST(arg, symTable, diag));
+            }
+            return node;
+        }
+        case TypeKind::Array: {
+            auto* a = dynamic_cast<const ArrayType*>(type);
+            auto node = std::make_unique<ArrayTypeNode>();
+            node->elementType = typeToAST(a->elementType, symTable, diag);
+            // Ignore array size expression for monomorphization for now
+            return node;
+        }
         default:
             // Fallback for simple generic parameters that might not be fully specialized yet
             if (auto* gp = dynamic_cast<const GenericParamType*>(type)) {
@@ -68,7 +93,7 @@ static std::unique_ptr<TypeNode> typeToAST(const Type* type, const SymbolTable& 
                 }
                 return node;
             }
-            throw std::runtime_error("Unsupported type kind for AST conversion in Monomorphization Engine: " + std::to_string(static_cast<int>(type->getKind())));
+            diag.ice(SourceLocation::invalid(), "Unsupported type kind for AST conversion in Monomorphization Engine: " + std::to_string(static_cast<int>(type->getKind())));
     }
 }
 
@@ -90,16 +115,30 @@ SymbolID MonomorphizationEngine::requestSpecialization(
         auto& param = genericTemplate->genericParams[i];
         const Type* argType = genericArgs[i];
         
+        std::cerr << "[DEBUG MonomorphizationEngine] bounds check for param '" << param.name << "' has " << param.bounds.size() << " bounds\n";
+
         for (auto& boundNode : param.bounds) {
             auto* named = dynamic_cast<NamedTypeNode*>(boundNode.get());
             if (named && named->symbolId != kInvalidSymbolID) {
+                std::cerr << "[DEBUG MonomorphizationEngine] calling implementsTrait for argType=" << argType->toString() << " traitId=" << named->symbolId << "\n";
                 // named->symbolId should point to the Trait
                 // Use typeChecker to check if argType implements this Trait
-                if (!typeChecker.implementsTrait(argType, named->symbolId)) {
+                SolverResult sRes = typeChecker.implementsTrait(argType, named->symbolId);
+                if (sRes == SolverResult::Failure) {
                     diag.error(loc, "Generic bounds check failed: Type does not implement required trait");
                     currentDepth--;
                     return kInvalidSymbolID;
+                } else if (sRes == SolverResult::Ambiguous) {
+                    diag.error(loc, "Multiple implementations match the trait bounds", "E-TRAIT-AMBIGUOUS");
+                    currentDepth--;
+                    return kInvalidSymbolID;
+                } else if (sRes == SolverResult::Overflow) {
+                    diag.error(loc, "trait resolution exceeded the recursion limit", "E-TRAIT-SOLVER-OVERFLOW");
+                    currentDepth--;
+                    return kInvalidSymbolID;
                 }
+            } else {
+                std::cerr << "[DEBUG MonomorphizationEngine] boundNode is not a resolved NamedTypeNode!\n";
             }
         }
     }
@@ -153,7 +192,7 @@ SymbolID MonomorphizationEngine::requestSpecialization(
     for (size_t i = 0; i < genericTemplate->genericParams.size(); ++i) {
         if (argIdx < genericArgs.size()) {
             std::string paramName = std::string(genericTemplate->genericParams[i].name);
-            auto astNode = typeToAST(genericArgs[argIdx], symTable);
+            auto astNode = typeToAST(genericArgs[argIdx], symTable, diag);
             
             if (genericTemplate->genericParams[i].kind == GenericParamKind::Type) {
                 subs.typeSubstitutions[paramName] = std::move(astNode);
@@ -226,7 +265,7 @@ SymbolID MonomorphizationEngine::requestStructSpecialization(
     for (size_t i = 0; i < genericTemplate->genericParams.size(); ++i) {
         if (argIdx < genericArgs.size()) {
             std::string paramName = std::string(genericTemplate->genericParams[i].name);
-            auto astNode = typeToAST(genericArgs[argIdx], symTable);
+            auto astNode = typeToAST(genericArgs[argIdx], symTable, diag);
             
             if (genericTemplate->genericParams[i].kind == GenericParamKind::Type) {
                 subs.typeSubstitutions[paramName] = std::move(astNode);
@@ -270,7 +309,7 @@ SymbolID MonomorphizationEngine::requestStructSpecialization(
             GenericSubstitution implSubs;
             for (size_t i = 0; i < implNode->genericParams.size() && i < genericArgs.size(); ++i) {
                 std::string paramName = std::string(implNode->genericParams[i].name);
-                auto astNode = typeToAST(genericArgs[i], symTable);
+                auto astNode = typeToAST(genericArgs[i], symTable, diag);
                 
                 if (implNode->genericParams[i].kind == GenericParamKind::Type) {
                     implSubs.typeSubstitutions[paramName] = std::move(astNode);
@@ -337,7 +376,7 @@ SymbolID MonomorphizationEngine::requestEnumSpecialization(
     for (size_t i = 0; i < genericTemplate->genericParams.size(); ++i) {
         if (genericTemplate->genericParams[i].kind == GenericParamKind::Type) {
             if (argIdx < genericArgs.size()) {
-                subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[argIdx], symTable);
+                subs.typeSubstitutions[std::string(genericTemplate->genericParams[i].name)] = typeToAST(genericArgs[argIdx], symTable, diag);
                 argIdx++;
             }
         }
@@ -352,6 +391,13 @@ SymbolID MonomorphizationEngine::requestEnumSpecialization(
 
     SymbolID newId = specializedAST->symbolId;
     insertedIt->second = newId;
+
+    const Type* specType = typeChecker.typeOf(newId);
+    if (auto* mutEnum = const_cast<EnumType*>(dynamic_cast<const EnumType*>(specType))) {
+        mutEnum->originalTemplateId = genericTemplate->symbolId;
+        mutEnum->specializedArgs = genericArgs;
+    }
+
     inProgress.erase(stableMangledName);
     specializedASTs.push_back(std::move(specializedAST));
 

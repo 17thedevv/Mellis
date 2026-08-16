@@ -177,6 +177,8 @@ void ModuleLoader::parseMLibMetadata(const std::string& path,
     // Pass 2: register Functions, Types, Traits into the virtual scope.
     for (uint32_t i = 0; i < sectionCount; ++i) {
         auto type = static_cast<SectionType>(sections[i].sectionType);
+        std::cout << "[MLibLoader] Section " << i << " type=" << (uint32_t)type 
+                  << " offset=" << sections[i].offset << " size=" << sections[i].size << "\n";
         switch (type) {
             case SectionType::ExportTable:
                 registerFunctions(fileData, sections[i].offset, sections[i].size,
@@ -266,20 +268,65 @@ void ModuleLoader::registerTypes(const std::vector<uint8_t>& fileData,
     if (sectionSize == 0) return;
 
     BinaryReader reader(fileData.data() + sectionOffset, sectionSize);
-    uint32_t version = reader.readU32();
-    (void)version;
+    
+    // 1. Namespaces
+    uint32_t nsCount = reader.readU32();
+    std::cout << "[MLibLoader] Loading " << nsCount << " namespaces\n";
+    for (uint32_t i = 0; i < nsCount; ++i) {
+        NamespaceEntry entry;
+        reader.readStruct(entry);
+    }
 
-    uint32_t count = reader.readU32();
-    for (uint32_t i = 0; i < count; ++i) {
+    // 2. Types
+    uint32_t typeCount = reader.readU32();
+    std::cout << "[MLibLoader] Loading " << typeCount << " types\n";
+    for (uint32_t i = 0; i < typeCount; ++i) {
         TypeEntry entry;
         reader.readStruct(entry);
 
         auto name = resolveString(strings, entry.nameStringID);
         if (name.empty()) continue;
+        std::cout << "[MLibLoader] Type: " << name << "\n";
 
         Identifier id(name);
         if (!symbolTable.containsInScope(id, virtualScope)) {
             symbolTable.declareExternalSymbol(id, SymbolKind::Struct,
+                                              virtualScope, i, moduleUUID);
+        }
+    }
+
+    // 3. Traits
+    uint32_t traitCount = reader.readU32();
+    std::cout << "[MLibLoader] Loading " << traitCount << " traits\n";
+    for (uint32_t i = 0; i < traitCount; ++i) {
+        TraitEntry entry;
+        reader.readStruct(entry);
+
+        auto name = resolveString(strings, entry.nameStringID);
+        if (name.empty()) continue;
+        std::cout << "[MLibLoader] Trait: " << name << "\n";
+
+        Identifier id(name);
+        if (!symbolTable.containsInScope(id, virtualScope)) {
+            symbolTable.declareExternalSymbol(id, SymbolKind::Trait,
+                                              virtualScope, i, moduleUUID);
+        }
+    }
+
+    // 4. Functions
+    uint32_t funcCount = reader.readU32();
+    std::cout << "[MLibLoader] Loading " << funcCount << " functions\n";
+    for (uint32_t i = 0; i < funcCount; ++i) {
+        FunctionEntry entry;
+        reader.readStruct(entry);
+        
+        auto name = resolveString(strings, entry.nameStringID);
+        if (name.empty()) continue;
+        std::cout << "[MLibLoader] Function: " << name << "\n";
+
+        Identifier id(name);
+        if (!symbolTable.containsInScope(id, virtualScope)) {
+            symbolTable.declareExternalSymbol(id, SymbolKind::Function,
                                               virtualScope, i, moduleUUID);
         }
     }
@@ -294,22 +341,12 @@ void ModuleLoader::registerTraits(const std::vector<uint8_t>& fileData,
     if (sectionSize == 0) return;
 
     BinaryReader reader(fileData.data() + sectionOffset, sectionSize);
-    uint32_t version = reader.readU32();
-    (void)version;
-
     uint32_t count = reader.readU32();
     for (uint32_t i = 0; i < count; ++i) {
-        TraitEntry entry;
+        ImplEntry entry;
         reader.readStruct(entry);
-
-        auto name = resolveString(strings, entry.nameStringID);
-        if (name.empty()) continue;
-
-        Identifier id(name);
-        if (!symbolTable.containsInScope(id, virtualScope)) {
-            symbolTable.declareExternalSymbol(id, SymbolKind::Trait,
-                                              virtualScope, i, moduleUUID);
-        }
+        // Impls are usually attached to types or traits.
+        // We can just skip them for now or register them into a global impl table.
     }
 }
 
@@ -409,6 +446,18 @@ void ModuleLoader::loadGenericMetadata(const std::vector<uint8_t>& fileData,
                 if (!optSyms.empty()) {
                     for (auto id : optSyms) {
                         symbolTable.getMutableSymbol(id).decl = decl.get();
+                        
+                        auto* d = decl.get();
+                        if (auto* fd = dynamic_cast<FunctionDeclNode*>(d)) { 
+                            fd->symbolId = id; 
+                            symbolTable.getMutableSymbol(id).kind = SymbolKind::Function; 
+                            symbolTable.getFunctionInfo(id).borrowCheckStatus = BorrowCheckStatus::Checked;
+                            std::cout << "[DEBUG] Updated kind to Function for id " << id << "\n"; 
+                        }
+                        else if (auto* sd = dynamic_cast<StructDeclNode*>(d)) { sd->symbolId = id; symbolTable.getMutableSymbol(id).kind = SymbolKind::Struct; std::cout << "[DEBUG] Updated kind to Struct for id " << id << "\n"; }
+                        else if (auto* ed = dynamic_cast<EnumDeclNode*>(d)) { ed->symbolId = id; symbolTable.getMutableSymbol(id).kind = SymbolKind::Enum; std::cout << "[DEBUG] Updated kind to Enum for id " << id << "\n"; }
+                        else if (auto* td = dynamic_cast<TraitDeclNode*>(d)) { td->symbolId = id; symbolTable.getMutableSymbol(id).kind = SymbolKind::Trait; std::cout << "[DEBUG] Updated kind to Trait for id " << id << "\n"; }
+                        else if (auto* ta = dynamic_cast<TypeAliasDeclNode*>(d)) { ta->symbolId = id; symbolTable.getMutableSymbol(id).kind = SymbolKind::TypeAlias; std::cout << "[DEBUG] Updated kind to TypeAlias for id " << id << "\n"; }
                     }
                 } else {
                     SymbolKind skind = SymbolKind::Function; // default
@@ -416,13 +465,18 @@ void ModuleLoader::loadGenericMetadata(const std::vector<uint8_t>& fileData,
                     else if (kind == GenericKind::Struct) skind = SymbolKind::Struct;
                     else if (kind == GenericKind::Enum) skind = SymbolKind::Enum;
                     else if (kind == GenericKind::Trait) skind = SymbolKind::Trait;
+                    else if (kind == GenericKind::TypeAlias) skind = SymbolKind::TypeAlias;
                     
                     SymbolID newId = symbolTable.declareExternalSymbol(Identifier(name), skind, virtualScope, 0, moduleUUID);
                     auto* d = decl.get();
-                    if (auto* fd = dynamic_cast<FunctionDeclNode*>(d)) fd->symbolId = newId;
+                    if (auto* fd = dynamic_cast<FunctionDeclNode*>(d)) {
+                        fd->symbolId = newId;
+                        symbolTable.getFunctionInfo(newId).borrowCheckStatus = BorrowCheckStatus::Checked;
+                    }
                     else if (auto* sd = dynamic_cast<StructDeclNode*>(d)) sd->symbolId = newId;
                     else if (auto* ed = dynamic_cast<EnumDeclNode*>(d)) ed->symbolId = newId;
                     else if (auto* td = dynamic_cast<TraitDeclNode*>(d)) td->symbolId = newId;
+                    else if (auto* ta = dynamic_cast<TypeAliasDeclNode*>(d)) ta->symbolId = newId;
                     
                     symbolTable.getMutableSymbol(newId).decl = d;
                 }

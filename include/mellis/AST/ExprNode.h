@@ -15,6 +15,13 @@ class ParamDeclNode;
 class StmtNode;
 class PatternNode;
 
+struct OperatorResolution {
+    bool isTraitMethod = false;
+    SymbolID traitId = kInvalidSymbolID;
+    SymbolID methodId = kInvalidSymbolID;
+    SymbolID implId = kInvalidSymbolID;
+};
+
 enum class ValueCategory : uint8_t {
     RValue,
     LValue,
@@ -86,6 +93,7 @@ public:
     std::unique_ptr<ExprNode> left;
     std::unique_ptr<ExprNode> right;
     SymbolID                  overloadedMethodId = kInvalidSymbolID;
+    OperatorResolution        opResolution;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };
@@ -94,6 +102,7 @@ class UnaryExpr : public ExprNode {
 public:
     UnaryOp                   op;
     std::unique_ptr<ExprNode> operand;
+    OperatorResolution        opResolution;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };
@@ -126,6 +135,13 @@ public:
     ASTNode* cloneImpl() const override;
 };
 
+enum class IntrinsicKind : uint8_t {
+    None,
+    PtrAdd,
+    PtrSub,
+    PtrOffset,
+};
+
 class MethodCallExpr : public ExprNode {
 public:
     std::unique_ptr<ExprNode>              object;
@@ -135,6 +151,7 @@ public:
     std::vector<CallArgNode>               args;
     std::vector<SymbolID> overloadCandidates;
     SymbolID resolvedFn = kInvalidSymbolID;
+    IntrinsicKind intrinsic = IntrinsicKind::None;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };
@@ -143,6 +160,7 @@ class IndexExpr : public ExprNode {
 public:
     std::unique_ptr<ExprNode> base;
     std::unique_ptr<ExprNode> index;
+    OperatorResolution        opResolution;
     void accept(ASTVisitor& v) override;
     ASTNode* cloneImpl() const override;
 };

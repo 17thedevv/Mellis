@@ -1,0 +1,125 @@
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Option' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='T' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='Some' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='v' kind=8 scope=1
+[DEBUG SymbolTable] declareSymbol id=22 name='None' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=23 name='Result' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=24 name='T' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=25 name='E' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=26 name='Ok' kind=7 scope=2
+[DEBUG SymbolTable] declareSymbol id=27 name='v' kind=8 scope=2
+[DEBUG SymbolTable] declareSymbol id=28 name='Err' kind=7 scope=2
+[DEBUG SymbolTable] declareSymbol id=29 name='e' kind=8 scope=2
+[DEBUG SymbolTable] declareSymbol id=30 name='Point' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=31 name='x' kind=8 scope=3
+[DEBUG SymbolTable] declareSymbol id=32 name='y' kind=8 scope=3
+[DEBUG SymbolTable] declareSymbol id=33 name='test_irrefutable_tuple' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=34 name='t' kind=3 scope=4
+[DEBUG SymbolTable] declareSymbol id=35 name='test_irrefutable_struct' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=36 name='p' kind=3 scope=5
+[DEBUG SymbolTable] declareSymbol id=37 name='test_refutable_local' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=38 name='opt' kind=3 scope=6
+[DEBUG SymbolTable] declareSymbol id=39 name='test_unreachable_arm' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=40 name='x' kind=3 scope=7
+[DEBUG SymbolTable] declareSymbol id=41 name='test_deep_missing_witness' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=42 name='res' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=43 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG SymbolTable] declareSymbol id=44 name='x' kind=0 scope=10
+[DEBUG SymbolTable] declareSymbol id=45 name='y' kind=0 scope=10
+[DEBUG SymbolTable] declareSymbol id=46 name='x' kind=0 scope=11
+[DEBUG SymbolTable] declareSymbol id=47 name='y' kind=0 scope=11
+[DEBUG SymbolTable] declareSymbol id=48 name='x' kind=0 scope=12
+[DEBUG SymbolTable] declareSymbol id=49 name='v' kind=0 scope=17
+[DEBUG SymbolTable] declareSymbol id=50 name='e' kind=0 scope=18
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Creating MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] TypePrePass visiting ProgramNode with 9 items
+[DEBUG] item kind: class fl::EnumDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=19
+[DEBUG] item kind: class fl::EnumDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=24
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'E' symbolId=25
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::TupleTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Point' symbolId=30
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Checking Option: allConcrete=1 monoEngine=1 sym.decl=1
+[DEBUG] enumDecl->genericParams.empty()=0
+[DEBUG] evaluateTypeNode calling requestEnumSpecialization for Option
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG SymbolTable] declareSymbol id=51 name='Option_int_32' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=52 name='Some' kind=7 scope=20
+[DEBUG SymbolTable] declareSymbol id=53 name='v' kind=8 scope=20
+[DEBUG SymbolTable] declareSymbol id=54 name='None' kind=7 scope=20
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Result' symbolId=23
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Checking Option: allConcrete=1 monoEngine=1 sym.decl=1
+[DEBUG] enumDecl->genericParams.empty()=0
+[DEBUG] evaluateTypeNode calling requestEnumSpecialization for Option
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 51
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode calling requestEnumSpecialization for Result
+[DEBUG] IN requestEnumSpecialization! mangledName=Result_Option_int_32_int_32
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: Substituted 'E' with its replacement.
+[DEBUG SymbolTable] declareSymbol id=55 name='Result_Option_int_32_int_32' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=56 name='Ok' kind=7 scope=21
+[DEBUG SymbolTable] declareSymbol id=57 name='v' kind=8 scope=21
+[DEBUG SymbolTable] declareSymbol id=58 name='Err' kind=7 scope=21
+[DEBUG SymbolTable] declareSymbol id=59 name='e' kind=8 scope=21
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option_int_32' symbolId=51
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode

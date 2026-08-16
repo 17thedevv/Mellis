@@ -116,6 +116,7 @@ SymbolID SymbolTable::declareExternalSymbol(const Identifier& name,
         /* decl            = */ nullptr
     });
     Symbol& sym = arena_.back();
+    sym.visibility   = Visibility::Public;
     sym.isExternal   = true;
     sym.mlibSymbolID = mlibSymbolID;
     std::memcpy(sym.externalModuleID, moduleUUID, 16);

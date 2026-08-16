@@ -59,8 +59,8 @@ public:
     void visit(ParamDeclNode&) override;
     void visit(StructDeclNode&) override;
     void visit(StructFieldNode&) override;
-    void visit(EnumDeclNode&) override {}
-    void visit(EnumVariantNode&) override {}
+    void visit(EnumDeclNode&) override;
+    void visit(EnumVariantNode&) override;
     void visit(TraitDeclNode&) override;
     void visit(ImplDeclNode&) override;
     void visit(ModDeclNode&) override {}

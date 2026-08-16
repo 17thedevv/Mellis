@@ -99,14 +99,21 @@ std::unique_ptr<DecisionNode> compileMatrix(
     const std::vector<std::string>& places,
     SymbolTable& table, 
     TypeChecker& typeChecker, 
-    std::vector<std::string>& missingPatterns) 
+    std::vector<std::vector<std::string>>& missingPatterns,
+    std::unordered_set<size_t>& reachedArms) 
 {
     if (colTypes.empty()) {
-        if (!matrix.empty()) return std::make_unique<SuccessNode>(matrix[0].armIndex, matrix[0].bindings);
+        if (!matrix.empty()) {
+            reachedArms.insert(matrix[0].armIndex);
+            return std::make_unique<SuccessNode>(matrix[0].armIndex, matrix[0].bindings);
+        }
+        missingPatterns.push_back({}); // 1 missing row with 0 columns
         return std::make_unique<FailureNode>();
     }
     if (matrix.empty()) {
-        missingPatterns.push_back("_");
+        std::vector<std::string> row;
+        for (size_t i = 0; i < colTypes.size(); ++i) row.push_back("_");
+        missingPatterns.push_back(row);
         return std::make_unique<FailureNode>();
     }
     
@@ -156,18 +163,27 @@ std::unique_ptr<DecisionNode> compileMatrix(
                 newColTypes.insert(newColTypes.end(), tailTypes.begin(), tailTypes.end());
                 newPlaces.insert(newPlaces.end(), tailPlaces.begin(), tailPlaces.end());
                 
-                std::vector<std::string> subMissing;
-                auto childNode = compileMatrix(filtered, newColTypes, newPlaces, table, typeChecker, subMissing);
+                std::vector<std::vector<std::string>> subMissing;
+                auto childNode = compileMatrix(filtered, newColTypes, newPlaces, table, typeChecker, subMissing, reachedArms);
                 
                 if (!subMissing.empty()) {
                     allExhaustive = false;
-                    for (auto& m : subMissing) {
+                    for (auto& mRow : subMissing) {
                         std::string prefix = std::string(enumDecl->variants[i]->name);
                         if (ctor.arity > 0) {
-                            if (m == "_") prefix += "(_)"; 
-                            else prefix += "(" + m + ")";
+                            prefix += "(";
+                            for (size_t f = 0; f < ctor.arity; ++f) {
+                                prefix += mRow[f];
+                                if (f + 1 < ctor.arity) prefix += ", ";
+                            }
+                            prefix += ")";
                         }
-                        missingPatterns.push_back(prefix);
+                        std::vector<std::string> newRow;
+                        newRow.push_back(prefix);
+                        for (size_t f = ctor.arity; f < mRow.size(); ++f) {
+                            newRow.push_back(mRow[f]);
+                        }
+                        missingPatterns.push_back(newRow);
                     }
                 }
                 extractNode->next = std::move(childNode);
@@ -196,10 +212,23 @@ std::unique_ptr<DecisionNode> compileMatrix(
         newColTypes.insert(newColTypes.end(), tailTypes.begin(), tailTypes.end());
         newPlaces.insert(newPlaces.end(), tailPlaces.begin(), tailPlaces.end());
         
-        std::vector<std::string> subMissing;
-        auto childNode = compileMatrix(filtered, newColTypes, newPlaces, table, typeChecker, subMissing);
+        std::vector<std::vector<std::string>> subMissing;
+        auto childNode = compileMatrix(filtered, newColTypes, newPlaces, table, typeChecker, subMissing, reachedArms);
         if (!subMissing.empty()) {
-            for (auto& m : subMissing) missingPatterns.push_back("(" + m + ")");
+            for (auto& mRow : subMissing) {
+                std::string prefix = "(";
+                for (size_t f = 0; f < ctor.arity; ++f) {
+                    prefix += mRow[f];
+                    if (f + 1 < ctor.arity) prefix += ", ";
+                }
+                prefix += ")";
+                std::vector<std::string> newRow;
+                newRow.push_back(prefix);
+                for (size_t f = ctor.arity; f < mRow.size(); ++f) {
+                    newRow.push_back(mRow[f]);
+                }
+                missingPatterns.push_back(newRow);
+            }
         }
         extractNode->next = std::move(childNode);
         return extractNode;
@@ -222,8 +251,8 @@ std::unique_ptr<DecisionNode> compileMatrix(
         }
     }
     
-    std::vector<std::string> subMissing;
-    auto childNode = compileMatrix(filtered, tailTypes, tailPlaces, table, typeChecker, subMissing);
+    std::vector<std::vector<std::string>> subMissing;
+    auto childNode = compileMatrix(filtered, tailTypes, tailPlaces, table, typeChecker, subMissing, reachedArms);
     
     auto switchNode = std::make_unique<SwitchLitNode>();
     switchNode->placeStr = headPlace;
@@ -232,7 +261,14 @@ std::unique_ptr<DecisionNode> compileMatrix(
     switchNode->fallback = std::move(childNode);
     
     if (!subMissing.empty()) {
-        for (auto& m : subMissing) missingPatterns.push_back("_");
+        for (auto& mRow : subMissing) {
+            std::vector<std::string> newRow;
+            newRow.push_back("_");
+            for (size_t f = 0; f < mRow.size(); ++f) {
+                newRow.push_back(mRow[f]);
+            }
+            missingPatterns.push_back(newRow);
+        }
     }
     return switchNode;
 }
@@ -241,6 +277,29 @@ std::unique_ptr<DecisionNode> compileMatrix(
 
 MatchAnalyzer::MatchAnalyzer(SymbolTable& table, TypeChecker& typeChecker, DiagnosticEngine& diag)
     : table(table), typeChecker(typeChecker), diag(diag) {}
+
+PatternAnalysisResult MatchAnalyzer::checkIrrefutable(PatternNode* pat, const Type* expectedType) {
+    if (!pat || !expectedType) return {true, ""};
+
+    PatMatrix matrix;
+    PatRow row;
+    row.armIndex = 0;
+    row.cols.push_back(pat);
+    matrix.push_back(row);
+
+    std::vector<const Type*> colTypes = { expectedType };
+    std::vector<std::string> places = { "subject" };
+    std::vector<std::vector<std::string>> missingPatterns;
+    std::unordered_set<size_t> reachedArms;
+
+    compileMatrix(matrix, colTypes, places, table, typeChecker, missingPatterns, reachedArms);
+
+    if (missingPatterns.empty()) {
+        return {true, ""};
+    } else {
+        return {false, missingPatterns[0][0]}; 
+    }
+}
 
 bool MatchAnalyzer::analyze(ASTNode* root) {
     if (!root) return false;
@@ -251,12 +310,26 @@ bool MatchAnalyzer::analyze(ASTNode* root) {
 
 void MatchAnalyzer::visit(ProgramNode& node) { for (auto& item : node.items) item->accept(*this); }
 void MatchAnalyzer::visit(ModDeclNode& node) { for (auto& d : node.decls) d->accept(*this); }
-void MatchAnalyzer::visit(VarDeclNode& node) { if (node.initializer) node.initializer->accept(*this); }
-void MatchAnalyzer::visit(FunctionDeclNode& node) { if (node.body) node.body->accept(*this); }
+void MatchAnalyzer::visit(VarDeclNode& node) { 
+    if (node.initializer) node.initializer->accept(*this); 
+    if (node.pattern) {
+        auto res = checkIrrefutable(node.pattern.get(), typeChecker.typeOf(node.symbolId));
+        if (!res.isIrrefutable) {
+            diag.error(node.loc, "refutable pattern in local binding");
+            hasError_ = true;
+        }
+    }
+}
+void MatchAnalyzer::visit(FunctionDeclNode& node) { 
+    if (node.body) node.body->accept(*this); 
+}
 void MatchAnalyzer::visit(ImplDeclNode& node) { for (auto& m : node.methods) m->accept(*this); }
 
 // Statements
-void MatchAnalyzer::visit(BlockStmtNode& node) { for (auto& s : node.body) s->accept(*this); }
+void MatchAnalyzer::visit(BlockStmtNode& node) { 
+    for (auto& s : node.body) s->accept(*this); 
+    if (node.tailExpr) node.tailExpr->accept(*this);
+}
 void MatchAnalyzer::visit(ExprStmtNode& node) { node.expr->accept(*this); }
 void MatchAnalyzer::visit(IfStmtNode& node) {
     node.condition->accept(*this);
@@ -297,18 +370,26 @@ void MatchAnalyzer::visit(MatchExpr& node) {
     if (node.subject->inferredType) {
         std::vector<const Type*> colTypes = { node.subject->inferredType };
         std::vector<std::string> places = { "subject" };
-        std::vector<std::string> missingPatterns;
+        std::vector<std::vector<std::string>> missingPatterns;
+        std::unordered_set<size_t> reachedArms;
         
-        node.decisionTree = compileMatrix(matrix, colTypes, places, table, typeChecker, missingPatterns);
+        node.decisionTree = compileMatrix(matrix, colTypes, places, table, typeChecker, missingPatterns, reachedArms);
         
         if (!missingPatterns.empty()) {
             std::string missingStr = "";
             for (size_t i = 0; i < missingPatterns.size(); ++i) {
-                missingStr += "`" + missingPatterns[i] + "`";
+                missingStr += "`" + missingPatterns[i][0] + "`";
                 if (i < missingPatterns.size() - 1) missingStr += ", ";
             }
             diag.error(node.loc, "non-exhaustive patterns: " + missingStr + " not covered");
             hasError_ = true;
+        }
+
+        // Warn about unreachable arms
+        for (size_t i = 0; i < node.arms.size(); ++i) {
+            if (node.arms[i].pattern && reachedArms.find(i) == reachedArms.end()) {
+                diag.warning(node.arms[i].pattern->loc, "unreachable pattern");
+            }
         }
     }
 }

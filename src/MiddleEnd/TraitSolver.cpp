@@ -14,6 +14,7 @@ TraitSolver::TraitSolver(TypeContext& ctx, SymbolTable& table, DiagnosticEngine&
     : ctx_(ctx), table_(table), diag_(diag), typeTable_(typeTable), methodResolver_(methodResolver) {}
 
 void TraitSolver::addClause(TraitClause clause) {
+    std::cerr << "[DEBUG TraitSolver] addClause: selfType=" << (clause.selfType ? clause.selfType->toString() : "null") << " traitId=" << clause.traitId << "\n";
     clauses_.push_back(std::move(clause));
 }
 
@@ -48,6 +49,16 @@ const Type* TraitSolver::instantiateWithFreshVars(const Type* type, const std::u
             elems.push_back(instantiateWithFreshVars(el, replacements));
         }
         return ctx_.getTupleType(elems);
+    }
+    
+    if (auto* ta = dynamic_cast<const TypeAliasType*>(type)) {
+        if (ta->genericArgs.empty()) return type;
+        std::vector<const Type*> args;
+        for (auto* arg : ta->genericArgs) {
+            args.push_back(instantiateWithFreshVars(arg, replacements));
+        }
+        const Type* aliased = instantiateWithFreshVars(ta->aliasedType, replacements);
+        return ctx_.getTypeAliasType(ta->aliasId, ta->aliasName, args, aliased);
     }
     
     if (auto* arr = dynamic_cast<const ArrayType*>(type)) {
@@ -116,6 +127,11 @@ bool TraitSolver::unify(const Type* expected, const Type* actual) {
         ctx_.unificationTable.unify(inf->varId, expected);
         return true;
     }
+    
+    expected = expected->unwrapAlias();
+    actual = actual->unwrapAlias();
+    
+    if (expected->equals(actual)) return true;
     
     // Structural unification
     if (auto* expRef = dynamic_cast<const ReferenceType*>(expected)) {
@@ -197,9 +213,11 @@ bool TraitSolver::unify(const Type* expected, const Type* actual) {
 }
 
 Solution TraitSolver::solveRecursive(const Goal& goal, size_t depth) {
-        if (depth > 64) {
+    static constexpr size_t kMaxTraitSolverDepth = 64;
+
+    if (depth > kMaxTraitSolverDepth) {
         // Prevent infinite recursion (e.g. self-referential impls)
-        return {SolverResult::Failure, nullptr};
+        return {SolverResult::Overflow, nullptr};
     }
 
     std::cerr << "[DEBUG TraitSolver] Solving goal: kind=" << (int)goal.kind << " self=" << (goal.selfType ? goal.selfType->toString() : "null") << " traitId=" << goal.traitId << std::endl;

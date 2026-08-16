@@ -136,6 +136,41 @@ ASTNode* StructDeclNode::cloneImpl() const {
     return copy;
 }
 
+ASTNode* EnumVariantNode::cloneImpl() const {
+    auto copy = new EnumVariantNode();
+    copy->loc = this->loc;
+    copy->name = this->name;
+    copy->symbolId = this->symbolId;
+    for (const auto& f : this->fields) {
+        copy->fields.push_back(f->cloneAs<ParamDeclNode>());
+    }
+    return copy;
+}
+
+ASTNode* EnumDeclNode::cloneImpl() const {
+    auto copy = new EnumDeclNode();
+    copy->loc = this->loc;
+    copy->name = this->name;
+    copy->bodyScopeId = this->bodyScopeId;
+    
+    for (const auto& gp : this->genericParams) {
+        GenericParamNode gpCopy;
+        gpCopy.loc = gp.loc;
+        gpCopy.name = gp.name;
+        gpCopy.kind = gp.kind;
+        gpCopy.symbolId = gp.symbolId;
+        for (const auto& b : gp.bounds) {
+            gpCopy.bounds.push_back(b->cloneAs<TypeNode>());
+        }
+        copy->genericParams.push_back(std::move(gpCopy));
+    }
+    
+    for (const auto& v : this->variants) {
+        copy->variants.push_back(v->cloneAs<EnumVariantNode>());
+    }
+    return copy;
+}
+
 // ==========================================
 // StmtNode Clones
 // ==========================================
@@ -573,14 +608,92 @@ ASTNode* TupleLiteralExpr::cloneImpl() const {
 }
 
 ASTNode* MatchExpr::cloneImpl() const {
-    auto copy = new MatchExpr();
-    copy->loc = this->loc;
-    copy->inferredType = this->inferredType;
-    copy->valueCategory = this->valueCategory;
-    copy->isConstant = this->isConstant;
-    if (this->subject) copy->subject = this->subject->cloneAs<ExprNode>();
-    return copy;
-}
+      auto copy = new MatchExpr();
+      copy->loc = this->loc;
+      copy->inferredType = this->inferredType;
+      copy->valueCategory = this->valueCategory;
+      copy->isConstant = this->isConstant;
+      if (this->subject) copy->subject = this->subject->cloneAs<ExprNode>();
+      for (const auto& arm : this->arms) {
+          MatchArmNode copyArm;
+          copyArm.loc = arm.loc;
+          if (arm.pattern) copyArm.pattern = arm.pattern->cloneAs<PatternNode>();
+          if (arm.body) copyArm.body = arm.body->cloneAs<StmtNode>();
+          copy->arms.push_back(std::move(copyArm));
+      }
+      return copy;
+  }
+  
+  ASTNode* WildcardPatternNode::cloneImpl() const {
+      auto copy = new WildcardPatternNode();
+      copy->loc = this->loc;
+      copy->inferredType = this->inferredType;
+      copy->action = this->action;
+      return copy;
+  }
+  
+  ASTNode* LiteralPatternNode::cloneImpl() const {
+      auto copy = new LiteralPatternNode();
+      copy->loc = this->loc;
+      copy->inferredType = this->inferredType;
+      copy->action = this->action;
+      if (this->lit) copy->lit = this->lit->cloneAs<LiteralExpr>();
+      return copy;
+  }
+  
+  ASTNode* IdentifierPatternNode::cloneImpl() const {
+      auto copy = new IdentifierPatternNode();
+      copy->loc = this->loc;
+      copy->inferredType = this->inferredType;
+      copy->action = this->action;
+      copy->segments = this->segments;
+      copy->symbolId = this->symbolId;
+      return copy;
+  }
+  
+  ASTNode* EnumPatternNode::cloneImpl() const {
+      auto copy = new EnumPatternNode();
+      copy->loc = this->loc;
+      copy->inferredType = this->inferredType;
+      copy->action = this->action;
+      copy->path = this->path;
+      copy->variantSymbolId = this->variantSymbolId;
+      for (const auto& f : this->fields) {
+          if (f) copy->fields.push_back(f->cloneAs<PatternNode>());
+          else copy->fields.push_back(nullptr);
+      }
+      return copy;
+  }
+  
+  ASTNode* TuplePatternNode::cloneImpl() const {
+      auto copy = new TuplePatternNode();
+      copy->loc = this->loc;
+      copy->inferredType = this->inferredType;
+      copy->action = this->action;
+      copy->hasRest = this->hasRest;
+      for (const auto& e : this->elements) {
+          if (e) copy->elements.push_back(e->cloneAs<PatternNode>());
+          else copy->elements.push_back(nullptr);
+      }
+      return copy;
+  }
+  
+  ASTNode* StructPatternNode::cloneImpl() const {
+      auto copy = new StructPatternNode();
+      copy->loc = this->loc;
+      copy->inferredType = this->inferredType;
+      copy->action = this->action;
+      copy->path = this->path;
+      copy->hasRest = this->hasRest;
+      copy->structSymbolId = this->structSymbolId;
+      for (const auto& f : this->fields) {
+          StructPatternField copyField;
+          copyField.name = f.name;
+          if (f.pattern) copyField.pattern = f.pattern->cloneAs<PatternNode>();
+          copy->fields.push_back(std::move(copyField));
+      }
+      return copy;
+  }
 
 ASTNode* LambdaExpr::cloneImpl() const {
     auto copy = new LambdaExpr();

@@ -76,12 +76,20 @@ Diagnostic& DiagnosticEngine::warning(SourceLocation loc, std::string msg, std::
 }
 
 Diagnostic& DiagnosticEngine::error(SourceLocation loc, std::string msg, std::string code) {
-    std::cerr << "[DEBUG] DiagnosticEngine::error called: " << msg << "\n";
     return report(DiagSeverity::Error, loc, std::move(msg), std::move(code));
 }
 
 Diagnostic& DiagnosticEngine::fatal(SourceLocation loc, std::string msg, std::string code) {
     return report(DiagSeverity::Fatal, loc, std::move(msg), std::move(code));
+}
+
+[[noreturn]] void DiagnosticEngine::ice(SourceLocation loc, std::string msg) {
+    std::cerr << "error: internal compiler error: " << msg << "\n";
+    if (loc.line > 0) {
+        std::cerr << " --> " << loc.file << ":" << loc.line << ":" << loc.column << "\n";
+    }
+    std::cerr << "note: this is a compiler bug, not an error in your program\n";
+    std::exit(101);
 }
 
 // =============================================================================

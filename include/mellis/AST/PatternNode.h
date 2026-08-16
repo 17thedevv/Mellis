@@ -30,6 +30,7 @@ class WildcardPatternNode : public PatternNode {
 public:
     void accept(PatternVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 class LiteralPatternNode : public PatternNode {
@@ -37,6 +38,7 @@ public:
     std::unique_ptr<LiteralExpr> lit;
     void accept(PatternVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 class IdentifierPatternNode : public PatternNode {
@@ -45,6 +47,7 @@ public:
     SymbolID                      symbolId = kInvalidSymbolID;
     void accept(PatternVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 class EnumPatternNode : public PatternNode {
@@ -54,6 +57,7 @@ public:
     SymbolID                                variantSymbolId = kInvalidSymbolID;
     void accept(PatternVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 class TuplePatternNode : public PatternNode {
@@ -62,6 +66,7 @@ public:
     bool hasRest = false;
     void accept(PatternVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 class StructPatternField {
@@ -78,6 +83,7 @@ public:
     SymbolID structSymbolId = kInvalidSymbolID;
     void accept(PatternVisitor& v) override;
     void accept(ASTVisitor& v) override { }
+    ASTNode* cloneImpl() const override;
 };
 
 } // namespace fl

@@ -46,6 +46,13 @@ bool MethodResolver::probe(const Type* receiverType, const std::string& name, Me
         return false;
     }
     
+    if (sol.result == SolverResult::Overflow) {
+        if (diag) {
+            diag->error(callLoc, "trait resolution exceeded the recursion limit", "E-TRAIT-SOLVER-OVERFLOW");
+        }
+        return false;
+    }
+    
     if (sol.result == SolverResult::Success) {
         // Reconstruct MethodInfo from the successful candidate in our own map
         auto it = candidates.find(name);

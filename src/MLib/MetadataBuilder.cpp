@@ -36,6 +36,8 @@ void MetadataBuilder::buildFromSnapshot(const SemanticSnapshot& snapshot) {
             addTrait(std::string(sym->name.view()), 0);
         } else if (sym->kind == SymbolKind::Enum) {
             addType(std::string(sym->name.view()), 0, 0, 0);
+        } else if (sym->kind == SymbolKind::TypeAlias) {
+            addType(std::string(sym->name.view()), 0, 0, 0); // Export TypeAlias as type
         }
     };
 

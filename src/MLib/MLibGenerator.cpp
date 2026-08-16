@@ -176,7 +176,10 @@ bool MLibGenerator::generate(llvm::Module* llvmModule, const std::string& output
         } else if (auto* ed = dynamic_cast<const EnumDeclNode*>(sym.decl)) {
             if (!ed->genericParams.empty()) { isGeneric = true; gkind = fl::mlib::GenericKind::Enum; }
         } else if (auto* td = dynamic_cast<const TraitDeclNode*>(sym.decl)) {
-            if (!td->genericParams.empty()) { isGeneric = true; gkind = fl::mlib::GenericKind::Trait; }
+            // ALWAYS serialize traits as source so their methods are available!
+            isGeneric = true; gkind = fl::mlib::GenericKind::Trait;
+        } else if (auto* ta = dynamic_cast<const TypeAliasDeclNode*>(sym.decl)) {
+            if (!ta->genericParams.empty()) { isGeneric = true; gkind = fl::mlib::GenericKind::TypeAlias; }
         }
 
         if (isGeneric) {
@@ -185,6 +188,9 @@ bool MLibGenerator::generate(llvm::Module* llvmModule, const std::string& output
             std::cout << "[MLibGen] Found generic symbol: " << sym.name.view() << " start=" << start << " end=" << end << "\n";
             if (end > start && end <= sourceCode_.size()) {
                 std::string rawSource(sourceCode_.substr(start, end - start));
+                if (sym.visibility == Visibility::Public) {
+                    rawSource = "export " + rawSource;
+                }
                 std::cout << "[MLibGen] Serializing source:\n" << rawSource << "\n";
                 genericBuilder.addGeneric(gkind, std::string(sym.name.view()), rawSource);
             }

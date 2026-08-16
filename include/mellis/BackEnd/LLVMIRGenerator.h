@@ -66,6 +66,7 @@ private:
     // ── Translation Helpers ──────────────────────────────────────────────────
 
     llvm::Type* mapType(const Type* type);
+    llvm::Constant* buildConstant(const mvir::ConstantValue& cv, const Type* expectedType);
     llvm::Value* mapOperand(const mvir::Operand& op, llvm::Type* expectedType = nullptr);
 
     void createFunctionStructure(const mvir::Function* func);

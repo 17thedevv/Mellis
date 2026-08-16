@@ -34,7 +34,8 @@ enum class GenericKind : uint8_t {
     Struct = 1,
     Enum = 2,
     Impl = 3,
-    Trait = 4
+    Trait = 4,
+    TypeAlias = 5
 };
 
 enum class SectionCompression : uint8_t {

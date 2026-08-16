@@ -89,16 +89,17 @@ bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
         globalValues_[func->name.name] = f;
     }
 
-    // 1.5 Global string literals
+    // 1.5 Global declarations
     for (const auto& gDecl : mvirModule->globalDecls) {
-        std::string name = gDecl.name.name.substr(1);
-        if (!gDecl.stringLiteral.empty()) {
-            llvm::Constant* strConst = llvm::ConstantDataArray::getString(context_, gDecl.stringLiteral, true);
+        std::string name = gDecl.id.name.substr(1);
+        llvm::Constant* constVal = buildConstant(gDecl.initializer, gDecl.type);
+        if (constVal) {
+            llvm::GlobalValue::LinkageTypes linkage = gDecl.visibility == Visibility::Public ? llvm::GlobalValue::ExternalLinkage : llvm::GlobalValue::PrivateLinkage;
             llvm::GlobalVariable* gv = new llvm::GlobalVariable(
-                module_, strConst->getType(), true,
-                llvm::GlobalValue::PrivateLinkage, strConst, name
+                module_, constVal->getType(), !gDecl.isMutable(),
+                linkage, constVal, name
             );
-            globalValues_[gDecl.name.name] = gv;
+            globalValues_[gDecl.id.name] = gv;
         }
     }
 
@@ -179,6 +180,32 @@ bool LLVMIRGenerator::generate(const mvir::Module* mvirModule) {
         return false;
     }
     return true;
+}
+
+llvm::Constant* LLVMIRGenerator::buildConstant(const mvir::ConstantValue& cv, const Type* expectedType) {
+    switch (cv.kind) {
+        case mvir::ConstantValue::Kind::Int: {
+            llvm::Type* ty = expectedType ? mapType(expectedType) : llvm::Type::getInt64Ty(context_);
+            return llvm::ConstantInt::get(ty, cv.iVal, true);
+        }
+        case mvir::ConstantValue::Kind::UInt: {
+            llvm::Type* ty = expectedType ? mapType(expectedType) : llvm::Type::getInt64Ty(context_);
+            return llvm::ConstantInt::get(ty, cv.uVal, false);
+        }
+        case mvir::ConstantValue::Kind::Float: {
+            llvm::Type* ty = expectedType ? mapType(expectedType) : llvm::Type::getDoubleTy(context_);
+            return llvm::ConstantFP::get(ty, cv.fVal);
+        }
+        case mvir::ConstantValue::Kind::Bool: {
+            return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context_), cv.bVal ? 1 : 0);
+        }
+        case mvir::ConstantValue::Kind::String: {
+            return llvm::ConstantDataArray::getString(context_, cv.sVal, false); // cv.sVal already has null terminator
+        }
+        // TODO: Array, Tuple, Struct
+        default:
+            return nullptr;
+    }
 }
 
 llvm::Type* LLVMIRGenerator::mapType(const Type* type) {
@@ -297,6 +324,9 @@ llvm::Type* LLVMIRGenerator::mapType(const Type* type) {
     }
     if (auto* arr = dynamic_cast<const ArrayType*>(type)) {
         return llvm::ArrayType::get(mapType(arr->elementType), arr->length);
+    }
+    if (auto* ta = dynamic_cast<const TypeAliasType*>(type)) {
+        return mapType(ta->aliasedType);
     }
     if (auto* closTy = dynamic_cast<const ClosureType*>(type)) {
         std::vector<llvm::Type*> elements;
@@ -785,6 +815,14 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
                 pointerTypes_[borrow->dest.name] = pointerTypes_[baseName];
             }
         }
+    }
+    else if (auto* ptroff = dynamic_cast<const mvir::PtrOffsetInst*>(inst)) {
+        llvm::Value* ptrVal = mapOperand(ptroff->ptr);
+        llvm::Value* offVal = mapOperand(ptroff->offset);
+        llvm::Type* elemTy = mapType(ptroff->elementType);
+        llvm::Value* res = builder_.CreateGEP(elemTy, ptrVal, offVal);
+        res->setName(ptroff->dest.name.substr(1));
+        localValues_[ptroff->dest.name] = res;
     }
     else if (auto* alu = dynamic_cast<const mvir::AluInst*>(inst)) {
         llvm::Value* left = mapOperand(alu->left);

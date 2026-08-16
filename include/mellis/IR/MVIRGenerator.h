@@ -17,7 +17,7 @@ struct DecisionNode;
 class MVIRGenerator : public ASTVisitor {
     friend class PatternLowerer;
 public:
-    explicit MVIRGenerator(SymbolTable& symTable, TypeChecker& typeChecker, std::unordered_map<const Type*, ClosureStorageKind>& storageMap);
+    explicit MVIRGenerator(SymbolTable& symTable, DiagnosticEngine& diag, TypeChecker& typeChecker, std::unordered_map<const Type*, ClosureStorageKind>& storageMap);
 
     /// Generate MVIR for the given program.
     std::unique_ptr<mvir::Module> generate(ProgramNode& program);
@@ -76,6 +76,7 @@ public:
 
 private:
     SymbolTable& table_;
+    DiagnosticEngine& diag_;
     TypeChecker& typeChecker_;
     std::unordered_map<const Type*, ClosureStorageKind>& storageMap_;
     TraitObjectLayoutBuilder layoutBuilder_;
@@ -119,6 +120,8 @@ private:
     mvir::Operand lastEvaluatedOperand_ = mvir::Number{"0"};
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    mvir::Operand evaluateAutoRefReceiver(ExprNode& object, SymbolID methodId);
 
     mvir::LocalId nextLocal(uint32_t symbolId = 0, uint32_t expansionId = 0);
     mvir::LabelId nextLabel(const std::string& prefix = "bb");

@@ -62,6 +62,7 @@ set(MIDDLEEND_SRC
     src/MiddleEnd/TraitSolver.cpp
     src/MiddleEnd/MethodResolver.cpp
     src/MiddleEnd/VisibilityLeakChecker.cpp
+    src/MiddleEnd/OperatorRegistry.cpp
 )
 
 set(IR_SRC

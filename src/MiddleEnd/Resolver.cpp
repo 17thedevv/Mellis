@@ -110,7 +110,20 @@ public:
                 return {};
             }
             SymbolID currentSym = currentSyms[0];
+            auto& symRef = table.getSymbol(currentSym);
+            SymbolID resolvedSymId = currentSym;
+            std::cout << "[DEBUG] resolvePath start: currentSym=" << currentSym << " kind=" << (int)symRef.kind << " aliasTo=" << symRef.aliasTo << "\n";
+            while (table.getSymbol(resolvedSymId).kind == SymbolKind::Alias) {
+                resolvedSymId = table.getSymbol(resolvedSymId).aliasTo;
+                std::cout << "[DEBUG] resolvePath alias jump: resolvedSymId=" << resolvedSymId << "\n";
+                if (resolvedSymId == kInvalidSymbolID) break;
+            }
+            if (resolvedSymId != kInvalidSymbolID) {
+                currentSym = resolvedSymId;
+            }
             auto& sym = table.getSymbol(currentSym);
+            std::cout << "[DEBUG] resolvePath final: currentSym=" << currentSym << " kind=" << (int)sym.kind << "\n";
+            
             if (sym.kind != SymbolKind::Module && sym.kind != SymbolKind::Enum && sym.kind != SymbolKind::ExternalModule) {
                 diag.error(loc, "Symbol '" + std::string(path[i-1]) + "' is not a module or enum.");
                 return {};
@@ -163,17 +176,17 @@ public:
 
     // --- Declarations ---
     void visit(VarDeclNode& node) override { 
+        SymbolKind kind = node.isMutable ? SymbolKind::Static : SymbolKind::Const;
         if (node.pattern) {
             if (auto bind = dynamic_cast<IdentifierPatternNode*>(node.pattern.get())) {
-                bind->symbolId = sm.declare(bind->segments.back(), SymbolKind::Variable, node.loc, &node);
+                bind->symbolId = sm.declare(bind->segments.back(), kind, node.loc, &node);
                 node.symbolId = bind->symbolId;
             } else {
                 sm.diag.error(node.loc, "Global variable declaration cannot use destructuring pattern.");
             }
         } else {
-            node.symbolId = sm.declare(node.name, SymbolKind::Variable, node.loc, &node);
+            node.symbolId = sm.declare(node.name, kind, node.loc, &node);
         }
-        // We do not visit the initializer in Pass 1
     }
 
     void visit(FunctionDeclNode& node) override { 
@@ -241,7 +254,10 @@ public:
     void visit(EnumVariantNode& node) override { 
         node.symbolId = sm.declare(node.name, SymbolKind::EnumVariant, node.loc, &node);
         for (auto& f : node.fields) {
-            f->symbolId = sm.declare(f->name, SymbolKind::StructField, f->loc, f.get());
+            std::cout << "DEBUG: f->name.length() = " << f->name.length() << std::endl;
+            if (!f->name.empty()) {
+                f->symbolId = sm.declare(f->name, SymbolKind::StructField, f->loc, f.get());
+            }
         }
     }
 
@@ -320,6 +336,14 @@ public:
     void visit(TypeAliasDeclNode& node) override { 
         if (node.symbolId == kInvalidSymbolID) {
             node.symbolId = sm.declare(node.name, SymbolKind::TypeAlias, node.loc, &node);
+        }
+        if (!node.genericParams.empty()) {
+            node.bodyScopeId = sm.table.createScope(ScopeKind::Block, sm.scopeStack.current());
+            sm.enterExistingScope(node.bodyScopeId);
+            for (auto& param : node.genericParams) {
+                param.symbolId = sm.declare(param.name, SymbolKind::GenericParam, param.loc, nullptr);
+            }
+            sm.exitScope();
         }
     }
 
@@ -432,6 +456,11 @@ class UseResolutionVisitor : public ASTVisitor {
                             alreadyImported = true;
                             break;
                         }
+                        auto& sym = sm.table.getSymbol(id);
+                        if (sym.kind == SymbolKind::Alias && sym.aliasTo == target) {
+                            alreadyImported = true;
+                            break;
+                        }
                     }
                     if (alreadyImported) {
                         // It is already imported (e.g. root module from ImportResolver), skip
@@ -520,6 +549,7 @@ class ResolutionVisitor : public ASTVisitor, public TypeVisitor, public PatternV
     ScopeManager& sm;
     DiagnosticEngine& diag;
     std::vector<std::pair<uint16_t, LambdaExpr*>> activeLambdas;
+    SymbolKind currentVarKind = SymbolKind::Variable;
 
 public:
     ResolutionVisitor(ScopeManager& sm, DiagnosticEngine& diag) : sm(sm), diag(diag) {}
@@ -534,14 +564,17 @@ public:
 
     // --- Declarations ---
     void visit(VarDeclNode& node) override { 
+        SymbolKind oldKind = currentVarKind;
+        currentVarKind = node.isMutable ? SymbolKind::Variable : SymbolKind::Const;
         if (node.pattern) {
             node.pattern->accept(static_cast<PatternVisitor&>(*this));
             if (auto idPat = dynamic_cast<IdentifierPatternNode*>(node.pattern.get())) {
                 node.symbolId = idPat->symbolId;
             }
         } else if (node.symbolId == kInvalidSymbolID) {
-            node.symbolId = sm.declare(node.name, SymbolKind::Variable, node.loc, &node);
+            node.symbolId = sm.declare(node.name, currentVarKind, node.loc, &node);
         }
+        currentVarKind = oldKind;
         if (node.typeAnnot) node.typeAnnot->accept(static_cast<TypeVisitor&>(*this));
         if (node.initializer) node.initializer->accept(static_cast<ASTVisitor&>(*this));
     }
@@ -667,7 +700,9 @@ public:
         }
     }
     void visit(TypeAliasDeclNode& node) override { 
+        if (!node.genericParams.empty()) sm.enterExistingScope(node.bodyScopeId);
         if (node.aliasedType) node.aliasedType->accept(static_cast<TypeVisitor&>(*this));
+        if (!node.genericParams.empty()) sm.exitScope();
     }
 
     // --- Statements ---
@@ -924,7 +959,7 @@ public:
     // --- Types ---
     void visit(BuiltinTypeNode&) override { }
     void visit(NamedTypeNode& node) override { 
-        if (!node.segments.empty()) {
+        if (node.symbolId == kInvalidSymbolID && !node.segments.empty()) {
             auto ids = sm.resolve(node.segments[0], node.loc);
             if (!ids.empty()) {
                 SymbolID id = ids[0];
@@ -969,7 +1004,7 @@ public:
     void visit(IdentifierPatternNode& node) override { 
         // Pattern binding creates a new variable in the current scope
         if (!node.segments.empty()) {
-            node.symbolId = sm.declare(node.segments[0], SymbolKind::Variable, node.loc, &node);
+            node.symbolId = sm.declare(node.segments[0], currentVarKind, node.loc, &node);
         }
     }
     void visit(EnumPatternNode& node) override { 

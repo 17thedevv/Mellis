@@ -8,6 +8,11 @@
 
 namespace fl {
 
+struct PatternAnalysisResult {
+    bool isIrrefutable;
+    std::string witness;
+};
+
 class MatchAnalyzer : public ASTVisitor {
     SymbolTable& table;
     TypeChecker& typeChecker;
@@ -17,6 +22,7 @@ class MatchAnalyzer : public ASTVisitor {
 public:
     MatchAnalyzer(SymbolTable& table, TypeChecker& typeChecker, DiagnosticEngine& diag);
     bool analyze(ASTNode* root);
+    PatternAnalysisResult checkIrrefutable(PatternNode* pat, const Type* expectedType);
 
     void visit(ProgramNode& node) override;
     void visit(ModDeclNode& node) override;

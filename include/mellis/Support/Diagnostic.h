@@ -114,6 +114,10 @@ public:
     /// Callers should check hasErrors() / return early after calling fatal().
     Diagnostic& fatal  (SourceLocation loc, std::string msg, std::string code = "");
 
+    /// ICE (Internal Compiler Error): indicates a compiler bug.
+    /// Prints the error and immediately aborts the process (exit(101)).
+    [[noreturn]] void ice(SourceLocation loc, std::string msg);
+
     // ── Query ─────────────────────────────────────────────────────────────────
 
     /// Number of Error + Fatal diagnostics recorded.

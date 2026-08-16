@@ -48,6 +48,7 @@ enum class TypeKind : uint8_t {
     Unknown,
     Error,
     AssociatedProjection, // <T as Trait>::AssocName
+    TypeAlias,            // Semantic alias
     Lifetime              // Represents a lifetime argument in a generic parameter list
 };
 
@@ -97,6 +98,9 @@ public:
     
     virtual TypeKind getKind() const = 0;
     virtual std::string toString() const = 0;
+    
+    // Transparent unwrap for TypeAlias
+    virtual const Type* unwrapAlias() const { return this; }
     
     // Exact equality check. For subtyping/coercion, use a separate TypeChecker utility.
     virtual bool equals(const Type* other) const = 0;
@@ -300,6 +304,8 @@ public:
     SymbolID enumSymbolId;
     std::vector<const Type*> genericArgs;
     bool hasDrop;
+    SymbolID originalTemplateId = kInvalidSymbolID;
+    std::vector<const Type*> specializedArgs;
     
     explicit EnumType(SymbolID id, std::vector<const Type*> args = {}, bool hasDrop = false) 
         : enumSymbolId(id), genericArgs(std::move(args)), hasDrop(hasDrop) {}
@@ -732,6 +738,54 @@ public:
     }
 };
 
+// -----------------------------------------------------------------------------
+// Type Alias Type
+// Represents a semantic alias (e.g. `type UserId = uint_64;`).
+// -----------------------------------------------------------------------------
+class TypeAliasType : public Type {
+public:
+    SymbolID aliasId;
+    std::string aliasName;
+    std::vector<const Type*> genericArgs;
+    const Type* aliasedType;
+    
+    TypeAliasType(SymbolID id, std::string name, std::vector<const Type*> args, const Type* aliased)
+        : aliasId(id), aliasName(std::move(name)), genericArgs(std::move(args)), aliasedType(aliased) {}
+        
+    TypeKind getKind() const override { return TypeKind::TypeAlias; }
+    
+    const Type* unwrapAlias() const override {
+        return aliasedType->unwrapAlias(); // recursive unwrap
+    }
+    
+    std::string toString() const override {
+        if (genericArgs.empty()) return aliasName;
+        std::string s = aliasName + "<";
+        for (size_t i = 0; i < genericArgs.size(); ++i) {
+            s += genericArgs[i]->toString();
+            if (i + 1 < genericArgs.size()) s += ", ";
+        }
+        s += ">";
+        return s;
+    }
+    
+    bool equals(const Type* other) const override {
+        if (auto* o = dynamic_cast<const TypeAliasType*>(other)) {
+            if (aliasId == o->aliasId && genericArgs.size() == o->genericArgs.size()) {
+                bool argsMatch = true;
+                for (size_t i = 0; i < genericArgs.size(); ++i) {
+                    if (!genericArgs[i]->equals(o->genericArgs[i])) {
+                        argsMatch = false;
+                        break;
+                    }
+                }
+                if (argsMatch) return true;
+            }
+        }
+        return aliasedType->equals(other);
+    }
+};
+
 // =============================================================================
 // TypeContext (Phase 4.2.1)
 // Acts as an arena allocator and interner for all Semantic Types.
@@ -888,9 +942,8 @@ public:
         if (!t) return nullptr;
         if (auto* gp = dynamic_cast<const GenericParamType*>(t)) {
             auto it = mapping.find(gp->paramId);
-            if (it != mapping.end()) {
-                return it->second;
-            }
+            std::cerr << "[DEBUG substitute] GenericParam id=" << gp->paramId << " name='" << gp->name << "' found=" << (it != mapping.end()) << "\n";
+            if (it != mapping.end()) return it->second;
             return t;
         }
         if (auto* ptr = dynamic_cast<const PointerType*>(t)) {
@@ -990,6 +1043,21 @@ public:
         return create<TraitObjectType>(std::move(ids), std::move(lt));
     }
     
+    const TypeAliasType* getTypeAliasType(SymbolID aliasId, std::string aliasName, std::vector<const Type*> genericArgs, const Type* aliasedType) {
+        for (auto& t : arena_) {
+            if (auto* ta = dynamic_cast<TypeAliasType*>(t.get())) {
+                if (ta->aliasId == aliasId && ta->genericArgs.size() == genericArgs.size()) {
+                    bool match = true;
+                    for (size_t i = 0; i < genericArgs.size(); ++i) {
+                        if (!ta->genericArgs[i]->equals(genericArgs[i])) { match = false; break; }
+                    }
+                    if (match) return ta;
+                }
+            }
+        }
+        return create<TypeAliasType>(aliasId, std::move(aliasName), std::move(genericArgs), aliasedType);
+    }
+
     const FunctionType* getFunctionType(std::vector<std::string> paramNames, std::vector<const Type*> paramTypes, const Type* returnType, bool isCallSite = false, bool isVariadic = false) {
         // Full deduplication skipped for simplicity, just create
         return create<FunctionType>(std::move(paramNames), std::move(paramTypes), returnType, isCallSite, isVariadic);
