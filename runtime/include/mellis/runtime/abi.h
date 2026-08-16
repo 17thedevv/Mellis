@@ -25,6 +25,14 @@ extern "C" {
 // =============================================================================
 #define MELLIS_RUNTIME_ABI_VERSION 1
 
+#if defined(__GNUC__) || defined(__clang__)
+    #define MELLIS_NORETURN __attribute__((noreturn))
+#elif defined(_MSC_VER)
+    #define MELLIS_NORETURN __declspec(noreturn)
+#else
+    #define MELLIS_NORETURN
+#endif
+
 // =============================================================================
 // PanicInfo — structured payload passed to __mellis_panic
 //

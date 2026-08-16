@@ -20,14 +20,6 @@
 extern "C" {
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-    #define MELLIS_NORETURN __attribute__((noreturn))
-#elif defined(_MSC_VER)
-    #define MELLIS_NORETURN __declspec(noreturn)
-#else
-    #define MELLIS_NORETURN
-#endif
-
 // Primary panic entry point. Called by compiler-generated code via MVIR PanicInst.
 // info must not be null; embedded builds may use a partial PanicInfo.
 MELLIS_NORETURN void __mellis_panic(const MellisPanicInfo* info);
