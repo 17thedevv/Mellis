@@ -74,7 +74,7 @@ std::string HeapAllocInst::toString() const {
 }
 
 std::string HeapFreeInst::toString() const {
-    return "heap_free " + mvir::toString(ptr);
+    return "heap_free " + mvir::toString(ptr) + " : " + (type ? type->toString() : "unknown");
 }
 
 std::string LoadInst::toString() const {

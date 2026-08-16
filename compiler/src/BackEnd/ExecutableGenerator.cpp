@@ -152,6 +152,25 @@ bool ExecutableGenerator::generateExecutable(llvm::Module* llvmModule,
     // 3. Link Object File into Executable
     std::vector<std::string> libs;
     
+    // Inject runtime lib
+    const char* mellisHome = std::getenv("MELLIS_HOME");
+    std::filesystem::path runtimePath;
+    if (mellisHome) {
+        runtimePath = std::filesystem::path(mellisHome) / "runtime" / "hosted" / "windows" / "mellis-runtime.lib";
+    } else {
+        // Fallback for dev environment
+        runtimePath = std::filesystem::current_path() / "build" / "new_test" / "runtime" / "Release" / "mellis-runtime.lib";
+        if (!std::filesystem::exists(runtimePath)) {
+             runtimePath = std::filesystem::current_path() / "build" / "host" / "x86_64-pc-windows-msvc" / "Release" / "mellis-runtime.lib";
+        }
+    }
+    
+    if (std::filesystem::exists(runtimePath)) {
+        libs.push_back(runtimePath.string());
+    } else {
+        diag_.error(SourceLocation{}, "Khong tim thay mellis-runtime.lib tai: " + runtimePath.string());
+    }
+    
     // Extract MLib Object Codes to .fd_obj
     if (!extraMLibs.empty()) {
         std::filesystem::path objDir = std::filesystem::current_path() / ".fd_obj";

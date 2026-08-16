@@ -30,6 +30,7 @@ void DropElaborator::elaborateFunction(mvir::Function& func) {
             
             bool isHeapClosureDrop = false;
             mvir::Operand dropOperand;
+            const Type* dropType = nullptr;
 
             if (auto* drop = dynamic_cast<const mvir::DropInst*>(inst)) {
                 // Determine state of the dropped place
@@ -62,6 +63,7 @@ void DropElaborator::elaborateFunction(mvir::Function& func) {
                         if (it != closureStorageMap_.end() && it->second == ClosureStorageKind::Heap) {
                             isHeapClosureDrop = true;
                             dropOperand = drop->value;
+                            dropType = cTy;
                         }
                     }
                 }
@@ -72,7 +74,7 @@ void DropElaborator::elaborateFunction(mvir::Function& func) {
             ++it;
 
             if (isHeapClosureDrop) {
-                auto freeInst = std::make_unique<mvir::HeapFreeInst>(dropOperand);
+                auto freeInst = std::make_unique<mvir::HeapFreeInst>(dropOperand, dropType);
                 it = block->instructions.insert(it, std::move(freeInst));
                 ++it;
             }

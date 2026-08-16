@@ -186,8 +186,9 @@ struct HeapAllocInst : public Instruction {
 struct HeapFreeInst : public Instruction {
     Opcode getOpcode() const override { return Opcode::HeapFree; }
     Operand ptr;
+    const Type* type;
 
-    HeapFreeInst(Operand p) : ptr(std::move(p)) {}
+    HeapFreeInst(Operand p, const Type* t) : ptr(std::move(p)), type(t) {}
     std::string toString() const override;
 };
 

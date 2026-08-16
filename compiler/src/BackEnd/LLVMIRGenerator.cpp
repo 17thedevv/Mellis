@@ -709,17 +709,19 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
     else if (auto* heapAlloc = dynamic_cast<const mvir::HeapAllocInst*>(inst)) {
         llvm::Type* ty = mapType(heapAlloc->type);
         if (!ty->isVoidTy()) {
-            // Get size of type
+            // Get size and align
             uint64_t size = module_.getDataLayout().getTypeAllocSize(ty);
+            uint64_t align = module_.getDataLayout().getABITypeAlign(ty).value();
             
-            llvm::Function* mallocFn = module_.getFunction("malloc");
-            if (!mallocFn) {
-                llvm::FunctionType* mallocTy = llvm::FunctionType::get(builder_.getPtrTy(), {builder_.getInt64Ty()}, false);
-                mallocFn = llvm::Function::Create(mallocTy, llvm::Function::ExternalLinkage, "malloc", &module_);
+            llvm::Function* allocFn = module_.getFunction("__mellis_alloc");
+            if (!allocFn) {
+                llvm::FunctionType* allocTy = llvm::FunctionType::get(builder_.getPtrTy(), {builder_.getInt64Ty(), builder_.getInt64Ty()}, false);
+                allocFn = llvm::Function::Create(allocTy, llvm::Function::ExternalLinkage, "__mellis_alloc", &module_);
             }
             
             llvm::Value* sizeVal = llvm::ConstantInt::get(builder_.getInt64Ty(), size);
-            llvm::Value* ptr = builder_.CreateCall(mallocFn, {sizeVal}, heapAlloc->dest.name.substr(1) + "_malloc");
+            llvm::Value* alignVal = llvm::ConstantInt::get(builder_.getInt64Ty(), align);
+            llvm::Value* ptr = builder_.CreateCall(allocFn, {sizeVal, alignVal}, heapAlloc->dest.name.substr(1) + "_alloc");
             
             if (localValues_.count(heapAlloc->dest.name)) {
                 builder_.CreateStore(ptr, localValues_[heapAlloc->dest.name]);
@@ -732,12 +734,24 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
     else if (auto* heapFree = dynamic_cast<const mvir::HeapFreeInst*>(inst)) {
         llvm::Value* val = mapOperand(heapFree->ptr);
         llvm::Value* heapPtr = builder_.CreateLoad(builder_.getPtrTy(), val, "heap_free.load");
-        llvm::Function* freeFn = module_.getFunction("free");
-        if (!freeFn) {
-            llvm::FunctionType* freeTy = llvm::FunctionType::get(llvm::Type::getVoidTy(context_), {builder_.getPtrTy()}, false);
-            freeFn = llvm::Function::Create(freeTy, llvm::Function::ExternalLinkage, "free", &module_);
+        
+        uint64_t size = 0;
+        uint64_t align = 1;
+        if (heapFree->type) {
+            llvm::Type* ty = mapType(heapFree->type);
+            size = module_.getDataLayout().getTypeAllocSize(ty);
+            align = module_.getDataLayout().getABITypeAlign(ty).value();
         }
-        builder_.CreateCall(freeFn, {heapPtr});
+        
+        llvm::Function* deallocFn = module_.getFunction("__mellis_dealloc");
+        if (!deallocFn) {
+            llvm::FunctionType* deallocTy = llvm::FunctionType::get(llvm::Type::getVoidTy(context_), {builder_.getPtrTy(), builder_.getInt64Ty(), builder_.getInt64Ty()}, false);
+            deallocFn = llvm::Function::Create(deallocTy, llvm::Function::ExternalLinkage, "__mellis_dealloc", &module_);
+        }
+        
+        llvm::Value* sizeVal = llvm::ConstantInt::get(builder_.getInt64Ty(), size);
+        llvm::Value* alignVal = llvm::ConstantInt::get(builder_.getInt64Ty(), align);
+        builder_.CreateCall(deallocFn, {heapPtr, sizeVal, alignVal});
     }
     else if (auto* local = dynamic_cast<const mvir::LocalInst*>(inst)) {
         llvm::Type* ty = mapType(local->type);
@@ -952,10 +966,17 @@ void LLVMIRGenerator::emitInstruction(const mvir::Instruction* inst) {
         // If __mellis_bounds_fail is not declared in module, declare it
         llvm::FunctionCallee failFunc = module_.getFunction("__mellis_bounds_fail");
         if (!failFunc) {
-            llvm::FunctionType* ft = llvm::FunctionType::get(llvm::Type::getVoidTy(context_), { llvm::Type::getInt64Ty(context_), llvm::Type::getInt64Ty(context_) }, false);
+            llvm::FunctionType* ft = llvm::FunctionType::get(llvm::Type::getVoidTy(context_), { 
+                llvm::Type::getInt64Ty(context_), 
+                llvm::Type::getInt64Ty(context_), 
+                builder_.getPtrTy(), 
+                llvm::Type::getInt32Ty(context_) 
+            }, false);
             failFunc = module_.getOrInsertFunction("__mellis_bounds_fail", ft);
         }
-        builder_.CreateCall(failFunc, { idxVal, lenVal });
+        llvm::Value* fileVal = llvm::ConstantPointerNull::get(builder_.getPtrTy());
+        llvm::Value* lineVal = llvm::ConstantInt::get(llvm::Type::getInt32Ty(context_), 0);
+        builder_.CreateCall(failFunc, { idxVal, lenVal, fileVal, lineVal });
         builder_.CreateUnreachable();
         
         // Ok Block
