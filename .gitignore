@@ -12,7 +12,6 @@ build/
 # Compiled outputs
 *.exe
 *.dll
-*.lib
 *.obj
 *.o
 *.log
@@ -20,6 +19,17 @@ build/
 # LLVM IR / object dumps
 *.ll
 *.bc
+
+# Mellis generated artifacts — NOT source of truth
+# Source of truth is always the .ms file
+*.mlib
+*.mlib.tmp
+lib/
+sysroot/
+
+# Static libraries (build outputs)
+*.lib
+*.a
 
 # Temp C/C++ test files at root
 test.c
@@ -50,4 +60,5 @@ output.txt
 ir_dump.txt
 stderr.txt
 llvmdump.txt
-
+err.txt
+llvm.ir
