@@ -1,0 +1,31 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+error: Expected ';' after struct field
+ --> D:\fdlang\tests\valid\minimal_hang.ms:1:34
+  |
+1 | struct Vec<T> { ptr: *rw T }
+  |                                  ^
+D:\fdlang\tests\valid\minimal_hang.ms: error: Parsing that bai.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

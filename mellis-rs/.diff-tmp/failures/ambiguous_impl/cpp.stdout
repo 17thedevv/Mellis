@@ -1,0 +1,18 @@
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 21)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = MyStruct, symbolId = 24)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Foo, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 25)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = MyStruct, symbolId = 24)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Bar, symbolId = 20)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 28)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = MyStruct, symbolId = 24)
+DEBUG: Inside IF block

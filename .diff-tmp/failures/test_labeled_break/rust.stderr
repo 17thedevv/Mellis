@@ -1,0 +1,29 @@
+Number of diagnostics: 4
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 128, end: 134 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_labeled_break.ms:8:5
+   |
+8  |     'outer: while (i < 5) {
+   |     ^^^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 179, end: 185 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_labeled_break.ms:10:9
+   |
+10 |         'inner: while (j < 5) {
+   |         ^^^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 508, end: 509 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_labeled_break.ms:24:5
+   |
+24 |     }
+   |     ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 742, end: 743 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_labeled_break.ms:35:1
+   |
+35 | }
+   | ^
+

@@ -1,0 +1,948 @@
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseModDecl: sourceMgr=0000007D0317F888
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] Enum 'Option' has 2 variants
+[DEBUG] Visiting variant 'None'
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Enum 'Result' has 2 variants
+[DEBUG] Visiting variant 'Ok'
+[DEBUG] Visiting variant 'Err'
+[DEBUG resolvePath] Resolving path starting with 'option'
+[DEBUG resolvePath] resolve('option') returned 1 syms. First id=42
+[DEBUG] resolvePath start: currentSym=42 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=42 kind=15
+[DEBUG resolvePath] Resolving path starting with 'option'
+[DEBUG resolvePath] resolve('option') returned 1 syms. First id=42
+[DEBUG] resolvePath start: currentSym=42 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=42 kind=15
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=70
+[DEBUG] resolvePath start: currentSym=70 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=70 kind=15
+[DEBUG resolvePath] Resolving path starting with 'cmp'
+[DEBUG resolvePath] resolve('cmp') returned 1 syms. First id=27
+[DEBUG] resolvePath start: currentSym=27 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=27 kind=15
+[DEBUG resolvePath] Resolving path starting with 'cmp'
+[DEBUG resolvePath] resolve('cmp') returned 1 syms. First id=27
+[DEBUG] resolvePath start: currentSym=27 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=27 kind=15
+[DEBUG resolvePath] Resolving path starting with 'ops'
+[DEBUG resolvePath] resolve('ops') returned 1 syms. First id=119
+[DEBUG] resolvePath start: currentSym=119 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=119 kind=15
+[DEBUG] resolvePath start: currentSym=120 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=120 kind=15
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'other'
+[DEBUG resolvePath] resolve('other') returned 1 syms. First id=39
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=53
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=56
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=58
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=186
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with '__mellis_panic'
+[DEBUG resolvePath] resolve('__mellis_panic') returned 1 syms. First id=43
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=60
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=187
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'default'
+[DEBUG resolvePath] resolve('default') returned 1 syms. First id=61
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=64
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=65
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=188
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=68
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=69
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=189
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=44
+[DEBUG] resolvePath start: currentSym=44 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=44 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=13 (sym.decl=00000247590862E0, bodyScopeId=13, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=84
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=87
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=89
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=190
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with '__mellis_panic'
+[DEBUG resolvePath] resolve('__mellis_panic') returned 1 syms. First id=71
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=91
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=191
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'default'
+[DEBUG resolvePath] resolve('default') returned 1 syms. First id=92
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=95
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=96
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=192
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=72
+[DEBUG] resolvePath start: currentSym=72 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=72 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=25 (sym.decl=000002475908D0A0, bodyScopeId=25, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'e'
+[DEBUG resolvePath] resolve('e') returned 1 syms. First id=193
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=105
+; ModuleID = '.\lib\core\mod.ms'
+source_filename = ".\\lib\\core\\mod.ms"
+
+declare void @__mellis_panic()
+
+declare void @__mellis_panic.1()
+
+declare void @__mellis_panic.2()
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
+[MLibGen Debug] sym=uint_4 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=uint_8 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=uint_16 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=uint_32 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=uint_64 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=uint_128 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=int_4 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=int_8 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=int_16 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=int_32 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=int_64 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=int_128 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=float_32 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=float_64 vis=1 ext=0 kind=12
+[MLibGen Debug] sym=bool vis=1 ext=0 kind=12
+[MLibGen Debug] sym=char vis=1 ext=0 kind=12
+[MLibGen Debug] sym=str vis=1 ext=0 kind=12
+[MLibGen Debug] sym=void vis=1 ext=0 kind=12
+[MLibGen Debug] sym=marker vis=2 ext=0 kind=15
+[MLibGen Debug] sym=Copy vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=clone vis=2 ext=0 kind=15
+[MLibGen Debug] sym=Clone vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=clone vis=1 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=cmp vis=2 ext=0 kind=15
+[MLibGen Debug] sym=PartialEq vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=eq vis=1 ext=0 kind=4
+[MLibGen Debug] sym='_2 vis=1 ext=0 kind=13
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=other vis=1 ext=0 kind=3
+[MLibGen Debug] sym=ne vis=1 ext=0 kind=4
+[MLibGen Debug] sym='_2 vis=1 ext=0 kind=13
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=other vis=1 ext=0 kind=3
+[MLibGen Debug] sym=Eq vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=option vis=2 ext=0 kind=15
+[MLibGen Debug] sym=__mellis_panic vis=1 ext=1 kind=4
+[MLibGen Debug] sym=Option vis=2 ext=0 kind=6
+[MLibGen Debug] sym=T vis=1 ext=0 kind=13
+[MLibGen Debug] sym=None vis=1 ext=0 kind=7
+[MLibGen Debug] sym=Some vis=1 ext=0 kind=7
+[MLibGen Debug] sym=__field_0 vis=1 ext=0 kind=8
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=12
+[MLibGen Debug] sym=T vis=1 ext=0 kind=13
+[MLibGen Debug] sym=is_some vis=2 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=is_none vis=2 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=unwrap vis=2 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=unwrap_or vis=2 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=default vis=1 ext=0 kind=3
+[MLibGen Debug] sym=map vis=2 ext=0 kind=4
+[MLibGen Debug] sym=U vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=f vis=1 ext=0 kind=3
+[MLibGen Debug] sym=and_then vis=2 ext=0 kind=4
+[MLibGen Debug] sym=U vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=f vis=1 ext=0 kind=3
+[MLibGen Debug] sym=result vis=2 ext=0 kind=15
+[MLibGen Debug] sym=__mellis_panic vis=1 ext=1 kind=4
+[MLibGen Debug] sym=Result vis=2 ext=0 kind=6
+[MLibGen Debug] sym=T vis=1 ext=0 kind=13
+[MLibGen Debug] sym=E vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Ok vis=1 ext=0 kind=7
+[MLibGen Debug] sym=__field_0 vis=1 ext=0 kind=8
+[MLibGen Debug] sym=Err vis=1 ext=0 kind=7
+[MLibGen Debug] sym=__field_0 vis=1 ext=0 kind=8
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=12
+[MLibGen Debug] sym=T vis=1 ext=0 kind=13
+[MLibGen Debug] sym=E vis=1 ext=0 kind=13
+[MLibGen Debug] sym=is_ok vis=2 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=is_err vis=2 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=unwrap vis=2 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=unwrap_or vis=2 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=default vis=1 ext=0 kind=3
+[MLibGen Debug] sym=map vis=2 ext=0 kind=4
+[MLibGen Debug] sym=U vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=f vis=1 ext=0 kind=3
+[MLibGen Debug] sym=slice vis=2 ext=0 kind=15
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=12
+[MLibGen Debug] sym=T vis=1 ext=0 kind=13
+[MLibGen Debug] sym=len vis=2 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=is_empty vis=2 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=iterator vis=2 ext=0 kind=15
+[MLibGen Debug] sym=Iterator vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Item vis=1 ext=0 kind=12
+[MLibGen Debug] sym=next vis=1 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=IntoIterator vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Item vis=1 ext=0 kind=12
+[MLibGen Debug] sym=IntoIter vis=1 ext=0 kind=12
+[MLibGen Debug] sym=into_iter vis=1 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=ops vis=2 ext=0 kind=15
+[MLibGen Debug] sym=drop vis=2 ext=0 kind=15
+[MLibGen Debug] sym=Drop vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=drop vis=1 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=arithmetic vis=2 ext=0 kind=15
+[MLibGen Debug] sym=Add vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Rhs vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Output vis=1 ext=0 kind=12
+[MLibGen Debug] sym=add vis=1 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=rhs vis=1 ext=0 kind=3
+[MLibGen Debug] sym=Sub vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Rhs vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Output vis=1 ext=0 kind=12
+[MLibGen Debug] sym=sub vis=1 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=rhs vis=1 ext=0 kind=3
+[MLibGen Debug] sym=Mul vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Rhs vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Output vis=1 ext=0 kind=12
+[MLibGen Debug] sym=mul vis=1 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=rhs vis=1 ext=0 kind=3
+[MLibGen Debug] sym=Div vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Rhs vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Output vis=1 ext=0 kind=12
+[MLibGen Debug] sym=div vis=1 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=rhs vis=1 ext=0 kind=3
+[MLibGen Debug] sym=Rem vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Rhs vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Output vis=1 ext=0 kind=12
+[MLibGen Debug] sym=rem vis=1 ext=0 kind=4
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=rhs vis=1 ext=0 kind=3
+[MLibGen Debug] sym=index vis=2 ext=0 kind=15
+[MLibGen Debug] sym=Index vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Idx vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Output vis=1 ext=0 kind=12
+[MLibGen Debug] sym=index vis=1 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=index vis=1 ext=0 kind=3
+[MLibGen Debug] sym=IndexMut vis=2 ext=0 kind=9
+[MLibGen Debug] sym=Self vis=1 ext=0 kind=13
+[MLibGen Debug] sym=Idx vis=1 ext=0 kind=13
+[MLibGen Debug] sym=index_mut vis=1 ext=0 kind=4
+[MLibGen Debug] sym='_1 vis=1 ext=0 kind=13
+[MLibGen Debug] sym=self vis=1 ext=0 kind=3
+[MLibGen Debug] sym=index vis=1 ext=0 kind=3
+[MLibGen Debug] sym=prelude vis=2 ext=0 kind=15
+[MLibGen Debug] sym=__mellis_panic vis=2 ext=1 kind=4
+[MLibGen Debug] sym=Option vis=1 ext=0 kind=17
+[MLibGen Debug] sym=Option vis=1 ext=0 kind=17
+[MLibGen Debug] sym=Result vis=1 ext=0 kind=17
+[MLibGen Debug] sym=PartialEq vis=1 ext=0 kind=17
+[MLibGen Debug] sym=Eq vis=1 ext=0 kind=17
+[MLibGen Debug] sym=Drop vis=1 ext=0 kind=17
+[MLibGen Debug] sym=val vis=1 ext=0 kind=0
+[MLibGen Debug] sym=val vis=1 ext=0 kind=0
+[MLibGen Debug] sym=val vis=1 ext=0 kind=0
+[MLibGen Debug] sym=val vis=1 ext=0 kind=0
+[MLibGen Debug] sym=val vis=1 ext=0 kind=0
+[MLibGen Debug] sym=val vis=1 ext=0 kind=0
+[MLibGen Debug] sym=val vis=1 ext=0 kind=0
+[MLibGen Debug] sym=e vis=1 ext=0 kind=0
+[MLibGen Debug] addFunction called for __mellis_panic
+[MLibGen Debug] Writing 1 functions
+[MLibGen Debug] symbolCount=194
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_1
+[LOOP] '_2
+[LOOP] '_2
+[LOOP] Add
+[LOOP POST] Add
+[MLibGen] Found generic symbol: Add start=7 end=92
+[MLibGen] Serializing source:
+export trait Add<Rhs> {
+    type Output;
+    fn add(self: Self, rhs: Rhs) -> Self::Output;
+}
+[LOOP] Clone
+[LOOP POST] Clone
+[MLibGen] Found generic symbol: Clone start=7 end=57
+[MLibGen] Serializing source:
+export trait Clone {
+    fn clone(self: &Self) -> Self;
+}
+[LOOP] Copy
+[LOOP POST] Copy
+[MLibGen] Found generic symbol: Copy start=7 end=20
+[MLibGen] Serializing source:
+export trait Copy {}
+[LOOP] Div
+[LOOP POST] Div
+[MLibGen] Found generic symbol: Div start=289 end=374
+[MLibGen] Serializing source:
+export trait Div<Rhs> {
+    type Output;
+    fn div(self: Self, rhs: Rhs) -> Self::Output;
+}
+[LOOP] Drop
+[LOOP] Drop
+[LOOP POST] Drop
+[MLibGen] Found generic symbol: Drop start=7 end=50
+[MLibGen] Serializing source:
+export trait Drop {
+    fn drop(self: &rw Self);
+}
+[LOOP] E
+[LOOP] E
+[LOOP] Eq
+[LOOP POST] Eq
+[MLibGen] Found generic symbol: Eq start=145 end=156
+[MLibGen] Serializing source:
+export trait Eq {}
+[LOOP] Eq
+[LOOP] Err
+[LOOP POST] Err
+[LOOP] Idx
+[LOOP] Idx
+[LOOP] Index
+[LOOP POST] Index
+[MLibGen] Found generic symbol: Index start=7 end=103
+[MLibGen] Serializing source:
+export trait Index<Idx> {
+    type Output;
+    fn index(self: &Self, index: Idx) -> &Self::Output;
+}
+[LOOP] IndexMut
+[LOOP POST] IndexMut
+[MLibGen] Found generic symbol: IndexMut start=114 end=205
+[MLibGen] Serializing source:
+export trait IndexMut<Idx> {
+    fn index_mut(self: &rw Self, index: Idx) -> &rw Self::Output;
+}
+[LOOP] IntoIter
+[LOOP POST] IntoIter
+[LOOP] IntoIterator
+[LOOP POST] IntoIterator
+[MLibGen] Found generic symbol: IntoIterator start=128 end=248
+[MLibGen] Serializing source:
+export trait IntoIterator {
+    type Item;
+    type IntoIter: Iterator;
+
+    fn into_iter(self: Self) -> Self::IntoIter;
+}
+[LOOP] Item
+[LOOP POST] Item
+[LOOP] Item
+[LOOP POST] Item
+[LOOP] Iterator
+[LOOP POST] Iterator
+[MLibGen] Found generic symbol: Iterator start=30 end=117
+[MLibGen] Serializing source:
+export trait Iterator {
+    type Item;
+    fn next(self: &rw Self) -> Option<Self::Item>;
+}
+[LOOP] Mul
+[LOOP POST] Mul
+[MLibGen] Found generic symbol: Mul start=195 end=280
+[MLibGen] Serializing source:
+export trait Mul<Rhs> {
+    type Output;
+    fn mul(self: Self, rhs: Rhs) -> Self::Output;
+}
+[LOOP] None
+[LOOP POST] None
+[LOOP] Ok
+[LOOP POST] Ok
+[LOOP] Option
+[LOOP POST] Option
+[MLibGen] Found generic symbol: Option start=36 end=80
+[MLibGen] Serializing source:
+export enum Option<T> {
+    None,
+    Some(T),
+}
+[LOOP] Option
+[LOOP] Option
+[LOOP] Output
+[LOOP POST] Output
+[LOOP] Output
+[LOOP POST] Output
+[LOOP] Output
+[LOOP POST] Output
+[LOOP] Output
+[LOOP POST] Output
+[LOOP] Output
+[LOOP POST] Output
+[LOOP] Output
+[LOOP POST] Output
+[LOOP] PartialEq
+[LOOP] PartialEq
+[LOOP POST] PartialEq
+[MLibGen] Found generic symbol: PartialEq start=7 end=137
+[MLibGen] Serializing source:
+export trait PartialEq { fn eq(self: &Self, other: &Self) -> bool; fn ne(self: &Self, other: &Self) -> bool { return !self.eq(other); } }
+[LOOP] Rem
+[LOOP POST] Rem
+[MLibGen] Found generic symbol: Rem start=383 end=468
+[MLibGen] Serializing source:
+export trait Rem<Rhs> {
+    type Output;
+    fn rem(self: Self, rhs: Rhs) -> Self::Output;
+}
+[LOOP] Result
+[LOOP] Result
+[LOOP POST] Result
+[MLibGen] Found generic symbol: Result start=38 end=85
+[MLibGen] Serializing source:
+export enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+[LOOP] Rhs
+[LOOP] Rhs
+[LOOP] Rhs
+[LOOP] Rhs
+[LOOP] Rhs
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Self
+[LOOP] Some
+[LOOP POST] Some
+[LOOP] Sub
+[LOOP POST] Sub
+[MLibGen] Found generic symbol: Sub start=101 end=186
+[MLibGen] Serializing source:
+export trait Sub<Rhs> {
+    type Output;
+    fn sub(self: Self, rhs: Rhs) -> Self::Output;
+}
+[LOOP] T
+[LOOP] T
+[LOOP] T
+[LOOP] T
+[LOOP] T
+[LOOP] U
+[LOOP] U
+[LOOP] U
+[LOOP] __field_0
+[LOOP POST] __field_0
+[LOOP] __field_0
+[LOOP POST] __field_0
+[LOOP] __field_0
+[LOOP POST] __field_0
+[LOOP] __mellis_panic
+[LOOP] __mellis_panic
+[LOOP POST] __mellis_panic
+[FUNC DEBUG] __mellis_panic isExt=1
+[PANIC DEBUG] body=NULL isExternal=1 emptyParams=1
+[MLibGen] Found generic symbol: __mellis_panic start=7 end=27
+[MLibGen] Serializing source:
+extern fn __mellis_panic();
+[LOOP] __mellis_panic
+[LOOP POST] __mellis_panic
+[FUNC DEBUG] __mellis_panic isExt=1
+[PANIC DEBUG] body=NULL isExternal=1 emptyParams=1
+[MLibGen] Found generic symbol: __mellis_panic start=7 end=27
+[MLibGen] Serializing source:
+extern fn __mellis_panic();
+[LOOP] add
+[LOOP POST] add
+[LOOP] and_then
+[LOOP POST] and_then
+[LOOP] arithmetic
+[LOOP POST] arithmetic
+[LOOP] bool
+[LOOP] char
+[LOOP] clone
+[LOOP POST] clone
+[LOOP] clone
+[LOOP] cmp
+[LOOP] default
+[LOOP POST] default
+[LOOP] default
+[LOOP POST] default
+[LOOP] div
+[LOOP POST] div
+[LOOP] drop
+[LOOP POST] drop
+[MLibGen Debug] drop declaredInScope=45 kindValue=8
+[LOOP] drop
+[LOOP POST] drop
+[MLibGen Debug] drop declaredInScope=43 kindValue=1
+[LOOP] e
+[LOOP] eq
+[LOOP POST] eq
+[LOOP] f
+[LOOP POST] f
+[LOOP] f
+[LOOP POST] f
+[LOOP] f
+[LOOP POST] f
+[LOOP] float_32
+[LOOP] float_64
+[LOOP] index
+[LOOP POST] index
+[LOOP] index
+[LOOP POST] index
+[LOOP] index
+[LOOP POST] index
+[LOOP] index
+[LOOP POST] index
+[LOOP] index_mut
+[LOOP POST] index_mut
+[LOOP] int_128
+[LOOP] int_16
+[LOOP] int_32
+[LOOP] int_4
+[LOOP] int_64
+[LOOP] int_8
+[LOOP] into_iter
+[LOOP POST] into_iter
+[LOOP] is_empty
+[LOOP POST] is_empty
+[LOOP] is_err
+[LOOP POST] is_err
+[LOOP] is_none
+[LOOP POST] is_none
+[LOOP] is_ok
+[LOOP POST] is_ok
+[LOOP] is_some
+[LOOP POST] is_some
+[MLibGen Debug] is_some declaredInScope=16 kindValue=9
+[LOOP] iterator
+[LOOP] len
+[LOOP POST] len
+[LOOP] map
+[LOOP POST] map
+[LOOP] map
+[LOOP POST] map
+[LOOP] marker
+[LOOP] mul
+[LOOP POST] mul
+[LOOP] ne
+[LOOP POST] ne
+[LOOP] next
+[LOOP POST] next
+[LOOP] ops
+[LOOP] option
+[LOOP] other
+[LOOP POST] other
+[LOOP] other
+[LOOP POST] other
+[LOOP] prelude
+[LOOP] rem
+[LOOP POST] rem
+[LOOP] result
+[LOOP] rhs
+[LOOP POST] rhs
+[LOOP] rhs
+[LOOP POST] rhs
+[LOOP] rhs
+[LOOP POST] rhs
+[LOOP] rhs
+[LOOP POST] rhs
+[LOOP] rhs
+[LOOP POST] rhs
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] self
+[LOOP POST] self
+[LOOP] slice
+[LOOP] str
+[LOOP] sub
+[LOOP POST] sub
+[LOOP] uint_128
+[LOOP] uint_16
+[LOOP] uint_32
+[LOOP] uint_4
+[LOOP] uint_64
+[LOOP] uint_8
+[LOOP] unwrap
+[LOOP POST] unwrap
+[LOOP] unwrap
+[LOOP POST] unwrap
+[LOOP] unwrap_or
+[LOOP POST] unwrap_or
+[LOOP] unwrap_or
+[LOOP POST] unwrap_or
+[LOOP] val
+[LOOP] val
+[LOOP] val
+[LOOP] val
+[LOOP] val
+[LOOP] val
+[LOOP] val
+[LOOP] void
+[MLibGen] snapshot_.getProgram() = 0000024759074C20
+[MLibGen] Serializing Impl as generic source for Option from fileId=4 start=84 end=1132 sourceSize=1134
+[MLibGen] Extracted source: impl<T> Option<T> {
+    export fn is_some(self: &Self) -> bool {
+        match self {
+            Option::Some(_) -> true,
+            Option::None -> false,
+        }
+    }
+
+    export fn is_none(self: &Self) -> bool {
+        !self.is_some()
+    }
+
+    export fn unwrap(self: Self) -> T {
+        match self {
+            Option::Some(val) -> val,
+            Option::None -> {
+                __mellis_panic()
+            }
+        }
+    }
+
+    export fn unwrap_or(self: Self, default: T) -> T {
+        match self {
+            Option::Some(val) -> val,
+            Option::None -> default,
+        }
+    }
+
+    export fn map<U>(self: Self, f: fn(T) -> U) -> Option<U> {
+        match self {
+            Option::Some(val) -> Option::Some(f(val)),
+            Option::None -> Option::None,
+        }
+    }
+
+    export fn and_then<U>(self: Self, f: fn(T) -> Option<U>) -> Option<U> {
+        match self {
+            Option::Some(val) -> f(val),
+            Option::None -> Option::None,
+        }
+    }
+}
+[MLibGen] Serializing Impl as generic source for Result from fileId=5 start=89 end=937 sourceSize=939
+[MLibGen] Extracted source: impl<T, E> Result<T, E> {
+    export fn is_ok(self: &Self) -> bool {
+        match self {
+            Result::Ok(_) -> true,
+            Result::Err(_) -> false,
+        }
+    }
+
+    export fn is_err(self: &Self) -> bool {
+        !self.is_ok()
+    }
+
+    export fn unwrap(self: Self) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(_) -> {
+                __mellis_panic()
+            }
+        }
+    }
+
+    export fn unwrap_or(self: Self, default: T) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(_) -> default,
+        }
+    }
+
+    export fn map<U>(self: Self, f: fn(T) -> U) -> Result<U, E> {
+        match self {
+            Result::Ok(val) -> Result::Ok(f(val)),
+            Result::Err(e) -> Result::Err(e),
+        }
+    }
+}

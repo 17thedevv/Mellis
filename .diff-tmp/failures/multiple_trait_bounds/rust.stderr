@@ -1,0 +1,78 @@
+Number of diagnostics: 11
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 32, end: 36 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:2:14
+   |
+2  |     fn print(self);
+   |              ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 40, end: 41 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:3:1
+   |
+3  | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 75, end: 79 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:6:13
+   |
+6  |     fn hash(self) -> int_32;
+   |             ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 93, end: 94 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:7:1
+   |
+7  | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 192, end: 196 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:15:14
+   |
+15 |     fn print(self) {
+   |              ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 268, end: 272 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:21:13
+   |
+21 |     fn hash(self) -> int_32 {
+   |             ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 324, end: 325 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:23:5
+   |
+23 |     }
+   |     ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 347, end: 348 }), message: "Expected '(' after function name" }
+error: Expected '(' after function name
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:26:16
+   |
+26 | fn do_something<T: Printable + Hashable>(val: T) {
+   |                ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 402, end: 403 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:28:1
+   |
+28 | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 420, end: 421 }), message: "Expected '(' after function name" }
+error: Expected '(' after function name
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:30:14
+   |
+30 | fn do_another<T: Printable + Hashable>(val: T) {
+   |              ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 482, end: 483 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\multiple_trait_bounds.ms:32:1
+   |
+32 | }
+   | ^
+

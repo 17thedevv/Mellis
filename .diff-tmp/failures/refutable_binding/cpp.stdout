@@ -1,0 +1,57 @@
+[DEBUG] Enum 'Option' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=00000240733C0A60, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'opt'
+[DEBUG resolvePath] resolve('opt') returned 1 syms. First id=24
+[DEBUG] Enum 'Option_int_32' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+Solving constraint: Enum<18<?T1>> == Enum<27>
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[DEBUG MVIRGenerator] EnumDeclNode Option_int_32 symbolId=27
+[DEBUG Semantic] Analyzing function: @test_refutable_local
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\invalid\refutable_binding.ms'
+source_filename = "D:\\fdlang\\tests\\invalid\\refutable_binding.ms"
+
+%Option_int_32 = type { i32, [1 x i32] }
+
+define void @test_refutable_local(%Option_int_32 %"0") {
+entry0:
+  %"1" = alloca %Option_int_32, align 8
+  store %Option_int_32 %"0", ptr %"1", align 4
+  %"2" = load %Option_int_32, ptr %"1", align 4
+  ret void
+}
+
+define i32 @main() {
+entry0:
+  ret void
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

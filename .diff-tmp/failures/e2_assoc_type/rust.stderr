@@ -1,0 +1,78 @@
+Number of diagnostics: 11
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 46, end: 50 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:3:12
+   |
+3  |     fn get(self: &Self) -> Self::Item;
+   |            ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 75, end: 76 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:4:1
+   |
+4  | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 90, end: 91 }), message: "Expected '{'" }
+error: Expected '{'
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:6:11
+   |
+6  | struct Box<T> {
+   |           ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 110, end: 111 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:8:1
+   |
+8  | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 178, end: 182 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:12:12
+   |
+12 |     fn get(self: &Self) -> T {
+   |            ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 229, end: 230 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:14:5
+   |
+14 |     }
+   |     ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 250, end: 251 }), message: "Expected '(' after function name" }
+error: Expected '(' after function name
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:17:14
+   |
+17 | fn test_assoc<T: Container>(c: &T) -> T::Item {
+   |              ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 307, end: 308 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:19:1
+   |
+19 | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 350, end: 352 }), message: "Expected ';' after variable declaration" }
+error: Expected ';' after variable declaration
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:22:16
+   |
+22 |     dec b = Box@<int_32> { val: 42 };
+   |                ^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 396, end: 398 }), message: "Expected ';' after variable declaration" }
+error: Expected ';' after variable declaration
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:23:23
+   |
+23 |     dec x = test_assoc@<Box<int_32>>(&b);
+   |                       ^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 454, end: 455 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\type\e2_assoc_type.ms:26:1
+   |
+26 | }
+   | ^
+

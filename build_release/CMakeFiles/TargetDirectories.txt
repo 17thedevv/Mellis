@@ -1,0 +1,16 @@
+D:/fdlang/build_release/CMakeFiles/RUN_TESTS.dir
+D:/fdlang/build_release/CMakeFiles/INSTALL.dir
+D:/fdlang/build_release/CMakeFiles/ALL_BUILD.dir
+D:/fdlang/build_release/CMakeFiles/ZERO_CHECK.dir
+D:/fdlang/build_release/compiler/CMakeFiles/intrinsics_gen.dir
+D:/fdlang/build_release/compiler/CMakeFiles/omp_gen.dir
+D:/fdlang/build_release/compiler/CMakeFiles/acc_gen.dir
+D:/fdlang/build_release/compiler/CMakeFiles/RISCVTargetParserTableGen.dir
+D:/fdlang/build_release/compiler/CMakeFiles/mellis.dir
+D:/fdlang/build_release/compiler/CMakeFiles/RUN_TESTS.dir
+D:/fdlang/build_release/compiler/CMakeFiles/INSTALL.dir
+D:/fdlang/build_release/compiler/CMakeFiles/ALL_BUILD.dir
+D:/fdlang/build_release/runtime/CMakeFiles/mellis-runtime.dir
+D:/fdlang/build_release/runtime/CMakeFiles/RUN_TESTS.dir
+D:/fdlang/build_release/runtime/CMakeFiles/INSTALL.dir
+D:/fdlang/build_release/runtime/CMakeFiles/ALL_BUILD.dir

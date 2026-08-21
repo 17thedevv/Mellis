@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Compiler · Mellis Docs</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-wrap">
+        <div class="brand">Mellis</div>
+        <nav class="nav" aria-label="Main navigation">
+          <a href="../index.html">Home</a>
+          <a href="../language/index.html">Language</a>
+          <a href="index.html">Compiler</a>
+          <a href="../stdlib/index.html">Standard Library</a>
+          <a href="../examples/index.html">Examples</a>
+          <a href="../design/index.html">Design Decisions</a>
+          <a href="../roadmap/index.html">Roadmap</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Compiler</p>
+            <h1>Architecture and pipeline</h1>
+          </div>
+
+          <div class="grid three-col">
+            <article class="card">
+              <h3>Frontend</h3>
+              <p>
+                Lexer, parser, and AST construction build the program representation before
+                semantic checks begin.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Middle-end</h3>
+              <p>
+                Type checking, pattern analysis, borrow rules, trait solving, and MVIR
+                lowering are all part of the semantic pipeline.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Backend</h3>
+              <p>
+                LLVM is the native backend; the compiler emits IR and then delegates final
+                assembly and linking to the toolchain.
+              </p>
+            </article>
+          </div>
+
+          <div class="card strip" style="margin-top: 24px;">
+            <h3>Pipeline</h3>
+            <p>Source → Lexer → Parser → AST → Semantic Analysis → MVIR → LLVM IR → Machine Code</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>Mellis Docs</span>
+        <span>Compiler</span>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+Test: D:\fdlang\tests\scratch\test_mono_trick.ms
+
+Compiler:
+  C++  exit=65
+  Rust exit=0
+
+Classification:
+  CompilePhase

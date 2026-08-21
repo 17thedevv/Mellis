@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Language · Mellis Docs</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-wrap">
+        <div class="brand">Mellis</div>
+        <nav class="nav" aria-label="Main navigation">
+          <a href="../index.html">Home</a>
+          <a href="index.html">Language</a>
+          <a href="../compiler/index.html">Compiler</a>
+          <a href="../stdlib/index.html">Standard Library</a>
+          <a href="../examples/index.html">Examples</a>
+          <a href="../design/index.html">Design Decisions</a>
+          <a href="../roadmap/index.html">Roadmap</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Language</p>
+            <h1>Overview</h1>
+          </div>
+
+          <div class="card strip">
+            <p>
+              Mellis is a systems-oriented language designed around explicit ownership,
+              expression-oriented syntax, strong static typing, and compiler-driven code
+              generation. The language is intended to be fast, predictable, and readable
+              while still retaining the low-level control needed for systems work.
+            </p>
+          </div>
+
+          <div class="grid two-col">
+            <article class="card">
+              <h3>Syntax</h3>
+              <p>
+                The syntax favors compact declarations, block expressions, and direct
+                control flow. Function bodies can express values implicitly and keep the
+                reading model close to the compiler’s internal AST.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Types</h3>
+              <p>
+                Mellis includes primitives, arrays, tuples, structs, enums, closures, and
+                generic abstractions. Type inference is used where it helps readability,
+                while explicit annotations remain available when needed.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Ownership &amp; Borrowing</h3>
+              <p>
+                Ownership keeps the lifetime story explicit. Borrowing allows temporary,
+                non-owning access with compiler checks that preserve memory safety without
+                introducing a heavy runtime model.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Generics &amp; Traits</h3>
+              <p>
+                Generic programming is powered by type parameters and trait constraints,
+                allowing code reuse without inheritance-heavy object modeling.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Closures</h3>
+              <p>
+                Closures capture environment state and behave like first-class values,
+                enabling functional style patterns while preserving static analysis.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Pattern Matching</h3>
+              <p>
+                Pattern matching is a core form of control flow. It is used for enum
+                handling, tuple destructuring, and structured value analysis with exhaustive
+                checks.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>Mellis Docs</span>
+        <span>Language</span>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+﻿<<<<
+    export fn is_ok(self: &Self) -> bool {
+        match self {
+            Result::Ok(v) -> true,
+            Result::Err(e) -> false
+        }
+    }
+
+    export fn is_err(self: &Self) -> bool {
+        return !self.is_ok();
+    }
+====
+    export fn is_ok(self: &Self) -> bool {
+        match *self {
+            Result::Ok(v) -> true,
+            Result::Err(e) -> false
+        }
+    }
+
+    export fn is_err(self: &Self) -> bool {
+        return !self.is_ok();
+    }
+>>>>

@@ -1,0 +1,552 @@
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] Resolver::visit(StructDeclNode) name='Point' symbolId=4294967295 this=000001A3A5827CE0 line=9
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: print
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=19
+[DEBUG] Resolving function: hash
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=23
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Point': i=1, currentSym=26
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Printable': i=1, currentSym=18
+[DEBUG] Resolving function: print
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=29
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Point': i=1, currentSym=26
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Hashable': i=1, currentSym=22
+[DEBUG] Resolving function: hash
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=32
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: do_something
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Printable': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Hashable': i=1, currentSym=22
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=36
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving function: do_another
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Printable': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Hashable': i=1, currentSym=22
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=39
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: do_something
+[DEBUG] Finished resolvePath for do_something
+[DEBUG] Resolving identifier: p
+[DEBUG] Finished resolvePath for p
+[DEBUG] Resolving identifier: do_another
+[DEBUG] Finished resolvePath for do_another
+[DEBUG] Resolving identifier: p2
+[DEBUG] Finished resolvePath for p2
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 8 items
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='print' symbolId=20
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=19
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG TraitDeclNode] Method 'print' symbolId=20
+[DEBUG TraitDeclNode] typeTable[20] = 3
+[DEBUG TraitDeclNode] Registered trait method 'print'
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='hash' symbolId=24
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=23
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG TraitDeclNode] Method 'hash' symbolId=24
+[DEBUG TraitDeclNode] typeTable[24] = 3
+[DEBUG TraitDeclNode] Registered trait method 'hash'
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='Point' symbolId=26 bodyScopeId=5
+[DEBUG]   field='x' bodyScopeId=5 optId.empty()=0 symbolId=27
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG]     evaluated type: int_32
+[DEBUG]   field='y' bodyScopeId=5 optId.empty()=0 symbolId=28
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG]     evaluated type: int_32
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Point' symbolId=26
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=29 selfType=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Printable' symbolId=18
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='print' symbolId=30
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=29
+[DEBUG self] Evaluated param->type for self -> 1
+[DEBUG TraitSolver] addClause: selfType=Struct<26> traitId=18
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Point' symbolId=26
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=32 selfType=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Hashable' symbolId=22
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='hash' symbolId=33
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=32
+[DEBUG self] Evaluated param->type for self -> 1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG TraitSolver] addClause: selfType=Struct<26> traitId=22
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='do_something' symbolId=35
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=36
+[DEBUG self] Evaluated param->type for val -> 11
+[DEBUG] Processing generic param: T with 2 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Printable' symbolId=18
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (36) traitId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Hashable' symbolId=22
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (36) traitId=22
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='do_another' symbolId=38
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=39
+[DEBUG self] Evaluated param->type for val -> 11
+[DEBUG] Processing generic param: T with 2 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Printable' symbolId=18
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (39) traitId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Hashable' symbolId=22
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (39) traitId=22
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=41
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=self tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A585F730 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=self tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A585F730 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=37 name=val tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A584BE40 kind=11
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=40 name=val tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A584B580 kind=11
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=42 expectedType=000001A3A585B4D0
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=Point
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=43 expectedType=000001A3A585F730
+[DEBUG] StructInitExpr sym kind=5 name=Point
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=44 expectedType=000001A3A585F730
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=35 name=do_something tableSize=45
+[DEBUG] Running TypePrePass on generic function: do_something
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='do_something' symbolId=35
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=36
+[DEBUG self] Evaluated param->type for val -> 11
+[DEBUG] Processing generic param: T with 2 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Printable' symbolId=18
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (36) traitId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Hashable' symbolId=22
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (36) traitId=22
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A585C7C0 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG substitute] GenericParam id=36 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=43 name=p tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A585F730 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG CallExpr] fnDecl name: 'do_something' symbolId: 35
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(val: T (36)) -> void
+[DEBUG CallExpr] before substitute: fn(val: T (36)) -> void
+[DEBUG substitute] GenericParam id=36 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(val: ?T7) -> void
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=38 name=do_another tableSize=45
+[DEBUG] Running TypePrePass on generic function: do_another
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='do_another' symbolId=38
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=39
+[DEBUG self] Evaluated param->type for val -> 11
+[DEBUG] Processing generic param: T with 2 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Printable' symbolId=18
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (39) traitId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Hashable' symbolId=22
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (39) traitId=22
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A585C600 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG substitute] GenericParam id=39 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=44 name=p2 tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A585F730 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG CallExpr] fnDecl name: 'do_another' symbolId: 38
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(val: T (39)) -> void
+[DEBUG CallExpr] before substitute: fn(val: T (39)) -> void
+[DEBUG substitute] GenericParam id=39 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(val: ?T10) -> void
+[DEBUG] Starting UnificationEngine
+[DEBUG Field] Found StructType symbol=26 name=Point
+[DEBUG Field] Checking struct field: x
+[DEBUG Field] Solved field constraint!
+[DEBUG Field] Checking struct field: y
+[DEBUG Field] Found StructType symbol=26 name=Point
+[DEBUG Field] Checking struct field: x
+[DEBUG Field] Checking struct field: y
+[DEBUG Field] Solved field constraint!
+[DEBUG MethodResolver] Probing method 'print' for receiverType: T (36)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (36) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(T (36)) -> ?T3 with mInfo.type: fn(self: T (36)) -> void
+[DEBUG MethodResolver] Probing method 'hash' for receiverType: T (39)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (39) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=23 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(T (39)) -> ?T4 with mInfo.type: fn(self: T (39)) -> int_32
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG MethodResolver] Probing method 'print' for receiverType: T (36)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (36) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG MethodResolver] Probing method 'hash' for receiverType: T (39)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (39) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=23 name='Self' found=1
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 1
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 2 bounds
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=Struct<26> traitId=18
+[DEBUG implementsTrait] type=Struct<26> traitId=18
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG implementsTrait] solve result=0
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=Struct<26> traitId=22
+[DEBUG implementsTrait] type=Struct<26> traitId=22
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG implementsTrait] solve result=0
+[DEBUG] Setting type substitution for 'T' to a concrete type.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: do_something_Point
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='do_something_Point' symbolId=45
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Point' symbolId=26
+[DEBUG self] Evaluated param->type for val -> 1
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=46 name=val tableSize=47
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A585F730 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG MethodResolver] Probing method 'print' for receiverType: Struct<26>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Struct<26> traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG MethodCall] unifying expectedFnType: fn(Struct<26>) -> ?T11 with mInfo.type: fn(self: Struct<26>) -> void
+[DEBUG] Starting TypeResolver
+[DEBUG MethodResolver] Probing method 'print' for receiverType: Struct<26>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Struct<26> traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG CallExpr] gFn->genericParams.size() = 1
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 2 bounds
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=Struct<26> traitId=18
+[DEBUG implementsTrait] type=Struct<26> traitId=18
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG implementsTrait] solve result=0
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=Struct<26> traitId=22
+[DEBUG implementsTrait] type=Struct<26> traitId=22
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG implementsTrait] solve result=0
+[DEBUG] Setting type substitution for 'T' to a concrete type.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: do_another_Point
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='do_another_Point' symbolId=47
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Point' symbolId=26
+[DEBUG self] Evaluated param->type for val -> 1
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=48 name=val tableSize=50
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001A3A585F730 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG MethodResolver] Probing method 'hash' for receiverType: Struct<26>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Struct<26> traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG MethodCall] unifying expectedFnType: fn(Struct<26>) -> ?T12 with mInfo.type: fn(self: Struct<26>) -> int_32
+[DEBUG] Starting TypeResolver
+[DEBUG MethodResolver] Probing method 'hash' for receiverType: Struct<26>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Struct<26> traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (36) traitId=22
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (39) traitId=22
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::TraitDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::TraitDeclNode
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::StructDeclNode
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::ImplDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 1 methods, genericParams: 0
+[DEBUG MVIRGenerator] calling method->accept for print
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG MVIRGenerator] done item[3]
+[DEBUG MVIRGenerator] visiting item[4] typeid=class fl::ImplDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 1 methods, genericParams: 0
+[DEBUG MVIRGenerator] calling method->accept for hash
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @hash_33
+[DEBUG] MVIRGenerator: returning operand %4
+[DEBUG MVIRGenerator] done item[4]
+[DEBUG MVIRGenerator] visiting item[5] typeid=class fl::FunctionDeclNode
+[DEBUG MVIRGenerator] done item[5]
+[DEBUG MVIRGenerator] visiting item[6] typeid=class fl::FunctionDeclNode
+[DEBUG MVIRGenerator] done item[6]
+[DEBUG MVIRGenerator] visiting item[7] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 1
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] VarDeclNode type kind: 1
+[DEBUG pushLocalInst] Inserting LocalInst for %3 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %4 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @main
+[DEBUG] MVIRGenerator: returning operand 0
+[DEBUG MVIRGenerator] done item[7]
+[DEBUG MVIRGenerator] visiting item[8] typeid=class fl::FunctionDeclNode
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG MVIRGenerator] done item[8]
+[DEBUG MVIRGenerator] visiting item[9] typeid=class fl::FunctionDeclNode
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG MVIRGenerator] done item[9]
+[PHASE] MVIRGenerator done
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %4 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %3 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %4 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %3 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %4 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %3 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in CallInst!
+[DEBUG DropElaborator] %1 is MOVED! Removing drop.
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in CallInst!
+[DEBUG DropElaborator] %1 is MOVED! Removing drop.

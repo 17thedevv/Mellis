@@ -1,6 +1,6 @@
-# Mellis Compiler (FDLang)
+# Mellis Compiler - Version 1.0
 
-Mellis là một trình biên dịch (compiler) dành cho ngôn ngữ **FDLang**, được thiết kế hướng tới ngôn ngữ lập trình hệ thống (System Programming Language) hiện đại, hiệu năng cao, và an toàn. Trình biên dịch sử dụng kiến trúc phân tầng chuyên nghiệp, tạo ra mã trung gian (MVIR) riêng biệt và biên dịch ra mã máy (Native Machine Code) thông qua backend **LLVM**.
+Mellis là một trình biên dịch (compiler) dành cho ngôn ngữ lập trình **Mellis**, được thiết kế hướng tới ngôn ngữ lập trình hệ thống (System Programming Language) hiện đại, hiệu năng cao, và an toàn. Trình biên dịch sử dụng kiến trúc phân tầng chuyên nghiệp, tạo ra mã trung gian (MVIR) riêng biệt và biên dịch ra mã máy (Native Machine Code) thông qua backend **LLVM**.
 
 ## ✨ Tính năng nổi bật
 
@@ -20,6 +20,12 @@ Mellis là một trình biên dịch (compiler) dành cho ngôn ngữ **FDLang**
 - `src/BackEnd/`: Dịch MVIR sang LLVM IR và gọi Linker để tạo file thực thi (`.exe`).
 - `src/MLib/`: Hệ thống nạp (Loader) và sinh (Generator) metadata thư viện.
 - `src/Support/`: Các tiện ích dùng chung (Diagnostic Engine, OSUtils, v.v.).
+
+## 📖 Tài liệu Tham khảo (Documentation)
+
+- [Language Reference](file:///d:/fdlang/docs/LanguageReference.md): Khái quát tất cả tính năng của ngôn ngữ Mellis (Primitive types, Control Flow, Structs, Enums & Pattern Matching, Traits & Generics, Borrowing, Closures, Macros...).
+- [Architecture](file:///d:/fdlang/docs/architecture.md): Cấu trúc kiến trúc nội bộ của Mellis Compiler.
+- [MVIR](file:///d:/fdlang/docs/MVIR.md): Đặc tả mã trung gian Mellis Virtual Intermediate Representation.
 
 ## 🛠️ Hướng dẫn Build
 

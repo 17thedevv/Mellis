@@ -1,0 +1,71 @@
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'base'
+[DEBUG resolvePath] resolve('base') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'adder'
+[DEBUG resolvePath] resolve('adder') returned 1 syms. First id=20
+Solving constraint: fn(int_32) -> ?T1 == [closure@22]
+Solving constraint: int_32 == ?T1
+; ModuleID = 'D:\fdlang\tests\borrow\test_closure_copy_capture.ms'
+source_filename = "D:\\fdlang\\tests\\borrow\\test_closure_copy_capture.ms"
+
+define i32 @main() {
+entry0:
+  %"0" = alloca i32, align 4
+  %"1" = alloca { ptr, i32 }, align 8
+  %"2" = alloca { ptr, i32 }, align 8
+  %"6" = alloca { ptr, i32 }, align 8
+  store i32 10, ptr %"0", align 4
+  %fld = getelementptr inbounds { ptr, i32 }, ptr %"2", i32 0, i32 0
+  store ptr @__LambdaFunc_1838015383872, ptr %fld, align 8
+  %"3" = load i32, ptr %"0", align 4
+  %fld1 = getelementptr inbounds { ptr, i32 }, ptr %"2", i32 0, i32 1
+  store i32 %"3", ptr %fld1, align 4
+  %"4" = load { ptr, i32 }, ptr %"2", align 8
+  store { ptr, i32 } %"4", ptr %"1", align 8
+  %"5" = load { ptr, i32 }, ptr %"1", align 8
+  store { ptr, i32 } %"5", ptr %"6", align 8
+  %fld2 = getelementptr inbounds { ptr, i32 }, ptr %"6", i32 0, i32 0
+  %"7" = load ptr, ptr %fld2, align 8
+  %"8" = call i32 %"7"(ptr %"6", i32 5)
+  ret i32 %"8"
+}
+
+define i32 @__LambdaFunc_1838015383872(ptr %"0", i32 %"1") {
+entry0:
+  %"2" = alloca ptr, align 8
+  %"3" = alloca i32, align 4
+  %"5" = alloca i32, align 4
+  store ptr %"0", ptr %"2", align 8
+  %fld = getelementptr inbounds { ptr, i32 }, ptr %"0", i32 0, i32 1
+  %"4" = load i32, ptr %fld, align 4
+  store i32 %"4", ptr %"3", align 4
+  store i32 %"1", ptr %"5", align 4
+  %"6" = load i32, ptr %"5", align 4
+  %"7" = load i32, ptr %"3", align 4
+  %"8" = add i32 %"6", %"7"
+  ret i32 %"8"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+[DEBUG Semantic] Analyzing function: @main
+[DEBUG Semantic] Analyzing function: @__LambdaFunc_1838015383872
+
+=== FORCE DUMP LLVM IR ===

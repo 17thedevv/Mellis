@@ -1,0 +1,15 @@
+Number of diagnostics: 2
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 10, end: 11 }), message: "Expected '{'" }
+error: Expected '{'
+  --> D:\fdlang\tests\generics\e6_macro_generic.ms:1:11
+   |
+1  | struct Box<T> {
+   |           ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 32, end: 33 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\e6_macro_generic.ms:3:1
+   |
+3  | }
+   | ^
+

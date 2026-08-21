@@ -1,0 +1,72 @@
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=28
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=30
+[DEBUG resolvePath] Resolving path starting with 'identity'
+[DEBUG resolvePath] resolve('identity') returned 1 syms. First id=25
+[DEBUG resolvePath] Resolving path starting with 'r'
+[DEBUG resolvePath] resolve('r') returned 1 syms. First id=31
+Solving constraint: &' T (27) == &' T (27)
+Solving constraint: ?T0 == &' int_32
+Solving constraint: &' int_32 == ?T0
+Solving constraint: fn(&' int_32) -> &' int_32 == fn(x: &' int_32) -> &' int_32
+Solving constraint: int_32 == int_32
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=34
+Solving constraint: &' int_32 == &' int_32
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+; ModuleID = 'D:\fdlang\tests\generics\e1_generic_lifetime.ms'
+source_filename = "D:\\fdlang\\tests\\generics\\e1_generic_lifetime.ms"
+
+define void @display_23(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  store ptr %"0", ptr %"1", align 8
+  ret void
+}
+
+define i32 @main() {
+entry0:
+  %"0" = alloca i32, align 4
+  %"1" = alloca ptr, align 8
+  %"3" = alloca ptr, align 8
+  store i32 42, ptr %"0", align 4
+  store ptr %"0", ptr %"1", align 8
+  %"4" = load ptr, ptr %"1", align 8
+  %"5" = call ptr @identity_unmangled_int_32(ptr %"4")
+  store ptr %"5", ptr %"3", align 8
+  ret i32 0
+}
+
+define ptr @identity_unmangled_int_32(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  store ptr %"0", ptr %"1", align 8
+  %"2" = load ptr, ptr %"1", align 8
+  ret ptr %"2"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+[DEBUG Semantic] Analyzing function: @display_23
+[DEBUG Semantic] Analyzing function: @main
+[DEBUG Semantic] Analyzing function: @identity_unmangled_int_32
+
+=== FORCE DUMP LLVM IR ===

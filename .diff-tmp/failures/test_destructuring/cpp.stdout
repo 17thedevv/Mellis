@@ -1,0 +1,107 @@
+[DEBUG resolvePath] Resolving path starting with 'Point'
+[DEBUG resolvePath] resolve('Point') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'Point'
+[DEBUG resolvePath] resolve('Point') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'p'
+[DEBUG resolvePath] resolve('p') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 't'
+[DEBUG resolvePath] resolve('t') returned 1 syms. First id=27
+[DEBUG resolvePath] Resolving path starting with 'test_struct_destructuring'
+[DEBUG resolvePath] resolve('test_struct_destructuring') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'test_tuple_destructuring'
+[DEBUG resolvePath] resolve('test_tuple_destructuring') returned 1 syms. First id=22
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: Struct<18> == Struct<18>
+Solving constraint: (?T0, ?T1) == (int_32, int_32)
+Solving constraint: fn() -> void == fn() -> void
+Solving constraint: fn() -> void == fn() -> void
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[DEBUG Semantic] Analyzing function: @test_struct_destructuring
+[DEBUG Semantic] Analyzing function: @test_tuple_destructuring
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\valid\test_destructuring.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\test_destructuring.ms"
+
+%Point = type { i32, i32 }
+
+define void @test_struct_destructuring() {
+entry0:
+  %"0" = alloca %Point, align 8
+  %"1" = alloca %Point, align 8
+  %"4" = alloca %Point, align 8
+  %"5" = alloca i32, align 4
+  %"6" = alloca i32, align 4
+  %"7" = alloca i32, align 4
+  %"8" = alloca i32, align 4
+  %fld = getelementptr inbounds %Point, ptr %"1", i32 0, i32 0
+  store i32 10, ptr %fld, align 4
+  %fld1 = getelementptr inbounds %Point, ptr %"1", i32 0, i32 1
+  store i32 20, ptr %fld1, align 4
+  %"2" = load %Point, ptr %"1", align 4
+  store %Point %"2", ptr %"0", align 4
+  %"3" = load %Point, ptr %"0", align 4
+  store %Point %"3", ptr %"4", align 4
+  %fld2 = getelementptr inbounds %Point, ptr %"4", i32 0, i32 0
+  %"53" = load i32, ptr %fld2, align 4
+  store i32 %"53", ptr %"6", align 4
+  %fld4 = getelementptr inbounds %Point, ptr %"4", i32 0, i32 1
+  %"75" = load i32, ptr %fld4, align 4
+  store i32 %"75", ptr %"8", align 4
+  ret void
+}
+
+define void @test_tuple_destructuring() {
+entry0:
+  %"0" = alloca { i32, i32 }, align 8
+  %"1" = alloca { i32, i32 }, align 8
+  %"4" = alloca { i32, i32 }, align 8
+  %"5" = alloca i32, align 4
+  %"6" = alloca i32, align 4
+  %"7" = alloca i32, align 4
+  %"8" = alloca i32, align 4
+  %fld = getelementptr inbounds { i32, i32 }, ptr %"1", i32 0, i32 0
+  store i32 10, ptr %fld, align 4
+  %fld1 = getelementptr inbounds { i32, i32 }, ptr %"1", i32 0, i32 1
+  store i32 20, ptr %fld1, align 4
+  %"2" = load { i32, i32 }, ptr %"1", align 4
+  store { i32, i32 } %"2", ptr %"0", align 4
+  %"3" = load { i32, i32 }, ptr %"0", align 4
+  store { i32, i32 } %"3", ptr %"4", align 4
+  %tidx = getelementptr inbounds { i32, i32 }, ptr %"4", i32 0, i32 0
+  %"52" = load i32, ptr %tidx, align 4
+  store i32 %"52", ptr %"6", align 4
+  %tidx3 = getelementptr inbounds { i32, i32 }, ptr %"4", i32 0, i32 1
+  %"74" = load i32, ptr %tidx3, align 4
+  store i32 %"74", ptr %"8", align 4
+  ret void
+}
+
+define void @main() {
+entry0:
+  call void @test_struct_destructuring()
+  call void @test_tuple_destructuring()
+  ret void
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

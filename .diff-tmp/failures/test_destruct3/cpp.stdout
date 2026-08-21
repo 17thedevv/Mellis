@@ -1,0 +1,60 @@
+[DEBUG resolvePath] Resolving path starting with 'Point'
+[DEBUG resolvePath] resolve('Point') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'make_point'
+[DEBUG resolvePath] resolve('make_point') returned 1 syms. First id=22
+Solving constraint: str == str
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: Struct<18> == Struct<18>
+Solving constraint: fn() -> Struct<18> == fn() -> Struct<18>
+Solving constraint: int_32 == int_32
+[DEBUG Semantic] Analyzing function: @make_point
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\scratch\test_destruct3.ms'
+source_filename = "D:\\fdlang\\tests\\scratch\\test_destruct3.ms"
+
+%Point = type { { ptr, i64 }, i32, i32 }
+
+@str_1 = private constant [6 x i8] c"Hello\00"
+
+define %Point @make_point() {
+entry0:
+  %"0" = alloca %Point, align 8
+  %fld = getelementptr inbounds %Point, ptr %"0", i32 0, i32 0
+  store ptr @str_1, ptr %fld, align 8
+  %fld1 = getelementptr inbounds %Point, ptr %"0", i32 0, i32 1
+  store i32 1, ptr %fld1, align 4
+  %fld2 = getelementptr inbounds %Point, ptr %"0", i32 0, i32 2
+  store i32 2, ptr %fld2, align 4
+  %"1" = load %Point, ptr %"0", align 8
+  ret %Point %"1"
+}
+
+define i32 @main() {
+entry0:
+  %"0" = alloca %Point, align 8
+  %"1" = call %Point @make_point()
+  store %Point %"1", ptr %"0", align 8
+  ret i32 0
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

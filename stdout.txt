@@ -1,0 +1,12 @@
+Solving constraint: int_32 == ?T0
+Solving constraint: int_32 == ?T1
+Solving constraint: int_32 == ?T2
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: ?T3 == &' Struct<23>
+Solving constraint: &' dyn Trait<18> + ' == ?T3
+Solving constraint: ?T4 == &' Struct<25>
+Solving constraint: &' dyn Trait<18> + ' == ?T4
+Solving constraint: fn(&' dyn Trait<18> + ') -> ?T6 == fn(g: &' dyn Trait<18> + ') -> int_32
+Solving constraint: fn(&' dyn Trait<18> + ') -> ?T9 == fn(g: &' dyn Trait<18> + ') -> int_32
+Solving constraint: int_32 == ?T11

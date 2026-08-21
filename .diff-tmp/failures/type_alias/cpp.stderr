@@ -1,0 +1,58 @@
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'MyInt': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'MyInt': i=1, currentSym=18
+[DEBUG] Resolving identifier: a
+[DEBUG] Finished resolvePath for a
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 2 items
+[DEBUG] item kind: class fl::TypeAliasDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'MyInt' symbolId=18
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TypeAliasDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'MyInt' symbolId=18
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=20 expectedType=00000251AE02F9E0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=20 name=a tableSize=21
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000251AE02F9E0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TypeAliasDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::TypeAliasDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @main
+[DEBUG] MVIRGenerator: returning operand %1
+[DEBUG MVIRGenerator] done item[1]
+[PHASE] MVIRGenerator done

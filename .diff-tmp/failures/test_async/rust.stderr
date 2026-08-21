@@ -1,0 +1,4 @@
+Number of diagnostics: 1
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: None, message: "Backend Error: Compiler internal invariant violated: Error type passed to backend" }
+error: Backend Error: Compiler internal invariant violated: Error type passed to backend
+

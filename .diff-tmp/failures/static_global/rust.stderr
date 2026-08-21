@@ -1,0 +1,4 @@
+
+thread 'main' (16472) panicked at crates\mellis-mlib\src\writer.rs:71:26:
+Store ptr must be a Value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

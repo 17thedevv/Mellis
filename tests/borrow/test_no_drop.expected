@@ -1,0 +1,381 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'printf'
+[DEBUG resolvePath] resolve('printf') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'c'
+[DEBUG resolvePath] resolve('c') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'printf'
+[DEBUG resolvePath] resolve('printf') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=22
+[DEBUG resolvePath] Resolving path starting with 'printf'
+[DEBUG resolvePath] resolve('printf') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'c'
+[DEBUG resolvePath] resolve('c') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'printf'
+[DEBUG resolvePath] resolve('printf') returned 1 syms. First id=18
+Solving constraint: fn(str) -> int_32 == fn(fmt: str, ...) -> int_32
+Solving constraint: fn(str, int_32) -> int_32 == fn(fmt: str, ...) -> int_32
+Solving constraint: ?T1 == [closure@23]
+Solving constraint: fn(str) -> int_32 == fn(fmt: str, ...) -> int_32
+Solving constraint: fn() -> ?T4 == ?T1
+Solving constraint: fn(str) -> int_32 == fn(fmt: str, ...) -> int_32
+Solving constraint: int_32 == int_32
+[DEBUG Semantic] Analyzing function: @main
+[DEBUG Semantic] Analyzing function: @__LambdaFunc_2581932491776
+; ModuleID = 'D:\fdlang\tests\borrow\test_no_drop.ms'
+source_filename = "D:\\fdlang\\tests\\borrow\\test_no_drop.ms"
+
+@str_1 = private constant [21 x i8] c"Before closure call\0A\00"
+@str_2 = private constant [20 x i8] c"Inside closure: %d\0A\00"
+@str_3 = private constant [12 x i8] c"Before c()\0A\00"
+@str_4 = private constant [11 x i8] c"After c()\0A\00"
+
+declare i32 @printf({ ptr, i64 }, ...)
+
+declare i32 @printf.1({ ptr, i64 }, ...)
+
+define i32 @main() {
+entry0:
+  %"1" = alloca ptr, align 8
+  %"2" = alloca i32, align 4
+  %"3" = alloca ptr, align 8
+  %"8" = alloca ptr, align 8
+  %"0" = call i32 ({ ptr, i64 }, ...) @printf(ptr @str_1)
+  store i32 42, ptr %"2", align 4
+  %"3_alloc" = call ptr @__mellis_alloc(i64 16, i64 8)
+  store ptr %"3_alloc", ptr %"3", align 8
+  %deref = load ptr, ptr %"3", align 8
+  %fld = getelementptr inbounds { ptr, i32 }, ptr %deref, i32 0, i32 0
+  store ptr @__LambdaFunc_2581932491776, ptr %fld, align 8
+  %"4" = load i32, ptr %"2", align 4
+  %deref1 = load ptr, ptr %"3", align 8
+  %fld2 = getelementptr inbounds { ptr, i32 }, ptr %deref1, i32 0, i32 1
+  store i32 %"4", ptr %fld2, align 4
+  %"5" = load ptr, ptr %"3", align 8
+  store ptr %"5", ptr %"1", align 8
+  %"6" = call i32 ({ ptr, i64 }, ...) @printf(ptr @str_3)
+  %"7" = load ptr, ptr %"1", align 8
+  store ptr %"7", ptr %"8", align 8
+  %deref3 = load ptr, ptr %"8", align 8
+  %fld4 = getelementptr inbounds { ptr, i32 }, ptr %deref3, i32 0, i32 0
+  %"9" = load ptr, ptr %fld4, align 8
+  %"10" = load ptr, ptr %"8", align 8
+  call void %"9"(ptr %"10")
+  %"12" = call i32 ({ ptr, i64 }, ...) @printf(ptr @str_4)
+  ret i32 0
+}
+
+define void @__LambdaFunc_2581932491776(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  %"2" = alloca i32, align 4
+  store ptr %"0", ptr %"1", align 8
+  %fld = getelementptr inbounds { ptr, i32 }, ptr %"0", i32 0, i32 1
+  %"3" = load i32, ptr %fld, align 4
+  store i32 %"3", ptr %"2", align 4
+  %"4" = load i32, ptr %"2", align 4
+  %"5" = call i32 ({ ptr, i64 }, ...) @printf(ptr @str_2, i32 %"4")
+  %heap_clos.drop.load = load ptr, ptr %"1", align 8
+  %heap_free.load = load ptr, ptr %"1", align 8
+  call void @__mellis_dealloc(ptr %heap_free.load, i64 16, i64 8)
+  ret void
+}
+
+declare ptr @__mellis_alloc(i64, i64)
+
+declare void @__mellis_dealloc(ptr, i64, i64)
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='printf' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='fmt' kind=3 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: printf
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: printf
+[DEBUG] Finished resolvePath for printf
+[DEBUG SymbolTable] declareSymbol id=21 name='c' kind=0 scope=3
+[DEBUG SymbolTable] declareSymbol id=22 name='x' kind=0 scope=4
+[DEBUG] Resolving identifier: c
+[DEBUG] Finished resolvePath for c
+[DEBUG] Resolver: resolvePath for 'c' returned 1 ids.
+[DEBUG] Resolver: id=21
+[DEBUG] Resolver: finalIds size for 'c' is 1
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'void': i=1, currentSym=17
+[DEBUG] Resolving identifier: printf
+[DEBUG] Finished resolvePath for printf
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving identifier: printf
+[DEBUG] Finished resolvePath for printf
+[DEBUG] Resolving identifier: c
+[DEBUG] Finished resolvePath for c
+[DEBUG] Resolver: resolvePath for 'c' returned 1 ids.
+[DEBUG] Resolver: id=21
+[DEBUG] Resolver: finalIds size for 'c' is 1
+[DEBUG] Resolving identifier: printf
+[DEBUG] Finished resolvePath for printf
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 2 items
+[DEBUG] item kind: class fl::ExternDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='printf' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG self] Evaluated param->type for fmt -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=20
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ExternDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=printf tableSize=23
+[MLibCache] getType(18) cache MISS!
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000259272B7300 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[MLibCache] getType(18) cache MISS!
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=21 expectedType=000002592727B680
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=22 expectedType=000002592727B320
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=21 name=c tableSize=23
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002592727B680 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'void' symbolId=17
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=printf tableSize=23
+[MLibCache] getType(18) cache MISS!
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000259272B7300 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=22 name=x tableSize=23
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002592727B320 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[MLibCache] getType(18) cache MISS!
+[DEBUG SymbolTable] declareSymbol id=23 name='__Closure_2581932491776' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=24 name='__LambdaFunc_2581932491776' kind=4 scope=0
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=printf tableSize=23
+[MLibCache] getType(18) cache MISS!
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000259272B7300 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[MLibCache] getType(18) cache MISS!
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=21 name=c tableSize=23
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002592727B680 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=printf tableSize=23
+[MLibCache] getType(18) cache MISS!
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000259272B7300 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[MLibCache] getType(18) cache MISS!
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ExternDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::ExternDeclNode
+[MLibCache] getType(18) cache MISS!
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::FunctionDeclNode
+[MLibCache] getType(18) cache MISS!
+[DEBUG] VarDeclNode type kind: 17
+[DEBUG] VarDeclNode is Heap!
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %2 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %2 into entry block entry0
+[DEBUG MVIRGenerator] ClosureExpr block needs terminator! emitting drops for size=1
+[DEBUG pushLocalInst] Inserting LocalInst for %3 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %8 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @main
+[DEBUG] MVIRGenerator: returning operand 0
+[DEBUG MVIRGenerator] done item[1]
+[PHASE] MVIRGenerator done
+[DEBUG MoveAnalyzer] %8 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %2 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %8 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %8 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %2 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %2 is marked MOVED in CallInst!
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::HeapAllocInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %4 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %5 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %7 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %9 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %10 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %3 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %4 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::HeapFreeInst
+[LLVM Verify Error]
+Call parameter type does not match function signature!
+ptr @str_1
+ { ptr, i64 }  %"0" = call i32 ({ ptr, i64 }, ...) @printf(ptr @str_1)
+Call parameter type does not match function signature!
+ptr @str_3
+ { ptr, i64 }  %"6" = call i32 ({ ptr, i64 }, ...) @printf(ptr @str_3)
+Call parameter type does not match function signature!
+ptr @str_4
+ { ptr, i64 }  %"12" = call i32 ({ ptr, i64 }, ...) @printf(ptr @str_4)
+Call parameter type does not match function signature!
+ptr @str_2
+ { ptr, i64 }  %"5" = call i32 ({ ptr, i64 }, ...) @printf(ptr @str_2, i32 %"4")
+
+D:\fdlang\tests\borrow\test_no_drop.ms: error: Loi trong qua trinh sinh LLVM IR.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

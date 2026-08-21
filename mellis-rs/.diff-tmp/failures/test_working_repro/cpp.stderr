@@ -1,0 +1,11 @@
+[1m[31merror: [0m[1mExpected ';' after expression[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_working_repro.ms:2:12
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_working_repro.ms:2:38
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_working_repro.ms: [1m[31merror: [0m[1mParsing that bai.[0m

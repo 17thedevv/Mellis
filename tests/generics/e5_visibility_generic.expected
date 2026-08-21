@@ -1,0 +1,231 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'View'
+[DEBUG resolvePath] resolve('View') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'm'
+[DEBUG resolvePath] resolve('m') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=15
+[DEBUG resolvePath] Resolving path starting with 'v'
+[DEBUG resolvePath] resolve('v') returned 1 syms. First id=26
+Solving constraint: ?T0 == T (23)
+Solving constraint: Struct<19<T (23)>> == Struct<19<?T0>>
+Solving constraint: fn(int_32) -> Struct<19<?T3>> == fn(val: ?T3) -> Struct<19<?T3>>
+[DEBUG resolvePath] Resolving path starting with 'View'
+[DEBUG resolvePath] resolve('View') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=31
+Solving constraint: ?T5 == int_32
+Solving constraint: Struct<19<int_32>> == Struct<19<?T5>>
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='m' kind=15 scope=0
+[DEBUG] Resolver::visit(StructDeclNode) name='View' symbolId=4294967295 this=000002484F34DF50 line=2
+[DEBUG SymbolTable] declareSymbol id=19 name='View' kind=5 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='T' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=21 name='data' kind=8 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='create_view' kind=4 scope=1
+[DEBUG SymbolTable] declareSymbol id=23 name='T' kind=13 scope=3
+[DEBUG SymbolTable] declareSymbol id=24 name='val' kind=3 scope=3
+[DEBUG SymbolTable] declareSymbol id=25 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=20
+[DEBUG] Resolving function: create_view
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'View': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=23
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=23
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving function: main
+[DEBUG SymbolTable] declareSymbol id=26 name='v' kind=0 scope=6
+[DEBUG] Resolving identifier: m
+[DEBUG] Finished resolvePath for m
+[DEBUG SymbolTable] declareSymbol id=27 name='x' kind=0 scope=6
+[DEBUG] Resolving identifier: v
+[DEBUG] Finished resolvePath for v
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 2 items
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='View' symbolId=19 bodyScopeId=2
+[DEBUG]   field='data' bodyScopeId=2 optId.empty()=0 symbolId=21
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=20
+[DEBUG]     evaluated type: T (20)
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='create_view' symbolId=22
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=23
+[DEBUG self] Evaluated param->type for val -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'View' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=23
+[DEBUG] Processing generic param: T with 0 bounds
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=25
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=View
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=24 name=val tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002484F378860 kind=11
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=22 name=create_view tableSize=28
+[DEBUG] Running TypePrePass on generic function: create_view
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='create_view' symbolId=22
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=23
+[DEBUG self] Evaluated param->type for val -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'View' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=23
+[DEBUG] Processing generic param: T with 0 bounds
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002484F388250 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG substitute] GenericParam id=23 name='T' found=1
+[DEBUG substitute] GenericParam id=23 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG CallExpr] fnDecl name: 'create_view' symbolId: 22
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(val: T (23)) -> Struct<19<T (23)>>
+[DEBUG CallExpr] before substitute: fn(val: T (23)) -> Struct<19<T (23)>>
+[DEBUG substitute] GenericParam id=23 name='T' found=1
+[DEBUG substitute] GenericParam id=23 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(val: ?T3) -> Struct<19<?T3>>
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=26 expectedType=000002484F388540
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=26 name=v tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002484F388540 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=27 expectedType=000002484F34B090
+[DEBUG] Starting UnificationEngine
+[DEBUG Field] Found StructType symbol=19 name=View
+[DEBUG Field] Checking struct field: data
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG Field] Solved field constraint!
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] TypeChecker(specializeType) requesting struct spec for name='View' with argCount=1
+[DEBUG] MonomorphizationEngine::instantiateStruct mangledName='View_int_32' for baseName='View' argCount=1
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] Resolver::visit(StructDeclNode) name='View_int_32' symbolId=4294967295 this=000002484F33D9D0 line=2
+[DEBUG SymbolTable] declareSymbol id=28 name='View_int_32' kind=5 scope=1
+[DEBUG SymbolTable] declareSymbol id=29 name='data' kind=8 scope=7
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] TypePrePass::visit(StructDeclNode) name='View_int_32' symbolId=28 bodyScopeId=7
+[DEBUG]   field='data' bodyScopeId=7 optId.empty()=0 symbolId=29
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG]     evaluated type: int_32
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG CallExpr] gFn->genericParams.size() = 1
+[DEBUG] TypeChecker(specializeType) requesting struct spec for name='View' with argCount=1
+[DEBUG] MonomorphizationEngine::instantiateStruct mangledName='View_int_32' for baseName='View' argCount=1
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 0 bounds
+[DEBUG] Setting type substitution for 'T' to a concrete type.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'View'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting StructInitExpr with 0 genericArgs
+[DEBUG SymbolTable] declareSymbol id=30 name='create_view_int_32' kind=4 scope=1
+[DEBUG SymbolTable] declareSymbol id=31 name='val' kind=3 scope=8
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: create_view_int_32
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='create_view_int_32' symbolId=30
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG self] Evaluated param->type for val -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'View' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] StructInitExpr sym kind=5 name=View
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=31 name=val tableSize=32
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002484F34B410 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] TypeChecker(specializeType) requesting struct spec for name='View' with argCount=1
+[DEBUG] MonomorphizationEngine::instantiateStruct mangledName='View_int_32' for baseName='View' argCount=1
+[DEBUG] TypeChecker(specializeType) requesting struct spec for name='View' with argCount=1
+[DEBUG] MonomorphizationEngine::instantiateStruct mangledName='View_int_32' for baseName='View' argCount=1
+[DEBUG] TypeChecker(specializeType) requesting struct spec for name='View' with argCount=1
+[DEBUG] MonomorphizationEngine::instantiateStruct mangledName='View_int_32' for baseName='View' argCount=1
+[DEBUG] TypeChecker(specializeType) requesting struct spec for name='View' with argCount=1
+[DEBUG] MonomorphizationEngine::instantiateStruct mangledName='View_int_32' for baseName='View' argCount=1
+[DEBUG] TypeChecker(specializeType) requesting struct spec for name='View' with argCount=1
+[DEBUG] MonomorphizationEngine::instantiateStruct mangledName='View_int_32' for baseName='View' argCount=1
+[PHASE] TypeChecker done, tcOk=0
+error: Field 'data' of struct 'View_int_32' is private.
+ --> D:\fdlang\tests\generics\e5_visibility_generic.ms:14:23
+  |
+14 |     dec x = v.data; 
+  |                       ^
+D:\fdlang\tests\generics\e5_visibility_generic.ms: error: Compilation aborted due to TypeChecker errors.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

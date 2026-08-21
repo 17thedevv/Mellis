@@ -1,0 +1,9 @@
+[package]
+name = "mellis-semantic"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mellis-common = { path = "../mellis-common" }
+mellis-ast = { path = "../mellis-ast" }
+mellis-lexer = { path = "../mellis-lexer" }

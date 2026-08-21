@@ -1,0 +1,29 @@
+; ModuleID = 'D:\fdlang\tests\scratch\test_type_alias_neg.ms'
+source_filename = "D:\\fdlang\\tests\\scratch\\test_type_alias_neg.ms"
+
+define void @main() {
+entry0:
+  ret void
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+[DEBUG Semantic] Analyzing function: @main
+
+=== FORCE DUMP LLVM IR ===

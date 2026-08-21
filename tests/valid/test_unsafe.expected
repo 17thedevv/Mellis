@@ -1,0 +1,208 @@
+=== EXIT CODE ===
+101
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'dangerous_op'
+[DEBUG resolvePath] resolve('dangerous_op') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'safe_caller'
+[DEBUG resolvePath] resolve('safe_caller') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'dangerous_op'
+[DEBUG resolvePath] resolve('dangerous_op') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'ptr'
+[DEBUG resolvePath] resolve('ptr') returned 1 syms. First id=23
+Solving constraint: int_32 == int_32
+Solving constraint: fn() -> int_32 == fn() -> int_32
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: fn() -> int_32 == fn() -> int_32
+Solving constraint: fn() -> int_32 == fn() -> int_32
+Solving constraint: fn() -> int_32 == fn() -> int_32
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='dangerous_op' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='safe_caller' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=20 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: dangerous_op
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving function: safe_caller
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=21 name='x' kind=0 scope=5
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving identifier: dangerous_op
+[DEBUG] Finished resolvePath for dangerous_op
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving function: main
+[DEBUG SymbolTable] declareSymbol id=22 name='p' kind=0 scope=7
+[DEBUG] Resolving identifier: safe_caller
+[DEBUG] Finished resolvePath for safe_caller
+[DEBUG SymbolTable] declareSymbol id=23 name='ptr' kind=0 scope=7
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: dangerous_op
+[DEBUG] Finished resolvePath for dangerous_op
+[DEBUG SymbolTable] declareSymbol id=24 name='y' kind=0 scope=8
+[DEBUG] Resolving identifier: ptr
+[DEBUG] Finished resolvePath for ptr
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 3 items
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='dangerous_op' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='safe_caller' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=20
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=21 expectedType=000001F3045DA2B0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=21 name=x tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001F3045DA2B0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=dangerous_op tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001F304614BE0 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=21 name=x tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001F3045DA2B0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=19 name=safe_caller tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001F304614F60 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=22 expectedType=000001F3045DA2B0
+[DEBUG] evaluateTypeNode called on class fl::FunctionTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=dangerous_op tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001F304614BE0 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=23 expectedType=000001F304614E10
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=23 name=ptr tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001F304614E10 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=24 expectedType=000001F3045DA2B0
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::FunctionDeclNode
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @dangerous_op
+[DEBUG] MVIRGenerator: returning operand 42
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @safe_caller
+[DEBUG] MVIRGenerator: returning operand %2
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG] VarDeclNode type kind: 3
+[DEBUG pushLocalInst] Inserting LocalInst for %2 into entry block entry0
+Missing symbolId in varAllocas_: dangerous_op (ID: 18)
+error: internal compiler error: Identifier symbolId not allocated
+ --> 0:20:42
+note: this is a compiler bug, not an error in your program

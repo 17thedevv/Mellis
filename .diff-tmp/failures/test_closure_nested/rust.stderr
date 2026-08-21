@@ -1,0 +1,29 @@
+Number of diagnostics: 4
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 79, end: 82 }), message: "Expected field name" }
+error: Expected field name
+  --> D:\fdlang\tests\closure\test_closure_nested.ms:4:9
+   |
+4  |         dec inner = | | -> void {
+   |         ^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 138, end: 139 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\closure\test_closure_nested.ms:6:9
+   |
+6  |         };
+   |         ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 164, end: 165 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\closure\test_closure_nested.ms:8:5
+   |
+8  |     };
+   |     ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 197, end: 198 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\closure\test_closure_nested.ms:11:1
+   |
+11 | }
+   | ^
+

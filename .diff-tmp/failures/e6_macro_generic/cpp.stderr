@@ -1,0 +1,92 @@
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver resolved create_box to id 1
+[DEBUG] MacroExpander::visit(MacroCallExpr) for create_box with id 1
+[DEBUG] expandMacro called with macroId=1 at line 10
+[DEBUG] Resolver::visit(StructDeclNode) name='Box' symbolId=4294967295 this=000002D7AB2B2C80 line=1
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=19
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: b
+[DEBUG] Finished resolvePath for b
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 3 items
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='Box' symbolId=18 bodyScopeId=1
+[DEBUG]   field='value' bodyScopeId=1 optId.empty()=0 symbolId=20
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=19
+[DEBUG]     evaluated type: T (19)
+[DEBUG] item kind: class fl::MacroDeclNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=21
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::MacroDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=Box
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=4294967295
+[DEBUG] TypeChecker(CG) requesting struct spec for node.structId=18 name='Box' with argCount=1
+[DEBUG] MonomorphizationEngine::instantiateStruct mangledName='Box_int_32' for baseName='Box' argCount=1
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] Resolver::visit(StructDeclNode) name='Box_int_32' symbolId=4294967295 this=000002D7AB2EB850 line=1
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] TypePrePass::visit(StructDeclNode) name='Box_int_32' symbolId=23 bodyScopeId=4
+[DEBUG]   field='value' bodyScopeId=4 optId.empty()=0 symbolId=24
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG]     evaluated type: int_32
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=22 expectedType=000002D7AB2E9500
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=22 name=b tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002D7AB2E9500 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG Field] Found StructType symbol=23 name=Box_int_32
+[DEBUG Field] Checking struct field: value
+[DEBUG Field] Solved field constraint!
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::MacroDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::StructDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::MacroDeclNode
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 1
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @main
+[DEBUG] MVIRGenerator: returning operand %3
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::StructDeclNode
+[DEBUG MVIRGenerator] done item[3]
+[PHASE] MVIRGenerator done
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!

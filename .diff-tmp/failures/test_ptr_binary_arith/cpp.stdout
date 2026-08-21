@@ -1,0 +1,99 @@
+[DEBUG resolvePath] Resolving path starting with 'arr'
+[DEBUG resolvePath] resolve('arr') returned 1 syms. First id=23
+[DEBUG resolvePath] Resolving path starting with 'p'
+[DEBUG resolvePath] resolve('p') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'p2'
+[DEBUG resolvePath] resolve('p2') returned 1 syms. First id=25
+[DEBUG resolvePath] Resolving path starting with 'p2'
+[DEBUG resolvePath] resolve('p2') returned 1 syms. First id=25
+[DEBUG resolvePath] Resolving path starting with 'p'
+[DEBUG resolvePath] resolve('p') returned 1 syms. First id=24
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: ?T1 == &' mut ?T0
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\scratch\test_ptr_binary_arith.ms'
+source_filename = "D:\\fdlang\\tests\\scratch\\test_ptr_binary_arith.ms"
+
+define void @main() {
+entry0:
+  %"0" = alloca [3 x i32], align 4
+  %"1" = alloca [3 x i32], align 4
+  %"2" = alloca i32, align 4
+  %"3" = alloca i32, align 4
+  %"4" = alloca i32, align 4
+  %"6" = alloca ptr, align 8
+  %"7" = alloca i32, align 4
+  %"10" = alloca ptr, align 8
+  %"13" = alloca ptr, align 8
+  %"17" = alloca i64, align 8
+  store i32 0, ptr %"2", align 4
+  %idx = load i32, ptr %"2", align 4
+  %elem = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx
+  store i32 1, ptr %elem, align 4
+  store i32 1, ptr %"3", align 4
+  %idx1 = load i32, ptr %"3", align 4
+  %elem2 = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx1
+  store i32 2, ptr %elem2, align 4
+  store i32 2, ptr %"4", align 4
+  %idx3 = load i32, ptr %"4", align 4
+  %elem4 = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx3
+  store i32 3, ptr %elem4, align 4
+  %"5" = load [3 x i32], ptr %"1", align 4
+  store [3 x i32] %"5", ptr %"0", align 4
+  store i32 0, ptr %"7", align 4
+  br i1 false, label %bounds_fail, label %bounds_ok
+
+bounds_fail:                                      ; preds = %entry0
+  call void @__mellis_bounds_fail(i64 0, i64 3, ptr null, i32 0)
+  unreachable
+
+bounds_ok:                                        ; preds = %entry0
+  %idx5 = load i32, ptr %"7", align 4
+  %elem6 = getelementptr [3 x i32], ptr %"0", i32 0, i32 %idx5
+  store ptr %elem6, ptr %"6", align 8
+  %"11" = load ptr, ptr %"6", align 8
+  %"12" = getelementptr i32, ptr %"11", i32 1
+  store ptr %"12", ptr %"10", align 8
+  %"14" = load ptr, ptr %"10", align 8
+  %"15" = getelementptr i32, ptr %"14", i32 -1
+  store ptr %"15", ptr %"13", align 8
+  %"18" = load ptr, ptr %"10", align 8
+  %"19" = load ptr, ptr %"6", align 8
+  %0 = ptrtoint ptr %"18" to i64
+  %1 = ptrtoint ptr %"19" to i64
+  %2 = sub i64 %0, %1
+  %"20" = sdiv exact i64 %2, 4
+  store i64 %"20", ptr %"17", align 4
+  ret void
+}
+
+declare void @__mellis_bounds_fail(i64, i64, ptr, i32)
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

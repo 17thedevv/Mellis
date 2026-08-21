@@ -1,0 +1,15 @@
+Number of diagnostics: 2
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 103, end: 104 }), message: "Expected ':' after field name" }
+error: Expected ':' after field name
+  --> D:\fdlang\tests\borrow\test_closure_copy_capture.ms:4:11
+   |
+4  |         x + base 
+   |           ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 142, end: 143 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\borrow\test_closure_copy_capture.ms:7:1
+   |
+7  | }
+   | ^
+

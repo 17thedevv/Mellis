@@ -1,0 +1,190 @@
+=== EXIT CODE ===
+101
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=23
+[DEBUG resolvePath] Resolving path starting with 'execute'
+[DEBUG resolvePath] resolve('execute') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'my_closure'
+[DEBUG resolvePath] resolve('my_closure') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'make_closure_and_execute'
+[DEBUG resolvePath] resolve('make_closure_and_execute') returned 1 syms. First id=21
+Solving constraint: fn() -> ?T0 == T (19)
+Solving constraint: int_32 == ?T0
+Solving constraint: int_32 == int_32
+Solving constraint: fn([closure@25]) -> int_32 == fn(f: ?T3) -> int_32
+Solving constraint: int_32 == int_32
+Solving constraint: fn() -> int_32 == fn() -> int_32
+Solving constraint: int_32 == int_32
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='execute' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='T' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='f' kind=3 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='make_closure_and_execute' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=22 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: execute
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=19
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving function: make_closure_and_execute
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=23 name='x' kind=0 scope=5
+[DEBUG SymbolTable] declareSymbol id=24 name='my_closure' kind=0 scope=5
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving identifier: execute
+[DEBUG] Finished resolvePath for execute
+[DEBUG] Resolving identifier: my_closure
+[DEBUG] Finished resolvePath for my_closure
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: make_closure_and_execute
+[DEBUG] Finished resolvePath for make_closure_and_execute
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 3 items
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='execute' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=19
+[DEBUG self] Evaluated param->type for f -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: T with 0 bounds
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='make_closure_and_execute' symbolId=21
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=22
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=20 name=f tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002C445D9AB60 kind=11
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=23 expectedType=000002C445D6AF00
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=23 name=x tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002C445D6AF00 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG SymbolTable] declareSymbol id=25 name='__Closure_3042008544272' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=26 name='__LambdaFunc_3042008544272' kind=4 scope=0
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=24 expectedType=000002C445D96240
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=execute tableSize=25
+[DEBUG] Running TypePrePass on generic function: execute
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='execute' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=19
+[DEBUG self] Evaluated param->type for f -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: T with 0 bounds
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002C445DA8420 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=24 name=my_closure tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002C445D96240 kind=17
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG CallExpr] fnDecl name: 'execute' symbolId: 18
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(f: T (19)) -> int_32
+[DEBUG CallExpr] before substitute: fn(f: T (19)) -> int_32
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(f: ?T3) -> int_32
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=21 name=make_closure_and_execute tableSize=25
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002C445DA8260 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] Starting UnificationEngine
+[DEBUG unify] Type mismatch at loc line 2 t1=fn() -> ?T0 t2=T (19)
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 1
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 0 bounds
+error: Type mismatch: expected 'fn() -> ?T0', found 'T (19)'
+ --> D:\fdlang\tests\borrow\test_closure_heap_copy.ms:2:16
+  |
+2 |     return f();
+  |                ^
+error: internal compiler error: Unsupported type kind for AST conversion in Monomorphization Engine: 17
+note: this is a compiler bug, not an error in your program

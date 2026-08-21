@@ -1,0 +1,170 @@
+=== EXIT CODE ===
+0
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'PrivateStruct'
+[DEBUG resolvePath] resolve('PrivateStruct') returned 1 syms. First id=18
+Solving constraint: int_32 == int_32
+Solving constraint: Struct<18> == Struct<18>
+Solving constraint: int_32 == int_32
+[DEBUG Semantic] Analyzing function: @expose_private
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\invalid\e2_visibility_generic_leak.ms'
+source_filename = "D:\\fdlang\\tests\\invalid\\e2_visibility_generic_leak.ms"
+
+%PrivateStruct = type { i32 }
+
+define %PrivateStruct @expose_private() {
+entry0:
+  %"0" = alloca %PrivateStruct, align 8
+  %fld = getelementptr inbounds %PrivateStruct, ptr %"0", i32 0, i32 0
+  store i32 10, ptr %fld, align 4
+  %"1" = load %PrivateStruct, ptr %"0", align 4
+  ret %PrivateStruct %"1"
+}
+
+define i32 @main() {
+entry0:
+  ret i32 0
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG] Resolver::visit(StructDeclNode) name='PrivateStruct' symbolId=4294967295 this=000001D1C39CFCC0 line=7
+[DEBUG SymbolTable] declareSymbol id=18 name='PrivateStruct' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='x' kind=8 scope=1
+[DEBUG] Resolver::visit(StructDeclNode) name='PublicStruct' symbolId=4294967295 this=000001D1C39DBD70 line=11
+[DEBUG SymbolTable] declareSymbol id=20 name='PublicStruct' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=21 name='pub_field' kind=8 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='expose_private' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=23 name='PubTrait' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=24 name='Self' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=25 name='do_something' kind=4 scope=4
+[DEBUG SymbolTable] declareSymbol id=26 name='val' kind=3 scope=5
+[DEBUG SymbolTable] declareSymbol id=27 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'PrivateStruct': i=1, currentSym=18
+[DEBUG] Resolving function: expose_private
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'PrivateStruct': i=1, currentSym=18
+[DEBUG] Resolving function: do_something
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'PrivateStruct': i=1, currentSym=18
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 5 items
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='PrivateStruct' symbolId=18 bodyScopeId=1
+[DEBUG]   field='x' bodyScopeId=1 optId.empty()=0 symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG]     evaluated type: int_32
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='PublicStruct' symbolId=20 bodyScopeId=2
+[DEBUG]   field='pub_field' bodyScopeId=2 optId.empty()=0 symbolId=21
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'PrivateStruct' symbolId=18
+[DEBUG]     evaluated type: Struct<18>
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='expose_private' symbolId=22
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'PrivateStruct' symbolId=18
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='do_something' symbolId=25
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'PrivateStruct' symbolId=18
+[DEBUG self] Evaluated param->type for val -> 1
+[DEBUG TraitDeclNode] Method 'do_something' symbolId=25
+[DEBUG TraitDeclNode] typeTable[25] = 3
+[DEBUG TraitDeclNode] Registered trait method 'do_something'
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=27
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=PrivateStruct
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::StructDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::StructDeclNode
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::FunctionDeclNode
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @expose_private
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG] MVIRGenerator: returning operand %1
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::TraitDeclNode
+[DEBUG MVIRGenerator] done item[3]
+[DEBUG MVIRGenerator] visiting item[4] typeid=class fl::FunctionDeclNode
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @main
+[DEBUG] MVIRGenerator: returning operand 0
+[DEBUG MVIRGenerator] done item[4]
+[PHASE] MVIRGenerator done
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %1 (type: 16)
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

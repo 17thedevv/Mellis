@@ -1,0 +1,8 @@
+Test: D:\fdlang\tests\codegen\array_bounds.ms
+
+Compiler:
+  C++  exit=0
+  Rust exit=0
+
+Classification:
+  CompilePhase / Executable Missing

@@ -1,0 +1,343 @@
+=== EXIT CODE ===
+0
+=== STDOUT ===
+[DEBUG] parseDeclaration KW_COMPTIME. peek.type=66
+[DEBUG] parseDeclaration KW_COMPTIME. peek.type=66
+[DEBUG] parseDeclaration KW_COMPTIME. peek.type=50
+[DEBUG] parseDeclaration KW_COMPTIME. peek.type=50
+[DEBUG] parseDeclaration KW_COMPTIME. peek.type=50
+[DEBUG resolvePath] Resolving path starting with 'n'
+[DEBUG resolvePath] resolve('n') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'n'
+[DEBUG resolvePath] resolve('n') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'factorial'
+[DEBUG resolvePath] resolve('factorial') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'n'
+[DEBUG resolvePath] resolve('n') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=23
+[DEBUG resolvePath] Resolving path starting with 'y'
+[DEBUG resolvePath] resolve('y') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'add_five'
+[DEBUG resolvePath] resolve('add_five') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'factorial'
+[DEBUG resolvePath] resolve('factorial') returned 1 syms. First id=18
+Solving constraint: bool == ?T0
+Solving constraint: int_32 == int_32
+Solving constraint: fn(?T1) -> int_32 == fn(n: int_32) -> int_32
+Solving constraint: int_32 == ?T3
+Solving constraint: int_32 == ?T4
+Solving constraint: fn(int_32) -> int_32 == fn(x: int_32) -> int_32
+Solving constraint: fn(int_32) -> int_32 == fn(n: int_32) -> int_32
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME] Set x = 10
+[COMPTIME] Set y = 20
+[COMPTIME] Set z = 30
+[COMPTIME] Bind param x = 10
+[COMPTIME] Call to 'add_five' returned 15
+[COMPTIME] Set result = 15
+[COMPTIME] Bind param n = 5
+[COMPTIME] Bind param n = 4
+[COMPTIME] Bind param n = 3
+[COMPTIME] Bind param n = 2
+[COMPTIME] Bind param n = 1
+[COMPTIME] Call to 'factorial' returned 1
+[COMPTIME] Call to 'factorial' returned 2
+[COMPTIME] Call to 'factorial' returned 6
+[COMPTIME] Call to 'factorial' returned 24
+[COMPTIME] Call to 'factorial' returned 120
+[COMPTIME] Set fact5 = 120
+[DEBUG Semantic] Analyzing function: @factorial
+[DEBUG Semantic] Analyzing function: @add_five
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\valid\test_comptime.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\test_comptime.ms"
+
+define i32 @factorial(i32 %"0") {
+entry0:
+  %"1" = alloca i32, align 4
+  store i32 %"0", ptr %"1", align 4
+  %"2" = load i32, ptr %"1", align 4
+  %"3" = icmp sle i32 %"2", 1
+  br i1 %"3", label %then1, label %merge2
+
+then1:                                            ; preds = %entry0
+  ret i32 1
+
+merge2:                                           ; preds = %entry0
+  %"4" = load i32, ptr %"1", align 4
+  %"5" = load i32, ptr %"1", align 4
+  %"6" = sub i32 %"5", 1
+  %"7" = call i32 @factorial(i32 %"6")
+  %"8" = mul i32 %"4", %"7"
+  ret i32 %"8"
+}
+
+define i32 @add_five(i32 %"0") {
+entry0:
+  %"1" = alloca i32, align 4
+  store i32 %"0", ptr %"1", align 4
+  %"2" = load i32, ptr %"1", align 4
+  %"3" = add i32 %"2", 5
+  ret i32 %"3"
+}
+
+define void @main() {
+entry0:
+  ret void
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='factorial' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='n' kind=3 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='add_five' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=21 name='x' kind=3 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: factorial
+[DEBUG] Resolving identifier: n
+[DEBUG] Finished resolvePath for n
+[DEBUG] Resolving identifier: n
+[DEBUG] Finished resolvePath for n
+[DEBUG] Resolving identifier: factorial
+[DEBUG] Finished resolvePath for factorial
+[DEBUG] Resolving identifier: n
+[DEBUG] Finished resolvePath for n
+[DEBUG] Resolving function: add_five
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving function: main
+[DEBUG SymbolTable] declareSymbol id=23 name='x' kind=0 scope=8
+[DEBUG SymbolTable] declareSymbol id=24 name='y' kind=0 scope=8
+[DEBUG SymbolTable] declareSymbol id=25 name='z' kind=0 scope=8
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving identifier: y
+[DEBUG] Finished resolvePath for y
+[DEBUG SymbolTable] declareSymbol id=26 name='result' kind=0 scope=9
+[DEBUG] Resolving identifier: add_five
+[DEBUG] Finished resolvePath for add_five
+[DEBUG SymbolTable] declareSymbol id=27 name='fact5' kind=0 scope=10
+[DEBUG] Resolving identifier: factorial
+[DEBUG] Finished resolvePath for factorial
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 3 items
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='factorial' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG self] Evaluated param->type for n -> 0
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='add_five' symbolId=20
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG self] Evaluated param->type for x -> 0
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=22
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=19 name=n tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937AC920 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=19 name=n tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937AC920 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=factorial tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937E7D30 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=19 name=n tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937AC920 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=21 name=x tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937AC920 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=23 expectedType=000001E8937AC920
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=24 expectedType=000001E8937AC920
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=23 name=x tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937AC920 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=24 name=y tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937AC920 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=25 expectedType=000001E8937EA900
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=20 name=add_five tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937E7470 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=26 expectedType=000001E8937AC920
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=factorial tableSize=28
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E8937E7D30 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=27 expectedType=000001E8937AC920
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::FunctionDeclNode
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @factorial
+[DEBUG] MVIRGenerator: returning operand 1
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @factorial
+[DEBUG] MVIRGenerator: returning operand %8
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::FunctionDeclNode
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @add_five
+[DEBUG] MVIRGenerator: returning operand %3
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::FunctionDeclNode
+[DEBUG MVIRGenerator] done item[2]
+[PHASE] MVIRGenerator done
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %2 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %4 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %5 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %2 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

@@ -1,0 +1,11 @@
+[package]
+name = "mellis-optimizer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mellis-common = { version = "0.1.0", path = "../mellis-common" }
+mellis-mvir = { version = "0.1.0", path = "../mellis-mvir" }
+
+[dev-dependencies]
+mellis-semantic = { path = "../mellis-semantic" }

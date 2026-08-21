@@ -1,0 +1,29 @@
+Number of diagnostics: 4
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 29, end: 33 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\valid\operator_overload.ms:2:12
+   |
+2  |     fn add(self, rhs: RHS) -> Self;
+   |            ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 55, end: 56 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\operator_overload.ms:3:1
+   |
+3  | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 153, end: 157 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\valid\operator_overload.ms:11:12
+   |
+11 |     fn add(self, rhs: Point) -> Point {
+   |            ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 286, end: 287 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\operator_overload.ms:16:5
+   |
+16 |     }
+   |     ^
+

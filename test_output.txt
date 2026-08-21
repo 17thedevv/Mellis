@@ -1,0 +1,246 @@
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Greeter' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='Self' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='greet' kind=4 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name=''_1' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='self' kind=3 scope=2
+[DEBUG SymbolTable] declareSymbol id=23 name='Dog' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=24 name='age' kind=8 scope=3
+[DEBUG SymbolTable] declareSymbol id=25 name='Cat' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=26 name='lives' kind=8 scope=4
+[DEBUG SymbolTable] declareSymbol id=27 name='Self' kind=12 scope=5
+[DEBUG SymbolTable] declareSymbol id=28 name='greet' kind=4 scope=5
+[DEBUG SymbolTable] declareSymbol id=29 name=''_1' kind=13 scope=6
+[DEBUG SymbolTable] declareSymbol id=30 name='self' kind=3 scope=6
+[DEBUG SymbolTable] declareSymbol id=31 name='Self' kind=12 scope=7
+[DEBUG SymbolTable] declareSymbol id=32 name='greet' kind=4 scope=7
+[DEBUG SymbolTable] declareSymbol id=33 name=''_1' kind=13 scope=8
+[DEBUG SymbolTable] declareSymbol id=34 name='self' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=35 name='call_greet' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=36 name=''_1' kind=13 scope=9
+[DEBUG SymbolTable] declareSymbol id=37 name='g' kind=3 scope=9
+[DEBUG SymbolTable] declareSymbol id=38 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: greet
+[DEBUG] Resolving function: greet
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: greet
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: call_greet
+[DEBUG] Resolving identifier: g
+[DEBUG] Finished resolvePath for g
+[DEBUG] Resolving function: main
+[DEBUG SymbolTable] declareSymbol id=39 name='d' kind=0 scope=14
+[DEBUG SymbolTable] declareSymbol id=40 name='c' kind=0 scope=14
+[DEBUG SymbolTable] declareSymbol id=41 name='dg' kind=0 scope=14
+[DEBUG] Resolving identifier: d
+[DEBUG] Finished resolvePath for d
+[DEBUG SymbolTable] declareSymbol id=42 name='cg' kind=0 scope=14
+[DEBUG] Resolving identifier: c
+[DEBUG] Finished resolvePath for c
+[DEBUG] Resolver: resolvePath for 'c' returned 1 ids.
+[DEBUG] Resolver: id=40
+[DEBUG] Resolver: finalIds size for 'c' is 1
+[DEBUG SymbolTable] declareSymbol id=43 name='dog_val' kind=0 scope=14
+[DEBUG] Resolving identifier: call_greet
+[DEBUG] Finished resolvePath for call_greet
+[DEBUG] Resolving identifier: dg
+[DEBUG] Finished resolvePath for dg
+[DEBUG SymbolTable] declareSymbol id=44 name='cat_val' kind=0 scope=14
+[DEBUG] Resolving identifier: call_greet
+[DEBUG] Finished resolvePath for call_greet
+[DEBUG] Resolving identifier: cg
+[DEBUG] Finished resolvePath for cg
+[DEBUG] Resolving identifier: dog_val
+[DEBUG] Finished resolvePath for dog_val
+[DEBUG] Resolving identifier: cat_val
+[DEBUG] Finished resolvePath for cat_val
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Creating MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] TypePrePass visiting ProgramNode with 7 items
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=19
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'greet' symbolId=20
+[DEBUG TraitDeclNode] typeTable[20] = 3
+[DEBUG TraitDeclNode] Registered trait method 'greet'
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Dog' symbolId=23
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=27 selfType=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Greeter' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=27
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitSolver] addClause: selfType=Struct<23> traitId=18
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Cat' symbolId=25
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=31 selfType=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Greeter' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=31
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitSolver] addClause: selfType=Struct<25> traitId=18
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::TraitObjectTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Greeter' symbolId=18
+[DEBUG self] Evaluated param->type for g -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG IdentifierExpr] visit start. segments.back()=self candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=30 baseType=5
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG IdentifierExpr] visit start. segments.back()=self candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=34 baseType=5
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG IdentifierExpr] visit start. segments.back()=g candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=37 baseType=5
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=Dog
+[DEBUG] StructInitExpr sym kind=5 name=Cat
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::TraitObjectTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Greeter' symbolId=18
+[DEBUG IdentifierExpr] visit start. segments.back()=d candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=39 baseType=1
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::TraitObjectTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Greeter' symbolId=18
+[DEBUG IdentifierExpr] visit start. segments.back()=c candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=40 baseType=1
+[DEBUG CallExpr] visiting callee of type: class fl::IdentifierExpr
+[DEBUG IdentifierExpr] visit start. segments.back()=call_greet candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=35 baseType=3
+[DEBUG IdentifierExpr] visit start. segments.back()=dg candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=41 baseType=5
+[DEBUG CallExpr] fnDecl name: 'call_greet' symbolId: 35
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(g: &' dyn Trait<18> + ') -> int_32
+[DEBUG CallExpr] before substitute: fn(g: &' dyn Trait<18> + ') -> int_32
+[DEBUG CallExpr] after substitute: fn(g: &' dyn Trait<18> + ') -> int_32
+[DEBUG CallExpr] visiting callee of type: class fl::IdentifierExpr
+[DEBUG IdentifierExpr] visit start. segments.back()=call_greet candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=35 baseType=3
+[DEBUG IdentifierExpr] visit start. segments.back()=cg candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=42 baseType=5
+[DEBUG CallExpr] fnDecl name: 'call_greet' symbolId: 35
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(g: &' dyn Trait<18> + ') -> int_32
+[DEBUG CallExpr] before substitute: fn(g: &' dyn Trait<18> + ') -> int_32
+[DEBUG CallExpr] after substitute: fn(g: &' dyn Trait<18> + ') -> int_32
+[DEBUG IdentifierExpr] visit start. segments.back()=dog_val candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=43 baseType=14
+[DEBUG IdentifierExpr] visit start. segments.back()=cat_val candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=44 baseType=14
+[DEBUG] Starting UnificationEngine
+[DEBUG Field] Found StructType symbol=23 name=Dog
+[DEBUG Field] Checking struct field: age
+[DEBUG Field] Solved field constraint!
+Solving constraint: int_32 == ?T0
+[DEBUG Field] Found StructType symbol=25 name=Cat
+[DEBUG Field] Checking struct field: lives
+[DEBUG Field] Solved field constraint!
+Solving constraint: int_32 == ?T1
+[DEBUG MethodResolver] Probing method 'greet' for receiverType: &' dyn Trait<18> + '
+[DEBUG TraitSolver] Solving goal: kind=2 self=&' dyn Trait<18> + ' traitId=0
+[DEBUG TraitSolver] Solving goal: kind=0 self=dyn Trait<18> + ' traitId=18
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(&' dyn Trait<18> + ') -> ?T2 with mInfo.type: fn(self: &' dyn Trait<18> + ') -> int_32
+Solving constraint: int_32 == ?T2
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: ?T3 == &' Struct<23>
+Solving constraint: &' dyn Trait<18> + ' == ?T3
+Solving constraint: ?T4 == &' Struct<25>
+Solving constraint: &' dyn Trait<18> + ' == ?T4
+Solving constraint: fn(&' dyn Trait<18> + ') -> ?T6 == fn(g: &' dyn Trait<18> + ') -> int_32
+Solving constraint: fn(&' dyn Trait<18> + ') -> ?T9 == fn(g: &' dyn Trait<18> + ') -> int_32
+Solving constraint: int_32 == ?T11
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG MethodResolver] Probing method 'greet' for receiverType: dyn Trait<18> + '
+[DEBUG TraitSolver] Solving goal: kind=2 self=dyn Trait<18> + ' traitId=3161446944
+[DEBUG TraitSolver] Solving goal: kind=0 self=dyn Trait<18> + ' traitId=18
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG TraitSolver] Solving goal: kind=3 self=¯ﬂE˜             Õ                          0@lNÆ  h@lNÆ  x@lNÆ          –ulNÆ  ˇˇˇˇ                                                                                                                            X∫ö˝¢Æ ò›E˜      !      ﬂ                           tiNÆ  ˇˇˇˇ    –`mNÆ  ‡`mNÆ  ‡`mNÆ                                  ·jNÆ  H·jNÆ  H·jNÆ          Z∫öˇ©Ø ¯€E˜                                          –}iNÆ  ˇˇˇˇ            ÜSmNÆ                                         X∫ö˝´Ø ò›E˜      "      ˚                          ∞tiNÆ  ˇˇˇˇ    ]mNÆ   ^mNÆ   ^mNÆ                                 ∞ÁjNÆ  ÿÁjNÆ  ÿÁjNÆ          Z∫öˇ©Ø ¯€E˜                                          –}iNÆ  ˇˇˇˇ            §SmNÆ                                         S∏í¸´Ø 0ïmNÆ  tiNÆ     ¿–‡,⁄´√    8       0umNÆ  ˛?ˇˇˇˇˇˇ                8xái   Ä`]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ  `]lNÆ          1xéi  ê‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ  ‡dlNÆ          
+xïi  ê∏ﬁE˜      (      o                                                     ,   TmNÆ         †emNÆ          –ômNÆ                 xúi  ê†plNÆ  †plNÆ  †plNÆ  †plNÆ  †plNÆ  †plNÆ  †plNÆ  †plNÆ  †plNÆ  †plNÆ  †plNÆ  †plNÆ   qlNÆ   qlNÆ  `qlNÆ  `qlNÆ          x´i  ê \lNÆ   \lNÆ   \lNÆ   \lNÆ  ``lNÆ  ``lNÆ   \lNÆ   \lNÆ   \lNÆ   \lNÆ   \lNÆ   \lNÆ   \lNÆ   \lNÆ   `lNÆ   `lNÆ          Ìx≤i  ê‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ  ‡olNÆ          Êxπi  ê _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ   _lNÆ          ˇx¿i  ê`alNÆ  `alNÆ  `alNÆ  `alNÆ  `alNÆ  `alNÆ  `alNÆ  `alNÆ  `WlNÆ  `WlNÆ  `alNÆ  `alNÆ  `alNÆ  `alNÆ  `alNÆ  `alNÆ          xœi  ê ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ   ^lNÆ          …x÷i 	 ê`[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ  `[lNÆ          ¬x›i 
+ à‹E˜      +      Õ                          0bmNÆ  ˇˇˇˇ    êamNÆ  †amNÆ  †amNÆ                          0’jNÆ  4’jNÆ  4’jNÆ  €x‰i  ê‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  ‡UlNÆ  `UlNÆ  †VlNÆ  ‡UlNÆ  ‡UlNÆ          ¨xÛi  ê∏ﬁE˜      (      o                                                     ˇˇˇˇTmNÆ                          ÕmNÆ                 •x˙i  à‹E˜      (      }                          –nmNÆ  ˇˇˇˇ    P]mNÆ  `]mNÆ  `]mNÆ                          ê’jNÆ  î’jNÆ  î’jNÆ  æxi  Ä7jNÆ  7jNÆ  7jNÆ  7jNÆ  7jNÆ  7jNÆ  7jNÆ  7jNÆ  7jNÆ  7jNÆ  7jNÆ  7jNÆ  P6jNÆ  P6jNÆ  7jNÆ  7jNÆ          ∑xi  Ä                                                                                                                                        àxi  à‹E˜      +      Õ                          0bmNÆ  ˇˇˇˇ    P\mNÆ  `\mNÆ  `\mNÆ                          †‘jNÆ  §‘jNÆ  §‘jNÆ  Åxi  ê†YlNÆ  †YlNÆ  †YlNÆ  †YlNÆ  †YlNÆ  †YlNÆ  †YlNÆ  †YlNÆ  `\lNÆ  `\lNÆ  †YlNÆ  †YlNÆ  †YlNÆ  †YlNÆ  †YlNÆ  †YlNÆ          öx%i  à‹E˜      +      √                          0[mNÆ  ˇˇˇˇ    –amNÆ  ‡amNÆ  ‡amNÆ                          “jNÆ  “jNÆ  “jNÆ  ìx,i  ê`_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `_lNÆ  `VlNÆ  `VlNÆ  ‡]lNÆ  ‡]lNÆ          dw;i  ê∏ﬁE˜      !      ”                                                     ˇˇˇˇwSmNÆ                         0ümNÆ                 }wBi  à‹E˜      (      }                          –nmNÆ  ˇˇˇˇ    p_mNÆ  Ä_mNÆ  Ä_mNÆ                          P“jNÆ  T“jNÆ  T“jNÆ  vwIi  ê∏ﬁE˜      %      -                                                     *   —SmNÆ         ¿dmNÆ  4lNÆ   jmNÆ                 OwPi  ê∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ  ∞·jNÆ          @w_i  ê`slNÆ  `slNÆ  `slNÆ  `slNÆ  `slNÆ  `slNÆ  `slNÆ  `slNÆ   YlNÆ   YlNÆ  `slNÆ  `slNÆ  `slNÆ  `slNÆ  `slNÆ  `slNÆ          Ywfi  ê∏ﬁE˜      $                                                           ˇˇˇˇ≤SmNÆ                 06lNÆ  †lmNÆ                 Rwmi  à‹E˜      '   !   f                          ê5lNÆ  ˇˇˇˇ    [mNÆ   \mNÆ   \mNÆ                          @”jNÆ  D”jNÆ  D”jNÆ  +wti  à‹E˜      (   !   à                          ê5lNÆ  ˇˇˇˇ    bmNÆ   bmNÆ   bmNÆ                          p’jNÆ  t’jNÆ  t’jNÆ  <wÉh  à‹E˜      (   !   à                          ê5lNÆ  ˇˇˇˇ    p[mNÆ  Ä[mNÆ  Ä[mNÆ                          p”jNÆ  t”jNÆ  t”jNÆ  5wäh  à‹E˜      %   !   E                          ∞tiNÆ  ˇˇˇˇ    P[mNÆ  `[mNÆ  `[mNÆ                          P”jNÆ  T”jNÆ  T”jNÆ  wëh  ê [lNÆ   [lNÆ   [lNÆ   [lNÆ  †_lNÆ  †_lNÆ   [lNÆ   [lNÆ   [lNÆ   [lNÆ   [lNÆ   [lNÆ   [lNÆ   [lNÆ   dlNÆ   dlNÆ          wòh  ê∏⁄E˜      %      :                          amNÆ   bmNÆ   bmNÆ                                                                 wßh   ê`^lNÆ  `^lNÆ  `^lNÆ  `^lNÆ  `^lNÆ  `^lNÆ  `^lNÆ  `^lNÆ  `XlNÆ  `XlNÆ  `^lNÆ  `^lNÆ  `^lNÆ  `^lNÆ  `^lNÆ  `^lNÆ          wÆh ! ê VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ   VlNÆ          Íwµh " ê‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ  ‡VlNÆ          „wºh # à‹E˜      '      [                          0lmNÆ  ˇˇˇˇ    ∞_mNÆ  ¿_mNÆ  ¿_mNÆ                          ¿‘jNÆ  ƒ‘jNÆ  ƒ‘jNÆ  ÙwÀh $ êP>lNÆ  P>lNÆ  P>lNÆ  P>lNÆ  ÄElNÆ  ÄElNÆ  P>lNÆ  P>lNÆ  P>lNÆ  P>lNÆ  P>lNÆ  P>lNÆ  P>lNÆ  P>lNÆ  P>lNÆ  P>lNÆ          Õw“h % ê∏ﬁE˜      '      M                                                     +   ÒSmNÆ         `gmNÆ          ômNÆ                 ∆wŸh & ê‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡_lNÆ  ‡YlNÆ  ‡YlNÆ  †TlNÆ  †TlNÆ          ﬂw‡h ' à‹E˜      '   !   f                          ê5lNÆ  ˇˇˇˇ    ê^mNÆ  †^mNÆ  †^mNÆ                          –‘jNÆ  ‘‘jNÆ  ‘‘jNÆ  –wÔh ( ê‡nlNÆ  ‡nlNÆ  ‡nlNÆ  ‡nlNÆ  `klNÆ  `klNÆ  ‡nlNÆ  ‡nlNÆ  ‡nlNÆ  ‡nlNÆ  ‡nlNÆ  ‡nlNÆ  ‡nlNÆ  ‡nlNÆ  †ilNÆ  †ilNÆ          ©wˆh ) ê∏⁄E˜      $                                ∞`mNÆ  ¿`mNÆ  ¿`mNÆ                                                                 ¢w˝h * ê ZlNÆ   ZlNÆ  ‡XlNÆ  ‡XlNÆ   WlNÆ   WlNÆ  †`lNÆ  †`lNÆ  ‡[lNÆ  ‡[lNÆ   ZlNÆ   ZlNÆ   ZlNÆ   ZlNÆ  ‡ZlNÆ  †blNÆ          ªwh + ê†XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ  †XlNÆ          åwh , ê∏ﬁE˜      %      -                                                     ˇˇˇˇ—SmNÆ                 p<lNÆ  pjmNÆ                 Öwh - ê∏⁄E˜      %      :                          pbmNÆ  ÄbmNÆ  ÄbmNÆ                                                                 ûw!h . à‹E˜      %   !   E                          ∞tiNÆ  ˇˇˇˇ    ∞^mNÆ  ¿^mNÆ  ¿^mNÆ                          ê‘jNÆ  î‘jNÆ  î‘jNÆ  ów(h / ê∏ﬁE˜      '      M                                                     ˇˇˇˇÒSmNÆ                         ê¢mNÆ                 hv7h 0 ê–]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ  –]mNÆ          av>h 1 ê ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ   ]lNÆ          zvEh 2 à‹E˜      '      [                          0lmNÆ  ˇˇˇˇ    ZmNÆ   [mNÆ   [mNÆ                          ‘jNÆ  ‘jNÆ  ‘jNÆ  svLh 3 à‹E˜      +      √                          0[mNÆ  ˇˇˇˇ    ∞\mNÆ  ¿\mNÆ  ¿\mNÆ                          ∞’jNÆ  ¥’jNÆ  ¥’jNÆ  Dv[h 4 à‹E˜      $   !   &                           tiNÆ  ˇˇˇˇ    ê[mNÆ  †[mNÆ  †[mNÆ                          `’jNÆ  d’jNÆ  d’jNÆ  ]vbh 5 êamNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ  amNÆ          Vvih 6 ê‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ  ‡rlNÆ          /vph 7 ê∏ﬁE˜      "      Ô                                                     ˇˇˇˇìSmNÆ                         p°mNÆ                                                                                 ∫íø¢≠  [NÆ   ÁiNÆ                 ¿[NÆ   umNÆ                    	   8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ^∫ö˚„Ø ò‹E˜      '   !   f                          0[mNÆ  ˇˇˇˇ     âmNÆ                           ’jNÆ  (’jNÆ  (’jNÆ  ¿ÊjNÆ  ËÊjNÆ  ËÊjNÆ                          #               ^∫ö˚ØØ ò‹E˜      (   !   à                          0bmNÆ  ˇˇˇˇ    †|mNÆ                          ¿“jNÆ  »“jNÆ  »“jNÆ  –ÂjNÆ  ¯ÂjNÆ  ¯ÂjNÆ                          #               Z∫öˇØØ 8‹E˜                                          ∞[mNÆ  ˇˇˇˇ            pmNÆ  zmNÆ  ˇˇˇˇ    ˇˇˇˇˇˇˇˇˇˇˇˇ            E∫ö‡´Ø vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  vlNÆ  êÇlNÆ  vlNÆ  ¿kmNÆ  0„jNÆ  ‡?lNÆ   tiNÆ  –}iNÆ  ∞tiNÆ  –}iNÆ   tiNÆ  pcmNÆ  Ä9jNÆ  P4lNÆ  ∞tiNÆ  fmNÆ  5jNÆ  BlNÆ  pqmNÆ  2jNÆ  ê5lNÆ  ‡jmNÆ   tiNÆ  ∞tiNÆ  ê5lNÆ  ê5lNÆ  –}iNÆ  –}iNÆ  ]∫ö¯¥Ø        $        Æ                                 0;lNÆ  t<18>   ?       F                                      %      -                                     ‡5lNÆ  t<18>   ?       F                                       [∫ö˛¨Ø  ¯€E˜                                          –}iNÆ  ˇˇˇˇ            ÜSmNÆ                                 p∞hNÆ  PhNÆ          A∫ö‰™Ø .\tests\core                  D:\fdlang       	              D:\fdlang\lib                 D:\fdlang\libs                ÊjNÆ                        P‰jNÆ                        ‡ÁjNÆ                         mlNÆ          $       /                                               X∫ö˝∞Ø ò›E˜      !      ﬂ                           tiNÆ  ˇˇˇˇ    PbmNÆ  `bmNÆ  `bmNÆ                                 P6jNÆ  x6jNÆ  x6jNÆ          P∫õÙ©Ø  p∞hNÆ  P£mNÆ         J∫öÔ°Ø                          tiNÆ                                                         @siNÆ                            Ä?    `[lNÆ          `zmNÆ  ‡zmNÆ  ‡zmNÆ                                        ∞tiNÆ                                                         –UmNÆ                            Ä?     ]lNÆ          ‡êmNÆ  `ëmNÆ  `ëmNÆ                        X∫ö˝ªØ ò›E˜      "      ˚                          ∞tiNÆ  ˇˇˇˇ    ê_mNÆ  †_mNÆ  †_mNÆ                                 p4jNÆ  ò4jNÆ  ò4jNÆ          Z∫öˇ©Ø ¯€E˜                                          –}iNÆ  ˇˇˇˇ            §SmNÆ                                         ^∫ö˚´Ø ò‹E˜      '   !   f                          0[mNÆ  ˇˇˇˇ    pëmNÆ                                                  ‡9jNÆ  :jNÆ  :jNÆ                          ˇˇˇˇ            P∫õÙØØ  –ümNÆ  PhNÆ          b∫ö«°Ø PwlNÆ  –ulNÆ  vlNÆ  `ulNÆ  P~iNÆ  ∞~iNÆ  ∞}iNÆ  –}iNÆ  ~iNÆ  yiNÆ  p~iNÆ  –~iNÆ  p{iNÆ  ê{iNÆ  0iNÆ  iNÆ  PiNÆ  êziNÆ  pÄiNÆ  –iNÆ  0ÄiNÆ  PÄiNÆ  êÇlNÆ  0„jNÆ  „jNÆ  ‡?lNÆ  ¿kmNÆ  †>lNÆ  ê5lNÆ  ‡:lNÆ  `mNÆ  \mNÆ   tiNÆ  ∞tiNÆ  Ä9jNÆ  P4lNÆ  pcmNÆ  5jNÆ  BlNÆ  fmNÆ  2jNÆ  pqmNÆ  ‡jmNÆ  0]mNÆ  ∞]mNÆ  ê`mNÆ  _mNÆ  0`mNÆ  ^mNÆ   imNÆ  0[mNÆ  0amNÆ  0lmNÆ  ‡cmNÆ  P`mNÆ  0emNÆ  0bmNÆ  ∞amNÆ  –nmNÆ  êpmNÆ  ∞[mNÆ  ÄfmNÆ  –gmNÆ  @omNÆ                 	   Y               ê5lNÆ  ê`mNÆ   reet                                                                                            ≥                 –}iNÆ  ê`mNÆ   blNÆ                                                 m∫õ…ìØ  Ä¥mNÆ  `ŒmNÆ                    §      j          –}iNÆ  –}iNÆ   8jNÆ                                                                                     !      ﬂ      Y          –}iNÆ  –}iNÆ   7jNÆ                                                                                     "      ˚                 _mNÆ  P4lNÆ                                                                                             $       %                 ê5lNÆ  _mNÆ                                                                                             $                       0`mNÆ  BlNÆ                                                                                             %       D                 ê5lNÆ  0`mNÆ                                                                                             %      -                 ‡cmNÆ  0lmNÆ                                                                                             '   !   f          ∫öUúØ    Æ  P4lNÆ  0]mNÆ  age                                                                                                               –}iNÆ  0]mNÆ  †alNÆ          ,       /                                                                      	                     BlNÆ  ∞]mNÆ  lives                                                                                           j                  –}iNÆ  ∞]mNÆ  `TlNÆ          ,       /                                                                      	   Y                 ê5lNÆ  ê`mNÆ  greet                                                                                           ≥                  –}iNÆ  ê`mNÆ  `blNÆ          ,       /                                                                         §                  –}iNÆ  –}iNÆ  8jNÆ                                                                                    !      ﬂ                  –}iNÆ  –}iNÆ  p7jNÆ                                                                                    "      ˚                  _mNÆ  P4lNÆ                                                                                             $       %                  ê5lNÆ  _mNÆ                                                                                             $                        0`mNÆ  BlNÆ                                                                                             %       D                  ê5lNÆ  0`mNÆ                                                                                             %      -      Æ          ‡cmNÆ  0lmNÆ                                                                                             '   !   f              ˛  êpmNÆ  –nmNÆ                                                                                             (   !   à                 ∞[mNÆ  0bmNÆ  0                             @“jNÆ  H“jNÆ  H“jNÆ  ¿8jNÆ  ‡8jNÆ  ‡8jNÆ                                          –}iNÆ  ∞[mNÆ  †UlNÆ          ,       /                                                                   +      º                                                                                                                                                                                                                                                                                                                                                                                                                                  €∫õØ  PhNÆ  p¶mNÆ  0]mNÆ   ge                                                                                                                –}iNÆ  0]mNÆ   TlNÆ                                                                                        	                     BlNÆ  ∞]mNÆ   ives                                                                                            j                  –}iNÆ  ∞]mNÆ   WlNÆ                                                                                        	   Y                 ê5lNÆ  ê`mNÆ   reet                                                                                            ≥                  –}iNÆ  ê`mNÆ   alNÆ                                                                                           §                  –}iNÆ  –}iNÆ   7jNÆ                                                                                     !      ﬂ                  –}iNÆ  –}iNÆ   6jNÆ                                                                                     "      ˚                  _mNÆ  P4lNÆ                                                                                             $       %                  ê5lNÆ  _mNÆ                                                                                             $            Æ          0`mNÆ  BlNÆ                                                                                             %       D      ˛      ˛  ê5lNÆ  0`mNÆ                                                                                             %      -                  ‡cmNÆ  0lmNÆ                                                                                             '   !   f                  êpmNÆ  –nmNÆ                                                                                             (   !   à                 ∞[mNÆ  0bmNÆ                                                                                                                         –}iNÆ  ∞[mNÆ   ]lNÆ                                                                                     +      º                  Sªö˜*Ø Solving constraint: int_32 == ?T2
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: ?T3 == &' Struct<23>
+Solving constraint: &' dyn Trait<18> + ' == ?T3
+Sol

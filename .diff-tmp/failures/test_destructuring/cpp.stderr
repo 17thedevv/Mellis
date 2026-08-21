@@ -1,0 +1,174 @@
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] Resolver::visit(StructDeclNode) name='Point' symbolId=4294967295 this=000001E009F40670 line=4
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: test_struct_destructuring
+[DEBUG] Resolving identifier: p
+[DEBUG] Finished resolvePath for p
+[DEBUG] Resolving function: test_tuple_destructuring
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: t
+[DEBUG] Finished resolvePath for t
+[DEBUG] Resolving function: main
+[DEBUG] Resolving identifier: test_struct_destructuring
+[DEBUG] Finished resolvePath for test_struct_destructuring
+[DEBUG] Resolving identifier: test_tuple_destructuring
+[DEBUG] Finished resolvePath for test_tuple_destructuring
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 4 items
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='Point' symbolId=18 bodyScopeId=1
+[DEBUG]   field='x' bodyScopeId=1 optId.empty()=0 symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG]     evaluated type: int_32
+[DEBUG]   field='y' bodyScopeId=1 optId.empty()=0 symbolId=20
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG]     evaluated type: int_32
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='test_struct_destructuring' symbolId=21
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='test_tuple_destructuring' symbolId=22
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=23
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=Point
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=24 expectedType=000001E009F7E1F0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=24 name=p tableSize=30
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E009F7E1F0 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=25 expectedType=000001E009F40530
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=26 expectedType=000001E009F40530
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::TupleTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=27 expectedType=000001E009F6D170
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=27 name=t tableSize=30
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E009F6D170 kind=8
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=28 expectedType=000001E009F7E0D0
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=29 expectedType=000001E009F7DFD0
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=21 name=test_struct_destructuring tableSize=30
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E009F7D090 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=22 name=test_tuple_destructuring tableSize=30
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E009F7CDF0 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[DEBUG TypeChecker] typeOf called with kInvalidSymbolID!
+[DEBUG TypeChecker] typeOf called with kInvalidSymbolID!
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::StructDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 1
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG TypeChecker] typeOf called with kInvalidSymbolID!
+[DEBUG] VarDeclNode type kind: 1
+[DEBUG] lowerPattern: StructPatternNode
+[DEBUG] lowerPattern: source is StructType
+[DEBUG pushLocalInst] Inserting LocalInst for %4 into entry block entry0
+[DEBUG] lowerPattern: processing field x
+[DEBUG] lowerPattern: fieldIndex=0, fieldTypes.size()=2
+[DEBUG] lowerPattern: generating LoadInst for field x
+[DEBUG pushLocalInst] Inserting LocalInst for %5 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %6 into entry block entry0
+[DEBUG] lowerPattern: processing field y
+[DEBUG] lowerPattern: fieldIndex=1, fieldTypes.size()=2
+[DEBUG] lowerPattern: generating LoadInst for field y
+[DEBUG pushLocalInst] Inserting LocalInst for %7 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %8 into entry block entry0
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 8
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG TypeChecker] typeOf called with kInvalidSymbolID!
+[DEBUG] VarDeclNode type kind: 8
+[DEBUG pushLocalInst] Inserting LocalInst for %4 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %5 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %6 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %7 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %8 into entry block entry0
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::FunctionDeclNode
+[DEBUG MVIRGenerator] done item[3]
+[PHASE] MVIRGenerator done
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG DropElaborator] %0 is MOVED! Removing drop.
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG DropElaborator] %0 is MOVED! Removing drop.

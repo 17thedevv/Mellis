@@ -1,0 +1,291 @@
+[DEBUG] Enum 'Option' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=31
+[DEBUG resolvePath] Resolving path starting with 'opt'
+[DEBUG resolvePath] resolve('opt') returned 1 syms. First id=34
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E172400930, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=36
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E172400930, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Data'
+[DEBUG resolvePath] resolve('Data') returned 1 syms. First id=27
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E172400930, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'data'
+[DEBUG resolvePath] resolve('data') returned 1 syms. First id=37
+[DEBUG resolvePath] Resolving path starting with 'process_option'
+[DEBUG resolvePath] resolve('process_option') returned 1 syms. First id=32
+[DEBUG resolvePath] Resolving path starting with 'opt'
+[DEBUG resolvePath] resolve('opt') returned 1 syms. First id=39
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=40
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=40
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=40
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=43
+[DEBUG resolvePath] Resolving path starting with 'factor'
+[DEBUG resolvePath] resolve('factor') returned 1 syms. First id=41
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'cl'
+[DEBUG resolvePath] resolve('cl') returned 1 syms. First id=42
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=40
+[DEBUG resolvePath] Resolving path starting with 'final_val'
+[DEBUG resolvePath] resolve('final_val') returned 1 syms. First id=44
+Solving constraint: int_32 == ?T1
+Solving constraint: Enum<18<?T4>> == Enum<18<T (33)>>
+Solving constraint: int_32 == ?T5
+Solving constraint: ?T3 == void
+Solving constraint: Enum<18<?T6>> == Enum<18<T (33)>>
+Solving constraint: int_32 == int_32
+Solving constraint: ?T3 == void
+Solving constraint: int_32 == int_32
+Solving constraint: fn(Struct<27>) -> Enum<18<?T7>> == fn(?T7) -> Enum<18<?T7>>
+Solving constraint: fn(Enum<18<?T7>>) -> int_32 == fn(opt: Enum<18<?T12>>) -> int_32
+Solving constraint: bool == ?T13
+Solving constraint: int_32 == ?T14
+Solving constraint: int_32 == ?T15
+Solving constraint: int_32 == ?T17
+Solving constraint: fn(int_32) -> ?T18 == [closure@45]
+Solving constraint: int_32 == ?T18
+[DEBUG] Enum 'Option_Data' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG resolvePath] Resolving path starting with 'opt'
+[DEBUG resolvePath] resolve('opt') returned 1 syms. First id=52
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E172400930, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=53
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E172400930, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+Solving constraint: Enum<18<?T21>> == Enum<47>
+Solving constraint: int_32 == ?T22
+Solving constraint: ?T20 == void
+Solving constraint: Enum<18<?T23>> == Enum<47>
+Solving constraint: int_32 == int_32
+Solving constraint: ?T20 == void
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[DEBUG MVIRGenerator] EnumDeclNode Option_Data symbolId=47
+[DEBUG MVIR] SuccessNode binding: symbolId=53 placeStr=subject_v48_f0
+[DEBUG Semantic] Analyzing function: @compute_30
+[DEBUG Semantic] Analyzing function: @main
+[DEBUG Semantic] Analyzing function: @__LambdaFunc_2067796389232
+[DEBUG Semantic] Analyzing function: @process_option_Data
+; ModuleID = 'D:\fdlang\tests\valid\test_kitchen_sink.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\test_kitchen_sink.ms"
+
+%Data = type { i32 }
+%Option_Data = type { i32, [1 x i32] }
+
+define i32 @compute_30(%Data %"0") {
+entry0:
+  %"1" = alloca %Data, align 8
+  store %Data %"0", ptr %"1", align 4
+  %fld = getelementptr inbounds %Data, ptr %"1", i32 0, i32 0
+  %"2" = load i32, ptr %fld, align 4
+  %"3" = mul i32 %"2", 2
+  ret i32 %"3"
+}
+
+define i32 @main() {
+entry0:
+  %"0" = alloca %Data, align 8
+  %"1" = alloca %Data, align 8
+  %"3" = alloca i32, align 4
+  %"4" = alloca %Option_Data, align 8
+  %"7" = alloca i32, align 4
+  %"18" = alloca i32, align 4
+  %"19" = alloca { ptr, ptr, ptr }, align 8
+  %"20" = alloca { ptr, ptr, ptr }, align 8
+  %"22" = alloca i32, align 4
+  %"25" = alloca { ptr, ptr, ptr }, align 8
+  %fld = getelementptr inbounds %Data, ptr %"1", i32 0, i32 0
+  store i32 10, ptr %fld, align 4
+  %"2" = load %Data, ptr %"1", align 4
+  store %Data %"2", ptr %"0", align 4
+  store i32 0, ptr %"3", align 4
+  %"5" = load %Data, ptr %"0", align 4
+  %0 = alloca %Option_Data, align 8
+  %1 = getelementptr inbounds %Option_Data, ptr %0, i32 0, i32 0
+  store i32 0, ptr %1, align 4
+  %2 = getelementptr inbounds %Option_Data, ptr %0, i32 0, i32 1
+  %3 = getelementptr inbounds { %Data }, ptr %2, i32 0, i32 0
+  store %Data %"5", ptr %3, align 4
+  %"6" = load %Option_Data, ptr %0, align 4
+  store %Option_Data %"6", ptr %"4", align 4
+  %"8" = load %Option_Data, ptr %"4", align 4
+  %"9" = call i32 @process_option_Data(%Option_Data %"8")
+  store i32 %"9", ptr %"7", align 4
+  %"10" = load i32, ptr %"7", align 4
+  %"11" = icmp sgt i32 %"10", 10
+  br i1 %"11", label %then1, label %else3
+
+then1:                                            ; preds = %entry0
+  %"12" = load i32, ptr %"3", align 4
+  %"13" = load i32, ptr %"7", align 4
+  %"14" = add i32 %"12", %"13"
+  store i32 %"14", ptr %"3", align 4
+  br label %merge2
+
+else3:                                            ; preds = %entry0
+  %"15" = load i32, ptr %"3", align 4
+  %"16" = load i32, ptr %"7", align 4
+  %"17" = sub i32 %"15", %"16"
+  store i32 %"17", ptr %"3", align 4
+  br label %merge2
+
+merge2:                                           ; preds = %else3, %then1
+  store i32 5, ptr %"18", align 4
+  %fld1 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"20", i32 0, i32 0
+  store ptr @__LambdaFunc_2067796389232, ptr %fld1, align 8
+  %fld2 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"20", i32 0, i32 1
+  store ptr %"18", ptr %fld2, align 8
+  %fld3 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"20", i32 0, i32 2
+  store ptr %"3", ptr %fld3, align 8
+  %"21" = load { ptr, ptr, ptr }, ptr %"20", align 8
+  store { ptr, ptr, ptr } %"21", ptr %"19", align 8
+  %"23" = load i32, ptr %"7", align 4
+  %"24" = load { ptr, ptr, ptr }, ptr %"19", align 8
+  store { ptr, ptr, ptr } %"24", ptr %"25", align 8
+  %fld4 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"25", i32 0, i32 0
+  %"26" = load ptr, ptr %fld4, align 8
+  %"27" = call i32 %"26"(ptr %"25", i32 %"23")
+  store i32 %"27", ptr %"22", align 4
+  %"28" = load i32, ptr %"22", align 4
+  ret i32 %"28"
+}
+
+define i32 @__LambdaFunc_2067796389232(ptr %"0", i32 %"1") {
+entry0:
+  %"2" = alloca ptr, align 8
+  %"3" = alloca ptr, align 8
+  %"5" = alloca ptr, align 8
+  %"7" = alloca i32, align 4
+  store ptr %"0", ptr %"2", align 8
+  %fld = getelementptr inbounds { ptr, ptr, ptr }, ptr %"0", i32 0, i32 1
+  %"4" = load ptr, ptr %fld, align 8
+  store ptr %"4", ptr %"3", align 8
+  %fld1 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"0", i32 0, i32 2
+  %"6" = load ptr, ptr %fld1, align 8
+  store ptr %"6", ptr %"5", align 8
+  store i32 %"1", ptr %"7", align 4
+  %"8" = load i32, ptr %"7", align 4
+  %"9" = load ptr, ptr %"3", align 8
+  %"10" = load i32, ptr %"9", align 4
+  %"11" = add i32 %"8", %"10"
+  %"12" = load ptr, ptr %"5", align 8
+  %"13" = load i32, ptr %"12", align 4
+  %"14" = add i32 %"11", %"13"
+  ret i32 %"14"
+}
+
+define i32 @process_option_Data(%Option_Data %"0") {
+entry0:
+  %"1" = alloca %Option_Data, align 8
+  %"7" = alloca %Data, align 8
+  store %Option_Data %"0", ptr %"1", align 4
+  %"2" = load %Option_Data, ptr %"1", align 4
+  %"4" = extractvalue %Option_Data %"2", 0
+  %"5" = icmp eq i32 %"4", 0
+  br i1 %"5", label %match_tag_05, label %match_tag_next6
+
+match_tag_05:                                     ; preds = %entry0
+  %0 = alloca %Option_Data, align 8
+  store %Option_Data %"2", ptr %0, align 4
+  %1 = getelementptr inbounds %Option_Data, ptr %0, i32 0, i32 1
+  %2 = getelementptr inbounds { %Data }, ptr %1, i32 0, i32 0
+  %"6" = load %Data, ptr %2, align 4
+  store %Data %"6", ptr %"7", align 4
+  br label %match_arm_02
+
+match_tag_next6:                                  ; preds = %entry0
+  %"8" = icmp eq i32 %"4", 1
+  br i1 %"8", label %match_tag_17, label %match_tag_next8
+
+match_tag_17:                                     ; preds = %match_tag_next6
+  br label %match_arm_13
+
+match_tag_next8:                                  ; preds = %match_tag_next6
+  br label %match_unreachable4
+
+match_arm_02:                                     ; preds = %match_tag_05
+  %"9" = load %Data, ptr %"7", align 4
+  %"10" = call i32 @compute_30(%Data %"9")
+  ret i32 %"10"
+
+match_arm_13:                                     ; preds = %match_tag_17
+  ret i32 0
+
+match_unreachable4:                               ; preds = %match_tag_next8
+  unreachable
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

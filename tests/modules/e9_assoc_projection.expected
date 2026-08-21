@@ -1,0 +1,386 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=30
+[DEBUG resolvePath] Resolving path starting with 'item'
+[DEBUG resolvePath] resolve('item') returned 1 syms. First id=34
+[DEBUG resolvePath] Resolving path starting with 'Box'
+[DEBUG resolvePath] resolve('Box') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'extract'
+[DEBUG resolvePath] resolve('extract') returned 1 syms. First id=31
+[DEBUG resolvePath] Resolving path starting with 'b'
+[DEBUG resolvePath] resolve('b') returned 1 syms. First id=36
+[DEBUG resolvePath] Resolving path starting with 'res'
+[DEBUG resolvePath] resolve('res') returned 1 syms. First id=37
+Solving constraint: int_32 == ?T0
+[DEBUG TraitSolver] resolveAssociatedType: selfType=T (33), traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=0
+[DEBUG TraitSolver]   -> no matching clause found
+Solving constraint: <T (33) as Trait<4294967295>>::Value == ?T1
+[DEBUG TraitSolver] resolveAssociatedType: selfType=T (33), traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=0
+[DEBUG TraitSolver]   -> no matching clause found
+[DEBUG TraitSolver] resolveAssociatedType: selfType=T (33), traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=0
+[DEBUG TraitSolver]   -> no matching clause found
+Solving constraint: int_32 == int_32
+Solving constraint: ?T3 == &' Struct<24>
+Solving constraint: fn(?T3) -> <Struct<24> as Trait<4294967295>>::Value == fn(item: &' Struct<24>) -> <Struct<24> as Trait<4294967295>>::Value
+[DEBUG TraitSolver] resolveAssociatedType: selfType=Struct<24>, traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=1
+[DEBUG TraitSolver]     -> resolved to int_32
+[DEBUG TraitSolver] resolveAssociatedType: selfType=Struct<24>, traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=1
+[DEBUG TraitSolver]     -> resolved to int_32
+Solving constraint: bool == ?T5
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+[DEBUG TraitSolver] resolveAssociatedType: selfType=T (33), traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=0
+[DEBUG TraitSolver]   -> no matching clause found
+[DEBUG TraitSolver] resolveAssociatedType: selfType=T (33), traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=0
+[DEBUG TraitSolver]   -> no matching clause found
+[DEBUG TraitSolver] resolveAssociatedType: selfType=Struct<24>, traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=1
+[DEBUG TraitSolver]     -> resolved to int_32
+[DEBUG TraitSolver] resolveAssociatedType: selfType=T (33), traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=0
+[DEBUG TraitSolver]   -> no matching clause found
+Solving constraint: <Struct<24> as Trait<4294967295>>::Value == ?T6
+[DEBUG TraitSolver] resolveAssociatedType: selfType=Struct<24>, traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=1
+[DEBUG TraitSolver]     -> resolved to int_32
+[DEBUG TraitSolver] resolveAssociatedType: selfType=T (33), traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=0
+[DEBUG TraitSolver]   -> no matching clause found
+[DEBUG TraitSolver] resolveAssociatedType: selfType=Struct<24>, traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=1
+[DEBUG TraitSolver]     -> resolved to int_32
+[DEBUG TraitSolver] resolveAssociatedType: selfType=T (33), traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=0
+[DEBUG TraitSolver]   -> no matching clause found
+[DEBUG TraitSolver] resolveAssociatedType: selfType=Struct<24>, traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=1
+[DEBUG TraitSolver]     -> resolved to int_32
+[DEBUG TraitSolver] resolveAssociatedType: selfType=Struct<24>, traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=1
+[DEBUG TraitSolver]     -> resolved to int_32
+[DEBUG TraitSolver] resolveAssociatedType: selfType=Struct<24>, traitId=-1, assocName=Value
+[DEBUG TraitSolver]   trying clause with selfType=Struct<24> (instSelf=Struct<24>): unified=1
+[DEBUG TraitSolver]     -> resolved to int_32
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='HasAssoc' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='Self' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='Value' kind=12 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='get_value' kind=4 scope=1
+[DEBUG SymbolTable] declareSymbol id=22 name=''_1' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=23 name='self' kind=3 scope=2
+[DEBUG] Resolver::visit(StructDeclNode) name='Box' symbolId=4294967295 this=000002866FEDACE0 line=6
+[DEBUG SymbolTable] declareSymbol id=24 name='Box' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=25 name='val' kind=8 scope=3
+[DEBUG SymbolTable] declareSymbol id=26 name='Self' kind=12 scope=4
+[DEBUG SymbolTable] declareSymbol id=27 name='Value' kind=12 scope=4
+[DEBUG SymbolTable] declareSymbol id=28 name='get_value' kind=4 scope=4
+[DEBUG SymbolTable] declareSymbol id=29 name=''_1' kind=13 scope=5
+[DEBUG SymbolTable] declareSymbol id=30 name='self' kind=3 scope=5
+[DEBUG SymbolTable] declareSymbol id=31 name='extract' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=32 name=''_1' kind=13 scope=6
+[DEBUG SymbolTable] declareSymbol id=33 name='T' kind=13 scope=6
+[DEBUG SymbolTable] declareSymbol id=34 name='item' kind=3 scope=6
+[DEBUG SymbolTable] declareSymbol id=35 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: get_value
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Box': i=1, currentSym=24
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'HasAssoc': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving function: get_value
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Box': i=1, currentSym=24
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: extract
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'HasAssoc': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=33
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=33
+[DEBUG] Resolving identifier: item
+[DEBUG] Finished resolvePath for item
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=36 name='b' kind=0 scope=10
+[DEBUG SymbolTable] declareSymbol id=37 name='res' kind=0 scope=10
+[DEBUG] Resolving identifier: extract
+[DEBUG] Finished resolvePath for extract
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Box': i=1, currentSym=24
+[DEBUG] Resolving identifier: b
+[DEBUG] Finished resolvePath for b
+[DEBUG] Resolving identifier: res
+[DEBUG] Finished resolvePath for res
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 5 items
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='get_value' symbolId=21
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=19
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=19
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'get_value' symbolId=21
+[DEBUG TraitDeclNode] typeTable[21] = 3
+[DEBUG TraitDeclNode] Registered trait method 'get_value'
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='Box' symbolId=24 bodyScopeId=3
+[DEBUG]   field='val' bodyScopeId=3 optId.empty()=0 symbolId=25
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG]     evaluated type: int_32
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Box' symbolId=24
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=26 selfType=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'HasAssoc' symbolId=18
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='get_value' symbolId=28
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Box' symbolId=24
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG TraitSolver] addClause: selfType=Struct<24> traitId=18
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='extract' symbolId=31
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=33
+[DEBUG self] Evaluated param->type for item -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=33
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'HasAssoc' symbolId=18
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (33) traitId=18
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=35
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=30 name=self tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002866FF040E0 kind=5
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=item tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002866FF03C30 kind=5
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=Box
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=36 expectedType=000002866FF18200
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=31 name=extract tableSize=38
+[DEBUG] Running TypePrePass on generic function: extract
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='extract' symbolId=31
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=33
+[DEBUG self] Evaluated param->type for item -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=33
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'HasAssoc' symbolId=18
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (33) traitId=18
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002866FF15110 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Box' symbolId=24
+[DEBUG substitute] GenericParam id=33 name='T' found=1
+[DEBUG substitute] GenericParam id=33 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=36 name=b tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002866FF18200 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Box' symbolId=24
+[DEBUG CallExpr] fnDecl name: 'extract' symbolId: 31
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(item: &' T (33)) -> <T (33) as Trait<4294967295>>::Value
+[DEBUG CallExpr] before substitute: fn(item: &' T (33)) -> <T (33) as Trait<4294967295>>::Value
+[DEBUG substitute] GenericParam id=33 name='T' found=1
+[DEBUG substitute] GenericParam id=33 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(item: &' Struct<24>) -> <Struct<24> as Trait<4294967295>>::Value
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=37 expectedType=000002866FF09000
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=37 name=res tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002866FF09000 kind=21
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG Field] Found StructType symbol=24 name=Box
+[DEBUG Field] Checking struct field: val
+[DEBUG Field] Solved field constraint!
+[DEBUG MethodResolver] Probing method 'get_value' for receiverType: &' T (33)
+[DEBUG TraitSolver] Solving goal: kind=2 self=&' T (33) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (33) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=18
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(&' T (33)) -> ?T1 with mInfo.type: fn(self: &' T (33)) -> <T (33) as Trait<4294967295>>::Value
+[DEBUG MethodResolver] Probing method 'eq' for receiverType: <Struct<24> as Trait<4294967295>>::Value
+[DEBUG TraitSolver] Solving goal: kind=2 self=<Struct<24> as Trait<4294967295>>::Value traitId=4294967295
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG MethodResolver] Probing method 'get_value' for receiverType: T (33)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (33) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (33) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=18
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 2
+[DEBUG MonomorphizationEngine] bounds check for param ''_1' has 0 bounds
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 1 bounds
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=Struct<24> traitId=18
+[DEBUG implementsTrait] type=Struct<24> traitId=18
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<24> traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=18
+[DEBUG implementsTrait] solve result=0
+[DEBUG] Setting lifetime substitution for ''_1'.
+[DEBUG] Setting type substitution for 'T' to a concrete type.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] Resolver::resolve: diag already has errors BEFORE pass1: 1 size: 1
+RAW ERROR: No method named 'eq' found for type '<Struct<24> as Trait<4294967295>>::Value'
+[DEBUG SymbolTable] declareSymbol id=38 name='extract_unmangled_Box' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=39 name='item' kind=3 scope=12
+[DEBUG] Resolver::resolve: Aborting after pass1 due to previous errors (1).
+RAW ERROR: No method named 'eq' found for type '<Struct<24> as Trait<4294967295>>::Value'
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='extract_unmangled_Box' symbolId=38
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Box' symbolId=24
+[DEBUG self] Evaluated param->type for item -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Box' symbolId=24
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=item tableSize=40
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002866FF03C30 kind=5
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG MethodResolver] Probing method 'get_value' for receiverType: &' T (33)
+[DEBUG TraitSolver] Solving goal: kind=2 self=&' T (33) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (33) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=18
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(&' T (33)) -> ?T6 with mInfo.type: fn(self: &' T (33)) -> <T (33) as Trait<4294967295>>::Value
+[DEBUG unify] Type mismatch at loc line 18 t1=int_32 t2=<T (33) as Trait<4294967295>>::Value
+[DEBUG] Starting TypeResolver
+[DEBUG MethodResolver] Probing method 'get_value' for receiverType: T (33)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (33) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (33) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=18
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[DEBUG substitute] GenericParam id=19 name='Self' found=1
+[PHASE] TypeChecker done, tcOk=0
+D:\fdlang\tests\modules\e9_assoc_projection.ms: error: No method named 'eq' found for type '<Struct<24> as Trait<4294967295>>::Value'
+error: Type mismatch: expected 'int_32', found '<T (33) as Trait<4294967295>>::Value'
+ --> D:\fdlang\tests\modules\e9_assoc_projection.ms:18:5
+  |
+18 |     return item.get_value();
+  |     ^
+D:\fdlang\tests\modules\e9_assoc_projection.ms: error: Compilation aborted due to TypeChecker errors.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

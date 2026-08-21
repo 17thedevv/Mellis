@@ -1,0 +1,46 @@
+[DEBUG resolvePath] Resolving path starting with 'PrivateStruct'
+[DEBUG resolvePath] resolve('PrivateStruct') returned 1 syms. First id=18
+Solving constraint: int_32 == int_32
+Solving constraint: Struct<18> == Struct<18>
+Solving constraint: int_32 == int_32
+; ModuleID = 'D:\fdlang\tests\invalid\e2_visibility_generic_leak.ms'
+source_filename = "D:\\fdlang\\tests\\invalid\\e2_visibility_generic_leak.ms"
+
+%PrivateStruct = type { i32 }
+
+define %PrivateStruct @expose_private() {
+entry0:
+  %"0" = alloca %PrivateStruct, align 8
+  %fld = getelementptr inbounds %PrivateStruct, ptr %"0", i32 0, i32 0
+  store i32 10, ptr %fld, align 4
+  %"1" = load %PrivateStruct, ptr %"0", align 4
+  ret %PrivateStruct %"1"
+}
+
+define i32 @main() {
+entry0:
+  ret i32 0
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+[DEBUG Semantic] Analyzing function: @expose_private
+[DEBUG Semantic] Analyzing function: @main
+
+=== FORCE DUMP LLVM IR ===

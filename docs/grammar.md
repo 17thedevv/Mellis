@@ -176,7 +176,7 @@ use_path      ::= IDENTIFIER ("::" IDENTIFIER)*
 
 use_tree_list ::= use_tree ("," use_tree)* ","?
 
-mod_decl      ::= annotation* "export"? KW_MOD IDENTIFIER "{" declaration* "}"
+mod_decl      ::= annotation* "export"? KW_MOD IDENTIFIER (";" | "{" declaration* "}")
 
 extern_decl ::= "extern" KW_FN IDENTIFIER "(" parameters? ")" ("->" type)? ";"
 
@@ -235,10 +235,10 @@ type           ::= reference_type
 
 builtin_type ::= BUILTIN_TYPE 
 
-BUILTIN_TYPE ::= "int_8" | "int_16" | "int_32" | "int_64" | "int_128" 
-                 | "uint_8" | "uint_16" | "uint_32" | "uint_64" | "uint_128"
+BUILTIN_TYPE ::= "int_4" | "int_8" | "int_16" | "int_32" | "int_64" | "int_128" 
+                 | "uint_4" | "uint_8" | "uint_16" | "uint_32" | "uint_64" | "uint_128"
                  | "float_32" | "float_64"
-                 | "bool" | "char" | "string" | "void"
+                 | "bool" | "char" | "str" | "void"
 
 trait_object_type ::= KW_DYN type_path
 
@@ -380,7 +380,7 @@ unit_literal  ::= "(" ")"
 
 // --- STRUCT LITERAL, LAMBDA, SIZEOF ---
 struct_literal ::= type_path "{" (IDENTIFIER ":" expression ("," IDENTIFIER ":" expression)* ","?)? "}"
-lambda_expr    ::= "|" (IDENTIFIER (":" type)? ("," IDENTIFIER (":" type)?)* ","?)? "|" ("->" type)? (expression | block_stmt)
+lambda_expr    ::= "move"? "|" (IDENTIFIER (":" type)? ("," IDENTIFIER (":" type)?)* ","?)? "|" "->" (type block_stmt | expression)
 sizeof_expr    ::= KW_SIZEOF "(" type ")"
 alignof_expr   ::= KW_ALIGNOF "(" type ")"
 

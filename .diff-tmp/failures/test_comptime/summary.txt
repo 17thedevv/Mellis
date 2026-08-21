@@ -1,0 +1,8 @@
+Test: D:\fdlang\tests\valid\test_comptime.ms
+
+Compiler:
+  C++  exit=0
+  Rust exit=1
+
+Classification:
+  CompilePhase

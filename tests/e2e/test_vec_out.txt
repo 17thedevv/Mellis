@@ -1,0 +1,300 @@
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 50 {
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 51 }
+[DEBUG] parseUseTree after segment: 50 {
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 51 }
+[DEBUG] Checking .\core.ms and .\core.mlib
+[DEBUG] Checking .\core\mod.ms and .\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\core.ms and D:\fdlang\tests\e2e\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\core\mod.ms and D:\fdlang\tests\e2e\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\core.ms and D:\fdlang\tests\e2e\lib\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\core\mod.ms and D:\fdlang\tests\e2e\lib\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\core.ms and D:\fdlang\tests\e2e\libs\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\core\mod.ms and D:\fdlang\tests\e2e\libs\core\mod.mlib
+[DEBUG] Checking .\lib\core.ms and .\lib\core.mlib
+[DEBUG] Checking .\lib\core\mod.ms and .\lib\core\mod.mlib
+[DEBUG] Checking ..\..\lib\core.ms and ..\..\lib\core.mlib
+[DEBUG] Checking ..\..\lib\core\mod.ms and ..\..\lib\core\mod.mlib
+[MLibLoader] Section 0 type=10 offset=442 size=24
+[MLibLoader] Section 1 type=4 offset=466 size=116
+[MLibLoader] Section 2 type=1 offset=582 size=8
+[MLibLoader] Section 3 type=2 offset=590 size=256
+[MLibLoader] Loading 0 namespaces
+[MLibLoader] Loading 2 types
+[MLibLoader] Type: Option
+[MLibLoader] Type: Result
+[MLibLoader] Loading 14 traits
+[MLibLoader] Trait: Add
+[MLibLoader] Trait: Clone
+[MLibLoader] Trait: Copy
+[MLibLoader] Trait: Div
+[MLibLoader] Trait: Drop
+[MLibLoader] Trait: Eq
+[MLibLoader] Trait: Index
+[MLibLoader] Trait: IndexMut
+[MLibLoader] Trait: IntoIterator
+[MLibLoader] Trait: Iterator
+[MLibLoader] Trait: Mul
+[MLibLoader] Trait: PartialEq
+[MLibLoader] Trait: Rem
+[MLibLoader] Trait: Sub
+[MLibLoader] Loading 0 functions
+[MLibLoader] Section 4 type=3 offset=846 size=64
+[MLibLoader] Section 5 type=12 offset=910 size=4
+[MLibLoader] Section 6 type=13 offset=914 size=3346
+[MLibLoader] Loading generic: Add rawSource size=92
+[DEBUG] Updated kind to Trait for id 19
+[MLibLoader] Loading generic: Clone rawSource size=57
+[DEBUG] Updated kind to Trait for id 20
+[MLibLoader] Loading generic: Copy rawSource size=20
+[DEBUG] Updated kind to Trait for id 21
+[MLibLoader] Loading generic: Div rawSource size=92
+[DEBUG] Updated kind to Trait for id 22
+[MLibLoader] Loading generic: Drop rawSource size=50
+[DEBUG] Updated kind to Trait for id 23
+[MLibLoader] Loading generic: Eq rawSource size=18
+[DEBUG] Updated kind to Trait for id 24
+[MLibLoader] Loading generic: Index rawSource size=103
+[DEBUG] Updated kind to Trait for id 25
+[MLibLoader] Loading generic: IndexMut rawSource size=98
+[DEBUG] Updated kind to Trait for id 26
+[MLibLoader] Loading generic: IntoIterator rawSource size=127
+[DEBUG] Updated kind to Trait for id 27
+[MLibLoader] Loading generic: Iterator rawSource size=94
+[DEBUG] Updated kind to Trait for id 28
+[MLibLoader] Loading generic: Mul rawSource size=92
+[DEBUG] Updated kind to Trait for id 29
+[MLibLoader] Loading generic: Option rawSource size=48
+[DEBUG] Updated kind to Enum for id 17
+[MLibLoader] Loading generic: PartialEq rawSource size=137
+[DEBUG] Updated kind to Trait for id 30
+[MLibLoader] Loading generic: Rem rawSource size=92
+[DEBUG] Updated kind to Trait for id 31
+[MLibLoader] Loading generic: Result rawSource size=51
+[DEBUG] Updated kind to Enum for id 18
+[MLibLoader] Loading generic: Sub rawSource size=92
+[DEBUG] Updated kind to Trait for id 32
+[MLibLoader] Loading generic: Option rawSource size=1007
+[MLibLoader] Loading generic: Result rawSource size=814
+[MLibLoader] Section 7 type=8 offset=4260 size=338
+[DEBUG] Checking .\core.ms and .\core.mlib
+[DEBUG] Checking .\core\mod.ms and .\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\core.ms and D:\fdlang\tests\e2e\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\core\mod.ms and D:\fdlang\tests\e2e\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\core.ms and D:\fdlang\tests\e2e\lib\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\core\mod.ms and D:\fdlang\tests\e2e\lib\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\core.ms and D:\fdlang\tests\e2e\libs\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\core\mod.ms and D:\fdlang\tests\e2e\libs\core\mod.mlib
+[DEBUG] Checking .\lib\core.ms and .\lib\core.mlib
+[DEBUG] Checking .\lib\core\mod.ms and .\lib\core\mod.mlib
+[DEBUG] Checking ..\..\lib\core.ms and ..\..\lib\core.mlib
+[DEBUG] Checking ..\..\lib\core\mod.ms and ..\..\lib\core\mod.mlib
+[DEBUG] Checking .\core.ms and .\core.mlib
+[DEBUG] Checking .\core\mod.ms and .\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\core.ms and D:\fdlang\tests\e2e\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\core\mod.ms and D:\fdlang\tests\e2e\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\core.ms and D:\fdlang\tests\e2e\lib\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\core\mod.ms and D:\fdlang\tests\e2e\lib\core\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\core.ms and D:\fdlang\tests\e2e\libs\core.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\core\mod.ms and D:\fdlang\tests\e2e\libs\core\mod.mlib
+[DEBUG] Checking .\lib\core.ms and .\lib\core.mlib
+[DEBUG] Checking .\lib\core\mod.ms and .\lib\core\mod.mlib
+[DEBUG] Checking ..\..\lib\core.ms and ..\..\lib\core.mlib
+[DEBUG] Checking ..\..\lib\core\mod.ms and ..\..\lib\core\mod.mlib
+[DEBUG] Checking .\alloc.ms and .\alloc.mlib
+[DEBUG] Checking .\alloc\mod.ms and .\alloc\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\alloc.ms and D:\fdlang\tests\e2e\alloc.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\alloc\mod.ms and D:\fdlang\tests\e2e\alloc\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\alloc.ms and D:\fdlang\tests\e2e\lib\alloc.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\alloc\mod.ms and D:\fdlang\tests\e2e\lib\alloc\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\alloc.ms and D:\fdlang\tests\e2e\libs\alloc.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\alloc\mod.ms and D:\fdlang\tests\e2e\libs\alloc\mod.mlib
+[DEBUG] Checking .\lib\alloc.ms and .\lib\alloc.mlib
+[DEBUG] Checking .\lib\alloc\mod.ms and .\lib\alloc\mod.mlib
+[DEBUG] Checking ..\..\lib\alloc.ms and ..\..\lib\alloc.mlib
+[DEBUG] Checking ..\..\lib\alloc\mod.ms and ..\..\lib\alloc\mod.mlib
+[MLibLoader] Section 0 type=10 offset=442 size=24
+[MLibLoader] Section 1 type=4 offset=466 size=77
+[MLibLoader] Section 2 type=1 offset=543 size=8
+[MLibLoader] Section 3 type=2 offset=551 size=129
+[MLibLoader] Loading 0 namespaces
+[MLibLoader] Loading 2 types
+[MLibLoader] Type: GlobalAlloc
+[MLibLoader] Type: Vec
+[MLibLoader] Loading 1 traits
+[MLibLoader] Trait: Allocator
+[MLibLoader] Loading 2 functions
+[MLibLoader] Function: vec_new
+[MLibLoader] Function: vec_with_capacity
+[MLibLoader] Section 4 type=3 offset=680 size=104
+[MLibLoader] Section 5 type=12 offset=784 size=4
+[MLibLoader] Section 6 type=13 offset=788 size=3563
+[MLibLoader] Loading generic: Allocator rawSource size=161
+[DEBUG] Updated kind to Trait for id 39
+[MLibLoader] Loading generic: Vec rawSource size=80
+[DEBUG] Updated kind to Struct for id 38
+[MLibLoader] Loading generic: vec_new rawSource size=123
+[DEBUG] Updated kind to Function for id 40
+[MLibLoader] Loading generic: vec_with_capacity rawSource size=337
+[DEBUG] Updated kind to Function for id 41
+[MLibLoader] Loading generic: GlobalAlloc rawSource size=271
+[MLibLoader] Loading generic: Vec rawSource size=1878
+[MLibLoader] Loading generic: Vec rawSource size=593
+[MLibLoader] Section 7 type=8 offset=4351 size=494
+[DEBUG] Checking .\alloc.ms and .\alloc.mlib
+[DEBUG] Checking .\alloc\mod.ms and .\alloc\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\alloc.ms and D:\fdlang\tests\e2e\alloc.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\alloc\mod.ms and D:\fdlang\tests\e2e\alloc\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\alloc.ms and D:\fdlang\tests\e2e\lib\alloc.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\lib\alloc\mod.ms and D:\fdlang\tests\e2e\lib\alloc\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\alloc.ms and D:\fdlang\tests\e2e\libs\alloc.mlib
+[DEBUG] Checking D:\fdlang\tests\e2e\libs\alloc\mod.ms and D:\fdlang\tests\e2e\libs\alloc\mod.mlib
+[DEBUG] Checking .\lib\alloc.ms and .\lib\alloc.mlib
+[DEBUG] Checking .\lib\alloc\mod.ms and .\lib\alloc\mod.mlib
+[DEBUG] Checking ..\..\lib\alloc.ms and ..\..\lib\alloc.mlib
+[DEBUG] Checking ..\..\lib\alloc\mod.ms and ..\..\lib\alloc\mod.mlib
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=35 kind=17 aliasTo=18
+[DEBUG] resolvePath alias jump: resolvedSymId=18
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+[DEBUG] resolvePath start: currentSym=34 kind=17 aliasTo=17
+[DEBUG] resolvePath alias jump: resolvedSymId=17
+[DEBUG] resolvePath final: currentSym=17 kind=6
+Solving constraint: bool == ?T2
+Solving constraint: ?T8 == int_32
+Solving constraint: ?T9 == ?T11
+Solving constraint: bool == ?T13
+Solving constraint: Enum<293> == Enum<17<?T14>>
+Solving constraint: ?T15 == ?T17
+Solving constraint: fn(?T23) -> ?T24 == fn(?T22) -> Enum<17<?T22>>
+Solving constraint: Enum<293> == ?T24
+Solving constraint: uint_64 == ?T25
+Solving constraint: uint_64 == ?T26
+Solving constraint: bool == ?T28
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == ?T30
+Solving constraint: bool == ?T34
+Solving constraint: uint_64 == int_32
+Solving constraint: bool == ?T36
+Solving constraint: ?T42 == ?T43
+Solving constraint: uint_64 == ?T44
+Solving constraint: ?T49 == *mut int_32
+Solving constraint: ?T50 == int_32
+Solving constraint: bool == ?T52
+Solving constraint: ?T57 == int_32
+Solving constraint: ?T58 == int_32
+Solving constraint: ?T59 == *mut int_32
+Solving constraint: bool == ?T62
+Solving constraint: ?T68 == unknown
+Solving constraint: ?T69 == ?T71
+Solving constraint: bool == ?T73
+Solving constraint: Enum<293> == Enum<17<?T74>>
+Solving constraint: ?T75 == ?T77
+Solving constraint: fn(?T83) -> ?T84 == fn(?T82) -> Enum<17<?T82>>
+Solving constraint: Enum<293> == ?T84
+Solving constraint: uint_64 == ?T85
+Solving constraint: uint_64 == ?T86
+Solving constraint: bool == ?T88
+Solving constraint: unknown == int_32
+Solving constraint: unknown == ?T90
+Solving constraint: bool == ?T94
+Solving constraint: uint_64 == int_32
+Solving constraint: bool == ?T96
+Solving constraint: ?T102 == ?T103
+Solving constraint: unknown == ?T104
+Solving constraint: ?T109 == unknown
+Solving constraint: ?T110 == unknown
+Solving constraint: bool == ?T112
+Solving constraint: ?T117 == int_32
+Solving constraint: ?T118 == int_32
+Solving constraint: ?T119 == *mut int_32
+Solving constraint: fn() -> ?T120 == fn() -> Struct<38<int_32>>
+Solving constraint: Struct<261> == ?T120
+Solving constraint: int_32 == ?T123
+Solving constraint: Struct<38<T (199)>> == Struct<38<?T124>>
+Solving constraint: bool == ?T125
+Solving constraint: fn() -> ?T126 == fn() -> Struct<38<T (200)>>
+Solving constraint: Struct<38<T (200)>> == ?T126
+Solving constraint: Struct<38<T (200)>> == Struct<38<?T129>>
+Solving constraint: fn(uint_64, uint_64) -> ?T130 == fn(size: uint_64, align: uint_64) -> *mut uint_8
+Solving constraint: *mut uint_8 == ?T130
+Solving constraint: fn(*mut uint_8, uint_64, uint_64) -> ?T131 == fn(ptr: *mut uint_8, size: uint_64, align: uint_64) -> void
+Solving constraint: Struct<261> == Struct<38<?T132>>

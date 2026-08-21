@@ -1,0 +1,659 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG] Enum 'Option' has 2 variants
+[DEBUG] Visiting variant 'None'
+[DEBUG] Visiting variant 'Some'
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=27
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=31
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=37
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with '__mellis_panic'
+[DEBUG resolvePath] resolve('__mellis_panic') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=35
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'test_try'
+[DEBUG resolvePath] resolve('test_try') returned 1 syms. First id=34
+[DEBUG resolvePath] Resolving path starting with 'a'
+[DEBUG resolvePath] resolve('a') returned 1 syms. First id=39
+[DEBUG] Enum 'Option_int_32' has 2 variants
+[DEBUG] Visiting variant 'None'
+[DEBUG] Visiting variant 'Some'
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=47
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=51
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=54
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with '__mellis_panic'
+[DEBUG resolvePath] resolve('__mellis_panic') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=19
+[DEBUG] resolvePath start: currentSym=19 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=19 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=2 (sym.decl=000001B83986EBD0, bodyScopeId=2, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+Solving constraint: Enum<19<?T2>> == Enum<41>
+Solving constraint: ?T1 == bool
+Solving constraint: Enum<19<?T3>> == Enum<41>
+Solving constraint: ?T1 == bool
+Solving constraint: Enum<19<?T5>> == Enum<41>
+Solving constraint: ?T4 == ?T5
+Solving constraint: Enum<19<?T6>> == Enum<41>
+Solving constraint: fn() -> void == fn() -> void
+Solving constraint: ?T4 == void
+Solving constraint: fn(?T11) -> Enum<19<?T10>> == fn(?T10) -> Enum<19<?T10>>
+Solving constraint: Enum<19<int_32>> == Enum<19<?T10>>
+Solving constraint: fn(int_32) -> Enum<19<?T13>> == fn(?T13) -> Enum<19<?T13>>
+Solving constraint: fn(Enum<19<?T13>>) -> Enum<41> == fn(val: Enum<19<int_32>>) -> Enum<19<int_32>>
+Solving constraint: int_32 == int_32
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='__mellis_panic' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='Option' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=20 name='T' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=21 name='None' kind=7 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='Some' kind=7 scope=2
+[DEBUG SymbolTable] declareSymbol id=23 name='__field_0' kind=8 scope=4
+[DEBUG SymbolTable] declareSymbol id=24 name='Self' kind=12 scope=5
+[DEBUG SymbolTable] declareSymbol id=25 name='T' kind=13 scope=5
+[DEBUG SymbolTable] declareSymbol id=26 name='is_error' kind=4 scope=5
+[DEBUG SymbolTable] declareSymbol id=27 name='self' kind=3 scope=6
+[DEBUG SymbolTable] declareSymbol id=28 name='extract_error' kind=4 scope=5
+[DEBUG SymbolTable] declareSymbol id=29 name='self' kind=3 scope=7
+[DEBUG SymbolTable] declareSymbol id=30 name='unwrap' kind=4 scope=5
+[DEBUG SymbolTable] declareSymbol id=31 name='self' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=32 name='from_error' kind=4 scope=5
+[DEBUG SymbolTable] declareSymbol id=33 name='err' kind=3 scope=9
+[DEBUG SymbolTable] declareSymbol id=34 name='test_try' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=35 name='val' kind=3 scope=10
+[DEBUG SymbolTable] declareSymbol id=36 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=20
+[DEBUG] lookup 'Option' starting at scope 5
+[DEBUG] lookup 'Option' checking scope 5 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Option': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=25
+[DEBUG] Resolving function: is_error
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=24
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 13
+[DEBUG] lookup 'Option' checking scope 13 (kind=3, parent=12)
+[DEBUG] lookup 'Option' checking scope 12 (kind=3, parent=6)
+[DEBUG] lookup 'Option' checking scope 6 (kind=2, parent=5)
+[DEBUG] lookup 'Option' checking scope 5 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] lookup 'Option' starting at scope 14
+[DEBUG] lookup 'Option' checking scope 14 (kind=3, parent=12)
+[DEBUG] lookup 'Option' checking scope 12 (kind=3, parent=6)
+[DEBUG] lookup 'Option' checking scope 6 (kind=2, parent=5)
+[DEBUG] lookup 'Option' checking scope 5 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] Resolving function: extract_error
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=24
+[DEBUG] Resolving function: unwrap
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=25
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=24
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 17
+[DEBUG] lookup 'Option' checking scope 17 (kind=3, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=3, parent=8)
+[DEBUG] lookup 'Option' checking scope 8 (kind=2, parent=5)
+[DEBUG] lookup 'Option' checking scope 5 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG SymbolTable] declareSymbol id=37 name='val' kind=0 scope=17
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 18
+[DEBUG] lookup 'Option' checking scope 18 (kind=3, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=3, parent=8)
+[DEBUG] lookup 'Option' checking scope 8 (kind=2, parent=5)
+[DEBUG] lookup 'Option' checking scope 5 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: from_error
+[DEBUG] lookup 'Option' starting at scope 9
+[DEBUG] lookup 'Option' checking scope 9 (kind=2, parent=5)
+[DEBUG] lookup 'Option' checking scope 5 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Option': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=25
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 20
+[DEBUG] lookup 'Option' checking scope 20 (kind=3, parent=9)
+[DEBUG] lookup 'Option' checking scope 9 (kind=2, parent=5)
+[DEBUG] lookup 'Option' checking scope 5 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving function: test_try
+[DEBUG] lookup 'Option' starting at scope 10
+[DEBUG] lookup 'Option' checking scope 10 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Option': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] lookup 'Option' starting at scope 10
+[DEBUG] lookup 'Option' checking scope 10 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Option': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=38 name='x' kind=0 scope=21
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 21
+[DEBUG] lookup 'Option' checking scope 21 (kind=3, parent=10)
+[DEBUG] lookup 'Option' checking scope 10 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=39 name='a' kind=0 scope=22
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 22
+[DEBUG] lookup 'Option' checking scope 22 (kind=3, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] Finished resolvePath for Option
+[DEBUG SymbolTable] declareSymbol id=40 name='b' kind=0 scope=22
+[DEBUG] Resolving identifier: test_try
+[DEBUG] Finished resolvePath for test_try
+[DEBUG] Resolving identifier: a
+[DEBUG] Finished resolvePath for a
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 5 items
+[DEBUG] item kind: class fl::ExternDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='__mellis_panic' symbolId=18
+[DEBUG] item kind: class fl::EnumDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=20
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 1
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='test_try' symbolId=34
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG self] Evaluated param->type for val -> 2
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=36
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ExternDeclNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=35 name=val tableSize=41
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398A3120 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG SymbolTable] declareSymbol id=41 name='Option_int_32' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=42 name='None' kind=7 scope=23
+[DEBUG SymbolTable] declareSymbol id=43 name='Some' kind=7 scope=23
+[DEBUG SymbolTable] declareSymbol id=44 name='__field_0' kind=8 scope=25
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Option'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: Skipping node type class fl::BuiltinTypeNode
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Option'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG SymbolTable] declareSymbol id=45 name='Self' kind=12 scope=26
+[DEBUG SymbolTable] declareSymbol id=46 name='is_error' kind=4 scope=26
+[DEBUG SymbolTable] declareSymbol id=47 name='self' kind=3 scope=27
+[DEBUG SymbolTable] declareSymbol id=48 name='extract_error' kind=4 scope=26
+[DEBUG SymbolTable] declareSymbol id=49 name='self' kind=3 scope=28
+[DEBUG SymbolTable] declareSymbol id=50 name='unwrap' kind=4 scope=26
+[DEBUG SymbolTable] declareSymbol id=51 name='self' kind=3 scope=29
+[DEBUG SymbolTable] declareSymbol id=52 name='from_error' kind=4 scope=26
+[DEBUG SymbolTable] declareSymbol id=53 name='err' kind=3 scope=30
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: is_error
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 32
+[DEBUG] lookup 'Option' checking scope 32 (kind=3, parent=31)
+[DEBUG] lookup 'Option' checking scope 31 (kind=3, parent=27)
+[DEBUG] lookup 'Option' checking scope 27 (kind=2, parent=26)
+[DEBUG] lookup 'Option' checking scope 26 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] lookup 'Option' starting at scope 33
+[DEBUG] lookup 'Option' checking scope 33 (kind=3, parent=31)
+[DEBUG] lookup 'Option' checking scope 31 (kind=3, parent=27)
+[DEBUG] lookup 'Option' checking scope 27 (kind=2, parent=26)
+[DEBUG] lookup 'Option' checking scope 26 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] Resolving function: extract_error
+[DEBUG] Resolving function: unwrap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 36
+[DEBUG] lookup 'Option' checking scope 36 (kind=3, parent=35)
+[DEBUG] lookup 'Option' checking scope 35 (kind=3, parent=29)
+[DEBUG] lookup 'Option' checking scope 29 (kind=2, parent=26)
+[DEBUG] lookup 'Option' checking scope 26 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG SymbolTable] declareSymbol id=54 name='val' kind=0 scope=36
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 37
+[DEBUG] lookup 'Option' checking scope 37 (kind=3, parent=35)
+[DEBUG] lookup 'Option' checking scope 35 (kind=3, parent=29)
+[DEBUG] lookup 'Option' checking scope 29 (kind=2, parent=26)
+[DEBUG] lookup 'Option' checking scope 26 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: from_error
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 39
+[DEBUG] lookup 'Option' checking scope 39 (kind=3, parent=30)
+[DEBUG] lookup 'Option' checking scope 30 (kind=2, parent=26)
+[DEBUG] lookup 'Option' checking scope 26 (kind=9, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 19
+[DEBUG] Finished resolvePath for Option
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] ImplDeclNode evaluating selfType: 2
+[DEBUG] ImplDeclNode Self symbolId=45 selfType=2
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='is_error' symbolId=46
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=41
+[DEBUG self] Evaluated param->type for self -> 2
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='extract_error' symbolId=48
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=41
+[DEBUG self] Evaluated param->type for self -> 2
+[DEBUG] evaluateTypeNode called on class fl::TupleTypeNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='unwrap' symbolId=50
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=41
+[DEBUG self] Evaluated param->type for self -> 2
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='from_error' symbolId=52
+[DEBUG] evaluateTypeNode called on class fl::TupleTypeNode
+[DEBUG self] Evaluated param->type for err -> 8
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] addInherentMethod: is_error methodId=46
+[DEBUG] addInherentMethod: extract_error methodId=48
+[DEBUG] addInherentMethod: unwrap methodId=50
+[DEBUG] addInherentMethod: from_error methodId=52
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=47 name=self tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398A3490 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000001B8398A3490
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000001B8398B8380
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=51 name=self tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398A3490 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000001B8398A3490
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000001B8398B8420
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=54 expectedType=000001B8398B8420
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=54 name=val tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398B8420 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=__mellis_panic tableSize=55
+[MLibCache] getType(18) cache MISS!
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398B4930 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[MLibCache] getType(18) cache MISS!
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=21 name=None tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398A3080 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG IdentifierExpr] Substituted generic enum variant 'None', new type: Enum<19<?T8>>
+[DEBUG] Starting UnificationEngine
+[DEBUG unify] Type mismatch at loc line 25 t1=int_32 t2=void
+[DEBUG] Starting TypeResolver
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG IdentifierExpr] Substituted generic enum variant 'val', new type: Enum<41>
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=38 expectedType=000001B8398B8020
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=22 name=Some tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398B4BD0 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG IdentifierExpr] Substituted generic enum variant 'Some', new type: fn(?T10) -> Enum<19<?T10>>
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=38 name=x tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398B8020 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=22 name=Some tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398B4BD0 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG substitute] GenericParam id=20 name='T' found=1
+[DEBUG IdentifierExpr] Substituted generic enum variant 'Some', new type: fn(?T13) -> Enum<19<?T13>>
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=39 expectedType=000001B8398A40C0
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=test_try tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398B5340 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG IdentifierExpr] Substituted generic enum variant 'test_try', new type: fn(val: Enum<41>) -> Enum<41>
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=39 name=a tableSize=55
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001B8398A40C0 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG IdentifierExpr] Substituted generic enum variant 'a', new type: Enum<19<?T13>>
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=40 expectedType=000001B8398A3490
+[DEBUG] Starting UnificationEngine
+[DEBUG MethodResolver] Probing method 'unwrap' for receiverType: Enum<41>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Enum<41> traitId=4294967295
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ExternDeclNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] InferenceVar at loc: 39:20 type: ?T9
+[DEBUG MethodResolver] Probing method 'is_error' for receiverType: Enum<41>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Enum<41> traitId=4294967295
+[DEBUG MethodResolver] Probing method 'unwrap' for receiverType: Enum<41>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Enum<41> traitId=4294967295
+[DEBUG MethodResolver] Probing method 'extract_error' for receiverType: Enum<41>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Enum<41> traitId=4294967295
+[DEBUG] InferenceVar at loc: 39:5 type: ?T9
+[DEBUG] InferenceVar at loc: 0:0 type: ?T9
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] InferenceVar at loc: 40:27 type: ?T9
+[DEBUG MethodResolver] Probing method 'add' for receiverType: ?T9
+[DEBUG TraitSolver] Solving goal: kind=2 self=?T9 traitId=4294967295
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 41
+[PHASE] TypeChecker done, tcOk=0
+error: Type mismatch: expected 'int_32', found 'void'
+ --> D:\fdlang\tests\valid\test_try.ms:25:9
+  |
+25 |         match self {
+  |         ^
+error: No method named 'unwrap' found for type 'Enum<41>'
+ --> D:\fdlang\tests\valid\test_try.ms:39:20
+  |
+39 |     dec x = val?;
+  |                    ^
+error: Type annotation needed
+ --> D:\fdlang\tests\valid\test_try.ms:39:20
+  |
+39 |     dec x = val?;
+  |                    ^
+error: Type does not implement `is_error()` for `?` operator.
+ --> D:\fdlang\tests\valid\test_try.ms:39:20
+  |
+39 |     dec x = val?;
+  |                    ^
+error: Type does not implement `unwrap()` for `?` operator.
+ --> D:\fdlang\tests\valid\test_try.ms:39:20
+  |
+39 |     dec x = val?;
+  |                    ^
+error: Type does not implement `extract_error()` for `?` operator.
+ --> D:\fdlang\tests\valid\test_try.ms:39:20
+  |
+39 |     dec x = val?;
+  |                    ^
+error: Type annotation needed
+ --> D:\fdlang\tests\valid\test_try.ms:39:5
+  |
+39 |     dec x = val?;
+  |     ^
+D:\fdlang\tests\valid\test_try.ms: error: Type annotation needed
+error: Type annotation needed
+ --> D:\fdlang\tests\valid\test_try.ms:40:27
+  |
+40 |     return Option::Some(x + 10);
+  |                           ^
+D:\fdlang\tests\valid\test_try.ms: error: Compilation aborted due to TypeChecker errors.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

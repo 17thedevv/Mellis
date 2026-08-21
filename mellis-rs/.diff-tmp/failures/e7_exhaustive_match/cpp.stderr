@@ -1,0 +1,3 @@
+D:\fdlang\tests\modules\e7_exhaustive_match.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%1'[0m
+D:\fdlang\tests\modules\e7_exhaustive_match.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%5'[0m
+D:\fdlang\tests\modules\e7_exhaustive_match.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m

@@ -1,0 +1,71 @@
+[DEBUG] Parser parsed array size, size ptr is 0000020E9A8FE2C0
+[DEBUG resolvePath] Resolving path starting with 'arr'
+[DEBUG resolvePath] resolve('arr') returned 1 syms. First id=19
+[DEBUG] ConstEvaluator evaluating expr of type: class fl::LiteralExpr
+[DEBUG] ConstEvaluator LiteralExpr kind: 0
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: [int_32; 3] == [int_32; 3]
+Solving constraint: int_32 == ?T0
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\scratch\test_array.ms'
+source_filename = "D:\\fdlang\\tests\\scratch\\test_array.ms"
+
+define i32 @main() {
+entry0:
+  %"0" = alloca [3 x i32], align 4
+  %"1" = alloca [3 x i32], align 4
+  %"2" = alloca i32, align 4
+  %"3" = alloca i32, align 4
+  %"4" = alloca i32, align 4
+  %"6" = alloca i32, align 4
+  store i32 0, ptr %"2", align 4
+  %idx = load i32, ptr %"2", align 4
+  %elem = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx
+  store i32 1, ptr %elem, align 4
+  store i32 1, ptr %"3", align 4
+  %idx1 = load i32, ptr %"3", align 4
+  %elem2 = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx1
+  store i32 2, ptr %elem2, align 4
+  store i32 2, ptr %"4", align 4
+  %idx3 = load i32, ptr %"4", align 4
+  %elem4 = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx3
+  store i32 3, ptr %elem4, align 4
+  %"5" = load [3 x i32], ptr %"1", align 4
+  store [3 x i32] %"5", ptr %"0", align 4
+  store i32 0, ptr %"6", align 4
+  br i1 false, label %bounds_fail, label %bounds_ok
+
+bounds_fail:                                      ; preds = %entry0
+  call void @__mellis_bounds_fail(i64 0, i64 3, ptr null, i32 0)
+  unreachable
+
+bounds_ok:                                        ; preds = %entry0
+  %idx5 = load i32, ptr %"6", align 4
+  %elem6 = getelementptr [3 x i32], ptr %"0", i32 0, i32 %idx5
+  %"7" = load i32, ptr %elem6, align 4
+  ret i32 %"7"
+}
+
+declare void @__mellis_bounds_fail(i64, i64, ptr, i32)
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

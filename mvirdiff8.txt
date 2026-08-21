@@ -1,0 +1,278 @@
+﻿diff --git a/compiler/src/IR/MVIRGenerator.cpp b/compiler/src/IR/MVIRGenerator.cpp
+index 252c3dd..00e9ca1 100644
+--- a/compiler/src/IR/MVIRGenerator.cpp
++++ b/compiler/src/IR/MVIRGenerator.cpp
+@@ -82,6 +82,147 @@ void MVIRGenerator::resetFunctionState() {
+ }
+ 
+ 
++void MVIRGenerator::emitDropsForScopes(size_t targetDepth) {
++    if (scopeStack_.size() <= targetDepth) return;
++    for (size_t i = scopeStack_.size(); i > targetDepth; --i) {
++        const auto& vars = scopeStack_[i - 1];
++        for (auto it = vars.rbegin(); it != vars.rend(); ++it) {
++            currentBlock_->instructions.push_back(
++                std::make_unique<mvir::DropInst>(it->id, it->type)
++            );
++        }
++    }
++}
++
++mvir::Operand MVIRGenerator::evaluateRValue(ExprNode& expr) {
++        auto oldMode = evalMode_;
++        evalMode_ = EvalMode::RValue;
++        lastEvaluatedOperand_ = mvir::Operand{};
++        expr.accept(*this);
++        evalMode_ = oldMode;
++        return lastEvaluatedOperand_;
++    }
++
++mvir::Operand MVIRGenerator::evaluateLValue(ExprNode& expr) {
++    auto oldMode = evalMode_;
++    evalMode_ = EvalMode::LValue;
++    expr.accept(*this);
++    evalMode_ = oldMode;
++    return lastEvaluatedOperand_;
++}
++
++// â”€â”€ ASTVisitor: Statements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
++
++void MVIRGenerator::visit(ProgramNode& node) {
++    for (size_t i = 0; i < node.items.size(); ++i) {
++        auto& item = node.items[i];
++        std::cerr << "[DEBUG MVIRGenerator] visiting item[" << i << "] typeid=" << typeid(*item).name() << std::endl;
++        item->accept(*this);
++        std::cerr << "[DEBUG MVIRGenerator] done item[" << i << "]" << std::endl;
++    }
++}
++
++void MVIRGenerator::visit(VarDeclNode& node) {
++    // Variable Declaration:
++    // 1. Allocate space on stack: %id = alloca type
++    // 2. If initialized, evaluate RHS and store: store val, %id
++
++    const Type* varType = typeChecker_.typeOf(node.symbolId);
++    varType = typeChecker_.getContext().unificationTable.deepResolve(varType, typeChecker_.getContext());
++    std::cerr << "[DEBUG] VarDeclNode type kind: " << (varType ? (int)varType->getKind() : -1) << std::endl;
++    if (auto* closureTy = dynamic_cast<const ClosureType*>(varType)) {
++        if (storageMap_[closureTy] == ClosureStorageKind::Heap) {
++            std::cerr << "[DEBUG] VarDeclNode is Heap!" << std::endl;
++            varType = typeChecker_.getContext().getPointerType(closureTy, false);
++        } else {
++            std::cerr << "[DEBUG] VarDeclNode is NOT Heap!" << std::endl;
++        }
++    }
++
++#include "mellis/IR/MVIRGenerator.h"
++#include "mellis/AST/ASTNode.h"
++#include "mellis/AST/ExprNode.h"
++#include "mellis/AST/StmtNode.h"
++#include "mellis/AST/DeclNode.h"
++#include "mellis/AST/ProgramNode.h"
++#include "mellis/AST/PatternNode.h"
++#include "mellis/MiddleEnd/Semantic/DecisionTree.h"
++#include "mellis/MiddleEnd/ComptimeEvaluator.h"
++#include "mellis/Support/Diagnostic.h"
++#include <cassert>
++#include <iostream>
++
++namespace fl {
++
++MVIRGenerator::MVIRGenerator(SymbolTable& symTable, DiagnosticEngine& diag, TypeChecker& typeChecker, std::unordered_map<const Type*, ClosureStorageKind>& storageMap)
++    : table_(symTable), diag_(diag), typeChecker_(typeChecker), layoutBuilder_(symTable), storageMap_(storageMap) {}
++
++std::unique_ptr<mvir::Module> MVIRGenerator::generate(ProgramNode& program) {
++    module_ = std::make_unique<mvir::Module>();
++    nextLocalId_ = 0;
++    nextLabelId_ = 0;
++    varAllocas_.clear();
++    evalMode_ = EvalMode::RValue;
++
++    visit(program);
++
++    return std::move(module_);
++}
++
++// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
++
++mvir::LocalId MVIRGenerator::nextLocal(
++    uint32_t symbolId, uint32_t expansionId) {
++    mvir::LocalId id;
++    id.name        = "%" + std::to_string(nextLocalId_++);
++    id.symbolId    = symbolId;
++    id.expansionId = expansionId;
++    return id;
++}
++
++mvir::LabelId MVIRGenerator::nextLabel(const std::string& prefix) {
++    return mvir::LabelId{prefix + std::to_string(nextLabelId_++)};
++}
++
++void MVIRGenerator::terminateBlock(std::unique_ptr<mvir::Terminator> term) {
++    if (currentBlock_ && !currentBlock_->terminator) {
++        currentBlock_->terminator = std::move(term);
++    }
++}
++
++void MVIRGenerator::startBlock(mvir::LabelId label) {
++    auto bb = std::make_unique<mvir::BasicBlock>(std::move(label));
++    currentBlock_ = bb.get();
++    currentFunction_->blocks.push_back(std::move(bb));
++}
++
++void MVIRGenerator::pushLocalInst(std::unique_ptr<mvir::LocalInst> inst) {
++    if (currentFunction_ && !currentFunction_->blocks.empty()) {
++        auto& entryBlock = currentFunction_->blocks.front();
++        std::cerr << "[DEBUG pushLocalInst] Inserting LocalInst for " << inst->dest.name << " into entry block " << entryBlock->label.name << std::endl;
++        
++        // Find the canonical position: after all existing LocalInsts
++        auto it = entryBlock->instructions.begin();
++        while (it != entryBlock->instructions.end() && dynamic_cast<mvir::LocalInst*>(it->get())) {
++            ++it;
++        }
++        
++        entryBlock->instructions.insert(it, std::move(inst));
++    } else if (currentBlock_) {
++        std::cerr << "[DEBUG pushLocalInst] Fallback to currentBlock_ " << currentBlock_->label.name << std::endl;
++        // Fallback if no function context (shouldn't happen in normal AST, but just in case)
++        currentBlock_->instructions.push_back(std::move(inst));
++    }
++}
++
++void MVIRGenerator::resetFunctionState() {
++    nextLocalId_ = 0;
++    nextLabelId_ = 0;
++    varAllocas_.clear();
++    currentBlock_ = nullptr;
++}
++
++
+ void MVIRGenerator::emitDropsForScopes(size_t targetDepth) {
+     if (scopeStack_.size() <= targetDepth) return;
+     for (size_t i = scopeStack_.size(); i > targetDepth; --i) {
+@@ -149,7 +290,7 @@ void MVIRGenerator::visit(VarDeclNode& node) {
+         
+         if (node.initializer) {
+             DiagnosticEngine diag;
+-            ComptimeEvaluator eval(diag);
++            ComptimeEvaluator eval(diag, table_);
+             globalDecl.initializer = eval.evaluateExpr(node.initializer.get());
+         }
+         
+@@ -157,32 +298,31 @@ void MVIRGenerator::visit(VarDeclNode& node) {
+         return;
+     }
+ 
+-    // S7.2: Embed semantic identity â€” symbolId for uniqueness, expansionId for hygiene
+-    mvir::LocalId ptr = nextLocal(node.symbolId, node.expansionID);
+-    pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, varType));
+-
+-    // Save pointer location to mapping
+-    varAllocas_[node.symbolId] = ptr;
+-
+-    if (!scopeStack_.empty()) {
+-        scopeStack_.back().push_back({ptr, varType});
+-    }
+-
+-    if (node.initializer) {
+-        mvir::Operand initVal = evaluateRValue(*node.initializer);
+-        const Type* assignType = typeChecker_.typeOf(node.symbolId);
+-        assignType = typeChecker_.getContext().unificationTable.deepResolve(assignType, typeChecker_.getContext());
+-        if (auto* closureTy = dynamic_cast<const ClosureType*>(assignType)) {
+-            if (storageMap_[closureTy] == ClosureStorageKind::Heap) {
+-                assignType = typeChecker_.getContext().getPointerType(closureTy, false);
+-            }
++    if (auto* idPat = dynamic_cast<IdentifierPatternNode*>(node.pattern.get())) {
++        mvir::LocalId ptr = nextLocal(node.symbolId, node.expansionID);
++        pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, varType));
++        varAllocas_[node.symbolId] = ptr;
++        if (!scopeStack_.empty()) {
++            scopeStack_.back().push_back({ptr, varType});
+         }
+-
+-        if (currentBlock_->terminator == nullptr) {
++        if (node.initializer) {
++            mvir::Operand initVal = evaluateRValue(*node.initializer);
++            const Type* assignType = typeChecker_.typeOf(node.symbolId);
++            assignType = typeChecker_.getContext().unificationTable.deepResolve(assignType, typeChecker_.getContext());
++            if (auto* closureTy = dynamic_cast<const ClosureType*>(assignType)) {
++                if (storageMap_[closureTy] == ClosureStorageKind::Heap) {
++                    assignType = typeChecker_.getContext().getPointerType(closureTy, false);
++                }
++            }
+             currentBlock_->instructions.push_back(
+-                std::make_unique<mvir::StoreInst>(assignType, initVal, ptr)
++                std::make_unique<mvir::StoreInst>(assignType, initVal, mvir::Operand(mvir::Place(ptr)))
+             );
+         }
++    } else {
++        if (node.initializer) {
++            mvir::Operand initVal = evaluateRValue(*node.initializer);
++            lowerPattern(node.pattern.get(), initVal, node.inferredType);
++        }
+     }
+ }
+ 
+@@ -1953,5 +2093,61 @@ void MVIRGenerator::visit(AlignofExpr& node) {
+     lastEvaluatedOperand_ = mvir::Operand(mvir::Place(dest));
+ }
+ 
+-} // namespace fl
++void MVIRGenerator::visit(TypeofExpr& node) {
++    mvir::LocalId dest = nextLocal();
++    currentBlock_->instructions.push_back(std::make_unique<mvir::SizeofInst>(dest, node.inferredType));
++    lastEvaluatedOperand_ = mvir::Operand(mvir::Place(dest));
++}
+ 
++void MVIRGenerator::lowerPattern(PatternNode* pat, mvir::Operand sourceVal, const Type* sourceType) {
++    if (auto* idPat = dynamic_cast<IdentifierPatternNode*>(pat)) {
++        if (idPat->symbolId != kInvalidSymbolID) {
++            mvir::LocalId ptr = nextLocal(idPat->symbolId, 0);
++            pushLocalInst(std::make_unique<mvir::LocalInst>(ptr, sourceType));
++            currentBlock_->instructions.push_back(std::make_unique<mvir::StoreInst>(sourceType, sourceVal, mvir::Operand(mvir::Place(ptr))));
++            varAllocas_[idPat->symbolId] = ptr;
++            if (!scopeStack_.empty()) {
++                scopeStack_.back().push_back({ptr, sourceType});
++            }
++        }
++    } else if (auto* structPat = dynamic_cast<StructPatternNode*>(pat)) {
++        if (auto* st = dynamic_cast<const StructType*>(typeChecker_.getContext().unificationTable.deepResolve(sourceType, typeChecker_.getContext()))) {
++            for (const auto& field : structPat->fields) {
++                if (!field.pattern) continue;
++                int fieldIndex = -1;
++                for (size_t i = 0; i < st->fields.size(); ++i) {
++                    if (st->fields[i].name == field.name) {
++                        fieldIndex = static_cast<int>(i);
++                        break;
++                    }
++                }
++                if (fieldIndex >= 0) {
++                    const Type* fieldType = st->fields[fieldIndex].type;
++                    std::vector<const Type*> payloadTypes;
++                    for (auto& f : st->fields) payloadTypes.push_back(f.type);
++                    
++                    mvir::LocalId memberResult = nextLocal();
++                    currentBlock_->instructions.push_back(
++                        std::make_unique<mvir::ExtractInst>(memberResult, sourceVal, payloadTypes, 0, (size_t)fieldIndex)
++                    );
++                    
++                    lowerPattern(field.pattern.get(), mvir::Operand{mvir::Place(memberResult)}, fieldType);
++                }
++            }
++        }
++    } else if (auto* tuplePat = dynamic_cast<TuplePatternNode*>(pat)) {
++        if (auto* tt = dynamic_cast<const TupleType*>(typeChecker_.getContext().unificationTable.deepResolve(sourceType, typeChecker_.getContext()))) {
++            for (size_t i = 0; i < tuplePat->elements.size(); ++i) {
++                if (!tuplePat->elements[i]) continue;
++                const Type* elemType = tt->elements[i];
++                mvir::LocalId elemResult = nextLocal();
++                currentBlock_->instructions.push_back(
++                    std::make_unique<mvir::TupleExtractInst>(elemResult, sourceVal, i, elemType)
++                );
++                lowerPattern(tuplePat->elements[i].get(), mvir::Operand{mvir::Place(elemResult)}, elemType);
++            }
++        }
++    }
++}
++
++} // namespace fl

@@ -1,0 +1,375 @@
+=== EXIT CODE ===
+0
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=28
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=30
+[DEBUG resolvePath] Resolving path starting with 'identity'
+[DEBUG resolvePath] resolve('identity') returned 1 syms. First id=25
+[DEBUG resolvePath] Resolving path starting with 'r'
+[DEBUG resolvePath] resolve('r') returned 1 syms. First id=31
+Solving constraint: &' T (27) == &' T (27)
+Solving constraint: ?T0 == &' int_32
+Solving constraint: &' int_32 == ?T0
+Solving constraint: fn(&' int_32) -> &' int_32 == fn(x: &' int_32) -> &' int_32
+Solving constraint: int_32 == int_32
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=34
+Solving constraint: &' int_32 == &' int_32
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[DEBUG Semantic] Analyzing function: @display_23
+[DEBUG Semantic] Analyzing function: @main
+[DEBUG Semantic] Analyzing function: @identity_unmangled_int_32
+; ModuleID = 'D:\fdlang\tests\generics\e1_generic_lifetime.ms'
+source_filename = "D:\\fdlang\\tests\\generics\\e1_generic_lifetime.ms"
+
+define void @display_23(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  store ptr %"0", ptr %"1", align 8
+  ret void
+}
+
+define i32 @main() {
+entry0:
+  %"0" = alloca i32, align 4
+  %"1" = alloca ptr, align 8
+  %"3" = alloca ptr, align 8
+  store i32 42, ptr %"0", align 4
+  store ptr %"0", ptr %"1", align 8
+  %"4" = load ptr, ptr %"1", align 8
+  %"5" = call ptr @identity_unmangled_int_32(ptr %"4")
+  store ptr %"5", ptr %"3", align 8
+  ret i32 0
+}
+
+define ptr @identity_unmangled_int_32(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  store ptr %"0", ptr %"1", align 8
+  %"2" = load ptr, ptr %"1", align 8
+  ret ptr %"2"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Display' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='Self' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='display' kind=4 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='self' kind=3 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='Self' kind=12 scope=3
+[DEBUG SymbolTable] declareSymbol id=23 name='display' kind=4 scope=3
+[DEBUG SymbolTable] declareSymbol id=24 name='self' kind=3 scope=4
+[DEBUG SymbolTable] declareSymbol id=25 name='identity' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=26 name=''a' kind=13 scope=5
+[DEBUG SymbolTable] declareSymbol id=27 name='T' kind=13 scope=5
+[DEBUG SymbolTable] declareSymbol id=28 name='x' kind=3 scope=5
+[DEBUG SymbolTable] declareSymbol id=29 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: display
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'void': i=1, currentSym=17
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Display': i=1, currentSym=18
+[DEBUG] Resolving function: display
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'void': i=1, currentSym=17
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=22
+[DEBUG] Resolving function: identity
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Display': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=27
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=27
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=30 name='val' kind=0 scope=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=31 name='r' kind=0 scope=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG SymbolTable] declareSymbol id=32 name='r2' kind=0 scope=9
+[DEBUG] Resolving identifier: identity
+[DEBUG] Finished resolvePath for identity
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: r
+[DEBUG] Finished resolvePath for r
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 4 items
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='display' symbolId=20
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=19
+[DEBUG self] Evaluated param->type for self -> 4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'void' symbolId=17
+[DEBUG] display retType: 16
+[DEBUG TraitDeclNode] Method 'display' symbolId=20
+[DEBUG TraitDeclNode] typeTable[20] = 3
+[DEBUG TraitDeclNode] Registered trait method 'display'
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ImplDeclNode evaluating selfType: 0
+[DEBUG] ImplDeclNode Self symbolId=22 selfType=0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Display' symbolId=18
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='display' symbolId=23
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=22
+[DEBUG self] Evaluated param->type for self -> 4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'void' symbolId=17
+[DEBUG] display retType: 16
+[DEBUG TraitSolver] addClause: selfType=int_32 traitId=18
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='identity' symbolId=25
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=27
+[DEBUG self] Evaluated param->type for x -> 5
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=27
+[DEBUG] Processing generic param: 'a with 0 bounds
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Display' symbolId=18
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (27) traitId=18
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=29
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=28 name=x tableSize=33
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000229D7674580 kind=5
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=30 expectedType=00000229D76480A0
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=30 name=val tableSize=33
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000229D76480A0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=31 expectedType=00000229D7673F40
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=25 name=identity tableSize=33
+[DEBUG] Running TypePrePass on generic function: identity
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='identity' symbolId=25
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=27
+[DEBUG self] Evaluated param->type for x -> 5
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=27
+[DEBUG] Processing generic param: 'a with 0 bounds
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Display' symbolId=18
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (27) traitId=18
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000229D7685260 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] evaluateTypeNode called on class fl::LifetimeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG substitute] GenericParam id=27 name='T' found=1
+[DEBUG substitute] GenericParam id=27 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=31 name=r tableSize=33
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000229D7673F40 kind=5
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] evaluateTypeNode called on class fl::LifetimeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG CallExpr] fnDecl name: 'identity' symbolId: 25
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(x: &' T (27)) -> &' T (27)
+[DEBUG CallExpr] before substitute: fn(x: &' T (27)) -> &' T (27)
+[DEBUG substitute] GenericParam id=27 name='T' found=1
+[DEBUG substitute] GenericParam id=27 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(x: &' int_32) -> &' int_32
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=32 expectedType=00000229D7673F40
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 2
+[DEBUG MonomorphizationEngine] bounds check for param ''a' has 0 bounds
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 1 bounds
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=int_32 traitId=18
+[DEBUG implementsTrait] type=int_32 traitId=18
+[DEBUG TraitSolver] Solving goal: kind=0 self=int_32 traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (27) traitId=18
+[DEBUG TraitSolver]   Checking env bound: self=T (27) traitId=18
+[DEBUG implementsTrait] solve result=0
+[DEBUG] Setting lifetime substitution for ''a'.
+[DEBUG] Setting type substitution for 'T' to a concrete type.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG SymbolTable] declareSymbol id=33 name='identity_unmangled_int_32' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=34 name='x' kind=3 scope=10
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: identity_unmangled_int_32
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='identity_unmangled_int_32' symbolId=33
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG self] Evaluated param->type for x -> 5
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=x tableSize=35
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000229D7673F40 kind=5
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::TraitDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::ImplDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 1 methods, genericParams: 0
+[DEBUG MVIRGenerator] calling method->accept for display
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::FunctionDeclNode
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG] VarDeclNode type kind: 5
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] VarDeclNode type kind: 5
+[DEBUG pushLocalInst] Inserting LocalInst for %3 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @main
+[DEBUG] MVIRGenerator: returning operand 0
+[DEBUG MVIRGenerator] done item[3]
+[DEBUG MVIRGenerator] visiting item[4] typeid=class fl::FunctionDeclNode
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @identity_unmangled_int_32
+[DEBUG] MVIRGenerator: returning operand %2
+[DEBUG MVIRGenerator] done item[4]
+[PHASE] MVIRGenerator done
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::BorrowInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %4 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %2 (type: 15)
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

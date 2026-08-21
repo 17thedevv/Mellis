@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Design Decisions · Mellis Docs</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-wrap">
+        <div class="brand">Mellis</div>
+        <nav class="nav" aria-label="Main navigation">
+          <a href="../index.html">Home</a>
+          <a href="../language/index.html">Language</a>
+          <a href="../compiler/index.html">Compiler</a>
+          <a href="../stdlib/index.html">Standard Library</a>
+          <a href="../examples/index.html">Examples</a>
+          <a href="index.html">Design Decisions</a>
+          <a href="../roadmap/index.html">Roadmap</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Design Decisions</p>
+            <h1>Why Mellis is designed this way</h1>
+          </div>
+
+          <div class="grid two-col">
+            <article class="card">
+              <h3>Immutable by default</h3>
+              <p><strong>Context:</strong> Systems languages often suffer from accidental mutation and hidden side effects.</p>
+              <p><strong>Decision:</strong> Prefer immutability unless mutation is explicitly requested.</p>
+              <p><strong>Alternatives:</strong> Fully mutable-by-default semantics or pervasive reference mutation.</p>
+              <p><strong>Trade-offs:</strong> Better clarity and reasoning at the cost of occasional explicitness.</p>
+              <p><strong>Status:</strong> Intended design direction.</p>
+            </article>
+
+            <article class="card">
+              <h3>Ownership + borrowing</h3>
+              <p><strong>Context:</strong> Memory safety must be explicit enough for systems code but not hostile to ergonomics.</p>
+              <p><strong>Decision:</strong> Model memory through ownership and borrowing, with compiler checking.</p>
+              <p><strong>Alternatives:</strong> GC-only, RAII-only, or manual pointer-heavy systems.</p>
+              <p><strong>Trade-offs:</strong> Stronger safety guarantees, but more discipline in code design.</p>
+              <p><strong>Status:</strong> Core semantic direction.</p>
+            </article>
+
+            <article class="card">
+              <h3>Inferred lifetimes</h3>
+              <p><strong>Context:</strong> Borrow checking becomes hard when lifetimes are always spelled out.</p>
+              <p><strong>Decision:</strong> Use inference to reduce user burden while preserving compiler safety.</p>
+              <p><strong>Alternatives:</strong> Full explicit lifetime annotations everywhere.</p>
+              <p><strong>Trade-offs:</strong> Cleaner syntax, but more complex compiler reasoning.</p>
+              <p><strong>Status:</strong> Under active design refinement.</p>
+            </article>
+
+            <article class="card">
+              <h3>Traits instead of inheritance</h3>
+              <p><strong>Context:</strong> Inheritance mixes identity, behavior, and hierarchy in ways that become fragile.</p>
+              <p><strong>Decision:</strong> Favor trait-based abstraction for extensibility and polymorphism.</p>
+              <p><strong>Alternatives:</strong> Class inheritance or interface-heavy OO modeling.</p>
+              <p><strong>Trade-offs:</strong> Better composition and specialization, but requires trait resolution machinery.</p>
+              <p><strong>Status:</strong> Planned feature set.</p>
+            </article>
+
+            <article class="card">
+              <h3>Monomorphization</h3>
+              <p><strong>Context:</strong> Generic code should avoid runtime overhead and remain predictable.</p>
+              <p><strong>Decision:</strong> Use monomorphization for code generation and specialization.</p>
+              <p><strong>Alternatives:</strong> Dynamic dispatch or runtime type erasure.</p>
+              <p><strong>Trade-offs:</strong> High performance and predictable code, but more compile time and binary growth.</p>
+              <p><strong>Status:</strong> Supported in the compiler architecture.</p>
+            </article>
+
+            <article class="card">
+              <h3>MVIR</h3>
+              <p><strong>Context:</strong> Direct LLVM generation can become unmanageably coupled to frontend semantics.</p>
+              <p><strong>Decision:</strong> Introduce an explicit virtual intermediate representation before LLVM lowering.</p>
+              <p><strong>Alternatives:</strong> Emit LLVM IR directly from the AST or fork many passes into the frontend.</p>
+              <p><strong>Trade-offs:</strong> Better pass separation and more stable compiler pipeline, with extra engineering work.</p>
+              <p><strong>Status:</strong> Core infrastructure in progress.</p>
+            </article>
+
+            <article class="card">
+              <h3>.mlib packages</h3>
+              <p><strong>Context:</strong> Recompiling the full standard library on every change is costly and rigid.</p>
+              <p><strong>Decision:</strong> Package reusable library components into .mlib artifacts with metadata and loader support.</p>
+              <p><strong>Alternatives:</strong> Source-only libraries or ad hoc linker scripts.</p>
+              <p><strong>Trade-offs:</strong> Faster reuse and modularity, but more metadata and packaging discipline.</p>
+              <p><strong>Status:</strong> Planned and partially implemented.</p>
+            </article>
+
+            <article class="card">
+              <h3>Backend independence</h3>
+              <p><strong>Context:</strong> The language should not become an LLVM-only design by accident.</p>
+              <p><strong>Decision:</strong> Keep backend concerns behind MVIR so code generation can change without reworking core semantics.</p>
+              <p><strong>Alternatives:</strong> Directly tie the language to one backend or one target family.</p>
+              <p><strong>Trade-offs:</strong> More abstraction, but better portability and future targets.</p>
+              <p><strong>Status:</strong> Architecturally intended.</p>
+            </article>
+
+            <article class="card">
+              <h3>No GC by default</h3>
+              <p><strong>Context:</strong> Systems programming is sensitive to runtime unpredictability.</p>
+              <p><strong>Decision:</strong> Favor explicit memory models and deterministic ownership rules over a garbage collector.</p>
+              <p><strong>Alternatives:</strong> Traditional GC semantics or hybrid garbage-collection approaches.</p>
+              <p><strong>Trade-offs:</strong> More control and performance, but more compiler responsibility for safety.</p>
+              <p><strong>Status:</strong> Core platform decision.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>Mellis Docs</span>
+        <span>Design Decisions</span>
+      </div>
+    </footer>
+  </body>
+</html>

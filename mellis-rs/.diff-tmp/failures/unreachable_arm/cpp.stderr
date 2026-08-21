@@ -1,0 +1,5 @@
+Function return type does not match operand type of return inst!
+  ret void
+ i32Function return type does not match operand type of return inst!
+  ret void
+ i32D:\fdlang\tests\invalid\unreachable_arm.ms: [1m[31merror: [0m[1mLoi trong qua trinh sinh LLVM IR.[0m

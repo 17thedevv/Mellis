@@ -1,0 +1,193 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=34
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Foo' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='Self' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='m' kind=4 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='self' kind=3 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='Bar' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=23 name='Self' kind=13 scope=3
+[DEBUG SymbolTable] declareSymbol id=24 name='m' kind=4 scope=3
+[DEBUG SymbolTable] declareSymbol id=25 name='self' kind=3 scope=4
+[DEBUG] Resolver::visit(StructDeclNode) name='MyStruct' symbolId=4294967295 this=0000022377EC4BE0 line=4
+[DEBUG SymbolTable] declareSymbol id=26 name='MyStruct' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=27 name='Self' kind=12 scope=6
+[DEBUG SymbolTable] declareSymbol id=28 name='m' kind=4 scope=6
+[DEBUG SymbolTable] declareSymbol id=29 name='self' kind=3 scope=7
+[DEBUG SymbolTable] declareSymbol id=30 name='Self' kind=12 scope=8
+[DEBUG SymbolTable] declareSymbol id=31 name='m' kind=4 scope=8
+[DEBUG SymbolTable] declareSymbol id=32 name='self' kind=3 scope=9
+[DEBUG SymbolTable] declareSymbol id=33 name='test' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=34 name='x' kind=3 scope=10
+[DEBUG SymbolTable] declareSymbol id=35 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: m
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=19
+[DEBUG] Resolving function: m
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=23
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'MyStruct': i=1, currentSym=26
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Foo': i=1, currentSym=18
+[DEBUG] Resolving function: m
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=27
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'MyStruct': i=1, currentSym=26
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Bar': i=1, currentSym=22
+[DEBUG] Resolving function: m
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=30
+[DEBUG] Resolving function: test
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'MyStruct': i=1, currentSym=26
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 7 items
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='m' symbolId=20
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=19
+[DEBUG self] Evaluated param->type for self -> 4
+[DEBUG TraitDeclNode] Method 'm' symbolId=20
+[DEBUG TraitDeclNode] typeTable[20] = 3
+[DEBUG TraitDeclNode] Registered trait method 'm'
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='m' symbolId=24
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=23
+[DEBUG self] Evaluated param->type for self -> 4
+[DEBUG TraitDeclNode] Method 'm' symbolId=24
+[DEBUG TraitDeclNode] typeTable[24] = 3
+[DEBUG TraitDeclNode] Registered trait method 'm'
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='MyStruct' symbolId=26 bodyScopeId=5
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'MyStruct' symbolId=26
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=27 selfType=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Foo' symbolId=18
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='m' symbolId=28
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=27
+[DEBUG self] Evaluated param->type for self -> 4
+[DEBUG TraitSolver] addClause: selfType=Struct<26> traitId=18
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'MyStruct' symbolId=26
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=30 selfType=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Bar' symbolId=22
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='m' symbolId=31
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=30
+[DEBUG self] Evaluated param->type for self -> 4
+[DEBUG TraitSolver] addClause: selfType=Struct<26> traitId=22
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='test' symbolId=33
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'MyStruct' symbolId=26
+[DEBUG self] Evaluated param->type for x -> 4
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=35
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=x tableSize=36
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000022377E89FE0 kind=4
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] Starting UnificationEngine
+[DEBUG MethodResolver] Probing method 'm' for receiverType: *const Struct<26>
+[DEBUG TraitSolver] Solving goal: kind=2 self=*const Struct<26> traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=18
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=22
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] InferenceVar at loc: 10:11 type: ?T0
+[DEBUG MethodResolver] Probing method 'm' for receiverType: Struct<26>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Struct<26> traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=18
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<26> traitId=22
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[PHASE] TypeChecker done, tcOk=0
+error[E-TRAIT-AMBIGUOUS]: multiple implementations match this call
+ --> D:\fdlang\tests\generics\ambiguous_impl.ms:10:11
+  |
+10 |     x.m(); // Error: E-TRAIT-AMBIGUOUS
+  |           ^
+  = note: candidate method
+   --> D:\fdlang\tests\generics\ambiguous_impl.ms:1:15
+  = note: candidate method
+   --> D:\fdlang\tests\generics\ambiguous_impl.ms:2:15
+  = note: candidate method
+   --> D:\fdlang\tests\generics\ambiguous_impl.ms:1:15
+  = note: candidate method
+   --> D:\fdlang\tests\generics\ambiguous_impl.ms:2:15
+error: No method named 'm' found for type '*const Struct<26>'
+ --> D:\fdlang\tests\generics\ambiguous_impl.ms:10:11
+  |
+10 |     x.m(); // Error: E-TRAIT-AMBIGUOUS
+  |           ^
+error: Type annotation needed
+ --> D:\fdlang\tests\generics\ambiguous_impl.ms:10:11
+  |
+10 |     x.m(); // Error: E-TRAIT-AMBIGUOUS
+  |           ^
+D:\fdlang\tests\generics\ambiguous_impl.ms: error: Compilation aborted due to TypeChecker errors.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

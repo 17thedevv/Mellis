@@ -1,0 +1,12 @@
+error: Expected expression.
+  --> dummy.ms:1:1
+   |
+1  | type A = B;
+   | ^^^^
+
+error: Expected expression.
+  --> dummy.ms:2:1
+   |
+2  | type B = A;
+   | ^^^^
+

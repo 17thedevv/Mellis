@@ -1,0 +1,1078 @@
+=== EXIT CODE ===
+0
+=== STDOUT ===
+[DEBUG] Enum 'Option' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=31
+[DEBUG resolvePath] Resolving path starting with 'opt'
+[DEBUG resolvePath] resolve('opt') returned 1 syms. First id=34
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E138743450, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=36
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E138743450, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Data'
+[DEBUG resolvePath] resolve('Data') returned 1 syms. First id=27
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E138743450, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'data'
+[DEBUG resolvePath] resolve('data') returned 1 syms. First id=37
+[DEBUG resolvePath] Resolving path starting with 'process_option'
+[DEBUG resolvePath] resolve('process_option') returned 1 syms. First id=32
+[DEBUG resolvePath] Resolving path starting with 'opt'
+[DEBUG resolvePath] resolve('opt') returned 1 syms. First id=39
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=40
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=40
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=40
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=43
+[DEBUG resolvePath] Resolving path starting with 'factor'
+[DEBUG resolvePath] resolve('factor') returned 1 syms. First id=41
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=38
+[DEBUG resolvePath] Resolving path starting with 'cl'
+[DEBUG resolvePath] resolve('cl') returned 1 syms. First id=42
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=40
+[DEBUG resolvePath] Resolving path starting with 'final_val'
+[DEBUG resolvePath] resolve('final_val') returned 1 syms. First id=44
+Solving constraint: int_32 == ?T1
+Solving constraint: Enum<18<?T4>> == Enum<18<T (33)>>
+Solving constraint: int_32 == ?T5
+Solving constraint: ?T3 == void
+Solving constraint: Enum<18<?T6>> == Enum<18<T (33)>>
+Solving constraint: int_32 == int_32
+Solving constraint: ?T3 == void
+Solving constraint: int_32 == int_32
+Solving constraint: fn(Struct<27>) -> Enum<18<?T7>> == fn(?T7) -> Enum<18<?T7>>
+Solving constraint: fn(Enum<18<?T7>>) -> int_32 == fn(opt: Enum<18<?T12>>) -> int_32
+Solving constraint: bool == ?T13
+Solving constraint: int_32 == ?T14
+Solving constraint: int_32 == ?T15
+Solving constraint: int_32 == ?T17
+Solving constraint: fn(int_32) -> ?T18 == [closure@45]
+Solving constraint: int_32 == ?T18
+[DEBUG] Enum 'Option_Data' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG resolvePath] Resolving path starting with 'opt'
+[DEBUG resolvePath] resolve('opt') returned 1 syms. First id=52
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E138743450, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=53
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000001E138743450, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+Solving constraint: Enum<18<?T21>> == Enum<47>
+Solving constraint: int_32 == ?T22
+Solving constraint: ?T20 == void
+Solving constraint: Enum<18<?T23>> == Enum<47>
+Solving constraint: int_32 == int_32
+Solving constraint: ?T20 == void
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[DEBUG MVIRGenerator] EnumDeclNode Option_Data symbolId=47
+[DEBUG MVIR] SuccessNode binding: symbolId=53 placeStr=subject_v48_f0
+[DEBUG Semantic] Analyzing function: @compute_30
+[DEBUG Semantic] Analyzing function: @main
+[DEBUG Semantic] Analyzing function: @__LambdaFunc_2066826637200
+[DEBUG Semantic] Analyzing function: @process_option_Data
+; ModuleID = 'D:\fdlang\tests\valid\test_kitchen_sink.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\test_kitchen_sink.ms"
+
+%Data = type { i32 }
+%Option_Data = type { i32, [1 x i32] }
+
+define i32 @compute_30(%Data %"0") {
+entry0:
+  %"1" = alloca %Data, align 8
+  store %Data %"0", ptr %"1", align 4
+  %fld = getelementptr inbounds %Data, ptr %"1", i32 0, i32 0
+  %"2" = load i32, ptr %fld, align 4
+  %"3" = mul i32 %"2", 2
+  ret i32 %"3"
+}
+
+define i32 @main() {
+entry0:
+  %"0" = alloca %Data, align 8
+  %"1" = alloca %Data, align 8
+  %"3" = alloca i32, align 4
+  %"4" = alloca %Option_Data, align 8
+  %"7" = alloca i32, align 4
+  %"18" = alloca i32, align 4
+  %"19" = alloca { ptr, ptr, ptr }, align 8
+  %"20" = alloca { ptr, ptr, ptr }, align 8
+  %"22" = alloca i32, align 4
+  %"25" = alloca { ptr, ptr, ptr }, align 8
+  %fld = getelementptr inbounds %Data, ptr %"1", i32 0, i32 0
+  store i32 10, ptr %fld, align 4
+  %"2" = load %Data, ptr %"1", align 4
+  store %Data %"2", ptr %"0", align 4
+  store i32 0, ptr %"3", align 4
+  %"5" = load %Data, ptr %"0", align 4
+  %0 = alloca %Option_Data, align 8
+  %1 = getelementptr inbounds %Option_Data, ptr %0, i32 0, i32 0
+  store i32 0, ptr %1, align 4
+  %2 = getelementptr inbounds %Option_Data, ptr %0, i32 0, i32 1
+  %3 = getelementptr inbounds { %Data }, ptr %2, i32 0, i32 0
+  store %Data %"5", ptr %3, align 4
+  %"6" = load %Option_Data, ptr %0, align 4
+  store %Option_Data %"6", ptr %"4", align 4
+  %"8" = load %Option_Data, ptr %"4", align 4
+  %"9" = call i32 @process_option_Data(%Option_Data %"8")
+  store i32 %"9", ptr %"7", align 4
+  %"10" = load i32, ptr %"7", align 4
+  %"11" = icmp sgt i32 %"10", 10
+  br i1 %"11", label %then1, label %else3
+
+then1:                                            ; preds = %entry0
+  %"12" = load i32, ptr %"3", align 4
+  %"13" = load i32, ptr %"7", align 4
+  %"14" = add i32 %"12", %"13"
+  store i32 %"14", ptr %"3", align 4
+  br label %merge2
+
+else3:                                            ; preds = %entry0
+  %"15" = load i32, ptr %"3", align 4
+  %"16" = load i32, ptr %"7", align 4
+  %"17" = sub i32 %"15", %"16"
+  store i32 %"17", ptr %"3", align 4
+  br label %merge2
+
+merge2:                                           ; preds = %else3, %then1
+  store i32 5, ptr %"18", align 4
+  %fld1 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"20", i32 0, i32 0
+  store ptr @__LambdaFunc_2066826637200, ptr %fld1, align 8
+  %fld2 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"20", i32 0, i32 1
+  store ptr %"18", ptr %fld2, align 8
+  %fld3 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"20", i32 0, i32 2
+  store ptr %"3", ptr %fld3, align 8
+  %"21" = load { ptr, ptr, ptr }, ptr %"20", align 8
+  store { ptr, ptr, ptr } %"21", ptr %"19", align 8
+  %"23" = load i32, ptr %"7", align 4
+  %"24" = load { ptr, ptr, ptr }, ptr %"19", align 8
+  store { ptr, ptr, ptr } %"24", ptr %"25", align 8
+  %fld4 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"25", i32 0, i32 0
+  %"26" = load ptr, ptr %fld4, align 8
+  %"27" = call i32 %"26"(ptr %"25", i32 %"23")
+  store i32 %"27", ptr %"22", align 4
+  %"28" = load i32, ptr %"22", align 4
+  ret i32 %"28"
+}
+
+define i32 @__LambdaFunc_2066826637200(ptr %"0", i32 %"1") {
+entry0:
+  %"2" = alloca ptr, align 8
+  %"3" = alloca ptr, align 8
+  %"5" = alloca ptr, align 8
+  %"7" = alloca i32, align 4
+  store ptr %"0", ptr %"2", align 8
+  %fld = getelementptr inbounds { ptr, ptr, ptr }, ptr %"0", i32 0, i32 1
+  %"4" = load ptr, ptr %fld, align 8
+  store ptr %"4", ptr %"3", align 8
+  %fld1 = getelementptr inbounds { ptr, ptr, ptr }, ptr %"0", i32 0, i32 2
+  %"6" = load ptr, ptr %fld1, align 8
+  store ptr %"6", ptr %"5", align 8
+  store i32 %"1", ptr %"7", align 4
+  %"8" = load i32, ptr %"7", align 4
+  %"9" = load ptr, ptr %"3", align 8
+  %"10" = load i32, ptr %"9", align 4
+  %"11" = add i32 %"8", %"10"
+  %"12" = load ptr, ptr %"5", align 8
+  %"13" = load i32, ptr %"12", align 4
+  %"14" = add i32 %"11", %"13"
+  ret i32 %"14"
+}
+
+define i32 @process_option_Data(%Option_Data %"0") {
+entry0:
+  %"1" = alloca %Option_Data, align 8
+  %"7" = alloca %Data, align 8
+  store %Option_Data %"0", ptr %"1", align 4
+  %"2" = load %Option_Data, ptr %"1", align 4
+  %"4" = extractvalue %Option_Data %"2", 0
+  %"5" = icmp eq i32 %"4", 0
+  br i1 %"5", label %match_tag_05, label %match_tag_next6
+
+match_tag_05:                                     ; preds = %entry0
+  %0 = alloca %Option_Data, align 8
+  store %Option_Data %"2", ptr %0, align 4
+  %1 = getelementptr inbounds %Option_Data, ptr %0, i32 0, i32 1
+  %2 = getelementptr inbounds { %Data }, ptr %1, i32 0, i32 0
+  %"6" = load %Data, ptr %2, align 4
+  store %Data %"6", ptr %"7", align 4
+  br label %match_arm_02
+
+match_tag_next6:                                  ; preds = %entry0
+  %"8" = icmp eq i32 %"4", 1
+  br i1 %"8", label %match_tag_17, label %match_tag_next8
+
+match_tag_17:                                     ; preds = %match_tag_next6
+  br label %match_arm_13
+
+match_tag_next8:                                  ; preds = %match_tag_next6
+  br label %match_unreachable4
+
+match_arm_02:                                     ; preds = %match_tag_05
+  %"9" = load %Data, ptr %"7", align 4
+  %"10" = call i32 @compute_30(%Data %"9")
+  ret i32 %"10"
+
+match_arm_13:                                     ; preds = %match_tag_17
+  ret i32 0
+
+match_unreachable4:                               ; preds = %match_tag_next8
+  unreachable
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Option' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='T' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='Some' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='__field_0' kind=8 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='None' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=23 name='Computable' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=24 name='Self' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=25 name='compute' kind=4 scope=4
+[DEBUG SymbolTable] declareSymbol id=26 name='self' kind=3 scope=5
+[DEBUG] Resolver::visit(StructDeclNode) name='Data' symbolId=4294967295 this=000001E138745A70 line=16
+[DEBUG SymbolTable] declareSymbol id=27 name='Data' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=28 name='value' kind=8 scope=6
+[DEBUG SymbolTable] declareSymbol id=29 name='Self' kind=12 scope=7
+[DEBUG SymbolTable] declareSymbol id=30 name='compute' kind=4 scope=7
+[DEBUG SymbolTable] declareSymbol id=31 name='self' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=32 name='process_option' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=33 name='T' kind=13 scope=9
+[DEBUG SymbolTable] declareSymbol id=34 name='opt' kind=3 scope=9
+[DEBUG SymbolTable] declareSymbol id=35 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=19
+[DEBUG] Resolving function: compute
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=24
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Data': i=1, currentSym=27
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Computable': i=1, currentSym=23
+[DEBUG] Resolving function: compute
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=29
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: process_option
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Computable': i=1, currentSym=23
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] lookup 'Option' starting at scope 9
+[DEBUG] lookup 'Option' checking scope 9 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Option': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=33
+[DEBUG] Resolving identifier: opt
+[DEBUG] Finished resolvePath for opt
+[DEBUG] lookup 'Option' starting at scope 13
+[DEBUG] lookup 'Option' checking scope 13 (kind=3, parent=12)
+[DEBUG] lookup 'Option' checking scope 12 (kind=3, parent=9)
+[DEBUG] lookup 'Option' checking scope 9 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG SymbolTable] declareSymbol id=36 name='val' kind=0 scope=13
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 15
+[DEBUG] lookup 'Option' checking scope 15 (kind=3, parent=12)
+[DEBUG] lookup 'Option' checking scope 12 (kind=3, parent=9)
+[DEBUG] lookup 'Option' checking scope 9 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=37 name='data' kind=0 scope=17
+[DEBUG SymbolTable] declareSymbol id=38 name='sum' kind=0 scope=17
+[DEBUG SymbolTable] declareSymbol id=39 name='opt' kind=0 scope=17
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 17
+[DEBUG] lookup 'Option' checking scope 17 (kind=3, parent=10)
+[DEBUG] lookup 'Option' checking scope 10 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving identifier: data
+[DEBUG] Finished resolvePath for data
+[DEBUG SymbolTable] declareSymbol id=40 name='result' kind=0 scope=17
+[DEBUG] Resolving identifier: process_option
+[DEBUG] Finished resolvePath for process_option
+[DEBUG] Resolving identifier: opt
+[DEBUG] Finished resolvePath for opt
+[DEBUG] Resolving identifier: result
+[DEBUG] Finished resolvePath for result
+[DEBUG] Resolving identifier: sum
+[DEBUG] Finished resolvePath for sum
+[DEBUG] Resolving identifier: sum
+[DEBUG] Finished resolvePath for sum
+[DEBUG] Resolving identifier: result
+[DEBUG] Finished resolvePath for result
+[DEBUG] Resolving identifier: sum
+[DEBUG] Finished resolvePath for sum
+[DEBUG] Resolving identifier: sum
+[DEBUG] Finished resolvePath for sum
+[DEBUG] Resolving identifier: result
+[DEBUG] Finished resolvePath for result
+[DEBUG SymbolTable] declareSymbol id=41 name='factor' kind=0 scope=17
+[DEBUG SymbolTable] declareSymbol id=42 name='cl' kind=0 scope=17
+[DEBUG SymbolTable] declareSymbol id=43 name='x' kind=0 scope=20
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving identifier: factor
+[DEBUG] Finished resolvePath for factor
+[DEBUG] Resolving identifier: sum
+[DEBUG] Finished resolvePath for sum
+[DEBUG SymbolTable] declareSymbol id=44 name='final_val' kind=0 scope=17
+[DEBUG] Resolving identifier: cl
+[DEBUG] Finished resolvePath for cl
+[DEBUG] Resolving identifier: result
+[DEBUG] Finished resolvePath for result
+[DEBUG] Resolving identifier: final_val
+[DEBUG] Finished resolvePath for final_val
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 6 items
+[DEBUG] item kind: class fl::EnumDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=19
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='compute' symbolId=25
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=24
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG TraitDeclNode] Method 'compute' symbolId=25
+[DEBUG TraitDeclNode] typeTable[25] = 3
+[DEBUG TraitDeclNode] Registered trait method 'compute'
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='Data' symbolId=27 bodyScopeId=6
+[DEBUG]   field='value' bodyScopeId=6 optId.empty()=0 symbolId=28
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG]     evaluated type: int_32
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Data' symbolId=27
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=29 selfType=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Computable' symbolId=23
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='compute' symbolId=30
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=29
+[DEBUG self] Evaluated param->type for self -> 1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG TraitSolver] addClause: selfType=Struct<27> traitId=23
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='process_option' symbolId=32
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=33
+[DEBUG self] Evaluated param->type for opt -> 2
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Computable' symbolId=23
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (33) traitId=23
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=35
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=31 name=self tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13877C520 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=opt tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E138764550 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=33 name='T' found=0
+[DEBUG IdentifierExpr] Substituted generic enum variant 'opt', new type: Enum<18<T (33)>>
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000001E138764550
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000001E138779100
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=36 expectedType=000001E138779100
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=36 name=val tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E138779100 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=Data
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=37 expectedType=000001E13877C520
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=38 expectedType=000001E13873A1D0
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=20 name=Some tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E138776130 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG IdentifierExpr] Substituted generic enum variant 'Some', new type: fn(?T7) -> Enum<18<?T7>>
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=37 name=data tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13877C520 kind=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=39 expectedType=000001E1387650E0
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=32 name=process_option tableSize=45
+[DEBUG] Running TypePrePass on generic function: process_option
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='process_option' symbolId=32
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=33
+[DEBUG self] Evaluated param->type for opt -> 2
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Computable' symbolId=23
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (33) traitId=23
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E138775E90 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG substitute] GenericParam id=33 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=39 name=opt tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E1387650E0 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG IdentifierExpr] Substituted generic enum variant 'opt', new type: Enum<18<?T7>>
+[DEBUG CallExpr] fnDecl name: 'process_option' symbolId: 32
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(opt: Enum<18<T (33)>>) -> int_32
+[DEBUG CallExpr] before substitute: fn(opt: Enum<18<T (33)>>) -> int_32
+[DEBUG substitute] GenericParam id=33 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(opt: Enum<18<?T12>>) -> int_32
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=40 expectedType=000001E13873A1D0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=40 name=result tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=38 name=sum tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=38 name=sum tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=40 name=result tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=38 name=sum tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=38 name=sum tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=40 name=result tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=41 expectedType=000001E13873A1D0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=43 name=x tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=41 name=factor tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=38 name=sum tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG SymbolTable] declareSymbol id=45 name='__Closure_2066826637200' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=46 name='__LambdaFunc_2066826637200' kind=4 scope=0
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=42 expectedType=000001E1387640A0
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=42 name=cl tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E1387640A0 kind=17
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=40 name=result tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A1D0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=44 expectedType=000001E138779260
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=44 name=final_val tableSize=45
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E138779260 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG Field] Found StructType symbol=27 name=Data
+[DEBUG Field] Checking struct field: value
+[DEBUG Field] Solved field constraint!
+[DEBUG MethodResolver] Probing method 'compute' for receiverType: T (33)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (33) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (33) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=23
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=24 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(T (33)) -> ?T5 with mInfo.type: fn(self: T (33)) -> int_32
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG MethodResolver] Probing method 'compute' for receiverType: T (33)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (33) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (33) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=23
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=24 name='Self' found=1
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_Data
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG SymbolTable] declareSymbol id=47 name='Option_Data' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=48 name='Some' kind=7 scope=22
+[DEBUG SymbolTable] declareSymbol id=49 name='__field_0' kind=8 scope=23
+[DEBUG SymbolTable] declareSymbol id=50 name='None' kind=7 scope=22
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Data' symbolId=27
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_Data
+[DEBUG] Already specialized: 47
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_Data
+[DEBUG] Already specialized: 47
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_Data
+[DEBUG] Already specialized: 47
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_Data
+[DEBUG] Already specialized: 47
+[DEBUG CallExpr] gFn->genericParams.size() = 1
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_Data
+[DEBUG] Already specialized: 47
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 1 bounds
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=Struct<27> traitId=23
+[DEBUG implementsTrait] type=Struct<27> traitId=23
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<27> traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=23
+[DEBUG implementsTrait] solve result=0
+[DEBUG] Setting type substitution for 'T' to a concrete type.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Option'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'int_32'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG SymbolTable] declareSymbol id=51 name='process_option_Data' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=52 name='opt' kind=3 scope=25
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: process_option_Data
+[DEBUG] Resolving identifier: opt
+[DEBUG] Finished resolvePath for opt
+[DEBUG] lookup 'Option' starting at scope 27
+[DEBUG] lookup 'Option' checking scope 27 (kind=3, parent=26)
+[DEBUG] lookup 'Option' checking scope 26 (kind=3, parent=25)
+[DEBUG] lookup 'Option' checking scope 25 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG SymbolTable] declareSymbol id=53 name='val' kind=0 scope=27
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 29
+[DEBUG] lookup 'Option' checking scope 29 (kind=3, parent=26)
+[DEBUG] lookup 'Option' checking scope 26 (kind=3, parent=25)
+[DEBUG] lookup 'Option' checking scope 25 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='process_option_Data' symbolId=51
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Data' symbolId=27
+[DEBUG self] Evaluated param->type for opt -> 2
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=52 name=opt tableSize=54
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E138764AA0 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_Data
+[DEBUG] Already specialized: 47
+[DEBUG IdentifierExpr] Substituted generic enum variant 'opt', new type: Enum<47>
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000001E1387642D0
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000001E13873A690
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=53 expectedType=000001E13873A690
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=53 name=val tableSize=54
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000001E13873A690 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG MethodResolver] Probing method 'compute' for receiverType: Struct<27>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Struct<27> traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<27> traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=23
+[DEBUG MethodCall] unifying expectedFnType: fn(Struct<27>) -> ?T22 with mInfo.type: fn(self: Struct<27>) -> int_32
+[DEBUG] Starting TypeResolver
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_Data
+[DEBUG] Already specialized: 47
+[DEBUG MethodResolver] Probing method 'compute' for receiverType: Struct<27>
+[DEBUG TraitSolver] Solving goal: kind=2 self=Struct<27> traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=Struct<27> traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (33) traitId=23
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[DEBUG MatchAnalyzer] resolvedTy is EnumType. enumSymbolId=18
+[DEBUG MatchAnalyzer] resolvedTy is EnumType. enumSymbolId=47
+[DEBUG MatchAnalyzer] resolvedTy is EnumType. enumSymbolId=47
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::EnumDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::TraitDeclNode
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::StructDeclNode
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::ImplDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 1 methods, genericParams: 0
+[DEBUG MVIRGenerator] calling method->accept for compute
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @compute_30
+[DEBUG] MVIRGenerator: returning operand %3
+[DEBUG MVIRGenerator] done item[3]
+[DEBUG MVIRGenerator] visiting item[4] typeid=class fl::FunctionDeclNode
+[DEBUG MVIRGenerator] done item[4]
+[DEBUG MVIRGenerator] visiting item[5] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 1
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %3 into entry block entry0
+[DEBUG] VarDeclNode type kind: 2
+[DEBUG pushLocalInst] Inserting LocalInst for %4 into entry block entry0
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %7 into entry block entry0
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %18 into entry block entry0
+[DEBUG] VarDeclNode type kind: 17
+[DEBUG] VarDeclNode is NOT Heap!
+[DEBUG pushLocalInst] Inserting LocalInst for %19 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %2 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %3 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %5 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %7 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @__LambdaFunc_2066826637200
+[DEBUG] MVIRGenerator: returning operand %14
+[DEBUG MVIRGenerator] ClosureExpr block already has terminator?!
+[DEBUG pushLocalInst] Inserting LocalInst for %20 into entry block entry0
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %22 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %25 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @main
+[DEBUG] MVIRGenerator: returning operand %28
+[DEBUG MVIRGenerator] done item[5]
+[DEBUG MVIRGenerator] visiting item[6] typeid=class fl::EnumDeclNode
+[DEBUG MVIRGenerator] done item[6]
+[DEBUG MVIRGenerator] visiting item[7] typeid=class fl::FunctionDeclNode
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %3 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %7 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @process_option_Data
+[DEBUG] MVIRGenerator: returning operand %10
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @process_option_Data
+[DEBUG] MVIRGenerator: returning operand 0
+[DEBUG MVIRGenerator] done item[7]
+[PHASE] MVIRGenerator done
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %6 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %4 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %7 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %6 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %7 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %6 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %4 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %7 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %1 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %6 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %4 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %7 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %6 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %7 is marked MOVED in CallInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %6 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %7 is marked MOVED in CallInst!
+[DEBUG mapType] EnumType enumSymbolId=47 genericArgs=0
+[DEBUG mapType] typeDecls count=2
+[DEBUG mapType]   typeDecl id=27 name='%Data' isEnum=0
+[DEBUG mapType]   typeDecl id=47 name='%Option_Data' isEnum=1
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %2 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG mapType] EnumType enumSymbolId=47 genericArgs=0
+[DEBUG mapType] typeDecls count=2
+[DEBUG mapType]   typeDecl id=27 name='%Data' isEnum=0
+[DEBUG mapType]   typeDecl id=47 name='%Option_Data' isEnum=1
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %2 (type: 16)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %5 (type: 16)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::VariantInst
+[DEBUG mapType] EnumType enumSymbolId=47 genericArgs=0
+[DEBUG mapType] typeDecls count=2
+[DEBUG mapType]   typeDecl id=27 name='%Data' isEnum=0
+[DEBUG mapType]   typeDecl id=47 name='%Option_Data' isEnum=1
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG mapType] EnumType enumSymbolId=47 genericArgs=0
+[DEBUG mapType] typeDecls count=2
+[DEBUG mapType]   typeDecl id=27 name='%Data' isEnum=0
+[DEBUG mapType]   typeDecl id=47 name='%Option_Data' isEnum=1
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG mapType] EnumType enumSymbolId=47 genericArgs=0
+[DEBUG mapType] typeDecls count=2
+[DEBUG mapType]   typeDecl id=27 name='%Data' isEnum=0
+[DEBUG mapType]   typeDecl id=47 name='%Option_Data' isEnum=1
+[DEBUG] Added LoadInst dest to localValues: %8 (type: 16)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %10 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %12 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %13 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %15 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %16 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %21 (type: 16)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %23 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %24 (type: 16)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %26 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %28 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %4 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %6 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %8 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %9 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %10 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %12 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %13 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG mapType] EnumType enumSymbolId=47 genericArgs=0
+[DEBUG mapType] typeDecls count=2
+[DEBUG mapType]   typeDecl id=27 name='%Data' isEnum=0
+[DEBUG mapType]   typeDecl id=47 name='%Option_Data' isEnum=1
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG mapType] EnumType enumSymbolId=47 genericArgs=0
+[DEBUG mapType] typeDecls count=2
+[DEBUG mapType]   typeDecl id=27 name='%Data' isEnum=0
+[DEBUG mapType]   typeDecl id=47 name='%Option_Data' isEnum=1
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG mapType] EnumType enumSymbolId=47 genericArgs=0
+[DEBUG mapType] typeDecls count=2
+[DEBUG mapType]   typeDecl id=27 name='%Data' isEnum=0
+[DEBUG mapType]   typeDecl id=47 name='%Option_Data' isEnum=1
+[DEBUG] Added LoadInst dest to localValues: %2 (type: 16)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::TagInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::ExtractInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %9 (type: 16)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

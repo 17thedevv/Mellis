@@ -1,0 +1,36 @@
+Number of diagnostics: 5
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 0, end: 3 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_full_pipeline_mlib_consumer.ms:1:1
+   |
+1  | use test_full_pipeline_mlib_producer::{Result, Process, handle_result};
+   | ^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 197, end: 201 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\valid\test_full_pipeline_mlib_consumer.ms:7:16
+   |
+7  |     fn process(self) -> int_32 { return self.val; }
+   |                ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 232, end: 233 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_full_pipeline_mlib_consumer.ms:7:51
+   |
+7  |     fn process(self) -> int_32 { return self.val; }
+   |                                                   ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 285, end: 289 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\valid\test_full_pipeline_mlib_consumer.ms:11:16
+   |
+11 |     fn process(self) -> int_32 { return self.code * -1; }
+   |                ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 326, end: 327 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_full_pipeline_mlib_consumer.ms:11:57
+   |
+11 |     fn process(self) -> int_32 { return self.code * -1; }
+   |                                                         ^
+

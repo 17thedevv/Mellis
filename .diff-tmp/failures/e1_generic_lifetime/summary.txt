@@ -1,0 +1,8 @@
+Test: D:\fdlang\tests\generics\e1_generic_lifetime.ms
+
+Compiler:
+  C++  exit=0
+  Rust exit=1
+
+Classification:
+  CompilePhase

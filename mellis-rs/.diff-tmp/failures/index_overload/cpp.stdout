@@ -1,0 +1,10 @@
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Idx, symbolId = 18)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Array, symbolId = 22)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Index, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 24)
+DEBUG: Inside IF block

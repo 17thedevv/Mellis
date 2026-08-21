@@ -1,0 +1,50 @@
+Number of diagnostics: 7
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 32, end: 36 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\generics\e1_generic_lifetime.ms:2:16
+   |
+2  |     fn display(self: *Self) -> void;
+   |                ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 55, end: 56 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\e1_generic_lifetime.ms:3:1
+   |
+3  | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 102, end: 106 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\generics\e1_generic_lifetime.ms:6:16
+   |
+6  |     fn display(self: *Self) -> void {
+   |                ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 200, end: 201 }), message: "Expected '(' after function name" }
+error: Expected '(' after function name
+  --> D:\fdlang\tests\generics\e1_generic_lifetime.ms:11:12
+   |
+11 | fn identity<'a, T: Display>(x: &'a T) -> &'a T {
+   |            ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 254, end: 255 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\e1_generic_lifetime.ms:13:1
+   |
+13 | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 366, end: 368 }), message: "Expected ';' after variable declaration" }
+error: Expected ';' after variable declaration
+  --> D:\fdlang\tests\generics\e1_generic_lifetime.ms:18:22
+   |
+18 |     dec r2 = identity@<'static, int_32>(r);
+   |                      ^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 405, end: 406 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\generics\e1_generic_lifetime.ms:20:1
+   |
+20 | }
+   | ^
+

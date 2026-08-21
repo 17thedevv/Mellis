@@ -1,0 +1,91 @@
+[DEBUG resolvePath] Resolving path starting with 's'
+[DEBUG resolvePath] resolve('s') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'StringData'
+[DEBUG resolvePath] resolve('StringData') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'consume'
+[DEBUG resolvePath] resolve('consume') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 's'
+[DEBUG resolvePath] resolve('s') returned 1 syms. First id=23
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=24
+Solving constraint: int_32 == ?T0
+Solving constraint: int_32 == int_32
+Solving constraint: fn(Struct<18>) -> int_32 == fn(s: Struct<18>) -> int_32
+Solving constraint: fn() -> ?T2 == [closure@25]
+Solving constraint: int_32 == ?T2
+[DEBUG Semantic] Analyzing function: @consume
+[DEBUG Semantic] Analyzing function: @main
+[DEBUG Semantic] Analyzing function: @__LambdaFunc_2037398596320
+; ModuleID = 'D:\fdlang\tests\borrow\test_closure_move.ms'
+source_filename = "D:\\fdlang\\tests\\borrow\\test_closure_move.ms"
+
+%StringData = type { i32 }
+
+define i32 @consume(%StringData %"0") {
+entry0:
+  %"1" = alloca %StringData, align 8
+  store %StringData %"0", ptr %"1", align 4
+  %fld = getelementptr inbounds %StringData, ptr %"1", i32 0, i32 0
+  %"2" = load i32, ptr %fld, align 4
+  ret i32 %"2"
+}
+
+define i32 @main() {
+entry0:
+  %"0" = alloca %StringData, align 8
+  %"1" = alloca %StringData, align 8
+  %"3" = alloca { ptr, %StringData }, align 8
+  %"4" = alloca { ptr, %StringData }, align 8
+  %"8" = alloca { ptr, %StringData }, align 8
+  %fld = getelementptr inbounds %StringData, ptr %"1", i32 0, i32 0
+  store i32 42, ptr %fld, align 4
+  %"2" = load %StringData, ptr %"1", align 4
+  store %StringData %"2", ptr %"0", align 4
+  %fld1 = getelementptr inbounds { ptr, %StringData }, ptr %"4", i32 0, i32 0
+  store ptr @__LambdaFunc_2037398596320, ptr %fld1, align 8
+  %"5" = load %StringData, ptr %"0", align 4
+  %fld2 = getelementptr inbounds { ptr, %StringData }, ptr %"4", i32 0, i32 1
+  store %StringData %"5", ptr %fld2, align 4
+  %"6" = load { ptr, %StringData }, ptr %"4", align 8
+  store { ptr, %StringData } %"6", ptr %"3", align 8
+  %"7" = load { ptr, %StringData }, ptr %"3", align 8
+  store { ptr, %StringData } %"7", ptr %"8", align 8
+  %fld3 = getelementptr inbounds { ptr, %StringData }, ptr %"8", i32 0, i32 0
+  %"9" = load ptr, ptr %fld3, align 8
+  %"10" = call i32 %"9"(ptr %"8")
+  ret i32 %"10"
+}
+
+define i32 @__LambdaFunc_2037398596320(ptr %"0") {
+entry0:
+  %"1" = alloca ptr, align 8
+  %"2" = alloca %StringData, align 8
+  store ptr %"0", ptr %"1", align 8
+  %fld = getelementptr inbounds { ptr, %StringData }, ptr %"0", i32 0, i32 1
+  %"3" = load %StringData, ptr %fld, align 4
+  store %StringData %"3", ptr %"2", align 4
+  %"4" = load %StringData, ptr %"2", align 4
+  %"5" = call i32 @consume(%StringData %"4")
+  ret i32 %"5"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

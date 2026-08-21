@@ -1,0 +1,15 @@
+Number of diagnostics: 2
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 0, end: 4 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\scratch\test_type_alias_neg.ms:1:1
+   |
+1  | type A = B;
+   | ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 13, end: 17 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\scratch\test_type_alias_neg.ms:2:1
+   |
+2  | type B = A;
+   | ^^^^
+

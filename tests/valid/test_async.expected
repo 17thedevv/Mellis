@@ -1,0 +1,514 @@
+=== EXIT CODE ===
+0
+=== STDOUT ===
+[DEBUG resolvePath] Resolving path starting with 'fetch_number'
+[DEBUG resolvePath] resolve('fetch_number') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'base'
+[DEBUG resolvePath] resolve('base') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'fetch_number'
+[DEBUG resolvePath] resolve('fetch_number') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'fetch_number'
+[DEBUG resolvePath] resolve('fetch_number') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'a'
+[DEBUG resolvePath] resolve('a') returned 1 syms. First id=25
+[DEBUG resolvePath] Resolving path starting with 'b'
+[DEBUG resolvePath] resolve('b') returned 1 syms. First id=26
+Solving constraint: int_32 == int_32
+Solving constraint: fn() -> Future<int_32> == fn() -> Future<int_32>
+Solving constraint: Future<int_32> == Future<?T1>
+Solving constraint: int_32 == ?T2
+Solving constraint: fn() -> Future<int_32> == fn() -> Future<int_32>
+Solving constraint: Future<int_32> == Future<?T4>
+Solving constraint: fn() -> Future<int_32> == fn() -> Future<int_32>
+Solving constraint: Future<int_32> == Future<?T6>
+Solving constraint: int_32 == ?T7
+Solving constraint: int_32 == int_32
+[DEBUG Semantic] Analyzing function: @fetch_number
+[DEBUG Semantic] Analyzing function: @double_async
+[DEBUG Semantic] Analyzing function: @do_work
+[DEBUG Semantic] Analyzing function: @sequential
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\valid\test_async.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\test_async.ms"
+
+; Function Attrs: presplitcoroutine
+define ptr @fetch_number() #0 {
+entry0:
+  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %1 = call i32 @llvm.coro.size.i32()
+  %2 = call ptr @malloc(i32 %1)
+  %3 = call ptr @llvm.coro.begin(token %0, ptr %2)
+  %4 = call ptr @llvm.coro.promise(ptr %3, i32 8, i1 false)
+  %5 = getelementptr inbounds { i8, i32 }, ptr %4, i32 0, i32 0
+  store i8 0, ptr %5, align 1
+  %6 = call ptr @llvm.coro.promise(ptr %3, i32 8, i1 false)
+  %7 = getelementptr inbounds { i8, i32 }, ptr %6, i32 0, i32 0
+  store i8 1, ptr %7, align 1
+  %8 = getelementptr inbounds { i8, i32 }, ptr %6, i32 0, i32 1
+  store i32 42, ptr %8, align 4
+  %9 = call i1 @llvm.coro.end(ptr %3, i1 false, token none)
+  ret ptr %3
+}
+
+; Function Attrs: presplitcoroutine
+define ptr @double_async(i32 %"0") #0 {
+entry0:
+  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %1 = call i32 @llvm.coro.size.i32()
+  %2 = call ptr @malloc(i32 %1)
+  %3 = call ptr @llvm.coro.begin(token %0, ptr %2)
+  %4 = call ptr @llvm.coro.promise(ptr %3, i32 8, i1 false)
+  %5 = getelementptr inbounds { i8, i32 }, ptr %4, i32 0, i32 0
+  store i8 0, ptr %5, align 1
+  %"1" = alloca i32, align 4
+  %"2" = alloca i32, align 4
+  store i32 %"0", ptr %"1", align 4
+  %"3" = call ptr @fetch_number()
+  %6 = call ptr @llvm.coro.promise(ptr %"3", i32 8, i1 false)
+  br label %await.check
+
+await.check:                                      ; preds = %await.suspend, %entry0
+  %7 = getelementptr inbounds { i8, i32 }, ptr %6, i32 0, i32 0
+  %8 = load i8, ptr %7, align 1
+  %9 = icmp eq i8 %8, 1
+  br i1 %9, label %await.ready, label %await.resume_inner
+
+await.resume_inner:                               ; preds = %await.check
+  call void @llvm.coro.resume(ptr %"3")
+  %10 = load i8, ptr %7, align 1
+  %11 = icmp eq i8 %10, 1
+  br i1 %11, label %await.ready, label %await.suspend
+
+await.suspend:                                    ; preds = %await.suspend, %await.resume_inner
+  %12 = call token @llvm.coro.save(ptr %3)
+  %13 = call i8 @llvm.coro.suspend(token %12, i1 false)
+  switch i8 %13, label %await.suspend [
+    i8 0, label %await.check
+    i8 1, label %await.cleanup
+  ]
+
+await.ready:                                      ; preds = %await.resume_inner, %await.check
+  %14 = getelementptr inbounds { i8, i32 }, ptr %6, i32 0, i32 1
+  %15 = load i32, ptr %14, align 4
+  call void @llvm.coro.destroy(ptr %"3")
+  store i32 %15, ptr %"2", align 4
+  %"5" = load i32, ptr %"2", align 4
+  %"6" = load i32, ptr %"1", align 4
+  %"7" = add i32 %"5", %"6"
+  %16 = call ptr @llvm.coro.promise(ptr %3, i32 8, i1 false)
+  %17 = getelementptr inbounds { i8, i32 }, ptr %16, i32 0, i32 0
+  store i8 1, ptr %17, align 1
+  %18 = getelementptr inbounds { i8, i32 }, ptr %16, i32 0, i32 1
+  store i32 %"7", ptr %18, align 4
+  %19 = call i1 @llvm.coro.end(ptr %3, i1 false, token none)
+  ret ptr %3
+
+await.cleanup:                                    ; preds = %await.suspend
+  unreachable
+}
+
+; Function Attrs: presplitcoroutine
+define ptr @do_work() #0 {
+entry0:
+  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %1 = call i32 @llvm.coro.size.i32()
+  %2 = call ptr @malloc(i32 %1)
+  %3 = call ptr @llvm.coro.begin(token %0, ptr %2)
+  %4 = call ptr @llvm.coro.promise(ptr %3, i32 8, i1 false)
+  %5 = getelementptr inbounds { i8, i8 }, ptr %4, i32 0, i32 0
+  store i8 0, ptr %5, align 1
+  %6 = call ptr @llvm.coro.promise(ptr %3, i32 8, i1 false)
+  %7 = getelementptr inbounds { i8, i8 }, ptr %6, i32 0, i32 0
+  store i8 1, ptr %7, align 1
+  %8 = call i1 @llvm.coro.end(ptr %3, i1 false, token none)
+  ret ptr %3
+}
+
+; Function Attrs: presplitcoroutine
+define ptr @sequential() #0 {
+entry0:
+  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %1 = call i32 @llvm.coro.size.i32()
+  %2 = call ptr @malloc(i32 %1)
+  %3 = call ptr @llvm.coro.begin(token %0, ptr %2)
+  %4 = call ptr @llvm.coro.promise(ptr %3, i32 8, i1 false)
+  %5 = getelementptr inbounds { i8, i32 }, ptr %4, i32 0, i32 0
+  store i8 0, ptr %5, align 1
+  %"0" = alloca i32, align 4
+  %"3" = alloca i32, align 4
+  %"1" = call ptr @fetch_number()
+  %6 = call ptr @llvm.coro.promise(ptr %"1", i32 8, i1 false)
+  br label %await.check
+
+await.check:                                      ; preds = %await.suspend, %entry0
+  %7 = getelementptr inbounds { i8, i32 }, ptr %6, i32 0, i32 0
+  %8 = load i8, ptr %7, align 1
+  %9 = icmp eq i8 %8, 1
+  br i1 %9, label %await.ready, label %await.resume_inner
+
+await.resume_inner:                               ; preds = %await.check
+  call void @llvm.coro.resume(ptr %"1")
+  %10 = load i8, ptr %7, align 1
+  %11 = icmp eq i8 %10, 1
+  br i1 %11, label %await.ready, label %await.suspend
+
+await.suspend:                                    ; preds = %await.suspend, %await.resume_inner
+  %12 = call token @llvm.coro.save(ptr %3)
+  %13 = call i8 @llvm.coro.suspend(token %12, i1 false)
+  switch i8 %13, label %await.suspend [
+    i8 0, label %await.check
+    i8 1, label %await.cleanup
+  ]
+
+await.ready:                                      ; preds = %await.resume_inner, %await.check
+  %14 = getelementptr inbounds { i8, i32 }, ptr %6, i32 0, i32 1
+  %15 = load i32, ptr %14, align 4
+  call void @llvm.coro.destroy(ptr %"1")
+  store i32 %15, ptr %"0", align 4
+  %"4" = call ptr @fetch_number()
+  %16 = call ptr @llvm.coro.promise(ptr %"4", i32 8, i1 false)
+  br label %await.check1
+
+await.cleanup:                                    ; preds = %await.suspend
+  unreachable
+
+await.check1:                                     ; preds = %await.suspend3, %await.ready
+  %17 = getelementptr inbounds { i8, i32 }, ptr %16, i32 0, i32 0
+  %18 = load i8, ptr %17, align 1
+  %19 = icmp eq i8 %18, 1
+  br i1 %19, label %await.ready4, label %await.resume_inner2
+
+await.resume_inner2:                              ; preds = %await.check1
+  call void @llvm.coro.resume(ptr %"4")
+  %20 = load i8, ptr %17, align 1
+  %21 = icmp eq i8 %20, 1
+  br i1 %21, label %await.ready4, label %await.suspend3
+
+await.suspend3:                                   ; preds = %await.suspend3, %await.resume_inner2
+  %22 = call token @llvm.coro.save(ptr %3)
+  %23 = call i8 @llvm.coro.suspend(token %22, i1 false)
+  switch i8 %23, label %await.suspend3 [
+    i8 0, label %await.check1
+    i8 1, label %await.cleanup5
+  ]
+
+await.ready4:                                     ; preds = %await.resume_inner2, %await.check1
+  %24 = getelementptr inbounds { i8, i32 }, ptr %16, i32 0, i32 1
+  %25 = load i32, ptr %24, align 4
+  call void @llvm.coro.destroy(ptr %"4")
+  store i32 %25, ptr %"3", align 4
+  %"6" = load i32, ptr %"0", align 4
+  %"7" = load i32, ptr %"3", align 4
+  %"8" = add i32 %"6", %"7"
+  %26 = call ptr @llvm.coro.promise(ptr %3, i32 8, i1 false)
+  %27 = getelementptr inbounds { i8, i32 }, ptr %26, i32 0, i32 0
+  store i8 1, ptr %27, align 1
+  %28 = getelementptr inbounds { i8, i32 }, ptr %26, i32 0, i32 1
+  store i32 %"8", ptr %28, align 4
+  %29 = call i1 @llvm.coro.end(ptr %3, i1 false, token none)
+  ret ptr %3
+
+await.cleanup5:                                   ; preds = %await.suspend3
+  unreachable
+}
+
+define i32 @main() {
+entry0:
+  ret i32 0
+}
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
+
+; Function Attrs: nounwind memory(none)
+declare i32 @llvm.coro.size.i32() #2
+
+declare ptr @malloc(i32)
+
+; Function Attrs: nounwind
+declare ptr @llvm.coro.begin(token, ptr writeonly) #3
+
+; Function Attrs: nounwind memory(none)
+declare ptr @llvm.coro.promise(ptr nocapture, i32, i1) #2
+
+; Function Attrs: nounwind
+declare i1 @llvm.coro.end(ptr, i1, token) #3
+
+declare void @llvm.coro.resume(ptr)
+
+; Function Attrs: nomerge nounwind
+declare token @llvm.coro.save(ptr) #4
+
+; Function Attrs: nounwind
+declare i8 @llvm.coro.suspend(token, i1) #3
+
+declare void @llvm.coro.destroy(ptr)
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #5
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+attributes #0 = { presplitcoroutine }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+attributes #2 = { nounwind memory(none) }
+attributes #3 = { nounwind }
+attributes #4 = { nomerge nounwind }
+attributes #5 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='fetch_number' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='double_async' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=20 name='x' kind=3 scope=2
+[DEBUG SymbolTable] declareSymbol id=21 name='do_work' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=22 name='sequential' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=23 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: fetch_number
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving function: double_async
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=24 name='base' kind=0 scope=7
+[DEBUG] Resolving identifier: fetch_number
+[DEBUG] Finished resolvePath for fetch_number
+[DEBUG] Resolving identifier: base
+[DEBUG] Finished resolvePath for base
+[DEBUG] Resolving identifier: x
+[DEBUG] Finished resolvePath for x
+[DEBUG] Resolving function: do_work
+[DEBUG] Resolving function: sequential
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=25 name='a' kind=0 scope=9
+[DEBUG] Resolving identifier: fetch_number
+[DEBUG] Finished resolvePath for fetch_number
+[DEBUG SymbolTable] declareSymbol id=26 name='b' kind=0 scope=9
+[DEBUG] Resolving identifier: fetch_number
+[DEBUG] Finished resolvePath for fetch_number
+[DEBUG] Resolving identifier: a
+[DEBUG] Finished resolvePath for a
+[DEBUG] Resolving identifier: b
+[DEBUG] Finished resolvePath for b
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 5 items
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='fetch_number' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='double_async' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG self] Evaluated param->type for x -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='do_work' symbolId=21
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='sequential' symbolId=22
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=23
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=fetch_number tableSize=27
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000020789605830 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=24 expectedType=0000020789609E90
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=24 name=base tableSize=27
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000020789609E90 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=20 name=x tableSize=27
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=00000207895CA7E0 kind=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=fetch_number tableSize=27
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000020789605830 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=25 expectedType=0000020789609C70
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=18 name=fetch_number tableSize=27
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000020789605830 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=26 expectedType=0000020789609EF0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=25 name=a tableSize=27
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000020789609C70 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=26 name=b tableSize=27
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000020789609EF0 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG CallExpr] gFn->genericParams.size() = 0
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::FunctionDeclNode
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @fetch_number
+[DEBUG] MVIRGenerator: returning operand 42
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::FunctionDeclNode
+[DEBUG pushLocalInst] Inserting LocalInst for %1 into entry block entry0
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %2 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @double_async
+[DEBUG] MVIRGenerator: returning operand %7
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::FunctionDeclNode
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::FunctionDeclNode
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %0 into entry block entry0
+[DEBUG] VarDeclNode type kind: 0
+[DEBUG pushLocalInst] Inserting LocalInst for %3 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @sequential
+[DEBUG] MVIRGenerator: returning operand %8
+[DEBUG MVIRGenerator] done item[3]
+[DEBUG MVIRGenerator] visiting item[4] typeid=class fl::FunctionDeclNode
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @main
+[DEBUG] MVIRGenerator: returning operand 0
+[DEBUG MVIRGenerator] done item[4]
+[PHASE] MVIRGenerator done
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %5 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %6 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %6 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %7 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::AluInst
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

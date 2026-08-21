@@ -1,6 +1,11 @@
-# freedomLanguage Vision
+# Mellis (freedomLanguage) Vision
 
-> A modern systems programming language focused on compiler and tooling innovation.
+> **Mellis is a memory-safe systems language with an expressive type system and first-class architecture for large-scale software.**
+
+Mellis được xây dựng trên 3 trụ cột cốt lõi (North Star):
+- **Rust** cho sự an toàn của bộ nhớ (Memory Safety: Ownership + Borrowing + Lifetime + no GC).
+- **TypeScript** cho khả năng biểu đạt của type system (Nominal Types + Generics + Traits + Associated Types + Deep Inference).
+- **Ada** cho kỷ luật kiến trúc của hệ thống lớn (Module + Explicit Boundaries + Contracts + .mlib Determinism).
 
 ---
 
@@ -72,9 +77,9 @@ Fast incremental builds, diagnostics and IDE support are part of the language ex
 
 ---
 
-# What fdlang Intentionally Inherits
+# What Mellis Intentionally Inherits
 
-fdlang does not attempt to redesign concepts that have already been proven.
+Mellis does not attempt to redesign concepts that have already been proven.
 
 It intentionally adopts:
 

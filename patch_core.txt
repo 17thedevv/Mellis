@@ -1,0 +1,23 @@
+﻿<<<<
+    export fn is_some(self: &Self) -> bool {
+        match self {
+            Option::Some(v) -> true,
+            Option::None -> false
+        }
+    }
+
+    export fn is_none(self: &Self) -> bool {
+        return !self.is_some();
+    }
+====
+    export fn is_some(self: &Self) -> bool {
+        match *self {
+            Option::Some(v) -> true,
+            Option::None -> false
+        }
+    }
+
+    export fn is_none(self: &Self) -> bool {
+        return !self.is_some();
+    }
+>>>>

@@ -1,0 +1,17 @@
+[package]
+name = "mellis-spike-llvm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+inkwell = { version = "0.5.0", features = ["llvm18-0"] }
+libc = "0.2.189"
+llvm-sys = { version = "180.0.0", features = ["no-llvm-linking"] }
+
+[[bin]]
+name = "llvmsys_spike"
+path = "src/llvmsys_spike.rs"
+
+[[bin]]
+name = "inkwell_spike"
+path = "src/inkwell_spike.rs"

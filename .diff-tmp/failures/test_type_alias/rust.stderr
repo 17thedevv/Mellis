@@ -1,0 +1,8 @@
+Number of diagnostics: 1
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 0, end: 4 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\scratch\test_type_alias.ms:1:1
+   |
+1  | type UserId = int_32;
+   | ^^^^
+

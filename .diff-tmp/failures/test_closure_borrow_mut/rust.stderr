@@ -1,0 +1,22 @@
+Number of diagnostics: 3
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 78, end: 79 }), message: "Expected ':' after field name" }
+error: Expected ':' after field name
+  --> D:\fdlang\tests\borrow\test_closure_borrow_mut.ms:4:11
+   |
+4  |         x = 20; 
+   |           ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 90, end: 91 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\borrow\test_closure_borrow_mut.ms:5:5
+   |
+5  |     };
+   |     ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 119, end: 120 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\borrow\test_closure_borrow_mut.ms:8:1
+   |
+8  | }
+   | ^
+

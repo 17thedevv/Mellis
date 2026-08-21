@@ -1,0 +1,45 @@
+[DEBUG resolvePath] Resolving path starting with 'Box'
+[DEBUG resolvePath] resolve('Box') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'b'
+[DEBUG resolvePath] resolve('b') returned 1 syms. First id=22
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == ?T0
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\generics\e6_macro_generic.ms'
+source_filename = "D:\\fdlang\\tests\\generics\\e6_macro_generic.ms"
+
+%Box_int_32 = type { i32 }
+
+define i32 @main() {
+entry0:
+  %"0" = alloca %Box_int_32, align 8
+  %"1" = alloca %Box_int_32, align 8
+  %fld = getelementptr inbounds %Box_int_32, ptr %"1", i32 0, i32 0
+  store i32 42, ptr %fld, align 4
+  %"2" = load %Box_int_32, ptr %"1", align 4
+  store %Box_int_32 %"2", ptr %"0", align 4
+  %fld1 = getelementptr inbounds %Box_int_32, ptr %"0", i32 0, i32 0
+  %"3" = load i32, ptr %fld1, align 4
+  ret i32 %"3"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

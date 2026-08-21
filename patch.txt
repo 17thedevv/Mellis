@@ -1,0 +1,15 @@
+﻿<<<<
+    export fn is_some(self: &Self) -> bool {
+        match self {
+            Option::Some(_) -> true,
+            Option::None -> false,
+        }
+    }
+====
+    export fn is_some(self: &Self) -> bool {
+        match *self {
+            Option::Some(_) -> true,
+            Option::None -> false,
+        }
+    }
+>>>>

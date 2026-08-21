@@ -1,0 +1,161 @@
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'j'
+[DEBUG resolvePath] resolve('j') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'j'
+[DEBUG resolvePath] resolve('j') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'j'
+[DEBUG resolvePath] resolve('j') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'j'
+[DEBUG resolvePath] resolve('j') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'j'
+[DEBUG resolvePath] resolve('j') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=19
+Solving constraint: bool == ?T0
+Solving constraint: bool == ?T1
+Solving constraint: bool == ?T2
+Solving constraint: bool == ?T3
+Solving constraint: bool == ?T4
+Solving constraint: int_32 == ?T5
+Solving constraint: int_32 == ?T6
+Solving constraint: int_32 == ?T7
+Solving constraint: int_32 == ?T8
+Solving constraint: bool == ?T9
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+; ModuleID = 'D:\fdlang\tests\valid\test_labeled_break.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\test_labeled_break.ms"
+
+define i32 @main() {
+entry0:
+  %"0" = alloca i32, align 4
+  %"1" = alloca i32, align 4
+  %"4" = alloca i32, align 4
+  store i32 0, ptr %"0", align 4
+  store i32 0, ptr %"1", align 4
+  br label %while_cond1
+
+while_cond1:                                      ; preds = %while_end6, %entry0
+  %"2" = load i32, ptr %"1", align 4
+  %"3" = icmp slt i32 %"2", 5
+  br i1 %"3", label %while_body2, label %while_end3
+
+while_body2:                                      ; preds = %while_cond1
+  store i32 0, ptr %"4", align 4
+  br label %while_cond4
+
+while_cond4:                                      ; preds = %merge12, %then11, %while_body2
+  %"5" = load i32, ptr %"4", align 4
+  %"6" = icmp slt i32 %"5", 5
+  br i1 %"6", label %while_body5, label %while_end6
+
+while_body5:                                      ; preds = %while_cond4
+  %"7" = load i32, ptr %"1", align 4
+  %"8" = icmp eq i32 %"7", 2
+  br i1 %"8", label %then7, label %merge8
+
+then7:                                            ; preds = %while_body5
+  %"9" = load i32, ptr %"4", align 4
+  %"10" = icmp eq i32 %"9", 2
+  br i1 %"10", label %then9, label %merge10
+
+then9:                                            ; preds = %then7
+  br label %while_end6
+
+merge10:                                          ; preds = %then7
+  br label %merge8
+
+merge8:                                           ; preds = %merge10, %while_body5
+  %"11" = load i32, ptr %"4", align 4
+  %"12" = icmp eq i32 %"11", 3
+  br i1 %"12", label %then11, label %merge12
+
+then11:                                           ; preds = %merge8
+  %"13" = load i32, ptr %"1", align 4
+  %"14" = add i32 %"13", 1
+  store i32 %"14", ptr %"1", align 4
+  br label %while_cond4
+
+merge12:                                          ; preds = %merge8
+  %"15" = load i32, ptr %"0", align 4
+  %"16" = add i32 %"15", 1
+  store i32 %"16", ptr %"0", align 4
+  %"17" = load i32, ptr %"4", align 4
+  %"18" = add i32 %"17", 1
+  store i32 %"18", ptr %"4", align 4
+  br label %while_cond4
+
+while_end6:                                       ; preds = %then9, %while_cond4
+  %"19" = load i32, ptr %"1", align 4
+  %"20" = add i32 %"19", 1
+  store i32 %"20", ptr %"1", align 4
+  br label %while_cond1
+
+while_end3:                                       ; preds = %while_cond1
+  %"21" = load i32, ptr %"0", align 4
+  %"22" = icmp ne i32 %"21", 8
+  br i1 %"22", label %then13, label %merge14
+
+then13:                                           ; preds = %while_end3
+  ret i32 1
+
+merge14:                                          ; preds = %while_end3
+  ret i32 0
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+[DEBUG Semantic] Analyzing function: @main
+
+=== FORCE DUMP LLVM IR ===

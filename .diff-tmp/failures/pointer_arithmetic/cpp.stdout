@@ -1,0 +1,87 @@
+[DEBUG] Parser parsed array size with semicolon, size ptr is 000001532709CAA0
+[DEBUG resolvePath] Resolving path starting with 'arr'
+[DEBUG resolvePath] resolve('arr') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'ptr'
+[DEBUG resolvePath] resolve('ptr') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'ptr2'
+[DEBUG resolvePath] resolve('ptr2') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'ptr'
+[DEBUG resolvePath] resolve('ptr') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'diff'
+[DEBUG resolvePath] resolve('diff') returned 1 syms. First id=22
+[DEBUG] ConstEvaluator evaluating expr of type: class fl::LiteralExpr
+[DEBUG] ConstEvaluator LiteralExpr kind: 0
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: [int_32; 3] == [int_32; 3]
+Solving constraint: ?T0 == &' [int_32; 3]
+Solving constraint: int_32 == int_32
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\valid\pointer_arithmetic.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\pointer_arithmetic.ms"
+
+define i32 @main() {
+entry0:
+  %"0" = alloca [3 x i32], align 4
+  %"1" = alloca [3 x i32], align 4
+  %"2" = alloca i32, align 4
+  %"3" = alloca i32, align 4
+  %"4" = alloca i32, align 4
+  %"6" = alloca ptr, align 8
+  %"9" = alloca ptr, align 8
+  %"12" = alloca i64, align 8
+  store i32 0, ptr %"2", align 4
+  %idx = load i32, ptr %"2", align 4
+  %elem = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx
+  store i32 10, ptr %elem, align 4
+  store i32 1, ptr %"3", align 4
+  %idx1 = load i32, ptr %"3", align 4
+  %elem2 = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx1
+  store i32 20, ptr %elem2, align 4
+  store i32 2, ptr %"4", align 4
+  %idx3 = load i32, ptr %"4", align 4
+  %elem4 = getelementptr [3 x i32], ptr %"1", i32 0, i32 %idx3
+  store i32 30, ptr %elem4, align 4
+  %"5" = load [3 x i32], ptr %"1", align 4
+  store [3 x i32] %"5", ptr %"0", align 4
+  store ptr %"0", ptr %"6", align 8
+  %"10" = load ptr, ptr %"6", align 8
+  %"11" = getelementptr i32, ptr %"10", i32 2
+  store ptr %"11", ptr %"9", align 8
+  %"13" = load ptr, ptr %"9", align 8
+  %"14" = load ptr, ptr %"6", align 8
+  %0 = ptrtoint ptr %"13" to i64
+  %1 = ptrtoint ptr %"14" to i64
+  %2 = sub i64 %0, %1
+  %"15" = sdiv exact i64 %2, 4
+  store i64 %"15", ptr %"12", align 4
+  %"16" = load i64, ptr %"12", align 4
+  %"17" = trunc i64 %"16" to i32
+  ret i32 %"17"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

@@ -1,0 +1,119 @@
+[DEBUG resolvePath] Resolving path starting with 'arr'
+[DEBUG resolvePath] resolve('arr') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=22
+[DEBUG resolvePath] Resolving path starting with 'sum'
+[DEBUG resolvePath] resolve('sum') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'sum_array'
+[DEBUG resolvePath] resolve('sum_array') returned 1 syms. First id=18
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == ?T1
+Solving constraint: int_32 == int_32
+Solving constraint: fn() -> int_32 == fn() -> int_32
+Solving constraint: int_32 == int_32
+[DEBUG Semantic] Analyzing function: @sum_array
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\scratch\test_for_in.ms'
+source_filename = "D:\\fdlang\\tests\\scratch\\test_for_in.ms"
+
+define i32 @sum_array() {
+entry0:
+  %"0" = alloca [5 x i32], align 4
+  %"1" = alloca [5 x i32], align 4
+  %"2" = alloca i32, align 4
+  %"3" = alloca i32, align 4
+  %"4" = alloca i32, align 4
+  %"5" = alloca i32, align 4
+  %"6" = alloca i32, align 4
+  %"8" = alloca i32, align 4
+  %"9" = alloca i32, align 4
+  %"10" = alloca i32, align 4
+  %"11" = alloca i32, align 4
+  store i32 0, ptr %"2", align 4
+  %idx = load i32, ptr %"2", align 4
+  %elem = getelementptr [5 x i32], ptr %"1", i32 0, i32 %idx
+  store i32 1, ptr %elem, align 4
+  store i32 1, ptr %"3", align 4
+  %idx1 = load i32, ptr %"3", align 4
+  %elem2 = getelementptr [5 x i32], ptr %"1", i32 0, i32 %idx1
+  store i32 2, ptr %elem2, align 4
+  store i32 2, ptr %"4", align 4
+  %idx3 = load i32, ptr %"4", align 4
+  %elem4 = getelementptr [5 x i32], ptr %"1", i32 0, i32 %idx3
+  store i32 3, ptr %elem4, align 4
+  store i32 3, ptr %"5", align 4
+  %idx5 = load i32, ptr %"5", align 4
+  %elem6 = getelementptr [5 x i32], ptr %"1", i32 0, i32 %idx5
+  store i32 4, ptr %elem6, align 4
+  store i32 4, ptr %"6", align 4
+  %idx7 = load i32, ptr %"6", align 4
+  %elem8 = getelementptr [5 x i32], ptr %"1", i32 0, i32 %idx7
+  store i32 5, ptr %elem8, align 4
+  %"7" = load [5 x i32], ptr %"1", align 4
+  store [5 x i32] %"7", ptr %"0", align 4
+  store i32 0, ptr %"8", align 4
+  store i32 0, ptr %"9", align 4
+  store i32 0, ptr %"10", align 4
+  store i32 0, ptr %"11", align 4
+  br label %foreach_cond1
+
+foreach_cond1:                                    ; preds = %foreach_step3, %entry0
+  %"12" = load i32, ptr %"9", align 4
+  %"13" = icmp slt i32 %"12", 5
+  br i1 %"13", label %foreach_body2, label %foreach_end4
+
+foreach_body2:                                    ; preds = %foreach_cond1
+  store i32 %"12", ptr %"10", align 4
+  %idx9 = load i32, ptr %"10", align 4
+  %elem10 = getelementptr [5 x i32], ptr %"0", i32 0, i32 %idx9
+  %"14" = load i32, ptr %elem10, align 4
+  store i32 %"14", ptr %"11", align 4
+  %"15" = load i32, ptr %"8", align 4
+  %"16" = load i32, ptr %"11", align 4
+  %"17" = add i32 %"15", %"16"
+  store i32 %"17", ptr %"8", align 4
+  br label %foreach_step3
+
+foreach_step3:                                    ; preds = %foreach_body2
+  %"18" = add i32 %"12", 1
+  store i32 %"18", ptr %"9", align 4
+  br label %foreach_cond1
+
+foreach_end4:                                     ; preds = %foreach_cond1
+  %"19" = load i32, ptr %"8", align 4
+  ret i32 %"19"
+}
+
+define i32 @main() {
+entry0:
+  %"0" = call i32 @sum_array()
+  ret i32 %"0"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

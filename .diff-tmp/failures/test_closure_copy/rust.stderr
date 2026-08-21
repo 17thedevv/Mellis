@@ -1,0 +1,15 @@
+Number of diagnostics: 2
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 70, end: 71 }), message: "Expected ':' after field name" }
+error: Expected ':' after field name
+  --> D:\fdlang\tests\borrow\test_closure_copy.ms:3:31
+   |
+3  |     dec f = | | -> int_32 { x };
+   |                               ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 155, end: 156 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\borrow\test_closure_copy.ms:6:1
+   |
+6  | }
+   | ^
+

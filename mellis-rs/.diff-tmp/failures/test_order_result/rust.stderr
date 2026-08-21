@@ -1,0 +1,8 @@
+DEBUG MethodCall obj_ty: InferenceVar(17)
+DEBUG MethodCall obj_ty: InferenceVar(17)
+DEBUG MethodCall obj_ty: Enum(SymbolId(1), [SemanticTypeId(7), SemanticTypeId(0)])
+DEBUG MethodCall obj_ty: Enum(SymbolId(1), [SemanticTypeId(7), SemanticTypeId(0)])
+DEBUG MethodCall obj_ty: InferenceVar(22)
+DEBUG MethodCall obj_ty: InferenceVar(22)
+DEBUG MethodCall obj_ty: InferenceVar(25)
+DEBUG MethodCall obj_ty: InferenceVar(25)

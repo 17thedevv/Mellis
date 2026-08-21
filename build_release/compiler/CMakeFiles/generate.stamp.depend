@@ -1,0 +1,11 @@
+# CMake generation dependency list for this directory.
+C:/Program Files/CMake/share/cmake-4.4/Modules/FindLibXml2.cmake
+C:/Program Files/CMake/share/cmake-4.4/Modules/FindPackageHandleStandardArgs.cmake
+C:/Program Files/CMake/share/cmake-4.4/Modules/FindPackageMessage.cmake
+C:/Program Files/CMake/share/cmake-4.4/Modules/FindPkgConfig.cmake
+D:/Programs/LLVM-DEV/lib/cmake/llvm/LLVM-Config.cmake
+D:/Programs/LLVM-DEV/lib/cmake/llvm/LLVMConfig.cmake
+D:/Programs/LLVM-DEV/lib/cmake/llvm/LLVMConfigVersion.cmake
+D:/Programs/LLVM-DEV/lib/cmake/llvm/LLVMExports-release.cmake
+D:/Programs/LLVM-DEV/lib/cmake/llvm/LLVMExports.cmake
+D:/fdlang/compiler/CMakeLists.txt

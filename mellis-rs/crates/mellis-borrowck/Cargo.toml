@@ -1,0 +1,9 @@
+[package]
+name = "mellis-borrowck"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mellis-common = { path = "../mellis-common" }
+mellis-semantic = { path = "../mellis-semantic" }
+mellis-mvir = { path = "../mellis-mvir" }

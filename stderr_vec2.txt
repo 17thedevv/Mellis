@@ -1,0 +1,2830 @@
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='marker' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='Copy' kind=9 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='Self' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=21 name='clone' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=22 name='Clone' kind=9 scope=3
+[DEBUG SymbolTable] declareSymbol id=23 name='Self' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=24 name='clone' kind=4 scope=4
+[DEBUG SymbolTable] declareSymbol id=25 name=''_1' kind=13 scope=5
+[DEBUG SymbolTable] declareSymbol id=26 name='self' kind=3 scope=5
+[DEBUG SymbolTable] declareSymbol id=27 name='cmp' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=28 name='PartialEq' kind=9 scope=6
+[DEBUG SymbolTable] declareSymbol id=29 name='Self' kind=13 scope=7
+[DEBUG SymbolTable] declareSymbol id=30 name='eq' kind=4 scope=7
+[DEBUG SymbolTable] declareSymbol id=31 name=''_2' kind=13 scope=8
+[DEBUG SymbolTable] declareSymbol id=32 name=''_1' kind=13 scope=8
+[DEBUG SymbolTable] declareSymbol id=33 name='self' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=34 name='other' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=35 name='ne' kind=4 scope=7
+[DEBUG SymbolTable] declareSymbol id=36 name=''_2' kind=13 scope=9
+[DEBUG SymbolTable] declareSymbol id=37 name=''_1' kind=13 scope=9
+[DEBUG SymbolTable] declareSymbol id=38 name='self' kind=3 scope=9
+[DEBUG SymbolTable] declareSymbol id=39 name='other' kind=3 scope=9
+[DEBUG SymbolTable] declareSymbol id=40 name='Eq' kind=9 scope=6
+[DEBUG SymbolTable] declareSymbol id=41 name='Self' kind=13 scope=10
+[DEBUG SymbolTable] declareSymbol id=42 name='option' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=43 name='__mellis_panic' kind=4 scope=11
+[DEBUG SymbolTable] declareSymbol id=44 name='Option' kind=6 scope=11
+[DEBUG SymbolTable] declareSymbol id=45 name='T' kind=13 scope=13
+[DEBUG SymbolTable] declareSymbol id=46 name='None' kind=7 scope=13
+[DEBUG SymbolTable] declareSymbol id=47 name='Some' kind=7 scope=13
+[DEBUG SymbolTable] declareSymbol id=48 name='__field_0' kind=8 scope=15
+[DEBUG SymbolTable] declareSymbol id=49 name='Self' kind=12 scope=16
+[DEBUG SymbolTable] declareSymbol id=50 name='T' kind=13 scope=16
+[DEBUG SymbolTable] declareSymbol id=51 name='is_some' kind=4 scope=16
+[DEBUG SymbolTable] declareSymbol id=52 name=''_1' kind=13 scope=17
+[DEBUG SymbolTable] declareSymbol id=53 name='self' kind=3 scope=17
+[DEBUG SymbolTable] declareSymbol id=54 name='is_none' kind=4 scope=16
+[DEBUG SymbolTable] declareSymbol id=55 name=''_1' kind=13 scope=18
+[DEBUG SymbolTable] declareSymbol id=56 name='self' kind=3 scope=18
+[DEBUG SymbolTable] declareSymbol id=57 name='unwrap' kind=4 scope=16
+[DEBUG SymbolTable] declareSymbol id=58 name='self' kind=3 scope=19
+[DEBUG SymbolTable] declareSymbol id=59 name='unwrap_or' kind=4 scope=16
+[DEBUG SymbolTable] declareSymbol id=60 name='self' kind=3 scope=20
+[DEBUG SymbolTable] declareSymbol id=61 name='default' kind=3 scope=20
+[DEBUG SymbolTable] declareSymbol id=62 name='map' kind=4 scope=16
+[DEBUG SymbolTable] declareSymbol id=63 name='U' kind=13 scope=21
+[DEBUG SymbolTable] declareSymbol id=64 name='self' kind=3 scope=21
+[DEBUG SymbolTable] declareSymbol id=65 name='f' kind=3 scope=21
+[DEBUG SymbolTable] declareSymbol id=66 name='and_then' kind=4 scope=16
+[DEBUG SymbolTable] declareSymbol id=67 name='U' kind=13 scope=22
+[DEBUG SymbolTable] declareSymbol id=68 name='self' kind=3 scope=22
+[DEBUG SymbolTable] declareSymbol id=69 name='f' kind=3 scope=22
+[DEBUG SymbolTable] declareSymbol id=70 name='result' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=71 name='__mellis_panic' kind=4 scope=23
+[DEBUG SymbolTable] declareSymbol id=72 name='Result' kind=6 scope=23
+[DEBUG SymbolTable] declareSymbol id=73 name='T' kind=13 scope=25
+[DEBUG SymbolTable] declareSymbol id=74 name='E' kind=13 scope=25
+[DEBUG SymbolTable] declareSymbol id=75 name='Ok' kind=7 scope=25
+[DEBUG SymbolTable] declareSymbol id=76 name='__field_0' kind=8 scope=26
+[DEBUG SymbolTable] declareSymbol id=77 name='Err' kind=7 scope=25
+[DEBUG SymbolTable] declareSymbol id=78 name='__field_0' kind=8 scope=27
+[DEBUG SymbolTable] declareSymbol id=79 name='Self' kind=12 scope=28
+[DEBUG SymbolTable] declareSymbol id=80 name='T' kind=13 scope=28
+[DEBUG SymbolTable] declareSymbol id=81 name='E' kind=13 scope=28
+[DEBUG SymbolTable] declareSymbol id=82 name='is_ok' kind=4 scope=28
+[DEBUG SymbolTable] declareSymbol id=83 name=''_1' kind=13 scope=29
+[DEBUG SymbolTable] declareSymbol id=84 name='self' kind=3 scope=29
+[DEBUG SymbolTable] declareSymbol id=85 name='is_err' kind=4 scope=28
+[DEBUG SymbolTable] declareSymbol id=86 name=''_1' kind=13 scope=30
+[DEBUG SymbolTable] declareSymbol id=87 name='self' kind=3 scope=30
+[DEBUG SymbolTable] declareSymbol id=88 name='unwrap' kind=4 scope=28
+[DEBUG SymbolTable] declareSymbol id=89 name='self' kind=3 scope=31
+[DEBUG SymbolTable] declareSymbol id=90 name='unwrap_or' kind=4 scope=28
+[DEBUG SymbolTable] declareSymbol id=91 name='self' kind=3 scope=32
+[DEBUG SymbolTable] declareSymbol id=92 name='default' kind=3 scope=32
+[DEBUG SymbolTable] declareSymbol id=93 name='map' kind=4 scope=28
+[DEBUG SymbolTable] declareSymbol id=94 name='U' kind=13 scope=33
+[DEBUG SymbolTable] declareSymbol id=95 name='self' kind=3 scope=33
+[DEBUG SymbolTable] declareSymbol id=96 name='f' kind=3 scope=33
+[DEBUG SymbolTable] declareSymbol id=97 name='slice' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=98 name='Self' kind=12 scope=35
+[DEBUG SymbolTable] declareSymbol id=99 name='T' kind=13 scope=35
+[DEBUG SymbolTable] declareSymbol id=100 name='len' kind=4 scope=35
+[DEBUG SymbolTable] declareSymbol id=101 name=''_1' kind=13 scope=36
+[DEBUG SymbolTable] declareSymbol id=102 name='self' kind=3 scope=36
+[DEBUG SymbolTable] declareSymbol id=103 name='is_empty' kind=4 scope=35
+[DEBUG SymbolTable] declareSymbol id=104 name=''_1' kind=13 scope=37
+[DEBUG SymbolTable] declareSymbol id=105 name='self' kind=3 scope=37
+[DEBUG SymbolTable] declareSymbol id=106 name='iterator' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=107 name='Iterator' kind=9 scope=38
+[DEBUG SymbolTable] declareSymbol id=108 name='Self' kind=13 scope=39
+[DEBUG SymbolTable] declareSymbol id=109 name='Item' kind=12 scope=39
+[DEBUG SymbolTable] declareSymbol id=110 name='next' kind=4 scope=39
+[DEBUG SymbolTable] declareSymbol id=111 name=''_1' kind=13 scope=40
+[DEBUG SymbolTable] declareSymbol id=112 name='self' kind=3 scope=40
+[DEBUG SymbolTable] declareSymbol id=113 name='IntoIterator' kind=9 scope=38
+[DEBUG SymbolTable] declareSymbol id=114 name='Self' kind=13 scope=41
+[DEBUG SymbolTable] declareSymbol id=115 name='Item' kind=12 scope=41
+[DEBUG SymbolTable] declareSymbol id=116 name='IntoIter' kind=12 scope=41
+[DEBUG SymbolTable] declareSymbol id=117 name='into_iter' kind=4 scope=41
+[DEBUG SymbolTable] declareSymbol id=118 name='self' kind=3 scope=42
+[DEBUG SymbolTable] declareSymbol id=119 name='ops' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=120 name='drop' kind=15 scope=43
+[DEBUG SymbolTable] declareSymbol id=121 name='Drop' kind=9 scope=44
+[DEBUG SymbolTable] declareSymbol id=122 name='Self' kind=13 scope=45
+[DEBUG SymbolTable] declareSymbol id=123 name='drop' kind=4 scope=45
+[DEBUG SymbolTable] declareSymbol id=124 name=''_1' kind=13 scope=46
+[DEBUG SymbolTable] declareSymbol id=125 name='self' kind=3 scope=46
+[DEBUG SymbolTable] declareSymbol id=126 name='arithmetic' kind=15 scope=43
+[DEBUG SymbolTable] declareSymbol id=127 name='Add' kind=9 scope=47
+[DEBUG SymbolTable] declareSymbol id=128 name='Self' kind=13 scope=48
+[DEBUG SymbolTable] declareSymbol id=129 name='Rhs' kind=13 scope=48
+[DEBUG SymbolTable] declareSymbol id=130 name='Output' kind=12 scope=48
+[DEBUG SymbolTable] declareSymbol id=131 name='add' kind=4 scope=48
+[DEBUG SymbolTable] declareSymbol id=132 name='self' kind=3 scope=49
+[DEBUG SymbolTable] declareSymbol id=133 name='rhs' kind=3 scope=49
+[DEBUG SymbolTable] declareSymbol id=134 name='Sub' kind=9 scope=47
+[DEBUG SymbolTable] declareSymbol id=135 name='Self' kind=13 scope=50
+[DEBUG SymbolTable] declareSymbol id=136 name='Rhs' kind=13 scope=50
+[DEBUG SymbolTable] declareSymbol id=137 name='Output' kind=12 scope=50
+[DEBUG SymbolTable] declareSymbol id=138 name='sub' kind=4 scope=50
+[DEBUG SymbolTable] declareSymbol id=139 name='self' kind=3 scope=51
+[DEBUG SymbolTable] declareSymbol id=140 name='rhs' kind=3 scope=51
+[DEBUG SymbolTable] declareSymbol id=141 name='Mul' kind=9 scope=47
+[DEBUG SymbolTable] declareSymbol id=142 name='Self' kind=13 scope=52
+[DEBUG SymbolTable] declareSymbol id=143 name='Rhs' kind=13 scope=52
+[DEBUG SymbolTable] declareSymbol id=144 name='Output' kind=12 scope=52
+[DEBUG SymbolTable] declareSymbol id=145 name='mul' kind=4 scope=52
+[DEBUG SymbolTable] declareSymbol id=146 name='self' kind=3 scope=53
+[DEBUG SymbolTable] declareSymbol id=147 name='rhs' kind=3 scope=53
+[DEBUG SymbolTable] declareSymbol id=148 name='Div' kind=9 scope=47
+[DEBUG SymbolTable] declareSymbol id=149 name='Self' kind=13 scope=54
+[DEBUG SymbolTable] declareSymbol id=150 name='Rhs' kind=13 scope=54
+[DEBUG SymbolTable] declareSymbol id=151 name='Output' kind=12 scope=54
+[DEBUG SymbolTable] declareSymbol id=152 name='div' kind=4 scope=54
+[DEBUG SymbolTable] declareSymbol id=153 name='self' kind=3 scope=55
+[DEBUG SymbolTable] declareSymbol id=154 name='rhs' kind=3 scope=55
+[DEBUG SymbolTable] declareSymbol id=155 name='Rem' kind=9 scope=47
+[DEBUG SymbolTable] declareSymbol id=156 name='Self' kind=13 scope=56
+[DEBUG SymbolTable] declareSymbol id=157 name='Rhs' kind=13 scope=56
+[DEBUG SymbolTable] declareSymbol id=158 name='Output' kind=12 scope=56
+[DEBUG SymbolTable] declareSymbol id=159 name='rem' kind=4 scope=56
+[DEBUG SymbolTable] declareSymbol id=160 name='self' kind=3 scope=57
+[DEBUG SymbolTable] declareSymbol id=161 name='rhs' kind=3 scope=57
+[DEBUG SymbolTable] declareSymbol id=162 name='index' kind=15 scope=43
+[DEBUG SymbolTable] declareSymbol id=163 name='Index' kind=9 scope=58
+[DEBUG SymbolTable] declareSymbol id=164 name='Self' kind=13 scope=59
+[DEBUG SymbolTable] declareSymbol id=165 name='Idx' kind=13 scope=59
+[DEBUG SymbolTable] declareSymbol id=166 name='Output' kind=12 scope=59
+[DEBUG SymbolTable] declareSymbol id=167 name='index' kind=4 scope=59
+[DEBUG SymbolTable] declareSymbol id=168 name=''_1' kind=13 scope=60
+[DEBUG SymbolTable] declareSymbol id=169 name='self' kind=3 scope=60
+[DEBUG SymbolTable] declareSymbol id=170 name='index' kind=3 scope=60
+[DEBUG SymbolTable] declareSymbol id=171 name='IndexMut' kind=9 scope=58
+[DEBUG SymbolTable] declareSymbol id=172 name='Self' kind=13 scope=61
+[DEBUG SymbolTable] declareSymbol id=173 name='Idx' kind=13 scope=61
+[DEBUG SymbolTable] declareSymbol id=174 name='index_mut' kind=4 scope=61
+[DEBUG SymbolTable] declareSymbol id=175 name=''_1' kind=13 scope=62
+[DEBUG SymbolTable] declareSymbol id=176 name='self' kind=3 scope=62
+[DEBUG SymbolTable] declareSymbol id=177 name='index' kind=3 scope=62
+[DEBUG SymbolTable] declareSymbol id=178 name='prelude' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=179 name='__mellis_panic' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=180 name='Option' kind=17 scope=38
+[DEBUG SymbolTable] declareSymbol id=181 name='Option' kind=17 scope=63
+[DEBUG SymbolTable] declareSymbol id=182 name='Result' kind=17 scope=63
+[DEBUG SymbolTable] declareSymbol id=183 name='PartialEq' kind=17 scope=63
+[DEBUG SymbolTable] declareSymbol id=184 name='Eq' kind=17 scope=63
+[DEBUG SymbolTable] declareSymbol id=185 name='Drop' kind=17 scope=63
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: clone
+[DEBUG] Resolving function: eq
+[DEBUG] Resolving function: ne
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: other
+[DEBUG] Finished resolvePath for other
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG] lookup 'Option' starting at scope 16
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Resolving function: is_some
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 67
+[DEBUG] lookup 'Option' checking scope 67 (kind=3, parent=66)
+[DEBUG] lookup 'Option' checking scope 66 (kind=3, parent=17)
+[DEBUG] lookup 'Option' checking scope 17 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] lookup 'Option' starting at scope 68
+[DEBUG] lookup 'Option' checking scope 68 (kind=3, parent=66)
+[DEBUG] lookup 'Option' checking scope 66 (kind=3, parent=17)
+[DEBUG] lookup 'Option' checking scope 17 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Resolving function: is_none
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: unwrap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 71
+[DEBUG] lookup 'Option' checking scope 71 (kind=3, parent=70)
+[DEBUG] lookup 'Option' checking scope 70 (kind=3, parent=19)
+[DEBUG] lookup 'Option' checking scope 19 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG SymbolTable] declareSymbol id=186 name='val' kind=0 scope=71
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 72
+[DEBUG] lookup 'Option' checking scope 72 (kind=3, parent=70)
+[DEBUG] lookup 'Option' checking scope 70 (kind=3, parent=19)
+[DEBUG] lookup 'Option' checking scope 19 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: unwrap_or
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 75
+[DEBUG] lookup 'Option' checking scope 75 (kind=3, parent=74)
+[DEBUG] lookup 'Option' checking scope 74 (kind=3, parent=20)
+[DEBUG] lookup 'Option' checking scope 20 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG SymbolTable] declareSymbol id=187 name='val' kind=0 scope=75
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 76
+[DEBUG] lookup 'Option' checking scope 76 (kind=3, parent=74)
+[DEBUG] lookup 'Option' checking scope 74 (kind=3, parent=20)
+[DEBUG] lookup 'Option' checking scope 20 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Resolving identifier: default
+[DEBUG] Finished resolvePath for default
+[DEBUG] Resolving function: map
+[DEBUG] lookup 'Option' starting at scope 21
+[DEBUG] lookup 'Option' checking scope 21 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 78
+[DEBUG] lookup 'Option' checking scope 78 (kind=3, parent=77)
+[DEBUG] lookup 'Option' checking scope 77 (kind=3, parent=21)
+[DEBUG] lookup 'Option' checking scope 21 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG SymbolTable] declareSymbol id=188 name='val' kind=0 scope=78
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 78
+[DEBUG] lookup 'Option' checking scope 78 (kind=3, parent=77)
+[DEBUG] lookup 'Option' checking scope 77 (kind=3, parent=21)
+[DEBUG] lookup 'Option' checking scope 21 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 79
+[DEBUG] lookup 'Option' checking scope 79 (kind=3, parent=77)
+[DEBUG] lookup 'Option' checking scope 77 (kind=3, parent=21)
+[DEBUG] lookup 'Option' checking scope 21 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 79
+[DEBUG] lookup 'Option' checking scope 79 (kind=3, parent=77)
+[DEBUG] lookup 'Option' checking scope 77 (kind=3, parent=21)
+[DEBUG] lookup 'Option' checking scope 21 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving function: and_then
+[DEBUG] lookup 'Option' starting at scope 22
+[DEBUG] lookup 'Option' checking scope 22 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] lookup 'Option' starting at scope 22
+[DEBUG] lookup 'Option' checking scope 22 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 81
+[DEBUG] lookup 'Option' checking scope 81 (kind=3, parent=80)
+[DEBUG] lookup 'Option' checking scope 80 (kind=3, parent=22)
+[DEBUG] lookup 'Option' checking scope 22 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG SymbolTable] declareSymbol id=189 name='val' kind=0 scope=81
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 82
+[DEBUG] lookup 'Option' checking scope 82 (kind=3, parent=80)
+[DEBUG] lookup 'Option' checking scope 80 (kind=3, parent=22)
+[DEBUG] lookup 'Option' checking scope 22 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 82
+[DEBUG] lookup 'Option' checking scope 82 (kind=3, parent=80)
+[DEBUG] lookup 'Option' checking scope 80 (kind=3, parent=22)
+[DEBUG] lookup 'Option' checking scope 22 (kind=2, parent=16)
+[DEBUG] lookup 'Option' checking scope 16 (kind=9, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 11 -> symbolId 44
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG] Resolving function: is_ok
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: is_err
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: unwrap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=190 name='val' kind=0 scope=88
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: unwrap_or
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=191 name='val' kind=0 scope=92
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving identifier: default
+[DEBUG] Finished resolvePath for default
+[DEBUG] Resolving function: map
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=192 name='val' kind=0 scope=95
+[DEBUG] Resolving identifier: Result
+[DEBUG] Finished resolvePath for Result
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG SymbolTable] declareSymbol id=193 name='e' kind=0 scope=96
+[DEBUG] Resolving identifier: Result
+[DEBUG] Finished resolvePath for Result
+[DEBUG] Resolving identifier: e
+[DEBUG] Finished resolvePath for e
+[DEBUG] Resolving function: len
+[DEBUG] Resolving function: is_empty
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: next
+[DEBUG] lookup 'Option' starting at scope 40
+[DEBUG] lookup 'Option' checking scope 40 (kind=2, parent=39)
+[DEBUG] lookup 'Option' checking scope 39 (kind=8, parent=38)
+[DEBUG] lookup 'Option' checking scope 38 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 38 -> symbolId 180
+[DEBUG] Resolving function: into_iter
+[DEBUG] Resolving function: drop
+[DEBUG] Resolving function: add
+[DEBUG] Resolving function: sub
+[DEBUG] Resolving function: mul
+[DEBUG] Resolving function: div
+[DEBUG] Resolving function: rem
+[DEBUG] Resolving function: index
+[DEBUG] Resolving function: index_mut
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Creating MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check... ast has 10 items
+[DEBUG] TypePrePass visiting ProgramNode with 10 items
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=23
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=23
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'clone' symbolId=24
+[DEBUG TraitDeclNode] typeTable[24] = 3
+[DEBUG TraitDeclNode] Registered trait method 'clone'
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=29
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=29
+[DEBUG self] Evaluated param->type for other -> 5
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Processing generic param: '_2 with 0 bounds
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=29
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=29
+[DEBUG self] Evaluated param->type for other -> 5
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Processing generic param: '_2 with 0 bounds
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'eq' symbolId=30
+[DEBUG TraitDeclNode] typeTable[30] = 3
+[DEBUG TraitDeclNode] Registered trait method 'eq'
+[DEBUG TraitDeclNode] Method 'ne' symbolId=35
+[DEBUG TraitDeclNode] typeTable[35] = 3
+[DEBUG TraitDeclNode] Registered trait method 'ne'
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=45
+[DEBUG] visit(ImplDeclNode) genericParams size: 1
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=73
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'E' symbolId=74
+[DEBUG] visit(ImplDeclNode) genericParams size: 2
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 1
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=108
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=44
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=108
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'next' symbolId=110
+[DEBUG TraitDeclNode] typeTable[110] = 3
+[DEBUG TraitDeclNode] Registered trait method 'next'
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=114
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=114
+[DEBUG TraitDeclNode] Method 'into_iter' symbolId=117
+[DEBUG TraitDeclNode] typeTable[117] = 3
+[DEBUG TraitDeclNode] Registered trait method 'into_iter'
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=122
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'drop' symbolId=123
+[DEBUG TraitDeclNode] typeTable[123] = 3
+[DEBUG TraitDeclNode] Registered trait method 'drop'
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=128
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Rhs' symbolId=129
+[DEBUG self] Evaluated param->type for rhs -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=128
+[DEBUG TraitDeclNode] Method 'add' symbolId=131
+[DEBUG TraitDeclNode] typeTable[131] = 3
+[DEBUG TraitDeclNode] Registered trait method 'add'
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=135
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Rhs' symbolId=136
+[DEBUG self] Evaluated param->type for rhs -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=135
+[DEBUG TraitDeclNode] Method 'sub' symbolId=138
+[DEBUG TraitDeclNode] typeTable[138] = 3
+[DEBUG TraitDeclNode] Registered trait method 'sub'
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=142
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Rhs' symbolId=143
+[DEBUG self] Evaluated param->type for rhs -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=142
+[DEBUG TraitDeclNode] Method 'mul' symbolId=145
+[DEBUG TraitDeclNode] typeTable[145] = 3
+[DEBUG TraitDeclNode] Registered trait method 'mul'
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=149
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Rhs' symbolId=150
+[DEBUG self] Evaluated param->type for rhs -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=149
+[DEBUG TraitDeclNode] Method 'div' symbolId=152
+[DEBUG TraitDeclNode] typeTable[152] = 3
+[DEBUG TraitDeclNode] Registered trait method 'div'
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=156
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Rhs' symbolId=157
+[DEBUG self] Evaluated param->type for rhs -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=156
+[DEBUG TraitDeclNode] Method 'rem' symbolId=159
+[DEBUG TraitDeclNode] typeTable[159] = 3
+[DEBUG TraitDeclNode] Registered trait method 'rem'
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=164
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Idx' symbolId=165
+[DEBUG self] Evaluated param->type for index -> 11
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=164
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'index' symbolId=167
+[DEBUG TraitDeclNode] typeTable[167] = 3
+[DEBUG TraitDeclNode] Registered trait method 'index'
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=172
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Idx' symbolId=173
+[DEBUG self] Evaluated param->type for index -> 11
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=172
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'index_mut' symbolId=174
+[DEBUG TraitDeclNode] typeTable[174] = 3
+[DEBUG TraitDeclNode] Registered trait method 'index_mut'
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] item kind: class fl::ExternDeclNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ExternDeclNode
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ExternDeclNode
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] VisibilityLeakChecker starting...
+[PHASE] VisibilityLeakChecker done, visOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 6 methods, genericParams: 1
+[DEBUG MVIRGenerator] done item[3]
+[DEBUG MVIRGenerator] visiting item[4] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 5 methods, genericParams: 2
+[DEBUG MVIRGenerator] done item[4]
+[DEBUG MVIRGenerator] visiting item[5] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 2 methods, genericParams: 1
+[DEBUG MVIRGenerator] done item[5]
+[DEBUG MVIRGenerator] visiting item[6] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] done item[6]
+[DEBUG MVIRGenerator] visiting item[7] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] done item[7]
+[DEBUG MVIRGenerator] visiting item[8] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] done item[8]
+[DEBUG MVIRGenerator] visiting item[9] typeid=class fl::ExternDeclNode
+[DEBUG MVIRGenerator] done item[9]
+[PHASE] MVIRGenerator done
+[MLibGen] target->createTargetMachine
+[MLibGen] setDataLayout
+[MLibGen] MPM.run
+[MLibGen] MPM.run DONE
+[MLibGen] addPassesToEmitFile
+[MLibGen] pass.run
+[MLibGen] pass.run DONE
+[MLibGen] Building MLib Sections
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=46 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=47 name='Self' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=48 name='Rhs' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=49 name='Output' kind=12 scope=2
+[DEBUG SymbolTable] declareSymbol id=50 name='add' kind=4 scope=2
+[DEBUG SymbolTable] declareSymbol id=51 name='self' kind=3 scope=3
+[DEBUG SymbolTable] declareSymbol id=52 name='rhs' kind=3 scope=3
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: add
+[DEBUG SymbolTable] declareSymbol id=53 name='Self' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=54 name='clone' kind=4 scope=4
+[DEBUG SymbolTable] declareSymbol id=55 name='self' kind=3 scope=5
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: clone
+[DEBUG SymbolTable] declareSymbol id=56 name='Self' kind=13 scope=6
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=57 name='Self' kind=13 scope=7
+[DEBUG SymbolTable] declareSymbol id=58 name='Rhs' kind=13 scope=7
+[DEBUG SymbolTable] declareSymbol id=59 name='Output' kind=12 scope=7
+[DEBUG SymbolTable] declareSymbol id=60 name='div' kind=4 scope=7
+[DEBUG SymbolTable] declareSymbol id=61 name='self' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=62 name='rhs' kind=3 scope=8
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: div
+[DEBUG SymbolTable] declareSymbol id=63 name='Self' kind=13 scope=9
+[DEBUG SymbolTable] declareSymbol id=64 name='drop' kind=4 scope=9
+[DEBUG SymbolTable] declareSymbol id=65 name='self' kind=3 scope=10
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: drop
+[DEBUG SymbolTable] declareSymbol id=66 name='Self' kind=13 scope=11
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=67 name='Self' kind=13 scope=12
+[DEBUG SymbolTable] declareSymbol id=68 name='Idx' kind=13 scope=12
+[DEBUG SymbolTable] declareSymbol id=69 name='Output' kind=12 scope=12
+[DEBUG SymbolTable] declareSymbol id=70 name='index' kind=4 scope=12
+[DEBUG SymbolTable] declareSymbol id=71 name='self' kind=3 scope=13
+[DEBUG SymbolTable] declareSymbol id=72 name='index' kind=3 scope=13
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: index
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=73 name='Self' kind=13 scope=14
+[DEBUG SymbolTable] declareSymbol id=74 name='Idx' kind=13 scope=14
+[DEBUG SymbolTable] declareSymbol id=75 name='index_mut' kind=4 scope=14
+[DEBUG SymbolTable] declareSymbol id=76 name='self' kind=3 scope=15
+[DEBUG SymbolTable] declareSymbol id=77 name='index' kind=3 scope=15
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: index_mut
+[DEBUG SymbolTable] declareSymbol id=78 name='Self' kind=13 scope=16
+[DEBUG SymbolTable] declareSymbol id=79 name='Item' kind=12 scope=16
+[DEBUG SymbolTable] declareSymbol id=80 name='IntoIter' kind=12 scope=16
+[DEBUG SymbolTable] declareSymbol id=81 name='into_iter' kind=4 scope=16
+[DEBUG SymbolTable] declareSymbol id=82 name='self' kind=3 scope=17
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: into_iter
+[DEBUG SymbolTable] declareSymbol id=83 name='Self' kind=13 scope=18
+[DEBUG SymbolTable] declareSymbol id=84 name='Item' kind=12 scope=18
+[DEBUG SymbolTable] declareSymbol id=85 name='next' kind=4 scope=18
+[DEBUG SymbolTable] declareSymbol id=86 name='self' kind=3 scope=19
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: next
+[DEBUG] lookup 'Option' starting at scope 19
+[DEBUG] lookup 'Option' checking scope 19 (kind=2, parent=18)
+[DEBUG] lookup 'Option' checking scope 18 (kind=8, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=87 name='Self' kind=13 scope=20
+[DEBUG SymbolTable] declareSymbol id=88 name='Rhs' kind=13 scope=20
+[DEBUG SymbolTable] declareSymbol id=89 name='Output' kind=12 scope=20
+[DEBUG SymbolTable] declareSymbol id=90 name='mul' kind=4 scope=20
+[DEBUG SymbolTable] declareSymbol id=91 name='self' kind=3 scope=21
+[DEBUG SymbolTable] declareSymbol id=92 name='rhs' kind=3 scope=21
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: mul
+[DEBUG SymbolTable] declareSymbol id=95 name='T' kind=13 scope=23
+[DEBUG SymbolTable] declareSymbol id=96 name='None' kind=7 scope=23
+[DEBUG SymbolTable] declareSymbol id=97 name='Some' kind=7 scope=23
+[DEBUG SymbolTable] declareSymbol id=98 name='__field_0' kind=8 scope=25
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=99 name='Self' kind=13 scope=26
+[DEBUG SymbolTable] declareSymbol id=100 name='eq' kind=4 scope=26
+[DEBUG SymbolTable] declareSymbol id=101 name='self' kind=3 scope=27
+[DEBUG SymbolTable] declareSymbol id=102 name='other' kind=3 scope=27
+[DEBUG SymbolTable] declareSymbol id=103 name='ne' kind=4 scope=26
+[DEBUG SymbolTable] declareSymbol id=104 name='self' kind=3 scope=28
+[DEBUG SymbolTable] declareSymbol id=105 name='other' kind=3 scope=28
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: eq
+[DEBUG] Resolving function: ne
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: other
+[DEBUG] Finished resolvePath for other
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=106 name='Self' kind=13 scope=30
+[DEBUG SymbolTable] declareSymbol id=107 name='Rhs' kind=13 scope=30
+[DEBUG SymbolTable] declareSymbol id=108 name='Output' kind=12 scope=30
+[DEBUG SymbolTable] declareSymbol id=109 name='rem' kind=4 scope=30
+[DEBUG SymbolTable] declareSymbol id=110 name='self' kind=3 scope=31
+[DEBUG SymbolTable] declareSymbol id=111 name='rhs' kind=3 scope=31
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: rem
+[DEBUG SymbolTable] declareSymbol id=114 name='T' kind=13 scope=33
+[DEBUG SymbolTable] declareSymbol id=115 name='E' kind=13 scope=33
+[DEBUG SymbolTable] declareSymbol id=116 name='Ok' kind=7 scope=33
+[DEBUG SymbolTable] declareSymbol id=117 name='__field_0' kind=8 scope=34
+[DEBUG SymbolTable] declareSymbol id=118 name='Err' kind=7 scope=33
+[DEBUG SymbolTable] declareSymbol id=119 name='__field_0' kind=8 scope=35
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=120 name='Self' kind=13 scope=36
+[DEBUG SymbolTable] declareSymbol id=121 name='Rhs' kind=13 scope=36
+[DEBUG SymbolTable] declareSymbol id=122 name='Output' kind=12 scope=36
+[DEBUG SymbolTable] declareSymbol id=123 name='sub' kind=4 scope=36
+[DEBUG SymbolTable] declareSymbol id=124 name='self' kind=3 scope=37
+[DEBUG SymbolTable] declareSymbol id=125 name='rhs' kind=3 scope=37
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: sub
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=126 name='Self' kind=12 scope=40
+[DEBUG SymbolTable] declareSymbol id=127 name='T' kind=13 scope=40
+[DEBUG SymbolTable] declareSymbol id=128 name='is_some' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=129 name='self' kind=3 scope=41
+[DEBUG SymbolTable] declareSymbol id=130 name='is_none' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=131 name='self' kind=3 scope=42
+[DEBUG SymbolTable] declareSymbol id=132 name='unwrap' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=133 name='self' kind=3 scope=43
+[DEBUG SymbolTable] declareSymbol id=134 name='unwrap_or' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=135 name='self' kind=3 scope=44
+[DEBUG SymbolTable] declareSymbol id=136 name='default' kind=3 scope=44
+[DEBUG SymbolTable] declareSymbol id=137 name='map' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=138 name='U' kind=13 scope=45
+[DEBUG SymbolTable] declareSymbol id=139 name='self' kind=3 scope=45
+[DEBUG SymbolTable] declareSymbol id=140 name='f' kind=3 scope=45
+[DEBUG SymbolTable] declareSymbol id=141 name='and_then' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=142 name='U' kind=13 scope=46
+[DEBUG SymbolTable] declareSymbol id=143 name='self' kind=3 scope=46
+[DEBUG SymbolTable] declareSymbol id=144 name='f' kind=3 scope=46
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] lookup 'Option' starting at scope 40
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving function: is_some
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 48
+[DEBUG] lookup 'Option' checking scope 48 (kind=3, parent=47)
+[DEBUG] lookup 'Option' checking scope 47 (kind=3, parent=41)
+[DEBUG] lookup 'Option' checking scope 41 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] lookup 'Option' starting at scope 49
+[DEBUG] lookup 'Option' checking scope 49 (kind=3, parent=47)
+[DEBUG] lookup 'Option' checking scope 47 (kind=3, parent=41)
+[DEBUG] lookup 'Option' checking scope 41 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving function: is_none
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: unwrap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 52
+[DEBUG] lookup 'Option' checking scope 52 (kind=3, parent=51)
+[DEBUG] lookup 'Option' checking scope 51 (kind=3, parent=43)
+[DEBUG] lookup 'Option' checking scope 43 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=145 name='val' kind=0 scope=52
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 53
+[DEBUG] lookup 'Option' checking scope 53 (kind=3, parent=51)
+[DEBUG] lookup 'Option' checking scope 51 (kind=3, parent=43)
+[DEBUG] lookup 'Option' checking scope 43 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: unwrap_or
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 56
+[DEBUG] lookup 'Option' checking scope 56 (kind=3, parent=55)
+[DEBUG] lookup 'Option' checking scope 55 (kind=3, parent=44)
+[DEBUG] lookup 'Option' checking scope 44 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=146 name='val' kind=0 scope=56
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 57
+[DEBUG] lookup 'Option' checking scope 57 (kind=3, parent=55)
+[DEBUG] lookup 'Option' checking scope 55 (kind=3, parent=44)
+[DEBUG] lookup 'Option' checking scope 44 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: default
+[DEBUG] Finished resolvePath for default
+[DEBUG] Resolving function: map
+[DEBUG] lookup 'Option' starting at scope 45
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 59
+[DEBUG] lookup 'Option' checking scope 59 (kind=3, parent=58)
+[DEBUG] lookup 'Option' checking scope 58 (kind=3, parent=45)
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=147 name='val' kind=0 scope=59
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 59
+[DEBUG] lookup 'Option' checking scope 59 (kind=3, parent=58)
+[DEBUG] lookup 'Option' checking scope 58 (kind=3, parent=45)
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 60
+[DEBUG] lookup 'Option' checking scope 60 (kind=3, parent=58)
+[DEBUG] lookup 'Option' checking scope 58 (kind=3, parent=45)
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 60
+[DEBUG] lookup 'Option' checking scope 60 (kind=3, parent=58)
+[DEBUG] lookup 'Option' checking scope 58 (kind=3, parent=45)
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving function: and_then
+[DEBUG] lookup 'Option' starting at scope 46
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] lookup 'Option' starting at scope 46
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 62
+[DEBUG] lookup 'Option' checking scope 62 (kind=3, parent=61)
+[DEBUG] lookup 'Option' checking scope 61 (kind=3, parent=46)
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=148 name='val' kind=0 scope=62
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 63
+[DEBUG] lookup 'Option' checking scope 63 (kind=3, parent=61)
+[DEBUG] lookup 'Option' checking scope 61 (kind=3, parent=46)
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 63
+[DEBUG] lookup 'Option' checking scope 63 (kind=3, parent=61)
+[DEBUG] lookup 'Option' checking scope 61 (kind=3, parent=46)
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=149 name='Self' kind=12 scope=64
+[DEBUG SymbolTable] declareSymbol id=150 name='T' kind=13 scope=64
+[DEBUG SymbolTable] declareSymbol id=151 name='E' kind=13 scope=64
+[DEBUG SymbolTable] declareSymbol id=152 name='is_ok' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=153 name='self' kind=3 scope=65
+[DEBUG SymbolTable] declareSymbol id=154 name='is_err' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=155 name='self' kind=3 scope=66
+[DEBUG SymbolTable] declareSymbol id=156 name='unwrap' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=157 name='self' kind=3 scope=67
+[DEBUG SymbolTable] declareSymbol id=158 name='unwrap_or' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=159 name='self' kind=3 scope=68
+[DEBUG SymbolTable] declareSymbol id=160 name='default' kind=3 scope=68
+[DEBUG SymbolTable] declareSymbol id=161 name='map' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=162 name='U' kind=13 scope=69
+[DEBUG SymbolTable] declareSymbol id=163 name='self' kind=3 scope=69
+[DEBUG SymbolTable] declareSymbol id=164 name='f' kind=3 scope=69
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: is_ok
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: is_err
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: unwrap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=165 name='val' kind=0 scope=75
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: unwrap_or
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=166 name='val' kind=0 scope=79
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving identifier: default
+[DEBUG] Finished resolvePath for default
+[DEBUG] Resolving function: map
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=167 name='val' kind=0 scope=82
+[DEBUG] Resolving identifier: Result
+[DEBUG] Finished resolvePath for Result
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG SymbolTable] declareSymbol id=168 name='e' kind=0 scope=83
+[DEBUG] Resolving identifier: Result
+[DEBUG] Finished resolvePath for Result
+[DEBUG] Resolving identifier: e
+[DEBUG] Finished resolvePath for e
+[DEBUG SymbolTable] declareSymbol id=169 name='core' kind=18 scope=0
+[DEBUG SymbolTable] declareSymbol id=170 name='Option' kind=17 scope=0
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=46 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=47 name='Self' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=48 name='Rhs' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=49 name='Output' kind=12 scope=2
+[DEBUG SymbolTable] declareSymbol id=50 name='add' kind=4 scope=2
+[DEBUG SymbolTable] declareSymbol id=51 name='self' kind=3 scope=3
+[DEBUG SymbolTable] declareSymbol id=52 name='rhs' kind=3 scope=3
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: add
+[DEBUG SymbolTable] declareSymbol id=53 name='Self' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=54 name='clone' kind=4 scope=4
+[DEBUG SymbolTable] declareSymbol id=55 name='self' kind=3 scope=5
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: clone
+[DEBUG SymbolTable] declareSymbol id=56 name='Self' kind=13 scope=6
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=57 name='Self' kind=13 scope=7
+[DEBUG SymbolTable] declareSymbol id=58 name='Rhs' kind=13 scope=7
+[DEBUG SymbolTable] declareSymbol id=59 name='Output' kind=12 scope=7
+[DEBUG SymbolTable] declareSymbol id=60 name='div' kind=4 scope=7
+[DEBUG SymbolTable] declareSymbol id=61 name='self' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=62 name='rhs' kind=3 scope=8
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: div
+[DEBUG SymbolTable] declareSymbol id=63 name='Self' kind=13 scope=9
+[DEBUG SymbolTable] declareSymbol id=64 name='drop' kind=4 scope=9
+[DEBUG SymbolTable] declareSymbol id=65 name='self' kind=3 scope=10
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: drop
+[DEBUG SymbolTable] declareSymbol id=66 name='Self' kind=13 scope=11
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=67 name='Self' kind=13 scope=12
+[DEBUG SymbolTable] declareSymbol id=68 name='Idx' kind=13 scope=12
+[DEBUG SymbolTable] declareSymbol id=69 name='Output' kind=12 scope=12
+[DEBUG SymbolTable] declareSymbol id=70 name='index' kind=4 scope=12
+[DEBUG SymbolTable] declareSymbol id=71 name='self' kind=3 scope=13
+[DEBUG SymbolTable] declareSymbol id=72 name='index' kind=3 scope=13
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: index
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=73 name='Self' kind=13 scope=14
+[DEBUG SymbolTable] declareSymbol id=74 name='Idx' kind=13 scope=14
+[DEBUG SymbolTable] declareSymbol id=75 name='index_mut' kind=4 scope=14
+[DEBUG SymbolTable] declareSymbol id=76 name='self' kind=3 scope=15
+[DEBUG SymbolTable] declareSymbol id=77 name='index' kind=3 scope=15
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: index_mut
+[DEBUG SymbolTable] declareSymbol id=78 name='Self' kind=13 scope=16
+[DEBUG SymbolTable] declareSymbol id=79 name='Item' kind=12 scope=16
+[DEBUG SymbolTable] declareSymbol id=80 name='IntoIter' kind=12 scope=16
+[DEBUG SymbolTable] declareSymbol id=81 name='into_iter' kind=4 scope=16
+[DEBUG SymbolTable] declareSymbol id=82 name='self' kind=3 scope=17
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: into_iter
+[DEBUG SymbolTable] declareSymbol id=83 name='Self' kind=13 scope=18
+[DEBUG SymbolTable] declareSymbol id=84 name='Item' kind=12 scope=18
+[DEBUG SymbolTable] declareSymbol id=85 name='next' kind=4 scope=18
+[DEBUG SymbolTable] declareSymbol id=86 name='self' kind=3 scope=19
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: next
+[DEBUG] lookup 'Option' starting at scope 19
+[DEBUG] lookup 'Option' checking scope 19 (kind=2, parent=18)
+[DEBUG] lookup 'Option' checking scope 18 (kind=8, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=87 name='Self' kind=13 scope=20
+[DEBUG SymbolTable] declareSymbol id=88 name='Rhs' kind=13 scope=20
+[DEBUG SymbolTable] declareSymbol id=89 name='Output' kind=12 scope=20
+[DEBUG SymbolTable] declareSymbol id=90 name='mul' kind=4 scope=20
+[DEBUG SymbolTable] declareSymbol id=91 name='self' kind=3 scope=21
+[DEBUG SymbolTable] declareSymbol id=92 name='rhs' kind=3 scope=21
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: mul
+[DEBUG SymbolTable] declareSymbol id=95 name='T' kind=13 scope=23
+[DEBUG SymbolTable] declareSymbol id=96 name='None' kind=7 scope=23
+[DEBUG SymbolTable] declareSymbol id=97 name='Some' kind=7 scope=23
+[DEBUG SymbolTable] declareSymbol id=98 name='__field_0' kind=8 scope=25
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=99 name='Self' kind=13 scope=26
+[DEBUG SymbolTable] declareSymbol id=100 name='eq' kind=4 scope=26
+[DEBUG SymbolTable] declareSymbol id=101 name='self' kind=3 scope=27
+[DEBUG SymbolTable] declareSymbol id=102 name='other' kind=3 scope=27
+[DEBUG SymbolTable] declareSymbol id=103 name='ne' kind=4 scope=26
+[DEBUG SymbolTable] declareSymbol id=104 name='self' kind=3 scope=28
+[DEBUG SymbolTable] declareSymbol id=105 name='other' kind=3 scope=28
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: eq
+[DEBUG] Resolving function: ne
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: other
+[DEBUG] Finished resolvePath for other
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=106 name='Self' kind=13 scope=30
+[DEBUG SymbolTable] declareSymbol id=107 name='Rhs' kind=13 scope=30
+[DEBUG SymbolTable] declareSymbol id=108 name='Output' kind=12 scope=30
+[DEBUG SymbolTable] declareSymbol id=109 name='rem' kind=4 scope=30
+[DEBUG SymbolTable] declareSymbol id=110 name='self' kind=3 scope=31
+[DEBUG SymbolTable] declareSymbol id=111 name='rhs' kind=3 scope=31
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: rem
+[DEBUG SymbolTable] declareSymbol id=114 name='T' kind=13 scope=33
+[DEBUG SymbolTable] declareSymbol id=115 name='E' kind=13 scope=33
+[DEBUG SymbolTable] declareSymbol id=116 name='Ok' kind=7 scope=33
+[DEBUG SymbolTable] declareSymbol id=117 name='__field_0' kind=8 scope=34
+[DEBUG SymbolTable] declareSymbol id=118 name='Err' kind=7 scope=33
+[DEBUG SymbolTable] declareSymbol id=119 name='__field_0' kind=8 scope=35
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=120 name='Self' kind=13 scope=36
+[DEBUG SymbolTable] declareSymbol id=121 name='Rhs' kind=13 scope=36
+[DEBUG SymbolTable] declareSymbol id=122 name='Output' kind=12 scope=36
+[DEBUG SymbolTable] declareSymbol id=123 name='sub' kind=4 scope=36
+[DEBUG SymbolTable] declareSymbol id=124 name='self' kind=3 scope=37
+[DEBUG SymbolTable] declareSymbol id=125 name='rhs' kind=3 scope=37
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: sub
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=126 name='Self' kind=12 scope=40
+[DEBUG SymbolTable] declareSymbol id=127 name='T' kind=13 scope=40
+[DEBUG SymbolTable] declareSymbol id=128 name='is_some' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=129 name='self' kind=3 scope=41
+[DEBUG SymbolTable] declareSymbol id=130 name='is_none' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=131 name='self' kind=3 scope=42
+[DEBUG SymbolTable] declareSymbol id=132 name='unwrap' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=133 name='self' kind=3 scope=43
+[DEBUG SymbolTable] declareSymbol id=134 name='unwrap_or' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=135 name='self' kind=3 scope=44
+[DEBUG SymbolTable] declareSymbol id=136 name='default' kind=3 scope=44
+[DEBUG SymbolTable] declareSymbol id=137 name='map' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=138 name='U' kind=13 scope=45
+[DEBUG SymbolTable] declareSymbol id=139 name='self' kind=3 scope=45
+[DEBUG SymbolTable] declareSymbol id=140 name='f' kind=3 scope=45
+[DEBUG SymbolTable] declareSymbol id=141 name='and_then' kind=4 scope=40
+[DEBUG SymbolTable] declareSymbol id=142 name='U' kind=13 scope=46
+[DEBUG SymbolTable] declareSymbol id=143 name='self' kind=3 scope=46
+[DEBUG SymbolTable] declareSymbol id=144 name='f' kind=3 scope=46
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] lookup 'Option' starting at scope 40
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving function: is_some
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 48
+[DEBUG] lookup 'Option' checking scope 48 (kind=3, parent=47)
+[DEBUG] lookup 'Option' checking scope 47 (kind=3, parent=41)
+[DEBUG] lookup 'Option' checking scope 41 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] lookup 'Option' starting at scope 49
+[DEBUG] lookup 'Option' checking scope 49 (kind=3, parent=47)
+[DEBUG] lookup 'Option' checking scope 47 (kind=3, parent=41)
+[DEBUG] lookup 'Option' checking scope 41 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving function: is_none
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: unwrap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 52
+[DEBUG] lookup 'Option' checking scope 52 (kind=3, parent=51)
+[DEBUG] lookup 'Option' checking scope 51 (kind=3, parent=43)
+[DEBUG] lookup 'Option' checking scope 43 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=145 name='val' kind=0 scope=52
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 53
+[DEBUG] lookup 'Option' checking scope 53 (kind=3, parent=51)
+[DEBUG] lookup 'Option' checking scope 51 (kind=3, parent=43)
+[DEBUG] lookup 'Option' checking scope 43 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: unwrap_or
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 56
+[DEBUG] lookup 'Option' checking scope 56 (kind=3, parent=55)
+[DEBUG] lookup 'Option' checking scope 55 (kind=3, parent=44)
+[DEBUG] lookup 'Option' checking scope 44 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=146 name='val' kind=0 scope=56
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 57
+[DEBUG] lookup 'Option' checking scope 57 (kind=3, parent=55)
+[DEBUG] lookup 'Option' checking scope 55 (kind=3, parent=44)
+[DEBUG] lookup 'Option' checking scope 44 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: default
+[DEBUG] Finished resolvePath for default
+[DEBUG] Resolving function: map
+[DEBUG] lookup 'Option' starting at scope 45
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 59
+[DEBUG] lookup 'Option' checking scope 59 (kind=3, parent=58)
+[DEBUG] lookup 'Option' checking scope 58 (kind=3, parent=45)
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=147 name='val' kind=0 scope=59
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 59
+[DEBUG] lookup 'Option' checking scope 59 (kind=3, parent=58)
+[DEBUG] lookup 'Option' checking scope 58 (kind=3, parent=45)
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 60
+[DEBUG] lookup 'Option' checking scope 60 (kind=3, parent=58)
+[DEBUG] lookup 'Option' checking scope 58 (kind=3, parent=45)
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 60
+[DEBUG] lookup 'Option' checking scope 60 (kind=3, parent=58)
+[DEBUG] lookup 'Option' checking scope 58 (kind=3, parent=45)
+[DEBUG] lookup 'Option' checking scope 45 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving function: and_then
+[DEBUG] lookup 'Option' starting at scope 46
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] lookup 'Option' starting at scope 46
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 62
+[DEBUG] lookup 'Option' checking scope 62 (kind=3, parent=61)
+[DEBUG] lookup 'Option' checking scope 61 (kind=3, parent=46)
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=148 name='val' kind=0 scope=62
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 63
+[DEBUG] lookup 'Option' checking scope 63 (kind=3, parent=61)
+[DEBUG] lookup 'Option' checking scope 61 (kind=3, parent=46)
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 63
+[DEBUG] lookup 'Option' checking scope 63 (kind=3, parent=61)
+[DEBUG] lookup 'Option' checking scope 61 (kind=3, parent=46)
+[DEBUG] lookup 'Option' checking scope 46 (kind=2, parent=40)
+[DEBUG] lookup 'Option' checking scope 40 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=149 name='Self' kind=12 scope=64
+[DEBUG SymbolTable] declareSymbol id=150 name='T' kind=13 scope=64
+[DEBUG SymbolTable] declareSymbol id=151 name='E' kind=13 scope=64
+[DEBUG SymbolTable] declareSymbol id=152 name='is_ok' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=153 name='self' kind=3 scope=65
+[DEBUG SymbolTable] declareSymbol id=154 name='is_err' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=155 name='self' kind=3 scope=66
+[DEBUG SymbolTable] declareSymbol id=156 name='unwrap' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=157 name='self' kind=3 scope=67
+[DEBUG SymbolTable] declareSymbol id=158 name='unwrap_or' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=159 name='self' kind=3 scope=68
+[DEBUG SymbolTable] declareSymbol id=160 name='default' kind=3 scope=68
+[DEBUG SymbolTable] declareSymbol id=161 name='map' kind=4 scope=64
+[DEBUG SymbolTable] declareSymbol id=162 name='U' kind=13 scope=69
+[DEBUG SymbolTable] declareSymbol id=163 name='self' kind=3 scope=69
+[DEBUG SymbolTable] declareSymbol id=164 name='f' kind=3 scope=69
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: is_ok
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: is_err
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: unwrap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=165 name='val' kind=0 scope=75
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: unwrap_or
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=166 name='val' kind=0 scope=79
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] Resolving identifier: default
+[DEBUG] Finished resolvePath for default
+[DEBUG] Resolving function: map
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=167 name='val' kind=0 scope=82
+[DEBUG] Resolving identifier: Result
+[DEBUG] Finished resolvePath for Result
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG SymbolTable] declareSymbol id=168 name='e' kind=0 scope=83
+[DEBUG] Resolving identifier: Result
+[DEBUG] Finished resolvePath for Result
+[DEBUG] Resolving identifier: e
+[DEBUG] Finished resolvePath for e
+[DEBUG SymbolTable] declareSymbol id=169 name='core' kind=18 scope=0
+[DEBUG SymbolTable] declareSymbol id=170 name='Option' kind=17 scope=0
+[DEBUG SymbolTable] declareSymbol id=171 name='Result' kind=17 scope=0
+[DEBUG SymbolTable] declareSymbol id=172 name='Drop' kind=17 scope=0
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=173 name='__mellis_panic' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=174 name='allocator' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=175 name='__mellis_alloc' kind=4 scope=85
+[DEBUG SymbolTable] declareSymbol id=176 name='size' kind=3 scope=86
+[DEBUG SymbolTable] declareSymbol id=177 name='align' kind=3 scope=86
+[DEBUG SymbolTable] declareSymbol id=178 name='__mellis_dealloc' kind=4 scope=85
+[DEBUG SymbolTable] declareSymbol id=179 name='ptr' kind=3 scope=87
+[DEBUG SymbolTable] declareSymbol id=180 name='size' kind=3 scope=87
+[DEBUG SymbolTable] declareSymbol id=181 name='align' kind=3 scope=87
+[DEBUG SymbolTable] declareSymbol id=182 name='__mellis_realloc' kind=4 scope=85
+[DEBUG SymbolTable] declareSymbol id=183 name='ptr' kind=3 scope=88
+[DEBUG SymbolTable] declareSymbol id=184 name='old_size' kind=3 scope=88
+[DEBUG SymbolTable] declareSymbol id=185 name='new_size' kind=3 scope=88
+[DEBUG SymbolTable] declareSymbol id=186 name='align' kind=3 scope=88
+[DEBUG SymbolTable] declareSymbol id=187 name='Allocator' kind=9 scope=85
+[DEBUG SymbolTable] declareSymbol id=188 name='Self' kind=13 scope=89
+[DEBUG SymbolTable] declareSymbol id=189 name='alloc' kind=4 scope=89
+[DEBUG SymbolTable] declareSymbol id=190 name='self' kind=3 scope=90
+[DEBUG SymbolTable] declareSymbol id=191 name='size' kind=3 scope=90
+[DEBUG SymbolTable] declareSymbol id=192 name='align' kind=3 scope=90
+[DEBUG SymbolTable] declareSymbol id=193 name='dealloc' kind=4 scope=89
+[DEBUG SymbolTable] declareSymbol id=194 name='self' kind=3 scope=91
+[DEBUG SymbolTable] declareSymbol id=195 name='ptr' kind=3 scope=91
+[DEBUG SymbolTable] declareSymbol id=196 name='size' kind=3 scope=91
+[DEBUG SymbolTable] declareSymbol id=197 name='align' kind=3 scope=91
+[DEBUG SymbolTable] declareSymbol id=198 name='GlobalAlloc' kind=5 scope=85
+[DEBUG SymbolTable] declareSymbol id=199 name='Self' kind=12 scope=93
+[DEBUG SymbolTable] declareSymbol id=200 name='alloc' kind=4 scope=93
+[DEBUG SymbolTable] declareSymbol id=201 name='self' kind=3 scope=94
+[DEBUG SymbolTable] declareSymbol id=202 name='size' kind=3 scope=94
+[DEBUG SymbolTable] declareSymbol id=203 name='align' kind=3 scope=94
+[DEBUG SymbolTable] declareSymbol id=204 name='dealloc' kind=4 scope=93
+[DEBUG SymbolTable] declareSymbol id=205 name='self' kind=3 scope=95
+[DEBUG SymbolTable] declareSymbol id=206 name='ptr' kind=3 scope=95
+[DEBUG SymbolTable] declareSymbol id=207 name='size' kind=3 scope=95
+[DEBUG SymbolTable] declareSymbol id=208 name='align' kind=3 scope=95
+[DEBUG SymbolTable] declareSymbol id=209 name='vec' kind=15 scope=0
+[DEBUG SymbolTable] declareSymbol id=210 name='Vec' kind=5 scope=96
+[DEBUG SymbolTable] declareSymbol id=211 name='T' kind=13 scope=97
+[DEBUG SymbolTable] declareSymbol id=212 name='ptr' kind=8 scope=97
+[DEBUG SymbolTable] declareSymbol id=213 name='len' kind=8 scope=97
+[DEBUG SymbolTable] declareSymbol id=214 name='cap' kind=8 scope=97
+[DEBUG SymbolTable] declareSymbol id=215 name='vec_new' kind=4 scope=96
+[DEBUG SymbolTable] declareSymbol id=216 name='T' kind=13 scope=98
+[DEBUG SymbolTable] declareSymbol id=217 name='vec_with_capacity' kind=4 scope=96
+[DEBUG SymbolTable] declareSymbol id=218 name='T' kind=13 scope=99
+[DEBUG SymbolTable] declareSymbol id=219 name='capacity' kind=3 scope=99
+[DEBUG SymbolTable] declareSymbol id=220 name='Self' kind=12 scope=100
+[DEBUG SymbolTable] declareSymbol id=221 name='T' kind=13 scope=100
+[DEBUG SymbolTable] declareSymbol id=222 name='push' kind=4 scope=100
+[DEBUG SymbolTable] declareSymbol id=223 name=''_1' kind=13 scope=101
+[DEBUG SymbolTable] declareSymbol id=224 name='self' kind=3 scope=101
+[DEBUG SymbolTable] declareSymbol id=225 name='item' kind=3 scope=101
+[DEBUG SymbolTable] declareSymbol id=226 name='pop' kind=4 scope=100
+[DEBUG SymbolTable] declareSymbol id=227 name=''_1' kind=13 scope=102
+[DEBUG SymbolTable] declareSymbol id=228 name='self' kind=3 scope=102
+[DEBUG SymbolTable] declareSymbol id=229 name='len' kind=4 scope=100
+[DEBUG SymbolTable] declareSymbol id=230 name=''_1' kind=13 scope=103
+[DEBUG SymbolTable] declareSymbol id=231 name='self' kind=3 scope=103
+[DEBUG SymbolTable] declareSymbol id=232 name='capacity' kind=4 scope=100
+[DEBUG SymbolTable] declareSymbol id=233 name=''_1' kind=13 scope=104
+[DEBUG SymbolTable] declareSymbol id=234 name='self' kind=3 scope=104
+[DEBUG SymbolTable] declareSymbol id=235 name='grow' kind=4 scope=100
+[DEBUG SymbolTable] declareSymbol id=236 name=''_1' kind=13 scope=105
+[DEBUG SymbolTable] declareSymbol id=237 name='self' kind=3 scope=105
+[DEBUG SymbolTable] declareSymbol id=238 name='Self' kind=12 scope=106
+[DEBUG SymbolTable] declareSymbol id=239 name='T' kind=13 scope=106
+[DEBUG SymbolTable] declareSymbol id=240 name='drop' kind=4 scope=106
+[DEBUG SymbolTable] declareSymbol id=241 name=''_1' kind=13 scope=107
+[DEBUG SymbolTable] declareSymbol id=242 name='self' kind=3 scope=107
+[DEBUG SymbolTable] declareSymbol id=243 name='__mellis_alloc' kind=17 scope=96
+[DEBUG SymbolTable] declareSymbol id=244 name='__mellis_dealloc' kind=17 scope=96
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_panic
+[DEBUG] Resolving function: __mellis_alloc
+[DEBUG] Resolving function: __mellis_dealloc
+[DEBUG] Resolving function: __mellis_realloc
+[DEBUG] Resolving function: alloc
+[DEBUG] Resolving function: dealloc
+[DEBUG] Resolving function: alloc
+[DEBUG] Resolving identifier: __mellis_alloc
+[DEBUG] Finished resolvePath for __mellis_alloc
+[DEBUG] Resolving identifier: size
+[DEBUG] Finished resolvePath for size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving function: dealloc
+[DEBUG] Resolving identifier: __mellis_dealloc
+[DEBUG] Finished resolvePath for __mellis_dealloc
+[DEBUG] Resolving identifier: ptr
+[DEBUG] Finished resolvePath for ptr
+[DEBUG] Resolving identifier: size
+[DEBUG] Finished resolvePath for size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving function: vec_new
+[DEBUG] Resolving function: vec_with_capacity
+[DEBUG] Resolving identifier: capacity
+[DEBUG] Finished resolvePath for capacity
+[DEBUG] Resolving identifier: vec_new
+[DEBUG] Finished resolvePath for vec_new
+[DEBUG SymbolTable] declareSymbol id=245 name='size' kind=0 scope=111
+[DEBUG] Resolving identifier: capacity
+[DEBUG] Finished resolvePath for capacity
+[DEBUG SymbolTable] declareSymbol id=246 name='align' kind=0 scope=111
+[DEBUG SymbolTable] declareSymbol id=247 name='ptr' kind=0 scope=111
+[DEBUG] Resolving identifier: __mellis_alloc
+[DEBUG] Finished resolvePath for __mellis_alloc
+[DEBUG] Resolving identifier: size
+[DEBUG] Finished resolvePath for size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: ptr
+[DEBUG] Finished resolvePath for ptr
+[DEBUG] Resolving identifier: capacity
+[DEBUG] Finished resolvePath for capacity
+[DEBUG] Resolving function: push
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=248 name='offset_ptr' kind=0 scope=113
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: offset_ptr
+[DEBUG] Finished resolvePath for offset_ptr
+[DEBUG] Resolving identifier: item
+[DEBUG] Finished resolvePath for item
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: pop
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: core
+[DEBUG] Finished resolvePath for core
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=249 name='offset_ptr' kind=0 scope=116
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: core
+[DEBUG] Finished resolvePath for core
+[DEBUG] Resolving identifier: offset_ptr
+[DEBUG] Finished resolvePath for offset_ptr
+[DEBUG] Resolving function: len
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: capacity
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: grow
+[DEBUG SymbolTable] declareSymbol id=250 name='new_cap' kind=0 scope=121
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=251 name='new_size' kind=0 scope=121
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG SymbolTable] declareSymbol id=252 name='align' kind=0 scope=121
+[DEBUG SymbolTable] declareSymbol id=253 name='new_ptr' kind=0 scope=121
+[DEBUG] Resolving identifier: __mellis_alloc
+[DEBUG] Finished resolvePath for __mellis_alloc
+[DEBUG] Resolving identifier: new_size
+[DEBUG] Finished resolvePath for new_size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=254 name='i' kind=0 scope=124
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=255 name='src' kind=0 scope=125
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG SymbolTable] declareSymbol id=256 name='dst' kind=0 scope=125
+[DEBUG] Resolving identifier: new_ptr
+[DEBUG] Finished resolvePath for new_ptr
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: dst
+[DEBUG] Finished resolvePath for dst
+[DEBUG] Resolving identifier: src
+[DEBUG] Finished resolvePath for src
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG SymbolTable] declareSymbol id=257 name='old_size' kind=0 scope=124
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: __mellis_dealloc
+[DEBUG] Finished resolvePath for __mellis_dealloc
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: old_size
+[DEBUG] Finished resolvePath for old_size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_ptr
+[DEBUG] Finished resolvePath for new_ptr
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG] Resolving function: drop
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=258 name='size' kind=0 scope=128
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=259 name='align' kind=0 scope=128
+[DEBUG] Resolving identifier: __mellis_dealloc
+[DEBUG] Finished resolvePath for __mellis_dealloc
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: size
+[DEBUG] Finished resolvePath for size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Creating MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check... ast has 5 items
+[DEBUG] TypePrePass visiting ProgramNode with 5 items
+[DEBUG] item kind: class fl::ExternDeclNode
+[DEBUG] item kind: class fl::UseDeclNode
+[DEBUG] item kind: class fl::UseDeclNode
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for size -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for align -> 0
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_8' symbolId=1
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_8' symbolId=1
+[DEBUG self] Evaluated param->type for ptr -> 4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for size -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for align -> 0
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_8' symbolId=1
+[DEBUG self] Evaluated param->type for ptr -> 4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for old_size -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for new_size -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for align -> 0
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_8' symbolId=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=188
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for size -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for align -> 0
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_8' symbolId=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=188
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_8' symbolId=1
+[DEBUG self] Evaluated param->type for ptr -> 4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for size -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for align -> 0
+[DEBUG TraitDeclNode] Method 'alloc' symbolId=189
+[DEBUG TraitDeclNode] typeTable[189] = 3
+[DEBUG TraitDeclNode] Registered trait method 'alloc'
+[DEBUG TraitDeclNode] Method 'dealloc' symbolId=193
+[DEBUG TraitDeclNode] typeTable[193] = 3
+[DEBUG TraitDeclNode] Registered trait method 'dealloc'
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'GlobalAlloc' symbolId=198
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=199 selfType=1
+[DEBUG] ImplDeclNode isSelfPrivate=0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Allocator' symbolId=187
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=199
+[DEBUG self] Evaluated param->type for self -> 1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for size -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for align -> 0
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_8' symbolId=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=199
+[DEBUG self] Evaluated param->type for self -> 1
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_8' symbolId=1
+[DEBUG self] Evaluated param->type for ptr -> 4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for size -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for align -> 0
+[DEBUG TraitSolver] addClause: selfType=Struct<198> traitId=187
+[DEBUG] item kind: class fl::ModDeclNode
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=211
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Vec' symbolId=210
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=216
+[DEBUG] Processing generic param: T with 0 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG self] Evaluated param->type for capacity -> 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Vec' symbolId=210
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=218
+[DEBUG] Processing generic param: T with 0 bounds
+[DEBUG] visit(ImplDeclNode) genericParams size: 1
+[DEBUG] visit(ImplDeclNode) genericParams size: 1
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ExternDeclNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG CallExpr] visiting callee of type: class fl::IdentifierExpr
+[DEBUG IdentifierExpr] visit start. segments.back()=__mellis_alloc candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=175 baseType=3
+[DEBUG IdentifierExpr] visit start. segments.back()=size candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=202 baseType=0
+[DEBUG IdentifierExpr] visit start. segments.back()=align candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=203 baseType=0
+[DEBUG CallExpr] visiting callee of type: class fl::IdentifierExpr
+[DEBUG IdentifierExpr] visit start. segments.back()=__mellis_dealloc candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=178 baseType=3
+[DEBUG IdentifierExpr] visit start. segments.back()=ptr candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=206 baseType=4
+[DEBUG IdentifierExpr] visit start. segments.back()=size candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=207 baseType=0
+[DEBUG IdentifierExpr] visit start. segments.back()=align candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=208 baseType=0
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] StructInitExpr sym kind=5 name=Vec
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=216
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG IdentifierExpr] visit start. segments.back()=capacity candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=219 baseType=0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG CallExpr] visiting callee of type: class fl::IdentifierExpr
+[DEBUG IdentifierExpr] visit start. segments.back()=vec_new candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=215 baseType=3
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=218
+[DEBUG substitute] GenericParam id=216 name='T' found=1
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=218
+[DEBUG CallExpr] fnDecl name: 'vec_new' symbolId: 215
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn() -> Struct<210<T (216)>>
+[DEBUG CallExpr] before substitute: fn() -> Struct<210<T (216)>>
+[DEBUG substitute] GenericParam id=216 name='T' found=1
+[DEBUG CallExpr] after substitute: fn() -> Struct<210<T (218)>>
+[DEBUG IdentifierExpr] visit start. segments.back()=capacity candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=219 baseType=0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=218
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=218
+[DEBUG CallExpr] visiting callee of type: class fl::IdentifierExpr
+[DEBUG IdentifierExpr] visit start. segments.back()=__mellis_alloc candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=175 baseType=3
+[DEBUG IdentifierExpr] visit start. segments.back()=size candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=245 baseType=14
+[DEBUG IdentifierExpr] visit start. segments.back()=align candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=246 baseType=0
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=218
+[DEBUG] StructInitExpr sym kind=5 name=Vec
+[DEBUG IdentifierExpr] visit start. segments.back()=ptr candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=247 baseType=4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG IdentifierExpr] visit start. segments.back()=capacity candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=219 baseType=0
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::ExternDeclNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG] CG visiting item: class fl::ModDeclNode
+[DEBUG TR] visit VarDeclNode: size
+[DEBUG TR] visit VarDeclNode: align
+[DEBUG TR] visit VarDeclNode: ptr
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] VisibilityLeakChecker starting...
+[PHASE] VisibilityLeakChecker done, visOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::ExternDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::UseDeclNode
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::UseDeclNode
+[DEBUG MVIRGenerator] done item[2]
+[DEBUG MVIRGenerator] visiting item[3] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 2 methods, genericParams: 0
+[DEBUG MVIRGenerator] calling method->accept for alloc
+[DEBUG pushLocalInst] Inserting LocalInst for %3 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %4 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %5 into entry block entry0
+[DEBUG] MVIRGenerator: visiting ReturnStmtNode for function @alloc_200
+[DEBUG] MVIRGenerator: returning operand %8
+[DEBUG MVIRGenerator] calling method->accept for dealloc
+[DEBUG pushLocalInst] Inserting LocalInst for %4 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %5 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %6 into entry block entry0
+[DEBUG pushLocalInst] Inserting LocalInst for %7 into entry block entry0
+[DEBUG MVIRGenerator] done item[3]
+[DEBUG MVIRGenerator] visiting item[4] typeid=class fl::ModDeclNode
+[DEBUG MVIRGenerator] visit ImplDeclNode with 5 methods, genericParams: 1
+[DEBUG MVIRGenerator] visit ImplDeclNode with 1 methods, genericParams: 1
+[DEBUG MVIRGenerator] done item[4]
+[PHASE] MVIRGenerator done
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG MoveAnalyzer] %0 is marked MOVED in StoreInst!
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %6 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %7 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LocalInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::StoreInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %8 (type: 15)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %9 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::LoadInst
+[DEBUG] Added LoadInst dest to localValues: %10 (type: 13)
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::CallInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[DEBUG LLVMIRGenerator] emitting instruction type: struct fl::mvir::DropInst
+[MLibGen] target->createTargetMachine
+[MLibGen] setDataLayout
+[MLibGen] MPM.run
+[MLibGen] MPM.run DONE
+[MLibGen] addPassesToEmitFile
+[MLibGen] pass.run
+[MLibGen] pass.run DONE
+[MLibGen] Building MLib Sections
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=210 name='Self' kind=13 scope=85
+[DEBUG SymbolTable] declareSymbol id=211 name='alloc' kind=4 scope=85
+[DEBUG SymbolTable] declareSymbol id=212 name='self' kind=3 scope=86
+[DEBUG SymbolTable] declareSymbol id=213 name='size' kind=3 scope=86
+[DEBUG SymbolTable] declareSymbol id=214 name='align' kind=3 scope=86
+[DEBUG SymbolTable] declareSymbol id=215 name='dealloc' kind=4 scope=85
+[DEBUG SymbolTable] declareSymbol id=216 name='self' kind=3 scope=87
+[DEBUG SymbolTable] declareSymbol id=217 name='ptr' kind=3 scope=87
+[DEBUG SymbolTable] declareSymbol id=218 name='size' kind=3 scope=87
+[DEBUG SymbolTable] declareSymbol id=219 name='align' kind=3 scope=87
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: alloc
+[DEBUG] Resolving function: dealloc
+[DEBUG SymbolTable] declareSymbol id=220 name='T' kind=13 scope=88
+[DEBUG SymbolTable] declareSymbol id=221 name='ptr' kind=8 scope=88
+[DEBUG SymbolTable] declareSymbol id=222 name='len' kind=8 scope=88
+[DEBUG SymbolTable] declareSymbol id=223 name='cap' kind=8 scope=88
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=224 name='size' kind=3 scope=89
+[DEBUG SymbolTable] declareSymbol id=225 name='align' kind=3 scope=89
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_alloc
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=226 name='ptr' kind=3 scope=90
+[DEBUG SymbolTable] declareSymbol id=227 name='size' kind=3 scope=90
+[DEBUG SymbolTable] declareSymbol id=228 name='align' kind=3 scope=90
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_dealloc
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=229 name='ptr' kind=3 scope=91
+[DEBUG SymbolTable] declareSymbol id=230 name='old_size' kind=3 scope=91
+[DEBUG SymbolTable] declareSymbol id=231 name='new_size' kind=3 scope=91
+[DEBUG SymbolTable] declareSymbol id=232 name='align' kind=3 scope=91
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: __mellis_realloc
+[DEBUG SymbolTable] declareSymbol id=233 name='T' kind=13 scope=92
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: vec_new
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=234 name='T' kind=13 scope=94
+[DEBUG SymbolTable] declareSymbol id=235 name='capacity' kind=3 scope=94
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: vec_with_capacity
+[DEBUG] Resolving identifier: capacity
+[DEBUG] Finished resolvePath for capacity
+[DEBUG] Resolving identifier: vec_new
+[DEBUG] Finished resolvePath for vec_new
+[DEBUG SymbolTable] declareSymbol id=236 name='size' kind=0 scope=95
+[DEBUG] Resolving identifier: capacity
+[DEBUG] Finished resolvePath for capacity
+[DEBUG SymbolTable] declareSymbol id=237 name='align' kind=0 scope=95
+[DEBUG SymbolTable] declareSymbol id=238 name='ptr' kind=0 scope=95
+[DEBUG] Resolving identifier: __mellis_alloc
+[DEBUG] Finished resolvePath for __mellis_alloc
+[DEBUG] Resolving identifier: size
+[DEBUG] Finished resolvePath for size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: ptr
+[DEBUG] Finished resolvePath for ptr
+[DEBUG] Resolving identifier: capacity
+[DEBUG] Finished resolvePath for capacity
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=239 name='Self' kind=12 scope=97
+[DEBUG SymbolTable] declareSymbol id=240 name='alloc' kind=4 scope=97
+[DEBUG SymbolTable] declareSymbol id=241 name='self' kind=3 scope=98
+[DEBUG SymbolTable] declareSymbol id=242 name='size' kind=3 scope=98
+[DEBUG SymbolTable] declareSymbol id=243 name='align' kind=3 scope=98
+[DEBUG SymbolTable] declareSymbol id=244 name='dealloc' kind=4 scope=97
+[DEBUG SymbolTable] declareSymbol id=245 name='self' kind=3 scope=99
+[DEBUG SymbolTable] declareSymbol id=246 name='ptr' kind=3 scope=99
+[DEBUG SymbolTable] declareSymbol id=247 name='size' kind=3 scope=99
+[DEBUG SymbolTable] declareSymbol id=248 name='align' kind=3 scope=99
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: alloc
+[DEBUG] Resolving identifier: __mellis_alloc
+[DEBUG] Finished resolvePath for __mellis_alloc
+[DEBUG] Resolving identifier: size
+[DEBUG] Finished resolvePath for size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving function: dealloc
+[DEBUG] Resolving identifier: __mellis_dealloc
+[DEBUG] Finished resolvePath for __mellis_dealloc
+[DEBUG] Resolving identifier: ptr
+[DEBUG] Finished resolvePath for ptr
+[DEBUG] Resolving identifier: size
+[DEBUG] Finished resolvePath for size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=249 name='Self' kind=12 scope=102
+[DEBUG SymbolTable] declareSymbol id=250 name='T' kind=13 scope=102
+[DEBUG SymbolTable] declareSymbol id=251 name='push' kind=4 scope=102
+[DEBUG SymbolTable] declareSymbol id=252 name='self' kind=3 scope=103
+[DEBUG SymbolTable] declareSymbol id=253 name='item' kind=3 scope=103
+[DEBUG SymbolTable] declareSymbol id=254 name='pop' kind=4 scope=102
+[DEBUG SymbolTable] declareSymbol id=255 name='self' kind=3 scope=104
+[DEBUG SymbolTable] declareSymbol id=256 name='len' kind=4 scope=102
+[DEBUG SymbolTable] declareSymbol id=257 name='self' kind=3 scope=105
+[DEBUG SymbolTable] declareSymbol id=258 name='capacity' kind=4 scope=102
+[DEBUG SymbolTable] declareSymbol id=259 name='self' kind=3 scope=106
+[DEBUG SymbolTable] declareSymbol id=260 name='grow' kind=4 scope=102
+[DEBUG SymbolTable] declareSymbol id=261 name='self' kind=3 scope=107
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: push
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=262 name='offset_ptr' kind=0 scope=108
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: offset_ptr
+[DEBUG] Finished resolvePath for offset_ptr
+[DEBUG] Resolving identifier: item
+[DEBUG] Finished resolvePath for item
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: pop
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: core
+[DEBUG] Finished resolvePath for core
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=263 name='offset_ptr' kind=0 scope=111
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: core
+[DEBUG] Finished resolvePath for core
+[DEBUG] Resolving identifier: offset_ptr
+[DEBUG] Finished resolvePath for offset_ptr
+[DEBUG] Resolving function: len
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: capacity
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: grow
+[DEBUG SymbolTable] declareSymbol id=264 name='new_cap' kind=0 scope=116
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=265 name='new_size' kind=0 scope=116
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG SymbolTable] declareSymbol id=266 name='align' kind=0 scope=116
+[DEBUG SymbolTable] declareSymbol id=267 name='new_ptr' kind=0 scope=116
+[DEBUG] Resolving identifier: __mellis_alloc
+[DEBUG] Finished resolvePath for __mellis_alloc
+[DEBUG] Resolving identifier: new_size
+[DEBUG] Finished resolvePath for new_size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=268 name='i' kind=0 scope=119
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=269 name='src' kind=0 scope=120
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG SymbolTable] declareSymbol id=270 name='dst' kind=0 scope=120
+[DEBUG] Resolving identifier: new_ptr
+[DEBUG] Finished resolvePath for new_ptr
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: dst
+[DEBUG] Finished resolvePath for dst
+[DEBUG] Resolving identifier: src
+[DEBUG] Finished resolvePath for src
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG SymbolTable] declareSymbol id=271 name='old_size' kind=0 scope=119
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: __mellis_dealloc
+[DEBUG] Finished resolvePath for __mellis_dealloc
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: old_size
+[DEBUG] Finished resolvePath for old_size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_ptr
+[DEBUG] Finished resolvePath for new_ptr
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG SymbolTable] declareSymbol id=272 name='Self' kind=12 scope=122
+[DEBUG SymbolTable] declareSymbol id=273 name='T' kind=13 scope=122
+[DEBUG SymbolTable] declareSymbol id=274 name='drop' kind=4 scope=122
+[DEBUG SymbolTable] declareSymbol id=275 name='self' kind=3 scope=123
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: drop
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=276 name='size' kind=0 scope=125
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=277 name='align' kind=0 scope=125
+[DEBUG] Resolving identifier: __mellis_dealloc
+[DEBUG] Finished resolvePath for __mellis_dealloc
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: size
+[DEBUG] Finished resolvePath for size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=278 name='alloc' kind=18 scope=0
+[DEBUG SymbolTable] declareSymbol id=279 name='Vec' kind=17 scope=0
+[DEBUG SymbolTable] declareSymbol id=280 name='vec_new' kind=17 scope=0
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=281 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: main
+[DEBUG SymbolTable] declareSymbol id=282 name='v' kind=0 scope=127
+[DEBUG] Resolving identifier: vec_new
+[DEBUG] Finished resolvePath for vec_new
+[DEBUG] Resolving identifier: v
+[DEBUG] Finished resolvePath for v
+[DEBUG SymbolTable] declareSymbol id=283 name='item' kind=0 scope=127
+[DEBUG] Resolving identifier: v
+[DEBUG] Finished resolvePath for v
+[DEBUG] Resolving identifier: item
+[DEBUG] Finished resolvePath for item
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Creating MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check... ast has 4 items
+[DEBUG] TypePrePass visiting ProgramNode with 4 items
+[DEBUG] item kind: class fl::UseDeclNode
+[DEBUG] item kind: class fl::UseDeclNode
+[DEBUG] item kind: class fl::UseDeclNode
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Vec' symbolId=188
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG SymbolTable] declareSymbol id=284 name='Vec_int_32' kind=5 scope=84
+[DEBUG SymbolTable] declareSymbol id=285 name='ptr' kind=8 scope=128
+[DEBUG SymbolTable] declareSymbol id=286 name='len' kind=8 scope=128
+[DEBUG SymbolTable] declareSymbol id=287 name='cap' kind=8 scope=128
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Vec'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 4 stmts.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'core'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 4 stmts.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 8 stmts.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 4 stmts.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 4 stmts.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_64'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting CastExpr
+[DEBUG] SubstitutionVisitor: NO substitution found for 'uint_8'.
+[DEBUG] Before Resolver in MonoEngine
+[DEBUG SymbolTable] declareSymbol id=288 name='Self' kind=12 scope=129
+[DEBUG SymbolTable] declareSymbol id=289 name='push' kind=4 scope=129
+[DEBUG SymbolTable] declareSymbol id=290 name='self' kind=3 scope=130
+[DEBUG SymbolTable] declareSymbol id=291 name='item' kind=3 scope=130
+[DEBUG SymbolTable] declareSymbol id=292 name='pop' kind=4 scope=129
+[DEBUG SymbolTable] declareSymbol id=293 name='self' kind=3 scope=131
+[DEBUG SymbolTable] declareSymbol id=294 name='len' kind=4 scope=129
+[DEBUG SymbolTable] declareSymbol id=295 name='self' kind=3 scope=132
+[DEBUG SymbolTable] declareSymbol id=296 name='capacity' kind=4 scope=129
+[DEBUG SymbolTable] declareSymbol id=297 name='self' kind=3 scope=133
+[DEBUG SymbolTable] declareSymbol id=298 name='grow' kind=4 scope=129
+[DEBUG SymbolTable] declareSymbol id=299 name='self' kind=3 scope=134
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: push
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=300 name='offset_ptr' kind=0 scope=135
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: offset_ptr
+[DEBUG] Finished resolvePath for offset_ptr
+[DEBUG] Resolving identifier: item
+[DEBUG] Finished resolvePath for item
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: pop
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: core
+[DEBUG] Finished resolvePath for core
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=301 name='offset_ptr' kind=0 scope=138
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: core
+[DEBUG] Finished resolvePath for core
+[DEBUG] Resolving identifier: offset_ptr
+[DEBUG] Finished resolvePath for offset_ptr
+[DEBUG] Resolving function: len
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: capacity
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: grow
+[DEBUG SymbolTable] declareSymbol id=302 name='new_cap' kind=0 scope=143
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=303 name='new_size' kind=0 scope=143
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG SymbolTable] declareSymbol id=304 name='align' kind=0 scope=143
+[DEBUG SymbolTable] declareSymbol id=305 name='new_ptr' kind=0 scope=143
+[DEBUG] Resolving identifier: __mellis_alloc
+[DEBUG] Finished resolvePath for __mellis_alloc
+[DEBUG] Resolving identifier: new_size
+[DEBUG] Finished resolvePath for new_size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=306 name='i' kind=0 scope=146
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG SymbolTable] declareSymbol id=307 name='src' kind=0 scope=147
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG SymbolTable] declareSymbol id=308 name='dst' kind=0 scope=147
+[DEBUG] Resolving identifier: new_ptr
+[DEBUG] Finished resolvePath for new_ptr
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: dst
+[DEBUG] Finished resolvePath for dst
+[DEBUG] Resolving identifier: src
+[DEBUG] Finished resolvePath for src
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG] Resolving identifier: i
+[DEBUG] Finished resolvePath for i
+[DEBUG SymbolTable] declareSymbol id=309 name='old_size' kind=0 scope=146
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: __mellis_dealloc
+[DEBUG] Finished resolvePath for __mellis_dealloc
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: old_size
+[DEBUG] Finished resolvePath for old_size
+[DEBUG] Resolving identifier: align
+[DEBUG] Finished resolvePath for align
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_ptr
+[DEBUG] Finished resolvePath for new_ptr
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving identifier: new_cap
+[DEBUG] Finished resolvePath for new_cap
+[DEBUG] Before TypeChecker in MonoEngine
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Vec' symbolId=188
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] ImplDeclNode evaluating selfType: 1
+[DEBUG] ImplDeclNode Self symbolId=288 selfType=1
+[DEBUG] ImplDeclNode isSelfPrivate=0
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Vec' symbolId=284
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG self] Evaluated param->type for item -> 0
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Vec' symbolId=284
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'core' symbolId=169
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG SymbolTable] declareSymbol id=310 name='Option_int_32' kind=6 scope=1
+[DEBUG SymbolTable] declareSymbol id=311 name='None' kind=7 scope=149
+[DEBUG SymbolTable] declareSymbol id=312 name='Some' kind=7 scope=149
+[DEBUG SymbolTable] declareSymbol id=313 name='__field_0' kind=8 scope=151
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Option'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: Skipping node type class fl::BuiltinTypeNode
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: Skipping node type class fl::BuiltinTypeNode
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'U'.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Option'.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'U'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: Substituted 'Self' with its replacement.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Option'.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'U'.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Option'.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'U'.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG SymbolTable] declareSymbol id=314 name='Self' kind=12 scope=152
+[DEBUG SymbolTable] declareSymbol id=315 name='is_some' kind=4 scope=152
+[DEBUG SymbolTable] declareSymbol id=316 name='self' kind=3 scope=153
+[DEBUG SymbolTable] declareSymbol id=317 name='is_none' kind=4 scope=152
+[DEBUG SymbolTable] declareSymbol id=318 name='self' kind=3 scope=154
+[DEBUG SymbolTable] declareSymbol id=319 name='unwrap' kind=4 scope=152
+[DEBUG SymbolTable] declareSymbol id=320 name='self' kind=3 scope=155
+[DEBUG SymbolTable] declareSymbol id=321 name='unwrap_or' kind=4 scope=152
+[DEBUG SymbolTable] declareSymbol id=322 name='self' kind=3 scope=156
+[DEBUG SymbolTable] declareSymbol id=323 name='default' kind=3 scope=156
+[DEBUG SymbolTable] declareSymbol id=324 name='map' kind=4 scope=152
+[DEBUG SymbolTable] declareSymbol id=325 name='U' kind=13 scope=157
+[DEBUG SymbolTable] declareSymbol id=326 name='self' kind=3 scope=157
+[DEBUG SymbolTable] declareSymbol id=327 name='f' kind=3 scope=157
+[DEBUG SymbolTable] declareSymbol id=328 name='and_then' kind=4 scope=152
+[DEBUG SymbolTable] declareSymbol id=329 name='U' kind=13 scope=158
+[DEBUG SymbolTable] declareSymbol id=330 name='self' kind=3 scope=158
+[DEBUG SymbolTable] declareSymbol id=331 name='f' kind=3 scope=158
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: is_some
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 160
+[DEBUG] lookup 'Option' checking scope 160 (kind=3, parent=159)
+[DEBUG] lookup 'Option' checking scope 159 (kind=3, parent=153)
+[DEBUG] lookup 'Option' checking scope 153 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] lookup 'Option' starting at scope 161
+[DEBUG] lookup 'Option' checking scope 161 (kind=3, parent=159)
+[DEBUG] lookup 'Option' checking scope 159 (kind=3, parent=153)
+[DEBUG] lookup 'Option' checking scope 153 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving function: is_none
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] Resolving function: unwrap
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 164
+[DEBUG] lookup 'Option' checking scope 164 (kind=3, parent=163)
+[DEBUG] lookup 'Option' checking scope 163 (kind=3, parent=155)
+[DEBUG] lookup 'Option' checking scope 155 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=332 name='val' kind=0 scope=164
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 165
+[DEBUG] lookup 'Option' checking scope 165 (kind=3, parent=163)
+[DEBUG] lookup 'Option' checking scope 163 (kind=3, parent=155)
+[DEBUG] lookup 'Option' checking scope 155 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: __mellis_panic
+[DEBUG] Finished resolvePath for __mellis_panic
+[DEBUG] Resolving function: unwrap_or
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 168
+[DEBUG] lookup 'Option' checking scope 168 (kind=3, parent=167)
+[DEBUG] lookup 'Option' checking scope 167 (kind=3, parent=156)
+[DEBUG] lookup 'Option' checking scope 156 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=333 name='val' kind=0 scope=168
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 169
+[DEBUG] lookup 'Option' checking scope 169 (kind=3, parent=167)
+[DEBUG] lookup 'Option' checking scope 167 (kind=3, parent=156)
+[DEBUG] lookup 'Option' checking scope 156 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: default
+[DEBUG] Finished resolvePath for default
+[DEBUG] Resolving function: map
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 171
+[DEBUG] lookup 'Option' checking scope 171 (kind=3, parent=170)
+[DEBUG] lookup 'Option' checking scope 170 (kind=3, parent=157)
+[DEBUG] lookup 'Option' checking scope 157 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=334 name='val' kind=0 scope=171
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 171
+[DEBUG] lookup 'Option' checking scope 171 (kind=3, parent=170)
+[DEBUG] lookup 'Option' checking scope 170 (kind=3, parent=157)
+[DEBUG] lookup 'Option' checking scope 157 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 172
+[DEBUG] lookup 'Option' checking scope 172 (kind=3, parent=170)
+[DEBUG] lookup 'Option' checking scope 170 (kind=3, parent=157)
+[DEBUG] lookup 'Option' checking scope 157 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 172
+[DEBUG] lookup 'Option' checking scope 172 (kind=3, parent=170)
+[DEBUG] lookup 'Option' checking scope 170 (kind=3, parent=157)
+[DEBUG] lookup 'Option' checking scope 157 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving function: and_then
+[DEBUG] Resolving identifier: self
+[DEBUG] Finished resolvePath for self
+[DEBUG] lookup 'Option' starting at scope 174
+[DEBUG] lookup 'Option' checking scope 174 (kind=3, parent=173)
+[DEBUG] lookup 'Option' checking scope 173 (kind=3, parent=158)
+[DEBUG] lookup 'Option' checking scope 158 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG SymbolTable] declareSymbol id=335 name='val' kind=0 scope=174
+[DEBUG] Resolving identifier: f
+[DEBUG] Finished resolvePath for f
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 175
+[DEBUG] lookup 'Option' checking scope 175 (kind=3, parent=173)
+[DEBUG] lookup 'Option' checking scope 173 (kind=3, parent=158)
+[DEBUG] lookup 'Option' checking scope 158 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 175
+[DEBUG] lookup 'Option' checking scope 175 (kind=3, parent=173)
+[DEBUG] lookup 'Option' checking scope 173 (kind=3, parent=158)
+[DEBUG] lookup 'Option' checking scope 158 (kind=2, parent=152)
+[DEBUG] lookup 'Option' checking scope 152 (kind=9, parent=1)
+[DEBUG] lookup 'Option' checking scope 1 (kind=1, parent=0)
+[DEBUG] lookup 'Option' FOUND in scope 1 -> symbolId 29
+[DEBUG] Finished resolvePath for Option
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=29
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 310
+[DEBUG] ImplDeclNode evaluating selfType: 2
+[DEBUG] ImplDeclNode Self symbolId=314 selfType=2
+[DEBUG] ImplDeclNode isSelfPrivate=0
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=310
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=310
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=310
+[DEBUG self] Evaluated param->type for self -> 2
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=310
+[DEBUG self] Evaluated param->type for self -> 2
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG self] Evaluated param->type for default -> 0
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=310
+[DEBUG self] Evaluated param->type for self -> 2
+[DEBUG] evaluateTypeNode called on class fl::FunctionTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'U' symbolId=138
+[DEBUG self] Evaluated param->type for f -> 3
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=29
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'U' symbolId=138
+[DEBUG] Processing generic param: U with 0 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=310
+[DEBUG self] Evaluated param->type for self -> 2
+[DEBUG] evaluateTypeNode called on class fl::FunctionTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=29
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'U' symbolId=142
+[DEBUG self] Evaluated param->type for f -> 3
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=29
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'U' symbolId=142
+[DEBUG] Processing generic param: U with 0 bounds
+[DEBUG] addInherentMethod: is_some methodId=315
+[DEBUG] addInherentMethod: is_none methodId=317
+[DEBUG] addInherentMethod: unwrap methodId=319
+[DEBUG] addInherentMethod: unwrap_or methodId=321
+[DEBUG] addInherentMethod: map methodId=324
+[DEBUG] addInherentMethod: and_then methodId=328
+[DEBUG] Starting ConstraintGenerator
+[DEBUG IdentifierExpr] visit start. segments.back()=self candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=316 baseType=5
+[DEBUG IdentifierExpr] visit start. segments.back()=self candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=318 baseType=5
+[DEBUG IdentifierExpr] visit start. segments.back()=self candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=320 baseType=2
+[DEBUG IdentifierExpr] visit start. segments.back()=val candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=332 baseType=19
+[DEBUG IdentifierExpr] sym.kind=0
+[DEBUG CallExpr] visiting callee of type: class fl::IdentifierExpr
+[DEBUG IdentifierExpr] visit start. segments.back()=__mellis_panic candidates=1
+[DEBUG IdentifierExpr] resolvedSymbol=45 baseType=19
+[DEBUG IdentifierExpr] sym.kind=4

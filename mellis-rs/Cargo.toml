@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "crates/mellis-common",
+    "crates/mellis-driver",
+    "crates/mellis-lexer",
+    "crates/mellis-ast",
+    "crates/mellis-parser", "crates/mellis-semantic", "crates/mellis-mvir", "crates/mellis-backend", "crates/mellis-borrowck", "crates/mellis-mlib", "crates/mellis-optimizer", "crates/mellis-spike-llvm", "crates/mellis-diff", "crates/mellis-cli",
+]

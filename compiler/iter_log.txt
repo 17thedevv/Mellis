@@ -1,0 +1,107 @@
+﻿.\build\Release\mellis.exe : [DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+At line:1 char:14
++ ... d compiler; .\build\Release\mellis.exe -v -lib ..\lib\core\iterator.m ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([DEBUG SymbolTa...kind=12 scope=0:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[INSTRUMENT] CompilerSession Created
+Compiling: ..\lib\core\iterator.ms
+-----------------------------------
+[1] Phan tich cu phap (Parser)...
+[DEBUG] parseUseTree after segment: 45 ;
+[2] Parse thanh cong! (3 cau lenh top-level)
+[1.2] Thu thap Macro...
+[1.3] Phan giai Import & Macro...
+[1.45] Kiem tra Macro...
+[1.4] Khai trien Macro...
+[1.5] Lifetime Elision...
+[2] Phan giai ky hieu (Resolver)...
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Iterator' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='Self' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='Item' kind=12 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='next' kind=4 scope=1
+[DEBUG SymbolTable] declareSymbol id=22 name=''_1' kind=13 scope=2
+[DEBUG SymbolTable] declareSymbol id=23 name='self' kind=3 scope=2
+[DEBUG SymbolTable] declareSymbol id=24 name='IntoIterator' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=25 name='Self' kind=13 scope=3
+[DEBUG SymbolTable] declareSymbol id=26 name='Item' kind=12 scope=3
+[DEBUG SymbolTable] declareSymbol id=27 name='IntoIter' kind=12 scope=3
+[DEBUG SymbolTable] declareSymbol id=28 name='into_iter' kind=4 scope=3
+[DEBUG SymbolTable] declareSymbol id=29 name='self' kind=3 scope=4
+[DEBUG] Resolver::resolve: Aborting after pass1_5 due to previous errors.
+[1m[31merror: [0m[1mModule does not contain 'option'.[0m
+ [34m--> [0m..\lib\core\iterator.ms:1:6
+  [34m|
+[0m1 [34m| [0muse super::option::Option;
+  [34m| [0m     [1m[31m^[0m
+..\lib\core\iterator.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Creating MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] TypePrePass visiting ProgramNode with 3 items
+[4] Resolver thanh cong!
+[5] Kiem tra kieu du lieu (TypeChecker)...
+[DEBUG] item kind: class fl::UseDeclNode
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] evaluateTypeNode called on class fl::ReferenceTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=4294967295
+[DEBUG self] Evaluated param->type for self -> 5
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=4294967295
+[DEBUG] Processing generic param: '_1 with 0 bounds
+[DEBUG TraitDeclNode] Method 'next' symbolId=21
+[DEBUG TraitDeclNode] typeTable[21] = 3
+[DEBUG TraitDeclNode] Registered trait method 'next'
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=4294967295
+[DEBUG self] Evaluated param->type for self -> 19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=4294967295
+[DEBUG TraitDeclNode] Method 'into_iter' symbolId=28
+[DEBUG TraitDeclNode] typeTable[28] = 3
+[DEBUG TraitDeclNode] Registered trait method 'into_iter'
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[PHASE] TypeChecker done, tcOk=0
+[1m[31merror: [0m[1mModule does not contain 'option'.[0m
+ [34m--> [0m..\lib\core\iterator.ms:1:6
+  [34m|
+[0m1 [34m| [0muse super::option::Option;
+  [34m| [0m     [1m[31m^[0m
+..\lib\core\iterator.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+..\lib\core\iterator.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m
+[INSTRUMENT] CompilerSession Destroyed
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SymbolTable Destroyed

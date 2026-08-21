@@ -1,0 +1,9 @@
+[package]
+name = "mellis-parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mellis-common = { path = "../mellis-common" }
+mellis-lexer = { path = "../mellis-lexer" }
+mellis-ast = { path = "../mellis-ast" }

@@ -1,0 +1,21 @@
+[1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_destructuring.ms:11:17
+  [34m|
+[0m11 [34m| [0m    dec Point { x, y } = p;
+  [34m| [0m                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_destructuring.ms:11:32
+  [34m|
+[0m11 [34m| [0m    dec Point { x, y } = p;
+  [34m| [0m                               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected variable name[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_destructuring.ms:16:10
+  [34m|
+[0m16 [34m| [0m    dec (a, b) = t;
+  [34m| [0m         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_destructuring.ms:16:23
+  [34m|
+[0m16 [34m| [0m    dec (a, b) = t;
+  [34m| [0m                      [1m[31m^[0m
+D:\fdlang\tests\valid\test_destructuring.ms: [1m[31merror: [0m[1mParsing that bai.[0m

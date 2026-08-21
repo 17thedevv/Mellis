@@ -1,0 +1,136 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] Checking D:\fdlang\tests\valid\metadata_mod.ms and D:\fdlang\tests\valid\metadata_mod.mlib
+[DEBUG] Checking D:\fdlang\tests\valid\metadata_mod\mod.ms and D:\fdlang\tests\valid\metadata_mod\mod.mlib
+[DEBUG] Checking D:\fdlang\metadata_mod.ms and D:\fdlang\metadata_mod.mlib
+[DEBUG] Checking D:\fdlang\metadata_mod\mod.ms and D:\fdlang\metadata_mod\mod.mlib
+[DEBUG] Checking D:\fdlang\lib\metadata_mod.ms and D:\fdlang\lib\metadata_mod.mlib
+[DEBUG] Checking D:\fdlang\lib\metadata_mod\mod.ms and D:\fdlang\lib\metadata_mod\mod.mlib
+[DEBUG] Checking D:\fdlang\libs\metadata_mod.ms and D:\fdlang\libs\metadata_mod.mlib
+[DEBUG] Checking D:\fdlang\libs\metadata_mod\mod.ms and D:\fdlang\libs\metadata_mod\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\valid\lib\metadata_mod.ms and D:\fdlang\tests\valid\lib\metadata_mod.mlib
+[DEBUG] Checking D:\fdlang\tests\valid\lib\metadata_mod\mod.ms and D:\fdlang\tests\valid\lib\metadata_mod\mod.mlib
+[DEBUG] Checking D:\fdlang\tests\valid\metadata_mod.ms and D:\fdlang\tests\valid\metadata_mod.mlib
+[DEBUG] Checking D:\fdlang\tests\valid\metadata_mod\mod.ms and D:\fdlang\tests\valid\metadata_mod\mod.mlib
+[DEBUG] Checking D:\fdlang\build_release\compiler\lib\metadata_mod.ms and D:\fdlang\build_release\compiler\lib\metadata_mod.mlib
+[DEBUG] Checking D:\fdlang\build_release\compiler\lib\metadata_mod\mod.ms and D:\fdlang\build_release\compiler\lib\metadata_mod\mod.mlib
+[DEBUG] Checking D:\fdlang\build_release\compiler\Release\lib\metadata_mod.ms and D:\fdlang\build_release\compiler\Release\lib\metadata_mod.mlib
+[DEBUG] Checking D:\fdlang\build_release\compiler\Release\lib\metadata_mod\mod.ms and D:\fdlang\build_release\compiler\Release\lib\metadata_mod\mod.mlib
+Solving constraint: uint_64 == uint_64
+Solving constraint: ?T0 == &' mut unknown
+Solving constraint: fn(*mut unknown) -> ?T1 == unknown
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG] Resolver::resolve: diag already has errors BEFORE pass1: 1 size: 1
+RAW ERROR: Cannot find module matching path 'metadata_mod' in library paths.
+[DEBUG] Resolver::visit(StructDeclNode) name='MyStruct' symbolId=4294967295 this=00000216948FACC0 line=2
+[DEBUG SymbolTable] declareSymbol id=18 name='MyStruct' kind=5 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='Self' kind=12 scope=2
+[DEBUG SymbolTable] declareSymbol id=20 name='trait_func' kind=4 scope=2
+[DEBUG SymbolTable] declareSymbol id=21 name='self' kind=3 scope=3
+[DEBUG SymbolTable] declareSymbol id=22 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Aborting after pass1 due to previous errors (1).
+RAW ERROR: Cannot find module matching path 'metadata_mod' in library paths.
+error: Cannot find module matching path 'metadata_mod' in library paths.
+ --> D:\fdlang\tests\valid\test_metadata.ms:1:6
+  |
+1 | use metadata_mod;
+  |      ^
+D:\fdlang\tests\valid\test_metadata.ms: error: Resolver that bai, nhung tiep tuc de test MVIR...
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 4 items
+[DEBUG] item kind: class fl::UseDeclNode
+[DEBUG] item kind: class fl::StructDeclNode
+[DEBUG] TypePrePass::visit(StructDeclNode) name='MyStruct' symbolId=18 bodyScopeId=1
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'MyStruct' symbolId=4294967295
+[DEBUG] ImplDeclNode evaluating selfType: 19
+[DEBUG] ImplDeclNode Self symbolId=19 selfType=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'metadata_mod' symbolId=4294967295
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='trait_func' symbolId=20
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=4294967295
+[DEBUG self] Evaluated param->type for self -> 4
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4294967295
+[DEBUG] addInherentMethod: trait_func methodId=20
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=22
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'uint_64' symbolId=4294967295
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=4294967295 expectedType=0000021694925730
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=0
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'MyStruct' symbolId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG unify] Type mismatch at loc line 8 t1=fn(*mut unknown) -> ?T1 t2=unknown
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::UseDeclNode
+[DEBUG] CG visiting item: class fl::StructDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] InferenceVar at loc: 8:42 type: ?T1
+[PHASE] TypeChecker done, tcOk=0
+error: Cannot find module matching path 'metadata_mod' in library paths.
+ --> D:\fdlang\tests\valid\test_metadata.ms:1:6
+  |
+1 | use metadata_mod;
+  |      ^
+D:\fdlang\tests\valid\test_metadata.ms: error: Resolver that bai, nhung tiep tuc de test MVIR...
+error: Type mismatch: expected 'fn(*mut unknown) -> ?T1', found 'unknown'
+ --> D:\fdlang\tests\valid\test_metadata.ms:8:42
+  |
+8 |     metadata_mod::uses_trait@<MyStruct>(&rw s as *rw MyStruct);
+  |                                          ^
+error: Type annotation needed
+ --> D:\fdlang\tests\valid\test_metadata.ms:8:42
+  |
+8 |     metadata_mod::uses_trait@<MyStruct>(&rw s as *rw MyStruct);
+  |                                          ^
+D:\fdlang\tests\valid\test_metadata.ms: error: Compilation aborted due to TypeChecker errors.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

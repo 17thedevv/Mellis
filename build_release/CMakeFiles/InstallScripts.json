@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/fdlang/build_release/cmake_install.cmake",
+		"D:/fdlang/build_release/compiler/cmake_install.cmake",
+		"D:/fdlang/build_release/runtime/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

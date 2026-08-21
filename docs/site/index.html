@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mellis Docs</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-wrap">
+        <div class="brand">Mellis</div>
+        <nav class="nav" aria-label="Main navigation">
+          <a href="../en/index.html">EN</a>
+          <a href="../vi/index.html">VI</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <p class="eyebrow">FDLang → Mellis</p>
+          <h1>Modern systems language documentation</h1>
+          <p class="lead">
+            Mellis is a systems-oriented language with explicit ownership, strong typing,
+            pattern matching, MVIR, and a compiler pipeline designed to scale as the project grows.
+          </p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="grid two-col">
+            <article class="card">
+              <h3>Language</h3>
+              <p class="muted">Syntax, types, ownership, borrowing, traits, closures, pattern matching, modules.</p>
+            </article>
+
+            <article class="card">
+              <h3>Compiler</h3>
+              <p class="muted">Frontend, middle-end, MVIR, LLVM backend, and architecture details.</p>
+            </article>
+
+            <article class="card">
+              <h3>Design Decisions</h3>
+              <p class="muted">Reasoning behind Ownership, Traits, MVIR, Monomorphization, and .mlib packaging.</p>
+            </article>
+
+            <article class="card">
+              <h3>Roadmap</h3>
+              <p class="muted">Core language, compiler stabilization, stdlib, and public ecosystem milestones.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>Mellis Docs</span>
+        <span>English</span>
+      </div>
+    </footer>
+  </body>
+</html>
+                before they become permanent compiler behavior.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Compiler-first public story</h3>
+              <p>
+                A project with real architecture, MVIR, and toolchain needs a docs story
+                that turns source code into a language story.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Migration and evolution</h3>
+              <p>
+                The docs site should record the evolution of syntax, ownership rules,
+                traits, module systems, and backend decisions over time.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="roadmap" class="section alt">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Roadmap</p>
+            <h2>Planned milestones</h2>
+          </div>
+
+          <ol class="timeline">
+            <li>
+              <span class="phase">Phase 1</span>
+              <div>
+                <h3>Core language stabilization</h3>
+                <p>Finalize semantics, syntax, ownership rules, and core type system.</p>
+              </div>
+            </li>
+            <li>
+              <span class="phase">Phase 2</span>
+              <div>
+                <h3>Compiler maturity</h3>
+                <p>Finish MVIR, diagnostics, performance passes, and backend validation.</p>
+              </div>
+            </li>
+            <li>
+              <span class="phase">Phase 3</span>
+              <div>
+                <h3>Library &amp; tooling</h3>
+                <p>Ship stdlib foundation, module packaging, and documentation tooling.</p>
+              </div>
+            </li>
+            <li>
+              <span class="phase">Phase 4</span>
+              <div>
+                <h3>Public language release</h3>
+                <p>Make docs, examples, and reference material ready for community use.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>Mellis Docs</span>
+        <span>Version: early draft</span>
+      </div>
+    </footer>
+  </body>
+</html>

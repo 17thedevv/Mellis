@@ -1,0 +1,4 @@
+Number of diagnostics: 1
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: None, message: "Backend Error: Missing mapping for value ValueId(6)" }
+error: Backend Error: Missing mapping for value ValueId(6)
+

@@ -1,0 +1,33 @@
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] Resolving function: main
+[1m[31merror: [0m[1m'break' outside of loop[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_break_outside.ms:5:5
+  [34m|
+[0m5 [34m| [0m    break;
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\invalid\neg_break_outside.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 1 items
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[PHASE] TypeChecker done, tcOk=0
+[1m[31merror: [0m[1m'break' outside of loop[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_break_outside.ms:5:5
+  [34m|
+[0m5 [34m| [0m    break;
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\invalid\neg_break_outside.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+D:\fdlang\tests\invalid\neg_break_outside.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m

@@ -1,0 +1,10 @@
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=19
+[DEBUG resolvePath] Resolving path starting with 'y'
+[DEBUG resolvePath] resolve('y') returned 1 syms. First id=20
+[DEBUG resolvePath] Resolving path starting with 'p1'
+[DEBUG resolvePath] resolve('p1') returned 1 syms. First id=21
+[DEBUG resolvePath] Resolving path starting with 'p2'
+[DEBUG resolvePath] resolve('p2') returned 1 syms. First id=22
+Solving constraint: ?T0 == &' mut int_32
+Solving constraint: ?T1 == &' mut int_32

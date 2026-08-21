@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Examples · Mellis Docs</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-wrap">
+        <div class="brand">Mellis</div>
+        <nav class="nav" aria-label="Main navigation">
+          <a href="../index.html">Home</a>
+          <a href="../language/index.html">Language</a>
+          <a href="../compiler/index.html">Compiler</a>
+          <a href="../stdlib/index.html">Standard Library</a>
+          <a href="index.html">Examples</a>
+          <a href="../design/index.html">Design Decisions</a>
+          <a href="../roadmap/index.html">Roadmap</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Examples</p>
+            <h1>Language examples</h1>
+          </div>
+
+          <div class="code-card">
+            <pre><code>fn main() {
+    let name = "Mellis";
+    print("hello, " + name);
+}</code></pre>
+          </div>
+
+          <div class="code-card">
+            <pre><code>enum Option[T] {
+    Some(T),
+    None
+}
+
+fn unwrap(value: Option[i32]) -> i32 {
+    match value {
+        Option::Some(v) => v,
+        Option::None => 0,
+    }
+}</code></pre>
+          </div>
+
+          <div class="code-card">
+            <pre><code>fn add_all(values: [i32]) -> i32 {
+    let total = 0;
+    for value in values {
+        total += value;
+    }
+    total
+}</code></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>Mellis Docs</span>
+        <span>Examples</span>
+      </div>
+    </footer>
+  </body>
+</html>

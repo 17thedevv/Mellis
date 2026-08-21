@@ -1,0 +1,2994 @@
+test_closure_borrow.ms:
+Parsed 2 items
+AstArena Exprs count: 12
+AstArena Stmts count: 5
+AstArena Decls count: 4
+Resolved symbols: 3
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(6): Struct(SymbolId(0), [SemanticTypeId(7)])
+Expr ExprId(2): Struct(SymbolId(0), [SemanticTypeId(7)])
+Expr ExprId(9): Void
+Expr ExprId(10): InferenceVar(4)
+Expr ExprId(11): InferenceVar(5)
+Expr ExprId(5): InferenceVar(4)
+Expr ExprId(3): Struct(SymbolId(0), [SemanticTypeId(7)])
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(8): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 10 -> %v0
+  %v2 = alloca
+  %v3 = store %v0 -> %v2
+  %v4 = alloca
+  %v5 = store 0 -> %v4
+  %v6 = store 20 -> 0
+  %v7 = load %v4
+  %v8 = call %v7()
+  ret %v8
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (14360) panicked at crates\mellis-mlib\src\writer.rs:71:26:
+Store ptr must be a Value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_closure_borrow_mut.ms:
+Parsed 1 items
+AstArena Exprs count: 8
+AstArena Stmts count: 5
+AstArena Decls count: 3
+Resolved symbols: 3
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(3): Void
+Expr ExprId(7): Primitive(Int)
+Expr ExprId(6): InferenceVar(4)
+Expr ExprId(5): InferenceVar(3)
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(2): Primitive(Int)
+Expr ExprId(0): Primitive(Int)
+Expr ExprId(4): InferenceVar(3)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 10 -> %v0
+  %v2 = alloca
+  %v3 = store 0 -> %v2
+  %v4 = load %v2
+  %v5 = call %v4()
+  %v6 = load %v0
+  ret %v6
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_closure_borrow_mut.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (17276) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v4", address: 0x229064c4030, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v4 = load i32, ptr %v2, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_closure_copy.ms:
+Parsed 1 items
+AstArena Exprs count: 8
+AstArena Stmts count: 5
+AstArena Decls count: 3
+Resolved symbols: 3
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(3): Primitive(Int)
+Expr ExprId(2): InferenceVar(3)
+Expr ExprId(5): Void
+Expr ExprId(4): Primitive(Int)
+Expr ExprId(7): InferenceVar(4)
+Expr ExprId(6): InferenceVar(3)
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(0): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 10 -> %v0
+  %v2 = alloca
+  %v3 = store 0 -> %v2
+  %v4 = store 20 -> %v0
+  %v5 = load %v2
+  %v6 = call %v5()
+  ret %v6
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_closure_copy.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (19540) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v5", address: 0x2917f132640, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v5 = load i32, ptr %v2, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_closure_copy_capture.ms:
+Parsed 1 items
+AstArena Exprs count: 8
+AstArena Stmts count: 4
+AstArena Decls count: 4
+Resolved symbols: 3
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(7): InferenceVar(6)
+Expr ExprId(1): InferenceVar(4)
+Expr ExprId(5): InferenceVar(5)
+Expr ExprId(2): Primitive(Int)
+Expr ExprId(0): Primitive(Int)
+Expr ExprId(6): Primitive(Int)
+Expr ExprId(3): InferenceVar(4)
+Expr ExprId(4): InferenceVar(5)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 10 -> %v0
+  %v2 = alloca
+  %v3 = store 0 -> %v2
+  %v4 = load %v2
+  %v5 = call %v4(5)
+  ret %v5
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_closure_copy_capture.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (11044) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v4", address: 0x19e272f2780, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v4 = load i32, ptr %v2, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_closure_heap_copy.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:11
+   |
+1  | fn execute<T>(f: T) -> int_32 {
+   |           ^
+
+error: Expected expression.
+  --> dummy.ms:3:1
+   |
+3  | }
+   | ^
+
+
+=================
+test_closure_heap_drop.ms:
+Parsed 6 items
+AstArena Exprs count: 26
+AstArena Stmts count: 12
+AstArena Decls count: 16
+Resolved symbols: 8
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(7): Primitive(Int)
+Expr ExprId(10): InferenceVar(7)
+Expr ExprId(8): Struct(SymbolId(4), [SemanticTypeId(7)])
+Expr ExprId(21): InferenceVar(12)
+Expr ExprId(25): Primitive(Int)
+Expr ExprId(20): InferenceVar(5)
+Expr ExprId(18): Primitive(String)
+Expr ExprId(22): InferenceVar(13)
+Expr ExprId(9): InferenceVar(5)
+Expr ExprId(14): InferenceVar(8)
+Expr ExprId(12): Struct(SymbolId(4), [SemanticTypeId(7)])
+Expr ExprId(3): InferenceVar(3)
+Expr ExprId(5): InferenceVar(4)
+Expr ExprId(19): InferenceVar(11)
+Expr ExprId(4): Primitive(String)
+Expr ExprId(11): Primitive(String)
+Expr ExprId(15): InferenceVar(9)
+Expr ExprId(23): Primitive(String)
+Expr ExprId(17): InferenceVar(10)
+Expr ExprId(24): InferenceVar(14)
+Expr ExprId(16): Void
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = call printf(null)
+  %v1 = alloca
+  %v2 = store 0 -> %v1
+  %v3 = alloca
+  %v4 = store 42 -> %v3
+  %v5 = alloca
+  %v6 = store %v3 -> %v5
+  %v7 = store 0 -> %v1
+  %v8 = call printf(null)
+  %v9 = load %v1
+  %v10 = call %v9()
+  %v11 = call printf(null)
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_closure_heap_drop.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (10552) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v9", address: 0x247cfa21450, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v9 = load i32, ptr %v1, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_closure_heap_drop_dbg.ms:
+Parsed 6 items
+AstArena Exprs count: 26
+AstArena Stmts count: 13
+AstArena Decls count: 14
+Resolved symbols: 8
+Monomorphized instances: 2
+--- Expression Types ---
+Expr ExprId(22): InferenceVar(13)
+Expr ExprId(14): InferenceVar(8)
+Expr ExprId(18): Primitive(String)
+Expr ExprId(24): InferenceVar(14)
+Expr ExprId(8): Struct(SymbolId(2), [SemanticTypeId(7)])
+Expr ExprId(25): Primitive(Int)
+Expr ExprId(4): Primitive(String)
+Expr ExprId(15): InferenceVar(9)
+Expr ExprId(5): InferenceVar(4)
+Expr ExprId(12): Struct(SymbolId(2), [SemanticTypeId(7)])
+Expr ExprId(3): InferenceVar(3)
+Expr ExprId(23): Primitive(String)
+Expr ExprId(11): Primitive(String)
+Expr ExprId(7): Primitive(Int)
+Expr ExprId(10): InferenceVar(7)
+Expr ExprId(9): InferenceVar(5)
+Expr ExprId(16): Void
+Expr ExprId(17): InferenceVar(10)
+Expr ExprId(21): InferenceVar(12)
+Expr ExprId(20): InferenceVar(5)
+Expr ExprId(19): InferenceVar(11)
+----------------------
+
+
+--- Generated MVIR ---
+fn drop_test() {
+entry0:
+  ret void
+}
+
+fn main() {
+entry0:
+  %v0 = call printf(null)
+  %v1 = alloca
+  %v2 = store 0 -> %v1
+  %v3 = alloca
+  %v4 = store 42 -> %v3
+  %v5 = alloca
+  %v6 = store %v3 -> %v5
+  %v7 = store 0 -> %v1
+  %v8 = call printf(null)
+  %v9 = load %v1
+  %v10 = call %v9()
+  %v11 = call printf(null)
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_closure_heap_drop_dbg.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (23424) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v9", address: 0x1ddc3f61ae0, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v9 = load i32, ptr %v1, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_closure_heap_move.ms:
+Parsed 5 items
+AstArena Exprs count: 29
+AstArena Stmts count: 12
+AstArena Decls count: 14
+Resolved symbols: 9
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(28): Primitive(Int)
+Expr ExprId(7): Struct(SymbolId(2), [SemanticTypeId(7)])
+Expr ExprId(8): InferenceVar(4)
+Expr ExprId(18): InferenceVar(10)
+Expr ExprId(21): Primitive(String)
+Expr ExprId(22): InferenceVar(12)
+Expr ExprId(24): InferenceVar(13)
+Expr ExprId(25): InferenceVar(14)
+Expr ExprId(27): InferenceVar(15)
+Expr ExprId(17): Primitive(String)
+Expr ExprId(20): InferenceVar(11)
+Expr ExprId(6): Primitive(Int)
+Expr ExprId(14): InferenceVar(8)
+Expr ExprId(9): InferenceVar(6)
+Expr ExprId(11): Struct(SymbolId(2), [SemanticTypeId(7)])
+Expr ExprId(15): Void
+Expr ExprId(16): InferenceVar(9)
+Expr ExprId(19): InferenceVar(4)
+Expr ExprId(23): InferenceVar(4)
+Expr ExprId(26): Primitive(String)
+Expr ExprId(13): InferenceVar(7)
+Expr ExprId(10): Primitive(String)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 0 -> %v0
+  %v2 = alloca
+  %v3 = store 42 -> %v2
+  %v4 = alloca
+  %v5 = store %v2 -> %v4
+  %v6 = store 0 -> %v0
+  %v7 = call printf(null)
+  %v8 = load %v0
+  %v9 = alloca
+  %v10 = store %v8 -> %v9
+  %v11 = call printf(null)
+  %v12 = load %v9
+  %v13 = call %v12()
+  %v14 = call printf(null)
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_closure_heap_move.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (18636) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v12", address: 0x22a6ea61750, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v12 = load i32, ptr %v9, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_closure_move.ms:
+Parsed 3 items
+AstArena Exprs count: 11
+AstArena Stmts count: 6
+AstArena Decls count: 6
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Member access requires a struct value
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Member a... a struct value:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:4:14
+   |
+4  |     return s.length;
+   |              ^^^^^^
+
+
+=================
+test_no_drop.ms:
+Parsed 2 items
+AstArena Exprs count: 20
+AstArena Stmts count: 10
+AstArena Decls count: 6
+Resolved symbols: 7
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(0): InferenceVar(2)
+Expr ExprId(7): Primitive(Int)
+Expr ExprId(6): Primitive(String)
+Expr ExprId(8): InferenceVar(7)
+Expr ExprId(12): Primitive(String)
+Expr ExprId(3): Primitive(Int)
+Expr ExprId(9): InferenceVar(8)
+Expr ExprId(10): Void
+Expr ExprId(2): InferenceVar(3)
+Expr ExprId(11): InferenceVar(9)
+Expr ExprId(13): InferenceVar(10)
+Expr ExprId(4): InferenceVar(4)
+Expr ExprId(15): InferenceVar(11)
+Expr ExprId(17): Primitive(String)
+Expr ExprId(18): InferenceVar(13)
+Expr ExprId(19): Primitive(Int)
+Expr ExprId(1): Primitive(String)
+Expr ExprId(14): InferenceVar(4)
+Expr ExprId(16): InferenceVar(12)
+Expr ExprId(5): InferenceVar(6)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = call printf(null)
+  %v1 = alloca
+  %v2 = store 0 -> %v1
+  %v3 = alloca
+  %v4 = store 42 -> %v3
+  %v5 = store 0 -> %v1
+  %v6 = call printf(null)
+  %v7 = load %v1
+  %v8 = call %v7()
+  %v9 = call printf(null)
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_no_drop.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (12044) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v7", address: 0x24dad39ef90, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v7 = load i32, ptr %v1, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_closure_nested.ms:
+Parsed 1 items
+AstArena Exprs count: 13
+AstArena Stmts count: 7
+AstArena Decls count: 4
+Resolved symbols: 5
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(6): InferenceVar(4)
+Expr ExprId(3): Primitive(Int)
+Expr ExprId(9): InferenceVar(6)
+Expr ExprId(2): Primitive(Int)
+Expr ExprId(5): Void
+Expr ExprId(8): InferenceVar(5)
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(4): Primitive(Int)
+Expr ExprId(0): Primitive(Int)
+Expr ExprId(7): InferenceVar(4)
+Expr ExprId(10): InferenceVar(6)
+Expr ExprId(11): InferenceVar(7)
+Expr ExprId(12): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 10 -> %v0
+  %v2 = alloca
+  %v3 = store 0 -> %v2
+  %v4 = load %v2
+  %v5 = call %v4()
+  %v6 = load %v0
+  ret %v6
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_closure_nested.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (3696) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v4", address: 0x1cb194f3db0, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v4 = load i32, ptr %v2, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_full_pipeline_closure.ms:
+Parsed 3 items
+AstArena Exprs count: 19
+AstArena Stmts count: 11
+AstArena Decls count: 9
+Resolved symbols: 5
+Monomorphized instances: 3
+--- Expression Types ---
+Expr ExprId(17): Primitive(Int)
+Expr ExprId(4): Error
+Expr ExprId(0): Error
+Expr ExprId(1): InferenceVar(8)
+Expr ExprId(14): InferenceVar(6)
+Expr ExprId(3): InferenceVar(9)
+Expr ExprId(9): Function { params: [SemanticTypeId(8)], return_type: SemanticTypeId(9) }
+Expr ExprId(2): Error
+Expr ExprId(18): Primitive(Int)
+Expr ExprId(12): Primitive(Int)
+Expr ExprId(15): Primitive(Int)
+Expr ExprId(16): InferenceVar(6)
+Expr ExprId(6): InferenceVar(10)
+Expr ExprId(7): Function { params: [SemanticTypeId(7)], return_type: SemanticTypeId(10) }
+Expr ExprId(5): Error
+Expr ExprId(13): InferenceVar(6)
+Expr ExprId(10): Function { params: [SemanticTypeId(14), SemanticTypeId(15)], return_type: SemanticTypeId(16) }
+Expr ExprId(8): Primitive(Int)
+Expr ExprId(11): Function { params: [SemanticTypeId(8)], return_type: SemanticTypeId(9) }
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = call make_adder(5)
+  %v1 = alloca
+  %v2 = store %v0 -> %v1
+  %v3 = load %v1
+  %v4 = call apply_op(%v3, 10)
+  %v5 = alloca
+  %v6 = store %v4 -> %v5
+  ret 0
+}
+
+fn make_adder() {
+entry0:
+  ret 0
+}
+
+fn apply_op() {
+entry0:
+  %v0 = call 0(0)
+  ret %v0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_full_pipeline_closure.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (16964) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "", address: 0x1ab274cde50, is_const: true, is_null: true, 
+is_undef: false, llvm_value: "i32 0", llvm_type: "i32" } }) but expected PointerValue variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+const_global.ms:
+Parsed 2 items
+AstArena Exprs count: 2
+AstArena Stmts count: 4
+AstArena Decls count: 2
+Resolved symbols: 1
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(0): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  ret MAX_SIZE
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote const_global.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Backend Error: Compiler internal invariant violated: Global not found: MAX_SIZE
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Backend Error: Compiler internal invariant violated: Global not 
+found: MAX_SIZE
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Backend ...found: MAX_SIZE:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+=================
+pattern_binding.ms:
+Parsed 2 items
+AstArena Exprs count: 8
+AstArena Stmts count: 4
+AstArena Decls count: 5
+Resolved symbols: 4
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(2): InferenceVar(4)
+Expr ExprId(4): InferenceVar(6)
+Expr ExprId(5): Primitive(Int)
+Expr ExprId(6): InferenceVar(6)
+Expr ExprId(3): InferenceVar(4)
+Expr ExprId(7): InferenceVar(6)
+Expr ExprId(0): Enum(SymbolId(0), [SemanticTypeId(7), SemanticTypeId(0)])
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = variant 8::0()
+  %v1 = variant 8::0(42)
+  %v2 = alloca
+  %v3 = store %v1 -> %v2
+  %v4 = load %v2
+  %v5 = alloca
+  br match_arm2
+match_arm2:
+  %v6 = tag %v4
+  %v7 = eq %v6, 0
+  condbr %v7, match_body4, match_arm3
+match_body4:
+  %v8 = extract %v4.0.0
+  %v9 = load %v8
+  %v10 = store 0 -> %v5
+  br match_end1
+match_arm3:
+  condbr true, match_body6, match_unreachable5
+match_body6:
+  %v11 = store 0 -> %v5
+  br match_end1
+match_unreachable5:
+  unreachable
+match_end1:
+  %v12 = load %v5
+  %v13 = alloca
+  %v14 = store %v12 -> %v13
+  %v15 = load %v13
+  ret %v15
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+Pass DeadCodeElimination modified the module.
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote pattern_binding.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Backend Error: Missing mapping for value ValueId(6)
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Backend Error: Missing mapping for value ValueId(6)
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Backend ...alue ValueId(6):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+=================
+static_global.ms:
+Parsed 2 items
+AstArena Exprs count: 7
+AstArena Stmts count: 3
+AstArena Decls count: 2
+Resolved symbols: 3
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(3): Primitive(Int)
+Expr ExprId(5): Void
+Expr ExprId(0): Primitive(Int)
+Expr ExprId(4): Primitive(Int)
+Expr ExprId(6): Primitive(Int)
+Expr ExprId(2): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = add GLOBAL_COUNT, 1
+  %v1 = store %v0 -> 0
+  ret GLOBAL_COUNT
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (8884) panicked at crates\mellis-mlib\src\writer.rs:71:26:
+Store ptr must be a Value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+e10_generic_iter.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:29:12
+   |
+29 | fn get_next<I: Iterator>(iter: &rw I) -> Option {
+   |            ^
+
+error: Expected expression.
+  --> dummy.ms:31:1
+   |
+31 | }
+   | ^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:38:22
+   |
+38 |     dec n1 = get_next@<Range>(&rw iter);
+   |                      ^^
+
+error: Expected expression.
+  --> dummy.ms:55:1
+   |
+55 | }
+   | ^
+
+
+=================
+e1_generic_lifetime.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:11:12
+   |
+11 | fn identity<'a, T: Display>(x: &'a T) -> &'a T {
+   |            ^
+
+error: Expected expression.
+  --> dummy.ms:13:1
+   |
+13 | }
+   | ^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:18:22
+   |
+18 |     dec r2 = identity@<'static, int_32>(r);
+   |                      ^^
+
+error: Expected expression.
+  --> dummy.ms:20:1
+   |
+20 | }
+   | ^
+
+
+=================
+e5_visibility_generic.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | mod m {
+   | ^^^
+
+error: Expected '{'
+  --> dummy.ms:2:23
+   |
+2  |     export struct View<T> {
+   |                       ^
+
+error: Expected expression.
+  --> dummy.ms:4:5
+   |
+4  |     }
+   |     ^
+
+error: Expected '(' after function name
+  --> dummy.ms:6:26
+   |
+6  |     export fn create_view<T>(val: T) -> View<T> {
+   |                          ^
+
+error: Expected expression.
+  --> dummy.ms:8:5
+   |
+8  |     }
+   |     ^
+
+
+=================
+e6_macro_generic.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '{'
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '{':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:11
+   |
+1  | struct Box<T> {
+   |           ^
+
+error: Expected expression.
+  --> dummy.ms:3:1
+   |
+3  | }
+   | ^
+
+
+=================
+multiple_trait_bounds.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:26:16
+   |
+26 | fn do_something<T: Printable + Hashable>(val: T) {
+   |                ^
+
+error: Expected expression.
+  --> dummy.ms:28:1
+   |
+28 | }
+   | ^
+
+error: Expected '(' after function name
+  --> dummy.ms:30:14
+   |
+30 | fn do_another<T: Printable + Hashable>(val: T) {
+   |              ^
+
+error: Expected expression.
+  --> dummy.ms:32:1
+   |
+32 | }
+   | ^
+
+
+=================
+e1_visibility_leak.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | mod secret {
+   | ^^^
+
+error: Expected expression.
+  --> dummy.ms:15:1
+   |
+15 | }
+   | ^
+
+
+=================
+neg_labeled_break.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:5:5
+   |
+5  |     'inner: while (true) {
+   |     ^^^^^^
+
+error: Expected expression.
+  --> dummy.ms:9:1
+   |
+9  | }
+   | ^
+
+
+=================
+neg_object_safety.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:6:18
+   |
+6  |     fn bad_method<T>(&self, x: T) -> int_32;
+   |                  ^
+
+error: Expected expression.
+  --> dummy.ms:7:1
+   |
+7  | }
+   | ^
+
+error: Expected parameter name
+  --> dummy.ms:10:19
+   |
+10 |     fn bad_method(&self) -> Self;
+   |                   ^
+
+error: Expected expression.
+  --> dummy.ms:11:1
+   |
+11 | }
+   | ^
+
+error: Expected '(' after function name
+  --> dummy.ms:24:18
+   |
+24 |     fn bad_method<T>(&self, x: T) -> int_32 {
+   |                  ^
+
+error: Expected expression.
+  --> dummy.ms:26:5
+   |
+26 |     }
+   |     ^
+
+error: Expected parameter name
+  --> dummy.ms:30:19
+   |
+30 |     fn bad_method(&self) -> Self {
+   |                   ^
+
+error: Expected expression.
+  --> dummy.ms:32:5
+   |
+32 |     }
+   |     ^
+
+
+=================
+consumer.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | use lib;
+   | ^^^
+
+error: Expected ';' after return value
+  --> dummy.ms:4:25
+   |
+4  |     return lib::identity@<int_32>(42);
+   |                         ^^
+
+error: Expected expression.
+  --> dummy.ms:5:1
+   |
+5  | }
+   | ^
+
+
+=================
+e9_assoc_projection.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:17:11
+   |
+17 | fn extract<T: HasAssoc>(item: &T) -> T::Value {
+   |           ^
+
+error: Expected expression.
+  --> dummy.ms:19:1
+   |
+19 | }
+   | ^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:23:22
+   |
+23 |     dec res = extract@<Box>(&b);
+   |                      ^^
+
+error: Expected expression.
+  --> dummy.ms:28:1
+   |
+28 | }
+   | ^
+
+
+=================
+external_mod.ms:
+Parsed 1 items
+AstArena Exprs count: 2
+AstArena Stmts count: 2
+AstArena Decls count: 1
+Resolved symbols: 0
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(0): Primitive(Int)
+Expr ExprId(1): Pointer(SemanticTypeId(10))
+----------------------
+
+
+--- Generated MVIR ---
+fn external_alloc() {
+entry0:
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote external_mod.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Successfully wrote external_mod.ll
+Target Triple: 'x86_64-pc-windows-msvc'
+Successfully wrote external_mod.obj
+Linking to external_mod.exe...
+LINK : fatal error LNK1561: entry point must be defined
+D:\fdlang\mellis-rs\target\debug\mellis.exe : clang: error: linker command failed with exit code 1561 (use -v to see 
+invocation)
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (clang: error: l...see invocation):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Link failed: clang exited with status exit code: 1561
+error: Link Error: clang exited with status exit code: 1561
+
+
+=================
+metadata_mod.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:4:21
+   |
+4  | export fn uses_trait<T: MyTrait>(val: *rw T) -> uint_64 {
+   |                     ^
+
+error: Expected expression.
+  --> dummy.ms:6:1
+   |
+6  | }
+   | ^
+
+
+=================
+closure_test.ms:
+Parsed 1 items
+AstArena Exprs count: 10
+AstArena Stmts count: 4
+AstArena Decls count: 4
+Resolved symbols: 3
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(3): Primitive(Int)
+Expr ExprId(7): InferenceVar(5)
+Expr ExprId(6): Primitive(Int)
+Expr ExprId(4): InferenceVar(4)
+Expr ExprId(5): InferenceVar(4)
+Expr ExprId(0): Primitive(Int)
+Expr ExprId(9): InferenceVar(5)
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(2): InferenceVar(3)
+Expr ExprId(8): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 5 -> %v0
+  %v2 = alloca
+  %v3 = store 0 -> %v2
+  %v4 = load %v2
+  %v5 = call %v4(10)
+  %v6 = sub %v5, 15
+  ret %v6
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote closure_test.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (7932) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:325:13:
+Found IntValue(IntValue { int_value: Value { name: "v4", address: 0x1a5cdb5fd00, is_const: false, is_null: false, 
+is_undef: false, llvm_value: "  %v4 = load i32, ptr %v2, align 4", llvm_type: "i32" } }) but expected PointerValue 
+variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+consumer_core.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:7:1
+   |
+7  | use core::{Option, Result, Clone, Drop, Eq, Ord, Ordering};
+   | ^^^
+
+
+=================
+ptr_arithmetic.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : Error reading file D:\fdlang\tests\scratch\ptr_arithmetic.ms: stream did 
+not contain valid UTF-8
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Error reading f...ain valid UTF-8:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+=================
+showcase.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:6:1
+   |
+6  | use core_lib::{ID, Status, Processor};
+   | ^^^
+
+error: Expected expression.
+  --> dummy.ms:7:1
+   |
+7  | use math::vector;
+   | ^^^
+
+error: Expected expression.
+  --> dummy.ms:14:1
+   |
+14 | type NodeID = uint_32;
+   | ^^^^
+
+error: Expected '{'
+  --> dummy.ms:17:19
+   |
+17 | export struct Task<T> {
+   |                   ^
+
+error: Expected ';' after expression
+  --> dummy.ms:19:9
+   |
+19 |     data: T;
+   |         ^
+
+error: Expected ';' after expression
+  --> dummy.ms:20:12
+   |
+20 |     is_done: bool;
+   |            ^
+
+error: Expected expression.
+  --> dummy.ms:21:1
+   |
+21 | }
+   | ^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:62:20
+   |
+62 |     dec task = Task@<str> {
+   |                    ^^
+
+error: Expected expression.
+  --> dummy.ms:105:1
+   |
+105| }
+   | ^
+
+
+=================
+test_borrow_join.ms:
+Parsed 1 items
+AstArena Exprs count: 20
+AstArena Stmts count: 8
+AstArena Decls count: 6
+Resolved symbols: 8
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(6): Primitive(Int)
+Expr ExprId(14): Void
+Expr ExprId(11): Void
+Expr ExprId(4): InferenceVar(5)
+Expr ExprId(5): Primitive(Int)
+Expr ExprId(0): Primitive(Int)
+Expr ExprId(16): InferenceVar(5)
+Expr ExprId(2): Primitive(Bool)
+Expr ExprId(15): InferenceVar(5)
+Expr ExprId(8): InferenceVar(5)
+Expr ExprId(19): Primitive(Int)
+Expr ExprId(7): Void
+Expr ExprId(17): Primitive(Int)
+Expr ExprId(18): Void
+Expr ExprId(12): Primitive(Int)
+Expr ExprId(9): Primitive(Int)
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(3): Primitive(Bool)
+Expr ExprId(10): Primitive(Int)
+Expr ExprId(13): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 10 -> %v0
+  %v2 = alloca
+  %v3 = store 20 -> %v2
+  %v4 = alloca
+  %v5 = store true -> %v4
+  %v6 = alloca
+  %v7 = store 0 -> %v6
+  %v8 = store 30 -> %v0
+  %v9 = store 40 -> 0
+  %v10 = load %v2
+  %v11 = alloca
+  %v12 = store %v10 -> %v11
+  ret void
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (24844) panicked at crates\mellis-mlib\src\writer.rs:71:26:
+Store ptr must be a Value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+test_consumer_core.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | use core::{Option, Result, Clone, Drop, Eq};
+   | ^^^
+
+error: Expected '(' after function name
+  --> dummy.ms:2:23
+   |
+2  | intrinsic fn ptr_write<T>(p: *rw T, val: T);
+   |                       ^
+
+error: Expected '(' after function name
+  --> dummy.ms:3:22
+   |
+3  | intrinsic fn ptr_read<T>(p: *const T) -> T;
+   |                      ^
+
+
+=================
+test_core_option_map.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:12:11
+   |
+12 |     fn map<U>(self, f: fn (T) -> U) -> Option<U> {
+   |           ^
+
+error: Expected function name
+  --> dummy.ms:12:27
+   |
+12 |     fn map<U>(self, f: fn (T) -> U) -> Option<U> {
+   |                           ^
+
+error: Expected expression.
+  --> dummy.ms:25:1
+   |
+25 | }
+   | ^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:33:45
+   |
+33 |     dec mapped: Option<int_32> = some_41.map@<int_32>(add_one);
+   |                                             ^^
+
+error: Expected expression.
+  --> dummy.ms:42:1
+   |
+42 | }
+   | ^
+
+
+=================
+test_core_option_map2.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:38:11
+   |
+38 |     fn map<U>(self, f: fn (T) -> U) -> Option<U> {
+   |           ^
+
+error: Expected function name
+  --> dummy.ms:38:27
+   |
+38 |     fn map<U>(self, f: fn (T) -> U) -> Option<U> {
+   |                           ^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:66:44
+   |
+66 |     dec mapped: Option<int_32> = some_7.map@<int_32>(add_one);
+   |                                            ^^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:72:49
+   |
+72 |     dec mapped_none: Option<int_32> = none_2.map@<int_32>(add_one);
+   |                                                 ^^
+
+error: Expected expression.
+  --> dummy.ms:76:1
+   |
+76 | }
+   | ^
+
+
+=================
+test_enum_exhaustiveness.ms:
+Parsed 2 items
+AstArena Exprs count: 6
+AstArena Stmts count: 2
+AstArena Decls count: 5
+Resolved symbols: 3
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(0): Enum(SymbolId(0), [SemanticTypeId(7), SemanticTypeId(0)])
+Expr ExprId(4): InferenceVar(5)
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(2): InferenceVar(3)
+Expr ExprId(3): InferenceVar(3)
+Expr ExprId(5): InferenceVar(5)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = variant 8::0()
+  %v1 = variant 8::0(42)
+  %v2 = alloca
+  %v3 = store %v1 -> %v2
+  %v4 = load %v2
+  %v5 = alloca
+  br match_arm2
+match_arm2:
+  %v6 = tag %v4
+  %v7 = eq %v6, 0
+  condbr %v7, match_body4, match_unreachable3
+match_body4:
+  %v8 = extract %v4.0.0
+  %v9 = load %v8
+  %v10 = store 0 -> %v5
+  br match_end1
+match_unreachable3:
+  unreachable
+match_end1:
+  %v11 = load %v5
+  %v12 = alloca
+  %v13 = store %v11 -> %v12
+  ret void
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+Pass DeadCodeElimination modified the module.
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_enum_exhaustiveness.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Backend Error: Missing mapping for value ValueId(6)
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Backend Error: Missing mapping for value ValueId(6)
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Backend ...alue ValueId(6):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+=================
+test_malloc.ms:
+Parsed 4 items
+AstArena Exprs count: 17
+AstArena Stmts count: 6
+AstArena Decls count: 11
+Resolved symbols: 6
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(2): InferenceVar(3)
+Expr ExprId(0): InferenceVar(2)
+Expr ExprId(11): InferenceVar(5)
+Expr ExprId(14): Primitive(String)
+Expr ExprId(1): Primitive(String)
+Expr ExprId(13): InferenceVar(11)
+Expr ExprId(5): InferenceVar(6)
+Expr ExprId(10): InferenceVar(9)
+Expr ExprId(8): Primitive(String)
+Expr ExprId(4): Primitive(Int)
+Expr ExprId(9): InferenceVar(8)
+Expr ExprId(12): InferenceVar(10)
+Expr ExprId(3): InferenceVar(4)
+Expr ExprId(7): InferenceVar(7)
+Expr ExprId(6): InferenceVar(5)
+Expr ExprId(15): InferenceVar(12)
+Expr ExprId(16): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = call printf(null)
+  %v1 = call malloc(0)
+  %v2 = alloca
+  %v3 = store %v1 -> %v2
+  %v4 = call printf(null)
+  %v5 = load %v2
+  %v6 = call free(%v5)
+  %v7 = call printf(null)
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_malloc.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Backend Error: LLVM Verification failed: Call parameter type does not match function signature!
+  %v5 = load i32, ptr %v2, align 4
+ ptr  call void @free(i32 %v5)
+
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Backend Error: LLVM Verification failed: Call parameter type does 
+not match function signature!
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Backend ...tion signature!:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  %v5 = load i32, ptr %v2, align 4
+ ptr  call void @free(i32 %v5)
+
+
+
+=================
+test_mvir_intrinsics.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected type
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected type:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:2:27
+   |
+2  | intrinsic fn ptr_read(p: *const int_32) -> int_32;
+   |                           ^^^^^
+
+error: Expected type
+  --> dummy.ms:4:29
+   |
+4  | intrinsic fn mem_copy(src: *const int_32, dest: *rw int_32, count: int_64) -> void;
+   |                             ^^^^^
+
+error: Expected type
+  --> dummy.ms:12:32
+   |
+12 |         dec y = ptr_read(p as *const int_32);
+   |                                ^^^^^
+
+error: Expected type
+  --> dummy.ms:15:24
+   |
+15 |         mem_copy(p as *const int_32, &rw z as *rw int_32, 1 as int_64);
+   |                        ^^^^^
+
+error: Expected expression.
+  --> dummy.ms:23:5
+   |
+23 |     }
+   |     ^
+
+
+=================
+test_ptr_binary_arith.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:24
+   |
+1  | intrinsic fn ptr_offset<T>(p: *const T, offset: int_32) -> *const T;
+   |                        ^
+
+
+=================
+test_trait_dispatch.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:17:20
+   |
+17 |     fn do_something<T>(self, val: T);
+   |                    ^
+
+error: Expected expression.
+  --> dummy.ms:18:1
+   |
+18 | }
+   | ^
+
+error: Expected '(' after function name
+  --> dummy.ms:21:20
+   |
+21 |     fn do_something<T>(self, val: T) {
+   |                    ^
+
+
+=================
+test_tuple_index.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected member name or tuple index
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected... or tuple index:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:10:20
+   |
+10 |     dec z = nested.0.1; // Nested path
+   |                    ^^^
+
+error: Expected expression.
+  --> dummy.ms:13:1
+   |
+13 | }
+   | ^
+
+
+=================
+test_type_alias.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | type UserId = int_32;
+   | ^^^^
+
+
+=================
+test_type_alias_generic.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | type Pair<T> = (T, T);
+   | ^^^^
+
+
+=================
+test_type_alias_neg.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | type A = B;
+   | ^^^^
+
+error: Expected expression.
+  --> dummy.ms:2:1
+   |
+2  | type B = A;
+   | ^^^^
+
+
+=================
+test_type_alias_neg2.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | type Pair<T> = (T, T);
+   | ^^^^
+
+
+=================
+unsafe_ptr_restrictions.ms:
+Parsed 1 items
+AstArena Exprs count: 10
+AstArena Stmts count: 1
+AstArena Decls count: 5
+D:\fdlang\mellis-rs\target\debug\mellis.exe : DEBUG MethodCall obj_ty: Pointer(SemanticTypeId(13))
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (DEBUG MethodCal...nticTypeId(13)):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error: Pointer arithmetic requires an unsafe block.
+  --> dummy.ms:4:15
+   |
+4  |     dec y = p.add(1); // Error: requires unsafe
+   |               ^^^
+
+error: Pointer arithmetic requires an unsafe block.
+
+
+=================
+lib.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '{'
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '{':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:18
+   |
+1  | export struct Box<T> {
+   |                  ^
+
+error: Expected expression.
+  --> dummy.ms:3:1
+   |
+3  | }
+   | ^
+
+
+=================
+lib.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '{'
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '{':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:19
+   |
+1  | export struct Pair<T, U> {
+   |                   ^
+
+error: Expected ';' after expression
+  --> dummy.ms:3:11
+   |
+3  |     second: U;
+   |           ^
+
+error: Expected expression.
+  --> dummy.ms:4:1
+   |
+4  | }
+   | ^
+
+
+=================
+lib.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:19
+   |
+1  | export fn identity<T>(x: T) -> T {
+   |                   ^
+
+error: Expected expression.
+  --> dummy.ms:3:1
+   |
+3  | }
+   | ^
+
+
+=================
+e2_assoc_type.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '{'
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '{':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:6:11
+   |
+6  | struct Box<T> {
+   |           ^
+
+error: Expected expression.
+  --> dummy.ms:8:1
+   |
+8  | }
+   | ^
+
+error: Expected '(' after function name
+  --> dummy.ms:17:14
+   |
+17 | fn test_assoc<T: Container>(c: &T) -> T::Item {
+   |              ^
+
+error: Expected expression.
+  --> dummy.ms:19:1
+   |
+19 | }
+   | ^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:22:16
+   |
+22 |     dec b = Box@<int_32> { val: 42 };
+   |                ^^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:23:23
+   |
+23 |     dec x = test_assoc@<Box<int_32>>(&b);
+   |                       ^^
+
+error: Expected expression.
+  --> dummy.ms:26:1
+   |
+26 | }
+   | ^
+
+
+=================
+type_alias.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | type MyInt = int_32;
+   | ^^^^
+
+
+=================
+minimal_hang.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '{'
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '{':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:11
+   |
+1  | struct Vec<T> { ptr: *rw T }
+   |           ^
+
+error: Expected '(' after function name
+  --> dummy.ms:2:11
+   |
+2  | fn vec_new<T>() -> Vec<T> { Vec { ptr: 0 as *rw T } }
+   |           ^
+
+error: Expected ';' after variable declaration
+  --> dummy.ms:3:28
+   |
+3  | fn main() { dec v = vec_new@<int_32>(); }
+   |                            ^^
+
+error: Expected expression.
+  --> dummy.ms:3:41
+   |
+3  | fn main() { dec v = vec_new@<int_32>(); }
+   |                                         ^
+
+
+=================
+nested_nonexhaustive.ms:
+Parsed 4 items
+AstArena Exprs count: 6
+AstArena Stmts count: 6
+AstArena Decls count: 8
+Resolved symbols: 1
+Monomorphized instances: 2
+--- Expression Types ---
+Expr ExprId(0): Error
+Expr ExprId(3): Primitive(Int)
+Expr ExprId(4): InferenceVar(7)
+Expr ExprId(5): Primitive(Int)
+Expr ExprId(2): Primitive(Int)
+Expr ExprId(1): InferenceVar(7)
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  ret 0
+}
+
+fn test_deep_missing_witness() {
+entry0:
+  %v0 = alloca
+  br match_arm2
+match_arm2:
+  %v1 = tag 0
+  %v2 = eq %v1, 0
+  condbr %v2, match_body4, match_arm3
+match_body4:
+  %v3 = extract 0.0.0
+  %v4 = extract %v3.0.0
+  %v5 = load %v4
+  %v6 = store 0 -> %v0
+  br match_end1
+match_arm3:
+  %v7 = tag 0
+  %v8 = eq %v7, 0
+  condbr %v8, match_body6, match_unreachable5
+match_body6:
+  %v9 = extract 0.0.0
+  %v10 = store 0 -> %v0
+  br match_end1
+match_unreachable5:
+  unreachable
+match_end1:
+  %v11 = load %v0
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+Pass DeadCodeElimination modified the module.
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote nested_nonexhaustive.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Backend Error: Missing mapping for value ValueId(1)
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Backend Error: Missing mapping for value ValueId(1)
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Backend ...alue ValueId(1):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+=================
+operator_overload.ms:
+Parsed 4 items
+AstArena Exprs count: 24
+AstArena Stmts count: 4
+AstArena Decls count: 13
+Resolved symbols: 2
+Monomorphized instances: 1
+--- Expression Types ---
+Expr ExprId(13): Primitive(Int)
+Expr ExprId(18): Primitive(Int)
+Expr ExprId(15): Struct(SymbolId(4), [SemanticTypeId(7), SemanticTypeId(8)])
+Expr ExprId(17): Primitive(Int)
+Expr ExprId(21): Struct(SymbolId(4), [SemanticTypeId(7), SemanticTypeId(8)])
+Expr ExprId(19): Struct(SymbolId(4), [SemanticTypeId(7), SemanticTypeId(8)])
+Expr ExprId(23): Primitive(Int)
+Expr ExprId(20): Struct(SymbolId(4), [SemanticTypeId(7), SemanticTypeId(8)])
+Expr ExprId(14): Primitive(Int)
+Expr ExprId(22): Struct(SymbolId(4), [SemanticTypeId(7), SemanticTypeId(8)])
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  %v0 = alloca
+  %v1 = store 10 -> %v0
+  %v2 = store 20 -> %v0
+  %v3 = alloca
+  %v4 = store %v0 -> %v3
+  %v5 = alloca
+  %v6 = store 5 -> %v5
+  %v7 = store 15 -> %v5
+  %v8 = alloca
+  %v9 = store %v5 -> %v8
+  %v10 = load %v3
+  %v11 = load %v8
+  %v12 = add %v10, %v11
+  %v13 = alloca
+  %v14 = store %v12 -> %v13
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote operator_overload.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+D:\fdlang\mellis-rs\target\debug\mellis.exe : 
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread 'main' (6396) panicked at 
+C:\Users\84387\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\inkwell-0.5.0\src\values\enums.rs:309:13:
+Found PointerValue(PointerValue { ptr_value: Value { name: "v10", address: 0x288a7b71890, is_const: false, is_null: 
+false, is_undef: false, llvm_value: "  %v10 = load ptr, ptr %v3, align 8", llvm_type: "ptr" } }) but expected the 
+IntValue variant
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+=================
+ref_self_sugar.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected parameter name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected parameter name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:10:12
+   |
+10 |     fn inc(&mut self) {
+   |            ^
+
+error: Expected expression.
+  --> dummy.ms:12:5
+   |
+12 |     }
+   |     ^
+
+error: Expected parameter name
+  --> dummy.ms:14:12
+   |
+14 |     fn get(&self) -> int_32 {
+   |            ^
+
+error: Expected expression.
+  --> dummy.ms:16:5
+   |
+16 |     }
+   |     ^
+
+
+=================
+test_async.ms:
+Parsed 5 items
+AstArena Exprs count: 17
+AstArena Stmts count: 9
+AstArena Decls count: 9
+Resolved symbols: 6
+Monomorphized instances: 5
+--- Expression Types ---
+Expr ExprId(14): Error
+Expr ExprId(0): Primitive(Int)
+Expr ExprId(9): Error
+Expr ExprId(4): Error
+Expr ExprId(3): Error
+Expr ExprId(6): Error
+Expr ExprId(5): Error
+Expr ExprId(12): Error
+Expr ExprId(13): Error
+Expr ExprId(15): Error
+Expr ExprId(16): Primitive(Int)
+----------------------
+
+
+--- Generated MVIR ---
+fn do_work() {
+entry0:
+  ret void
+}
+
+fn fetch_number() {
+entry0:
+  ret 42
+}
+
+fn sequential() {
+entry0:
+  %v0 = alloca
+  %v1 = store 0 -> %v0
+  %v2 = alloca
+  %v3 = store 0 -> %v2
+  %v4 = load %v0
+  %v5 = load %v2
+  %v6 = add %v4, %v5
+  ret %v6
+}
+
+fn double_async() {
+entry0:
+  %v0 = alloca
+  %v1 = store 0 -> %v0
+  %v2 = load %v0
+  %v3 = add %v2, 0
+  ret %v3
+}
+
+fn main() {
+entry0:
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_async.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Backend Error: Compiler internal invariant violated: Error type passed to backend
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Backend Error: Compiler internal invariant violated: Error type 
+passed to backend
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Backend ...ssed to backend:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+=================
+test_comptime.ms:
+Parsed 3 items
+AstArena Exprs count: 25
+AstArena Stmts count: 14
+AstArena Decls count: 10
+Resolved symbols: 1
+Monomorphized instances: 3
+--- Expression Types ---
+Expr ExprId(0): Error
+Expr ExprId(6): Error
+Expr ExprId(3): Primitive(Int)
+Expr ExprId(7): Primitive(Int)
+Expr ExprId(4): Error
+Expr ExprId(12): Primitive(Int)
+Expr ExprId(1): Primitive(Int)
+Expr ExprId(2): Error
+Expr ExprId(5): Function { params: [SemanticTypeId(3)], return_type: SemanticTypeId(3) }
+Expr ExprId(9): Primitive(Int)
+Expr ExprId(11): Error
+Expr ExprId(13): Error
+Expr ExprId(10): Error
+Expr ExprId(8): Error
+----------------------
+
+
+--- Generated MVIR ---
+fn main() {
+entry0:
+  ret void
+}
+
+fn factorial() {
+entry0:
+  %v0 = sub 0, 1
+  %v1 = call factorial(%v0)
+  %v2 = mul 0, %v1
+  ret %v2
+}
+
+fn add_five() {
+entry0:
+  %v0 = add 0, 5
+  ret %v0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+Pass ConstantFolding modified the module.
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_comptime.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Backend Error: Compiler internal invariant violated: Invalid number: -1
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Backend Error: Compiler internal invariant violated: Invalid 
+number: -1
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Backend ...alid number: -1:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+=================
+test_dyn_dispatch.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected parameter name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected parameter name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:5:14
+   |
+5  |     fn greet(&self) -> int_32;
+   |              ^
+
+error: Expected expression.
+  --> dummy.ms:6:1
+   |
+6  | }
+   | ^
+
+error: Expected parameter name
+  --> dummy.ms:17:14
+   |
+17 |     fn greet(&self) -> int_32 {
+   |              ^
+
+error: Expected expression.
+  --> dummy.ms:19:5
+   |
+19 |     }
+   |     ^
+
+error: Expected parameter name
+  --> dummy.ms:23:14
+   |
+23 |     fn greet(&self) -> int_32 {
+   |              ^
+
+error: Expected expression.
+  --> dummy.ms:25:5
+   |
+25 |     }
+   |     ^
+
+
+=================
+test_external_symbol.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected ';' after expression
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected ';' after expression:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:8
+   |
+1  | import "external_mod";
+   |        ^^^^^^^^^^^^^^
+
+
+=================
+test_full_pipeline.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected type
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected type:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:7:25
+   |
+7  |     fn format(self) -> *const u8;
+   |                         ^^^^^
+
+error: Expected expression.
+  --> dummy.ms:8:1
+   |
+8  | }
+   | ^
+
+error: Expected type
+  --> dummy.ms:11:25
+   |
+11 |     fn format(self) -> *const u8 {
+   |                         ^^^^^
+
+error: Expected expression.
+  --> dummy.ms:13:5
+   |
+13 |     }
+   |     ^
+
+error: Expected '(' after function name
+  --> dummy.ms:16:13
+   |
+16 | fn print_opt<T: Display>(opt: Option<T>) {
+   |             ^
+
+error: Expected expression.
+  --> dummy.ms:20:9
+   |
+20 |         },
+   |         ^
+
+
+=================
+test_full_pipeline_mlib_consumer.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | use test_full_pipeline_mlib_producer::{Result, Process, handle_result};
+   | ^^^
+
+
+=================
+test_full_pipeline_mlib_producer.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:10:24
+   |
+10 | export fn handle_result<T: Process, E: Process>(res: Result<T, E>) -> int_32 {
+   |                        ^
+
+error: Expected expression.
+  --> dummy.ms:12:48
+   |
+12 |         Result::Ok(t) -> { return t.process(); },
+   |                                                ^
+
+error: Expected expression.
+  --> dummy.ms:13:49
+   |
+13 |         Result::Err(e) -> { return e.process(); }
+   |                                                 ^
+
+
+=================
+test_kitchen_sink.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected '(' after function name
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected '(' after function name:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:28:18
+   |
+28 | fn process_option<T: Computable>(opt: Option<T>) -> int_32 {
+   |                  ^
+
+error: Expected expression.
+  --> dummy.ms:33:9
+   |
+33 |         },
+   |         ^
+
+error: Expected expression.
+  --> dummy.ms:36:9
+   |
+36 |         }
+   |         ^
+
+
+=================
+test_labeled_break.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:8:5
+   |
+8  |     'outer: while (i < 5) {
+   |     ^^^^^^
+
+error: Expected expression.
+  --> dummy.ms:10:9
+   |
+10 |         'inner: while (j < 5) {
+   |         ^^^^^^
+
+error: Expected expression.
+  --> dummy.ms:24:5
+   |
+24 |     }
+   |     ^
+
+error: Expected expression.
+  --> dummy.ms:35:1
+   |
+35 | }
+   | ^
+
+
+=================
+test_metadata.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | use metadata_mod;
+   | ^^^
+
+error: Expected ';' after expression
+  --> dummy.ms:8:29
+   |
+8  |     metadata_mod::uses_trait@<MyStruct>(&rw s as *rw MyStruct);
+   |                             ^^
+
+error: Expected expression.
+  --> dummy.ms:9:1
+   |
+9  | }
+   | ^
+
+
+=================
+test_try.ms:
+Parsed 5 items
+AstArena Exprs count: 25
+AstArena Stmts count: 17
+AstArena Decls count: 19
+Resolved symbols: 8
+Monomorphized instances: 2
+--- Expression Types ---
+Expr ExprId(20): InferenceVar(6)
+Expr ExprId(15): Primitive(Int)
+Expr ExprId(19): Primitive(Int)
+Expr ExprId(16): Error
+Expr ExprId(21): Function { params: [SemanticTypeId(8)], return_type: SemanticTypeId(8) }
+Expr ExprId(23): Enum(SymbolId(1), [SemanticTypeId(0), SemanticTypeId(7)])
+Expr ExprId(24): Primitive(Int)
+Expr ExprId(22): InferenceVar(6)
+Expr ExprId(13): Enum(SymbolId(1), [SemanticTypeId(0), SemanticTypeId(7)])
+Expr ExprId(14): Error
+Expr ExprId(11): Error
+Expr ExprId(12): Error
+Expr ExprId(17): InferenceVar(3)
+Expr ExprId(18): Enum(SymbolId(1), [SemanticTypeId(0), SemanticTypeId(7)])
+----------------------
+
+
+--- Generated MVIR ---
+fn test_try() {
+entry0:
+  %v0 = alloca
+  %v1 = store 0 -> %v0
+  %v2 = variant 8::1()
+  %v3 = load %v0
+  %v4 = add %v3, 10
+  %v5 = variant 8::1(%v4)
+  ret %v5
+}
+
+fn main() {
+entry0:
+  %v0 = variant 8::1()
+  %v1 = variant 8::1(5)
+  %v2 = alloca
+  %v3 = store %v1 -> %v2
+  %v4 = load %v2
+  %v5 = call test_try(%v4)
+  %v6 = alloca
+  %v7 = store %v5 -> %v6
+  ret 0
+}
+
+
+----------------------
+
+
+--- Borrow Checker ---
+Borrow check passed!
+----------------------
+
+
+--- Optimizer ---
+Pass DeadCodeElimination modified the module.
+-----------------
+
+--- Serializing MLib v2 ---
+Successfully wrote test_try.mlib
+---------------------------
+
+
+--- LLVM Backend (Inkwell) ---
+Backend Error: Compiler internal invariant violated: Error type passed to backend
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Backend Error: Compiler internal invariant violated: Error type 
+passed to backend
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Backend ...ssed to backend:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+=================
+test_unsafe.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected type
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected type:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:20:14
+   |
+20 |     dec ptr: unsafe fn() -> int_32 = dangerous_op;
+   |              ^^^^^^
+
+error: Expected function name
+  --> dummy.ms:20:23
+   |
+20 |     dec ptr: unsafe fn() -> int_32 = dangerous_op;
+   |                       ^
+
+error: Expected expression.
+  --> dummy.ms:26:1
+   |
+26 | }
+   | ^
+
+
+=================
+test_unsafe_neg.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected type
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected type:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:4:14
+   |
+4  |     dec ptr: unsafe fn() = dangerous_op; 
+   |              ^^^^^^
+
+error: Expected function name
+  --> dummy.ms:4:23
+   |
+4  |     dec ptr: unsafe fn() = dangerous_op; 
+   |                       ^
+
+error: Expected expression.
+  --> dummy.ms:6:1
+   |
+6  | }
+   | ^
+
+
+=================
+test_vec.ms:
+D:\fdlang\mellis-rs\target\debug\mellis.exe : error: Expected expression.
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Expected expression.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> dummy.ms:1:1
+   |
+1  | use core;
+   | ^^^
+
+error: Expected expression.
+  --> dummy.ms:2:1
+   |
+2  | use core::option::Option;
+   | ^^^
+
+error: Expected expression.
+  --> dummy.ms:3:1
+   |
+3  | use alloc::vec::{Vec, vec_new};
+   | ^^^
+
+error: Expected ';' or ',' in array type
+  --> dummy.ms:5:19
+   |
+5  | fn main(args: [str]) -> int_32 {
+   |                   ^
+
+error: Expected expression.
+  --> dummy.ms:10:1
+   |
+10 | }
+   | ^
+
+
+=================
+unsafe_intrinsic_method_call.ms:
+Parsed 1 items
+AstArena Exprs count: 7
+AstArena Stmts count: 2
+AstArena Decls count: 3
+D:\fdlang\mellis-rs\target\debug\mellis.exe : DEBUG MethodCall obj_ty: Pointer(SemanticTypeId(10))
+At line:1 char:178
++ ... t { $out = (D:\fdlang\mellis-rs\target\debug\mellis.exe $_.FullName 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (DEBUG MethodCal...nticTypeId(10)):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error: Pointer arithmetic requires an unsafe block.
+  --> dummy.ms:4:7
+   |
+4  |     p.add(1);
+   |       ^^^
+
+

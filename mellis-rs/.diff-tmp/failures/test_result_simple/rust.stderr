@@ -1,0 +1,4 @@
+DEBUG MethodCall obj_ty: InferenceVar(10)
+DEBUG MethodCall obj_ty: InferenceVar(10)
+DEBUG MethodCall obj_ty: InferenceVar(13)
+DEBUG MethodCall obj_ty: InferenceVar(13)

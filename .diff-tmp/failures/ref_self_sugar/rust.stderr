@@ -1,0 +1,29 @@
+Number of diagnostics: 4
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 137, end: 138 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\valid\ref_self_sugar.ms:10:12
+   |
+10 |     fn inc(&mut self) {
+   |            ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 189, end: 190 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\ref_self_sugar.ms:12:5
+   |
+12 |     }
+   |     ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 205, end: 206 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\valid\ref_self_sugar.ms:14:12
+   |
+14 |     fn get(&self) -> int_32 {
+   |            ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 255, end: 256 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\ref_self_sugar.ms:16:5
+   |
+16 |     }
+   |     ^
+

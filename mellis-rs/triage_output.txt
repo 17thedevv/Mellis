@@ -1,0 +1,2301 @@
+test_closure_borrow.ms:
+mellis : D:\fdlang\tests\borrow\test_closure_borrow.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%1'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%1'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\borrow\test_closure_borrow.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%7'[0m
+D:\fdlang\tests\borrow\test_closure_borrow.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%14.0'[0m
+D:\fdlang\tests\borrow\test_closure_borrow.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0.1'[0m
+D:\fdlang\tests\borrow\test_closure_borrow.ms: [1m[31merror: [0m[1mUse of uninitialized variable: 
+'%2.18446744073709551615'[0m
+D:\fdlang\tests\borrow\test_closure_borrow.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_closure_borrow_mut.ms:
+DEBUG: NamedTypeNode visited (segments[0] = void, symbolId = 15)
+DEBUG: Inside IF block
+mellis : D:\fdlang\tests\borrow\test_closure_borrow_mut.ms: [1m[31merror: [0m[1mUse of uninitialized variable: 
+'%5'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%5'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\borrow\test_closure_borrow_mut.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%11.0'[0m
+D:\fdlang\tests\borrow\test_closure_borrow_mut.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0.1'[0m
+D:\fdlang\tests\borrow\test_closure_borrow_mut.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_closure_copy.ms:
+mellis : D:\fdlang\tests\borrow\test_closure_copy.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%6'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%6'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\borrow\test_closure_copy.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%12.0'[0m
+D:\fdlang\tests\borrow\test_closure_copy.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0.1'[0m
+D:\fdlang\tests\borrow\test_closure_copy.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_closure_copy_capture.ms:
+DEBUG: visit(LambdaExpr) param=x has_type=1
+DEBUG: param=x pType_is_null=0 kind=19
+DEBUG: evaluateTypeNode returned kind=0 for param x
+mellis : D:\fdlang\tests\borrow\test_closure_copy_capture.ms: [1m[31merror: [0m[1mUse of uninitialized variable: 
+'%10'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...able: '%10'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\borrow\test_closure_copy_capture.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%16.0'[0m
+D:\fdlang\tests\borrow\test_closure_copy_capture.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0.1'[0m
+D:\fdlang\tests\borrow\test_closure_copy_capture.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_closure_heap_copy.ms:
+mellis : [1m[31merror: [0m[1mExpected lambda param name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... param name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_copy.ms:11:34
+  [34m|
+[0m11 [34m| [0m    dec my_closure = move | | -> int_32 { return x; };
+  [34m| [0m                                 [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_copy.ms:11:58
+  [34m|
+[0m11 [34m| [0m    dec my_closure = move | | -> int_32 { return x; };
+  [34m| [0m                                                         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_copy.ms:11:59
+  [34m|
+[0m11 [34m| [0m    dec my_closure = move | | -> int_32 { return x; };
+  [34m| [0m                                                          [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_copy.ms:13:1
+  [34m|
+[0m13 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\borrow\test_closure_heap_copy.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_closure_heap_drop.ms:
+mellis : [1m[31merror: [0m[1mExpected lambda param name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... param name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop.ms:23:24
+  [34m|
+[0m23 [34m| [0m        c = move | | -> void {
+  [34m| [0m                       [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop.ms:24:54
+  [34m|
+[0m24 [34m| [0m            printf("Inside closure: %d\n", r.val);
+  [34m| [0m                                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop.ms:25:10
+  [34m|
+[0m25 [34m| [0m        };
+  [34m| [0m         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop.ms:28:37
+  [34m|
+[0m28 [34m| [0m    printf("Calling closure...\n");
+  [34m| [0m                                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop.ms:29:9
+  [34m|
+[0m29 [34m| [0m    c();
+  [34m| [0m        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop.ms:31:38
+  [34m|
+[0m31 [34m| [0m    printf("Dropping closure...\n");
+  [34m| [0m                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop.ms:33:1
+  [34m|
+[0m33 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\borrow\test_closure_heap_drop.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_closure_heap_drop_dbg.ms:
+mellis : [1m[31merror: [0m[1mExpected lambda param name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... param name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop_dbg.ms:22:24
+  [34m|
+[0m22 [34m| [0m        c = move | | -> void {
+  [34m| [0m                       [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop_dbg.ms:23:54
+  [34m|
+[0m23 [34m| [0m            printf("Inside closure: %d\n", r.val);
+  [34m| [0m                                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop_dbg.ms:24:10
+  [34m|
+[0m24 [34m| [0m        };
+  [34m| [0m         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop_dbg.ms:27:37
+  [34m|
+[0m27 [34m| [0m    printf("Calling closure...\n");
+  [34m| [0m                                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop_dbg.ms:28:9
+  [34m|
+[0m28 [34m| [0m    c();
+  [34m| [0m        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop_dbg.ms:30:38
+  [34m|
+[0m30 [34m| [0m    printf("Dropping closure...\n");
+  [34m| [0m                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_drop_dbg.ms:32:1
+  [34m|
+[0m32 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\borrow\test_closure_heap_drop_dbg.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_closure_heap_move.ms:
+mellis : [1m[31merror: [0m[1mExpected lambda param name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... param name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_move.ms:21:24
+  [34m|
+[0m21 [34m| [0m        f = move | | -> void {
+  [34m| [0m                       [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_move.ms:22:54
+  [34m|
+[0m22 [34m| [0m            printf("Inside closure: %d\n", r.val);
+  [34m| [0m                                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_move.ms:23:10
+  [34m|
+[0m23 [34m| [0m        };
+  [34m| [0m         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_move.ms:25:35
+  [34m|
+[0m25 [34m| [0m    printf("Closure created.\n");
+  [34m| [0m                                  [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_heap_move.ms:34:1
+  [34m|
+[0m34 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\borrow\test_closure_heap_move.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_closure_move.ms:
+mellis : [1m[31merror: [0m[1mExpected lambda param name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... param name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_move.ms:9:25
+  [34m|
+[0m9 [34m| [0m    dec f = move | | -> int_32 { consume(s) };
+  [34m| [0m                        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_move.ms:9:51
+  [34m|
+[0m9 [34m| [0m    dec f = move | | -> int_32 { consume(s) };
+  [34m| [0m                                                  [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_closure_move.ms:11:1
+  [34m|
+[0m11 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\borrow\test_closure_move.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_no_drop.ms:
+mellis : [1m[31merror: [0m[1mExpected lambda param name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... param name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\borrow\test_no_drop.ms:7:24
+  [34m|
+[0m7 [34m| [0m        c = move | | -> void {
+  [34m| [0m                       [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_no_drop.ms:8:49
+  [34m|
+[0m8 [34m| [0m            printf("Inside closure: %d\n", x);
+  [34m| [0m                                                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_no_drop.ms:9:10
+  [34m|
+[0m9 [34m| [0m        };
+  [34m| [0m         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_no_drop.ms:11:29
+  [34m|
+[0m11 [34m| [0m    printf("Before c()\n");
+  [34m| [0m                            [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_no_drop.ms:12:9
+  [34m|
+[0m12 [34m| [0m    c();
+  [34m| [0m        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_no_drop.ms:13:28
+  [34m|
+[0m13 [34m| [0m    printf("After c()\n");
+  [34m| [0m                           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\borrow\test_no_drop.ms:15:1
+  [34m|
+[0m15 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\borrow\test_no_drop.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_closure_nested.ms:
+mellis : D:\fdlang\tests\closure\test_closure_nested.ms: [1m[31merror: [0m[1mUse of uninitialized variable: 
+'%13'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...able: '%13'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\closure\test_closure_nested.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%19.0'[0m
+D:\fdlang\tests\closure\test_closure_nested.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0.1'[0m
+D:\fdlang\tests\closure\test_closure_nested.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%7'[0m
+D:\fdlang\tests\closure\test_closure_nested.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%6'[0m
+D:\fdlang\tests\closure\test_closure_nested.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+DEBUG: NamedTypeNode visited (segments[0] = void, symbolId = 15)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = void, symbolId = 15)
+DEBUG: Inside IF block
+
+=================
+test_full_pipeline_closure.ms:
+mellis : [DEBUG] parseType failed at byte 28 token 65 text: fn
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([DEBUG] parseTy...ken 65 text: fn:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[DEBUG] parseType failed at byte 139 token 65 text: fn
+[1m[31merror: [0m[1mExpected a type[0m
+ [34m--> [0mD:\fdlang\tests\closure\test_full_pipeline_closure.ms:1:32
+  [34m|
+[0m1 [34m| [0mfn make_adder(x: int_32) -> fn(int_32) -> int_32 {
+  [34m| [0m                               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\closure\test_full_pipeline_closure.ms:5:1
+  [34m|
+[0m5 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+[1m[31merror: [0m[1mExpected a type[0m
+ [34m--> [0mD:\fdlang\tests\closure\test_full_pipeline_closure.ms:7:19
+  [34m|
+[0m7 [34m| [0mfn apply_op(f: fn(int_32) -> int_32, val: int_32) -> int_32 {
+  [34m| [0m                  [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\closure\test_full_pipeline_closure.ms:9:1
+  [34m|
+[0m9 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\closure\test_full_pipeline_closure.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+array_bounds.ms:
+mellis : [1m[31merror: [0m[1mType mismatch: expected '[int_32; 0]', found '[int_32; 3]'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...int_32; 3]'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\codegen\array_bounds.ms:2:5
+  [34m|
+[0m2 [34m| [0m    dec arr: [int_32, 3] = [10, 20, 30];
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\codegen\array_bounds.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m
+
+=================
+const_global.ms:
+
+=================
+pattern_binding.ms:
+mellis : D:\fdlang\tests\codegen\pattern_binding.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%1'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%1'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\codegen\pattern_binding.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%5'[0m
+D:\fdlang\tests\codegen\pattern_binding.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%6'[0m
+D:\fdlang\tests\codegen\pattern_binding.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+static_global.ms:
+
+=================
+ambiguous_impl.ms:
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 21)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = MyStruct, symbolId = 24)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Foo, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 25)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = MyStruct, symbolId = 24)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Bar, symbolId = 20)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 28)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = MyStruct, symbolId = 24)
+DEBUG: Inside IF block
+mellis : [1m[31merror: [0m[1mType mismatch: expected 'Struct<24>', found 'unknown'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...d 'unknown'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\generics\ambiguous_impl.ms:10:11
+  [34m|
+[0m10 [34m| [0m    x.m(); // Error: E-TRAIT-AMBIGUOUS
+  [34m| [0m          [1m[31m^[0m
+[1m[31merror: [0m[1mType annotation needed[0m
+ [34m--> [0mD:\fdlang\tests\generics\ambiguous_impl.ms:10:11
+  [34m|
+[0m10 [34m| [0m    x.m(); // Error: E-TRAIT-AMBIGUOUS
+  [34m| [0m          [1m[31m^[0m
+D:\fdlang\tests\generics\ambiguous_impl.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m
+
+=================
+e10_generic_iter.ms:
+mellis : [1m[31merror: [0m[1mExpected 'fn'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...pected 'fn'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\generics\e10_generic_iter.ms:7:5
+  [34m|
+[0m7 [34m| [0m    type Item;
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\generics\e10_generic_iter.ms:7:16
+  [34m|
+[0m7 [34m| [0m    type Item;
+  [34m| [0m               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\generics\e10_generic_iter.ms:8:43
+  [34m|
+[0m8 [34m| [0m    fn next(self: &rw Self) -> Option;
+  [34m| [0m                                          [1m[31m^[0m
+[1m[31merror: [0m[1mExpected 'fn'[0m
+ [34m--> [0mD:\fdlang\tests\generics\e10_generic_iter.ms:17:5
+  [34m|
+[0m17 [34m| [0m    type Item = int_32;
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\generics\e10_generic_iter.ms:17:26
+  [34m|
+[0m17 [34m| [0m    type Item = int_32;
+  [34m| [0m                         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\generics\e10_generic_iter.ms:27:1
+  [34m|
+[0m27 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\generics\e10_generic_iter.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+e1_generic_lifetime.ms:
+mellis : [DEBUG] parseType failed at byte 368 token 1 text: Unterminated char literal.
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([DEBUG] parseTy...d char literal.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[1m[31merror: [0m[1mExpected generic parameter name[0m
+ [34m--> [0mD:\fdlang\tests\generics\e1_generic_lifetime.ms:11:15
+  [34m|
+[0m11 [34m| [0mfn identity<'a, T: Display>(x: &'a T) -> &'a T {
+  [34m| [0m              [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\generics\e1_generic_lifetime.ms:17:37
+  [34m|
+[0m17 [34m| [0m    dec r: &'static int_32 = &val;
+  [34m| [0m                                    [1m[31m^[0m
+D:\fdlang\tests\generics\e1_generic_lifetime.ms: [1m[31merror: [0m[1mExpected a type[0m
+D:\fdlang\tests\generics\e1_generic_lifetime.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+e5_visibility_generic.ms:
+
+=================
+e6_macro_generic.ms:
+mellis : [1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...er, or '(')[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\generics\e6_macro_generic.ms:5:1
+  [34m|
+[0m5 [34m| [0mmacro create_box(@val: expr) {
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\generics\e6_macro_generic.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+multiple_trait_bounds.ms:
+
+=================
+e1_visibility_leak.ms:
+DEBUG: NamedTypeNode visited (segments[0] = SecretKey, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = SecretKey, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = SecretKey, symbolId = 17)
+DEBUG: Inside IF block
+mellis : D:\fdlang\tests\invalid\e1_visibility_leak.ms: [1m[31merror: [0m[1mUse of uninitialized variable: 
+'%1.0'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...ble: '%1.0'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\invalid\e1_visibility_leak.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0'[0m
+D:\fdlang\tests\invalid\e1_visibility_leak.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%1'[0m
+D:\fdlang\tests\invalid\e1_visibility_leak.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%4'[0m
+D:\fdlang\tests\invalid\e1_visibility_leak.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0.0'[0m
+D:\fdlang\tests\invalid\e1_visibility_leak.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+e2_visibility_generic_leak.ms:
+mellis : D:\fdlang\tests\invalid\e2_visibility_generic_leak.ms: [1m[31merror: [0m[1mUse of uninitialized variable: 
+'%0'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%0'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\invalid\e2_visibility_generic_leak.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+DEBUG: NamedTypeNode visited (segments[0] = PrivateStruct, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = PrivateStruct, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = PrivateStruct, symbolId = 16)
+DEBUG: Inside IF block
+
+=================
+neg_break_outside.ms:
+DEBUG: NamedTypeNode visited (segments[0] = i32, symbolId = 4294967295)
+mellis : [1m[31merror: [0m[1mUse of undeclared name 'i32'.[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...name 'i32'.[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\invalid\neg_break_outside.ms:4:15
+  [34m|
+[0m4 [34m| [0mfn main() -> i32 {
+  [34m| [0m              [1m[31m^[0m
+D:\fdlang\tests\invalid\neg_break_outside.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test 
+MVIR...[0m
+[1m[31merror: [0m[1mUse of undeclared name 'i32'.[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_break_outside.ms:4:15
+  [34m|
+[0m4 [34m| [0mfn main() -> i32 {
+  [34m| [0m              [1m[31m^[0m
+D:\fdlang\tests\invalid\neg_break_outside.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test 
+MVIR...[0m
+[1m[31merror: [0m[1mType mismatch: expected 'unknown', found 'int_32'[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_break_outside.ms:6:5
+  [34m|
+[0m6 [34m| [0m    return 0;
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\invalid\neg_break_outside.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker 
+errors.[0m
+
+=================
+neg_labeled_break.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\invalid\neg_labeled_break.ms:6:16
+  [34m|
+[0m6 [34m| [0m        break 'outer;
+  [34m| [0m               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_labeled_break.ms:6:22
+  [34m|
+[0m6 [34m| [0m        break 'outer;
+  [34m| [0m                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_labeled_break.ms:9:1
+  [34m|
+[0m9 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\invalid\neg_labeled_break.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+neg_object_safety.ms:
+mellis : [1m[31merror: [0m[1mExpected parameter name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...ameter name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\invalid\neg_object_safety.ms:6:25
+  [34m|
+[0m6 [34m| [0m    fn bad_method<T>(&self, x: T) -> int_32;
+  [34m| [0m                        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_object_safety.ms:6:50
+  [34m|
+[0m6 [34m| [0m    fn bad_method<T>(&self, x: T) -> int_32;
+  [34m| [0m                                                 [1m[31m^[0m
+[1m[31merror: [0m[1mExpected parameter name[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_object_safety.ms:10:21
+  [34m|
+[0m10 [34m| [0m    fn bad_method(&self) -> Self;
+  [34m| [0m                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_object_safety.ms:10:36
+  [34m|
+[0m10 [34m| [0m    fn bad_method(&self) -> Self;
+  [34m| [0m                                   [1m[31m^[0m
+[1m[31merror: [0m[1mExpected parameter name[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_object_safety.ms:24:25
+  [34m|
+[0m24 [34m| [0m    fn bad_method<T>(&self, x: T) -> int_32 {
+  [34m| [0m                        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_object_safety.ms:26:5
+  [34m|
+[0m26 [34m| [0m    }
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected parameter name[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_object_safety.ms:30:21
+  [34m|
+[0m30 [34m| [0m    fn bad_method(&self) -> Self {
+  [34m| [0m                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\invalid\neg_object_safety.ms:32:5
+  [34m|
+[0m32 [34m| [0m    }
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\invalid\neg_object_safety.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+refutable_binding.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...declaration[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\invalid\refutable_binding.ms:7:17
+  [34m|
+[0m7 [34m| [0m    dec Option::Some(x) = opt; // Error: refutable pattern
+  [34m| [0m                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\invalid\refutable_binding.ms:7:34
+  [34m|
+[0m7 [34m| [0m    dec Option::Some(x) = opt; // Error: refutable pattern
+  [34m| [0m                                 [1m[31m^[0m
+D:\fdlang\tests\invalid\refutable_binding.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+unreachable_arm.ms:
+mellis : Function return type does not match operand type of return inst!
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Function return...of return inst!:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  ret void
+ i32Function return type does not match operand type of return inst!
+  ret void
+ i32D:\fdlang\tests\invalid\unreachable_arm.ms: [1m[31merror: [0m[1mLoi trong qua trinh sinh LLVM IR.[0m
+
+=================
+consumer.ms:
+mellis : [1m[31merror: [0m[1mCannot find module 'lib' in library paths.[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...rary paths.[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\modules\consumer.ms:1:6
+  [34m|
+[0m1 [34m| [0muse lib;
+[DEBUG] parseUseTree after segment: 45 ;
+  [34m| [0m     [1m[31m^[0m
+D:\fdlang\tests\modules\consumer.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+[1m[31merror: [0m[1mCannot find module 'lib' in library paths.[0m
+ [34m--> [0mD:\fdlang\tests\modules\consumer.ms:1:6
+  [34m|
+[0m1 [34m| [0muse lib;
+  [34m| [0m     [1m[31m^[0m
+D:\fdlang\tests\modules\consumer.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+[1m[31merror: [0m[1mType mismatch: expected 'fn(int_32) -> ?T0', found 'unknown'[0m
+ [34m--> [0mD:\fdlang\tests\modules\consumer.ms:4:37
+  [34m|
+[0m4 [34m| [0m    return lib::identity@<int_32>(42);
+  [34m| [0m                                    [1m[31m^[0m
+D:\fdlang\tests\modules\consumer.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m
+
+=================
+e7_exhaustive_match.ms:
+mellis : D:\fdlang\tests\modules\e7_exhaustive_match.ms: [1m[31merror: [0m[1mUse of uninitialized variable: 
+'%1'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%1'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\modules\e7_exhaustive_match.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%5'[0m
+D:\fdlang\tests\modules\e7_exhaustive_match.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+e9_assoc_projection.ms:
+mellis : [1m[31merror: [0m[1mExpected 'fn'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...pected 'fn'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\modules\e9_assoc_projection.ms:2:5
+  [34m|
+[0m2 [34m| [0m    type Value;
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\modules\e9_assoc_projection.ms:2:17
+  [34m|
+[0m2 [34m| [0m    type Value;
+  [34m| [0m                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\modules\e9_assoc_projection.ms:3:49
+  [34m|
+[0m3 [34m| [0m    fn get_value(self: &Self) -> Self::Value;
+  [34m| [0m                                                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected 'fn'[0m
+ [34m--> [0mD:\fdlang\tests\modules\e9_assoc_projection.ms:11:5
+  [34m|
+[0m11 [34m| [0m    type Value = int_32;
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\modules\e9_assoc_projection.ms:11:27
+  [34m|
+[0m11 [34m| [0m    type Value = int_32;
+  [34m| [0m                          [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\modules\e9_assoc_projection.ms:15:1
+  [34m|
+[0m15 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\modules\e9_assoc_projection.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+external_mod.ms:
+mellis : lld-link: error: undefined symbol: main
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (lld-link: error: undefined symbol: main:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:78
+>>>               libcmt.lib(exe_main.obj):(int __cdecl invoke_main(void))
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:288
+>>>               libcmt.lib(exe_main.obj):(int __cdecl __scrt_common_main_seh(void))
+D:\fdlang\tests\modules\external_mod.ms: [1m[31merror: [0m[1mTrinh lien ket (lld-link) that bai khi tao 
+D:\fdlang\tests\modules\external_mod.exe. Kiem tra xem ban da cai dat LLVM chua.[0m
+D:\fdlang\tests\modules\external_mod.ms: [1m[31merror: [0m[1mTao file thuc thi that bai.[0m
+
+=================
+metadata_mod.ms:
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = T, symbolId = 21)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = MyTrait, symbolId = 16)
+DEBUG: Inside IF block
+mellis : lld-link: error: undefined symbol: main
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (lld-link: error: undefined symbol: main:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:78
+>>>               libcmt.lib(exe_main.obj):(int __cdecl invoke_main(void))
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:288
+>>>               libcmt.lib(exe_main.obj):(int __cdecl __scrt_common_main_seh(void))
+D:\fdlang\tests\modules\metadata_mod.ms: [1m[31merror: [0m[1mTrinh lien ket (lld-link) that bai khi tao 
+D:\fdlang\tests\modules\metadata_mod.exe. Kiem tra xem ban da cai dat LLVM chua.[0m
+D:\fdlang\tests\modules\metadata_mod.ms: [1m[31merror: [0m[1mTao file thuc thi that bai.[0m
+
+=================
+bounds_test.ms:
+mellis : [1m[31merror: [0m[1mExpected ']' after array type[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... array type[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\bounds_test.ms:2:24
+  [34m|
+[0m2 [34m| [0m    dec arr: [int_32; 3] = [10, 20, 30];
+  [34m| [0m                       [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\bounds_test.ms:2:47
+  [34m|
+[0m2 [34m| [0m    dec arr: [int_32; 3] = [10, 20, 30];
+  [34m| [0m                                              [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\bounds_test.ms:5:1
+  [34m|
+[0m5 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\scratch\bounds_test.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+closure_test.ms:
+DEBUG: visit(LambdaExpr) param=y has_type=1
+DEBUG: param=y pType_is_null=0 kind=19
+DEBUG: evaluateTypeNode returned kind=0 for param y
+mellis : D:\fdlang\tests\scratch\closure_test.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%10'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...able: '%10'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\scratch\closure_test.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%16.0'[0m
+D:\fdlang\tests\scratch\closure_test.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0.1'[0m
+D:\fdlang\tests\scratch\closure_test.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+consumer_core.ms:
+[DEBUG] parseUseTree after segment: 50 {
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 51 }
+mellis : [1m[31merror: [0m[1mFailed to load module 'core': Section table out of bounds in: 
+D:\fdlang\lib/core.mlib[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...b/core.mlib[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\consumer_core.ms:7:6
+  [34m|
+[0m7 [34m| [0muse core::{Option, Result, Clone, Drop, Eq, Ord, Ordering};
+  [34m| [0m     [1m[31m^[0m
+D:\fdlang\tests\scratch\consumer_core.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+
+=================
+ptr_arithmetic.ms:
+mellis : D:\fdlang\tests\scratch\ptr_arithmetic.ms: [1m[31merror: [0m[1mExpected expression (e.g., literal, 
+identifier, or '(')[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...er, or '(')[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\ptr_arithmetic.ms:2:51
+  [34m|
+[0m2 [34m| [0m         l e t   a   =   [ 1 ,   2 ,   3 ] ; 
+  [34m| [0m                                                  [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\ptr_arithmetic.ms:3:118
+  [34m|
+[0m3 [34m| [0m         l e t   p t r :   * c o n s t   i 3 2   =   & a [ 0 ]   a s   * c o n s t   i 3 2 ; 
+  [34m| [0m                                                                                                          
+           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\ptr_arithmetic.ms:4:66
+  [34m|
+[0m4 [34m| [0m         l e t   p t r 2   =   p t r . a d d ( 2 ) ; 
+  [34m| [0m                                                                 [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\ptr_arithmetic.ms:5:50
+  [34m|
+[0m5 [34m| [0m         l e t   v a l   =   * p t r 2 ; 
+  [34m| [0m                                                 [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\ptr_arithmetic.ms:6:44
+  [34m|
+[0m6 [34m| [0m         p r i n t l n ( v a l ) ;   / /   e x p e c t e d   3 
+  [34m| [0m                                           [1m[31m^[0m
+D:\fdlang\tests\scratch\ptr_arithmetic.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+ptr_diff_type_mismatch.ms:
+mellis : [1m[31merror: [0m[1mType mismatch: expected 'int_64', found 'int_32'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...nd 'int_32'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\ptr_diff_type_mismatch.ms:3:5
+  [34m|
+[0m3 [34m| [0m    dec y: int_64 = 20; // int_64
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\scratch\ptr_diff_type_mismatch.ms: [1m[31merror: [0m[1mType mismatch: expected 'int_32', found 
+'int_64'[0m
+D:\fdlang\tests\scratch\ptr_diff_type_mismatch.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker 
+errors.[0m
+
+=================
+showcase.ms:
+[DEBUG] parseUseTree after segment: 50 {
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 51 }
+[DEBUG] parseUseTree after segment: 45 ;
+mellis : [1m[31merror: [0m[1mExpected ']' after array type[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... array type[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\showcase.ms:81:24
+  [34m|
+[0m81 [34m| [0m    dec arr: [int_32; 3] = [10, 20, 30];
+  [34m| [0m                       [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\showcase.ms:81:47
+  [34m|
+[0m81 [34m| [0m    dec arr: [int_32; 3] = [10, 20, 30];
+  [34m| [0m                                              [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\showcase.ms:105:1
+  [34m|
+[0m105 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\scratch\showcase.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_array.ms:
+mellis : [1m[31merror: [0m[1mType mismatch: expected '[int_32; 0]', found '[int_32; 3]'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...int_32; 3]'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_array.ms:2:5
+  [34m|
+[0m2 [34m| [0m    dec arr: [int_32, 3] = [1, 2, 3];
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\scratch\test_array.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m
+
+=================
+test_borrow_join.ms:
+mellis : D:\fdlang\tests\scratch\test_borrow_join.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '*%0'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...able: '*%0'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\scratch\test_borrow_join.ms: [1m[31merror: [0m[1mCannot access '*%0' because it is currently 
+borrowed[0m
+D:\fdlang\tests\scratch\test_borrow_join.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '*%1'[0m
+D:\fdlang\tests\scratch\test_borrow_join.ms: [1m[31merror: [0m[1mCannot access '*%1' because it is currently 
+borrowed[0m
+D:\fdlang\tests\scratch\test_borrow_join.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_confirmed_working.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_confirmed_working.ms:2:12
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_confirmed_working.ms:2:38
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_confirmed_working.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_consumer_core.ms:
+[DEBUG] parseUseTree after segment: 50 {
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 51 }
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_consumer_core.ms:2:12
+  [34m|
+[0m2 [34m| [0mintrinsic fn ptr_write<T>(p: *rw T, val: T);
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_consumer_core.ms:2:53
+  [34m|
+[0m2 [34m| [0mintrinsic fn ptr_write<T>(p: *rw T, val: T);
+  [34m| [0m                                                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_consumer_core.ms:3:50
+  [34m|
+[0m3 [34m| [0mintrinsic fn ptr_read<T>(p: *const T) -> T;
+  [34m| [0m                                                 [1m[31m^[0m
+D:\fdlang\tests\scratch\test_consumer_core.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_core_final_subset.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_final_subset.ms:4:12
+  [34m|
+[0m4 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_final_subset.ms:4:38
+  [34m|
+[0m4 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_core_final_subset.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_core_full_simple.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_full_simple.ms:2:12
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_full_simple.ms:2:38
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_core_full_simple.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_core_option_map.ms:
+mellis : [DEBUG] parseType failed at byte 278 token 65 text: fn
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([DEBUG] parseTy...ken 65 text: fn:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[1m[31merror: [0m[1mExpected ';' after expression[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map.ms:3:12
+  [34m|
+[0m3 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map.ms:3:38
+  [34m|
+[0m3 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected a type[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map.ms:12:29
+  [34m|
+[0m12 [34m| [0m    fn map<U>(self, f: fn (T) -> U) -> Option<U> {
+  [34m| [0m                            [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map.ms:14:44
+  [34m|
+[0m14 [34m| [0m            Option::Some(v) -> Option<U>::Some(f(v)),
+  [34m| [0m                                           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map.ms:25:1
+  [34m|
+[0m25 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+[1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map.ms:33:51
+  [34m|
+[0m33 [34m| [0m    dec mapped: Option<int_32> = some_41.map@<int_32>(add_one);
+  [34m| [0m                                                  [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map.ms:33:70
+  [34m|
+[0m33 [34m| [0m    dec mapped: Option<int_32> = some_41.map@<int_32>(add_one);
+  [34m| [0m                                                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map.ms:42:1
+  [34m|
+[0m42 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\scratch\test_core_option_map.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_core_option_map2.ms:
+mellis : [DEBUG] parseType failed at byte 791 token 65 text: fn
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([DEBUG] parseTy...ken 65 text: fn:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[1m[31merror: [0m[1mExpected ';' after expression[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:3:12
+  [34m|
+[0m3 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:3:38
+  [34m|
+[0m3 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected a type[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:38:29
+  [34m|
+[0m38 [34m| [0m    fn map<U>(self, f: fn (T) -> U) -> Option<U> {
+  [34m| [0m                            [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:40:44
+  [34m|
+[0m40 [34m| [0m            Option::Some(v) -> Option<U>::Some(f(v)),
+  [34m| [0m                                           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:66:50
+  [34m|
+[0m66 [34m| [0m    dec mapped: Option<int_32> = some_7.map@<int_32>(add_one);
+  [34m| [0m                                                 [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:66:69
+  [34m|
+[0m66 [34m| [0m    dec mapped: Option<int_32> = some_7.map@<int_32>(add_one);
+  [34m| [0m                                                                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:72:55
+  [34m|
+[0m72 [34m| [0m    dec mapped_none: Option<int_32> = none_2.map@<int_32>(add_one);
+  [34m| [0m                                                      [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:72:74
+  [34m|
+[0m72 [34m| [0m    dec mapped_none: Option<int_32> = none_2.map@<int_32>(add_one);
+  [34m| [0m                                                                         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_option_map2.ms:76:1
+  [34m|
+[0m76 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\scratch\test_core_option_map2.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_core_or_pattern.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_or_pattern.ms:2:12
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_core_or_pattern.ms:2:38
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_core_or_pattern.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_destruct2.ms:
+DEBUG: NamedTypeNode visited (segments[0] = Point, symbolId = 16)
+DEBUG: Inside IF block
+mellis : D:\fdlang\tests\scratch\test_destruct2.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%0'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\scratch\test_destruct2.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_destruct3.ms:
+DEBUG: NamedTypeNode visited (segments[0] = Point, symbolId = 16)
+DEBUG: Inside IF block
+mellis : D:\fdlang\tests\scratch\test_destruct3.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%0'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%0'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\scratch\test_destruct3.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%1'[0m
+D:\fdlang\tests\scratch\test_destruct3.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_destructuring.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...declaration[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_destructuring.ms:12:17
+  [34m|
+[0m12 [34m| [0m    dec Point { value, x, y } = make_point();
+  [34m| [0m                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_destructuring.ms:12:51
+  [34m|
+[0m12 [34m| [0m    dec Point { value, x, y } = make_point();
+  [34m| [0m                                                  [1m[31m^[0m
+[1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_destructuring.ms:15:17
+  [34m|
+[0m15 [34m| [0m    dec Point { value: val2, .. } = make_point();
+  [34m| [0m                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_destructuring.ms:15:53
+  [34m|
+[0m15 [34m| [0m    dec Point { value: val2, .. } = make_point();
+  [34m| [0m                                                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_destructuring.ms:18:1
+  [34m|
+[0m18 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\scratch\test_destructuring.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_enum_exhaustiveness.ms:
+mellis : [1m[31merror: [0m[1mnon-exhaustive patterns: `None` not covered[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...not covered[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_enum_exhaustiveness.ms:10:17
+  [34m|
+[0m10 [34m| [0m    dec val = match opt {
+  [34m| [0m                [1m[31m^[0m
+D:\fdlang\tests\scratch\test_enum_exhaustiveness.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%1'[0m
+D:\fdlang\tests\scratch\test_enum_exhaustiveness.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%5'[0m
+D:\fdlang\tests\scratch\test_enum_exhaustiveness.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%6'[0m
+D:\fdlang\tests\scratch\test_enum_exhaustiveness.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_for_in.ms:
+mellis : D:\fdlang\tests\scratch\test_for_in.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%1'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%1'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\scratch\test_for_in.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '*%0'[0m
+D:\fdlang\tests\scratch\test_for_in.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%17'[0m
+D:\fdlang\tests\scratch\test_for_in.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%18'[0m
+D:\fdlang\tests\scratch\test_for_in.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_malloc.ms:
+DEBUG: NamedTypeNode visited (segments[0] = void, symbolId = 15)
+DEBUG: Inside IF block
+mellis : D:\fdlang\tests\scratch\test_malloc.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%3'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...iable: '%3'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\scratch\test_malloc.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+test_mono_trick.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_mono_trick.ms:3:12
+  [34m|
+[0m3 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_mono_trick.ms:3:38
+  [34m|
+[0m3 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_mono_trick.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_mvir_intrinsics.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_mvir_intrinsics.ms:1:12
+  [34m|
+[0m1 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_mvir_intrinsics.ms:1:38
+  [34m|
+[0m1 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_mvir_intrinsics.ms:2:56
+  [34m|
+[0m2 [34m| [0mintrinsic fn ptr_read(p: *const int_32) -> int_32;
+  [34m| [0m                                                       [1m[31m^[0m
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_mvir_intrinsics.ms:3:67
+  [34m|
+[0m3 [34m| [0mintrinsic fn ptr_write(p: *rw int_32, val: int_32) -> void;
+  [34m| [0m                                                                  [1m[31m^[0m
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_mvir_intrinsics.ms:4:94
+  [34m|
+[0m4 [34m| [0mintrinsic fn mem_copy(src: *const int_32, dest: *rw int_32, count: int_64) -> void;
+  [34m| [0m                                                                                             
+[1m[31m^[0m
+D:\fdlang\tests\scratch\test_mvir_intrinsics.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_order_result.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_order_result.ms:2:12
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_order_result.ms:2:38
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_order_result.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_ptr_binary_arith.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_ptr_binary_arith.ms:1:12
+  [34m|
+[0m1 [34m| [0mintrinsic fn ptr_offset<T>(p: *const T, offset: int_32) -> *const T;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_ptr_binary_arith.ms:1:46
+  [34m|
+[0m1 [34m| [0mintrinsic fn ptr_offset<T>(p: *const T, offset: int_32) -> *const T;
+  [34m| [0m                                             [1m[31m^[0m
+D:\fdlang\tests\scratch\test_ptr_binary_arith.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_result_simple.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_result_simple.ms:2:12
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_result_simple.ms:2:38
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_result_simple.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_trait_dispatch.ms:
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Circle, symbolId = 20)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Drawable, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 22)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 26)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = T, symbolId = 28)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Circle, symbolId = 20)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = InvalidTrait, symbolId = 25)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 31)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = T, symbolId = 33)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Circle, symbolId = 20)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Drawable, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Circle, symbolId = 20)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Drawable, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = InvalidTrait, symbolId = 25)
+DEBUG: Inside IF block
+mellis : [1m[31merror: [0m[1mType mismatch: expected 'Struct<20>', found 'unknown'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...d 'unknown'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_trait_dispatch.ms:27:14
+  [34m|
+[0m27 [34m| [0m    c.draw();
+  [34m| [0m             [1m[31m^[0m
+[1m[31merror: [0m[1mType mismatch: expected '&dyn Trait<16>', found 'dyn Trait<16>'[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_trait_dispatch.ms:31:14
+  [34m|
+[0m31 [34m| [0m    d.draw();
+  [34m| [0m             [1m[31m^[0m
+[1m[31merror: [0m[1mType mismatch: expected 'dyn Trait<16>', found 'Struct<20>'[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_trait_dispatch.ms:40:5
+  [34m|
+[0m40 [34m| [0m    dec d: &dyn Drawable = &c;
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mType mismatch: expected 'dyn Trait<25>', found 'Struct<20>'[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_trait_dispatch.ms:44:5
+  [34m|
+[0m44 [34m| [0m    dec bad: &dyn InvalidTrait = &c;
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mType annotation needed[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_trait_dispatch.ms:27:14
+  [34m|
+[0m27 [34m| [0m    c.draw();
+  [34m| [0m             [1m[31m^[0m
+[1m[31merror: [0m[1mType annotation needed[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_trait_dispatch.ms:31:14
+  [34m|
+[0m31 [34m| [0m    d.draw();
+  [34m| [0m             [1m[31m^[0m
+D:\fdlang\tests\scratch\test_trait_dispatch.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker 
+errors.[0m
+
+=================
+test_tuple_index.ms:
+mellis : [1m[31merror: [0m[1mExpected member name or tuple index[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...tuple index[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_tuple_index.ms:10:23
+  [34m|
+[0m10 [34m| [0m    dec z = nested.0.1; // Nested path
+  [34m| [0m                      [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_tuple_index.ms:10:27
+  [34m|
+[0m10 [34m| [0m    dec z = nested.0.1; // Nested path
+  [34m| [0m                          [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_tuple_index.ms:13:1
+  [34m|
+[0m13 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\scratch\test_tuple_index.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_type_alias.ms:
+DEBUG: NamedTypeNode visited (segments[0] = UserId, symbolId = 16)
+DEBUG: Inside IF block
+mellis : [1m[31merror: [0m[1mType mismatch: expected 'unknown', found 'int_32'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...nd 'int_32'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias.ms:3:5
+  [34m|
+[0m3 [34m| [0m    return 0;
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\scratch\test_type_alias.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m
+
+=================
+test_type_alias_generic.ms:
+mellis : [1m[31merror: [0m[1mUse of undeclared name 'T'.[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...d name 'T'.[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_generic.ms:1:20
+  [34m|
+[0m1 [34m| [0mtype Pair<T> = (T, T);
+  [34m| [0m                   [1m[31m^[0m
+[1m[31merror: [0m[1mUse of undeclared name 'T'.[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_generic.ms:1:24
+  [34m|
+[0m1 [34m| [0mtype Pair<T> = (T, T);
+  [34m| [0m                       [1m[31m^[0m
+D:\fdlang\tests\scratch\test_type_alias_generic.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test 
+MVIR...[0m
+DEBUG: NamedTypeNode visited (segments[0] = Pair, symbolId = 16)
+DEBUG: Inside IF block
+[1m[31merror: [0m[1mUse of undeclared name 'T'.[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_generic.ms:1:20
+  [34m|
+[0m1 [34m| [0mtype Pair<T> = (T, T);
+  [34m| [0m                   [1m[31m^[0m
+[1m[31merror: [0m[1mUse of undeclared name 'T'.[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_generic.ms:1:24
+  [34m|
+[0m1 [34m| [0mtype Pair<T> = (T, T);
+  [34m| [0m                       [1m[31m^[0m
+D:\fdlang\tests\scratch\test_type_alias_generic.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test 
+MVIR...[0m
+[1m[31merror: [0m[1mType mismatch: expected 'unknown', found '(int_32, int_32)'[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_generic.ms:4:5
+  [34m|
+[0m4 [34m| [0m    return (1, 2);
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\scratch\test_type_alias_generic.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker 
+errors.[0m
+
+=================
+test_type_alias_neg2.ms:
+mellis : [1m[31merror: [0m[1mUse of undeclared name 'T'.[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...d name 'T'.[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_neg2.ms:1:20
+  [34m|
+[0m1 [34m| [0mtype Pair<T> = (T, T);
+  [34m| [0m                   [1m[31m^[0m
+[1m[31merror: [0m[1mUse of undeclared name 'T'.[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_neg2.ms:1:24
+  [34m|
+[0m1 [34m| [0mtype Pair<T> = (T, T);
+  [34m| [0m                       [1m[31m^[0m
+D:\fdlang\tests\scratch\test_type_alias_neg2.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test 
+MVIR...[0m
+DEBUG: NamedTypeNode visited (segments[0] = Pair, symbolId = 16)
+DEBUG: Inside IF block
+[1m[31merror: [0m[1mUse of undeclared name 'T'.[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_neg2.ms:1:20
+  [34m|
+[0m1 [34m| [0mtype Pair<T> = (T, T);
+  [34m| [0m                   [1m[31m^[0m
+[1m[31merror: [0m[1mUse of undeclared name 'T'.[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_type_alias_neg2.ms:1:24
+  [34m|
+[0m1 [34m| [0mtype Pair<T> = (T, T);
+  [34m| [0m                       [1m[31m^[0m
+D:\fdlang\tests\scratch\test_type_alias_neg2.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test 
+MVIR...[0m
+D:\fdlang\tests\scratch\test_type_alias_neg2.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker 
+errors.[0m
+
+=================
+test_working_repro.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\test_working_repro.ms:2:12
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\scratch\test_working_repro.ms:2:38
+  [34m|
+[0m2 [34m| [0mintrinsic fn unreachable() -> void;
+  [34m| [0m                                     [1m[31m^[0m
+D:\fdlang\tests\scratch\test_working_repro.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+unsafe_ptr_restrictions.ms:
+mellis : [1m[31merror: [0m[1mNo method named 'add' found for type '*mut int_32'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...mut int_32'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\scratch\unsafe_ptr_restrictions.ms:4:23
+  [34m|
+[0m4 [34m| [0m    dec y = p.add(1); // Error: requires unsafe
+  [34m| [0m                      [1m[31m^[0m
+D:\fdlang\tests\scratch\unsafe_ptr_restrictions.ms: [1m[31merror: [0m[1mType mismatch: expected '*mut int_32', 
+found 'int_32'[0m
+[1m[31merror: [0m[1mType annotation needed[0m
+ [34m--> [0mD:\fdlang\tests\scratch\unsafe_ptr_restrictions.ms:4:23
+  [34m|
+[0m4 [34m| [0m    dec y = p.add(1); // Error: requires unsafe
+  [34m| [0m                      [1m[31m^[0m
+D:\fdlang\tests\scratch\unsafe_ptr_restrictions.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker 
+errors.[0m
+
+=================
+lib.ms:
+DEBUG: NamedTypeNode visited (segments[0] = T, symbolId = 17)
+DEBUG: Inside IF block
+mellis : lld-link: error: undefined symbol: main
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (lld-link: error: undefined symbol: main:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:78
+>>>               libcmt.lib(exe_main.obj):(int __cdecl invoke_main(void))
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:288
+>>>               libcmt.lib(exe_main.obj):(int __cdecl __scrt_common_main_seh(void))
+D:\fdlang\tests\sprint6\e11\lib.ms: [1m[31merror: [0m[1mTrinh lien ket (lld-link) that bai khi tao 
+D:\fdlang\tests\sprint6\e11\lib.exe. Kiem tra xem ban da cai dat LLVM chua.[0m
+D:\fdlang\tests\sprint6\e11\lib.ms: [1m[31merror: [0m[1mTao file thuc thi that bai.[0m
+
+=================
+lib.ms:
+DEBUG: NamedTypeNode visited (segments[0] = T, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = U, symbolId = 18)
+DEBUG: Inside IF block
+mellis : lld-link: error: undefined symbol: main
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (lld-link: error: undefined symbol: main:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:78
+>>>               libcmt.lib(exe_main.obj):(int __cdecl invoke_main(void))
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:288
+>>>               libcmt.lib(exe_main.obj):(int __cdecl __scrt_common_main_seh(void))
+D:\fdlang\tests\sprint6\e12\lib.ms: [1m[31merror: [0m[1mTrinh lien ket (lld-link) that bai khi tao 
+D:\fdlang\tests\sprint6\e12\lib.exe. Kiem tra xem ban da cai dat LLVM chua.[0m
+D:\fdlang\tests\sprint6\e12\lib.ms: [1m[31merror: [0m[1mTao file thuc thi that bai.[0m
+
+=================
+lib.ms:
+DEBUG: NamedTypeNode visited (segments[0] = T, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = T, symbolId = 17)
+DEBUG: Inside IF block
+mellis : lld-link: error: undefined symbol: main
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (lld-link: error: undefined symbol: main:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:78
+>>>               libcmt.lib(exe_main.obj):(int __cdecl invoke_main(void))
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:288
+>>>               libcmt.lib(exe_main.obj):(int __cdecl __scrt_common_main_seh(void))
+D:\fdlang\tests\sprint6\e3\lib.ms: [1m[31merror: [0m[1mTrinh lien ket (lld-link) that bai khi tao 
+D:\fdlang\tests\sprint6\e3\lib.exe. Kiem tra xem ban da cai dat LLVM chua.[0m
+D:\fdlang\tests\sprint6\e3\lib.ms: [1m[31merror: [0m[1mTao file thuc thi that bai.[0m
+
+=================
+e2_assoc_type.ms:
+mellis : [1m[31merror: [0m[1mExpected 'fn'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...pected 'fn'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\type\e2_assoc_type.ms:2:5
+  [34m|
+[0m2 [34m| [0m    type Item;
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\type\e2_assoc_type.ms:2:16
+  [34m|
+[0m2 [34m| [0m    type Item;
+  [34m| [0m               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\type\e2_assoc_type.ms:3:42
+  [34m|
+[0m3 [34m| [0m    fn get(self: &Self) -> Self::Item;
+  [34m| [0m                                         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected 'fn'[0m
+ [34m--> [0mD:\fdlang\tests\type\e2_assoc_type.ms:11:5
+  [34m|
+[0m11 [34m| [0m    type Item = T;
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\type\e2_assoc_type.ms:11:21
+  [34m|
+[0m11 [34m| [0m    type Item = T;
+  [34m| [0m                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\type\e2_assoc_type.ms:15:1
+  [34m|
+[0m15 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\type\e2_assoc_type.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+ptr_diff_type_mismatch.ms:
+mellis : D:\fdlang\tests\type\ptr_diff_type_mismatch.ms: [1m[31merror: [0m[1mType mismatch: expected 'int_32', 
+found 'int_64'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...nd 'int_64'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\type\ptr_diff_type_mismatch.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker 
+errors.[0m
+
+=================
+type_alias.ms:
+DEBUG: NamedTypeNode visited (segments[0] = MyInt, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = MyInt, symbolId = 16)
+DEBUG: Inside IF block
+mellis : [1m[31merror: [0m[1mType mismatch: expected 'unknown', found 'int_32'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...nd 'int_32'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\type\type_alias.ms:4:5
+  [34m|
+[0m4 [34m| [0m    dec a: MyInt = 42;
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\type\type_alias.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m
+
+=================
+index_overload.ms:
+mellis : [1m[31merror: [0m[1mType 'Struct<22>' is not iterable[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...ot iterable[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\index_overload.ms:17:22
+  [34m|
+[0m17 [34m| [0m    dec val = arr[5];
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Idx, symbolId = 18)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Array, symbolId = 22)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Index, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 24)
+DEBUG: Inside IF block
+  [34m| [0m                     [1m[31m^[0m
+D:\fdlang\tests\valid\index_overload.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker errors.[0m
+
+=================
+minimal_hang.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after struct field[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...truct field[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\minimal_hang.ms:1:34
+  [34m|
+[0m1 [34m| [0mstruct Vec<T> { ptr: *rw T }
+  [34m| [0m                                 [1m[31m^[0m
+D:\fdlang\tests\valid\minimal_hang.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+nested_nonexhaustive.ms:
+
+=================
+operator_overload.ms:
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = RHS, symbolId = 18)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 17)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Point, symbolId = 22)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Add, symbolId = 16)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Point, symbolId = 4294967295)
+DEBUG: NamedTypeNode visited (segments[0] = Self, symbolId = 25)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Point, symbolId = 22)
+DEBUG: Inside IF block
+DEBUG: NamedTypeNode visited (segments[0] = Point, symbolId = 22)
+DEBUG: Inside IF block
+mellis : D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: 
+'%2.18446744073709551615'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\fdlang\tests...3709551615'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%3.0'[0m
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%9'[0m
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%3.1'[0m
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%15'[0m
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%4'[0m
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%1'[0m
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%6'[0m
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mUse of uninitialized variable: '%13'[0m
+D:\fdlang\tests\valid\operator_overload.ms: [1m[31merror: [0m[1mBorrowChecker that bai.[0m
+
+=================
+pointer_arithmetic.ms:
+mellis : [1m[31merror: [0m[1mExpected ']' after array type[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... array type[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\pointer_arithmetic.ms:2:24
+  [34m|
+[0m2 [34m| [0m    dec arr: [int_32; 3] = [10, 20, 30];
+  [34m| [0m                       [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\pointer_arithmetic.ms:2:47
+  [34m|
+[0m2 [34m| [0m    dec arr: [int_32; 3] = [10, 20, 30];
+  [34m| [0m                                              [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\pointer_arithmetic.ms:9:1
+  [34m|
+[0m9 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\valid\pointer_arithmetic.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+ref_self_sugar.ms:
+mellis : [1m[31merror: [0m[1mExpected parameter name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...ameter name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\ref_self_sugar.ms:10:14
+  [34m|
+[0m10 [34m| [0m    fn inc(&mut self) {
+  [34m| [0m             [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\ref_self_sugar.ms:11:37
+  [34m|
+[0m11 [34m| [0m        self.val = self.val + 1;
+  [34m| [0m                                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected parameter name[0m
+ [34m--> [0mD:\fdlang\tests\valid\ref_self_sugar.ms:14:14
+  [34m|
+[0m14 [34m| [0m    fn get(&self) -> int_32 {
+  [34m| [0m             [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\ref_self_sugar.ms:16:5
+  [34m|
+[0m16 [34m| [0m    }
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\valid\ref_self_sugar.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_async.ms:
+mellis : [1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...er, or '(')[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_async.ms:6:1
+  [34m|
+[0m6 [34m| [0masync fn fetch_number() -> int_32 {
+  [34m| [0m[1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_async.ms:11:1
+  [34m|
+[0m11 [34m| [0masync fn double_async(x: int_32) -> int_32 {
+  [34m| [0m[1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_async.ms:17:1
+  [34m|
+[0m17 [34m| [0masync fn do_work() {
+  [34m| [0m[1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_async.ms:22:1
+  [34m|
+[0m22 [34m| [0masync fn sequential() -> int_32 {
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\valid\test_async.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_comptime.ms:
+mellis : [1m[31merror: [0m[1mExpected '{' to start block[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...start block[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_comptime.ms:7:11
+  [34m|
+[0m7 [34m| [0mcomptime fn factorial(n: i32) -> i32 {
+  [34m| [0m          [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_comptime.ms:12:1
+  [34m|
+[0m12 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\valid\test_comptime.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_destructuring.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after variable declaration[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...declaration[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_destructuring.ms:11:17
+  [34m|
+[0m11 [34m| [0m    dec Point { x, y } = p;
+  [34m| [0m                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_destructuring.ms:11:32
+  [34m|
+[0m11 [34m| [0m    dec Point { x, y } = p;
+  [34m| [0m                               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected variable name[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_destructuring.ms:16:10
+  [34m|
+[0m16 [34m| [0m    dec (a, b) = t;
+  [34m| [0m         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_destructuring.ms:16:23
+  [34m|
+[0m16 [34m| [0m    dec (a, b) = t;
+  [34m| [0m                      [1m[31m^[0m
+D:\fdlang\tests\valid\test_destructuring.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_dyn_dispatch.ms:
+mellis : [1m[31merror: [0m[1mExpected parameter name[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...ameter name[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_dyn_dispatch.ms:5:16
+  [34m|
+[0m5 [34m| [0m    fn greet(&self) -> int_32;
+  [34m| [0m               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_dyn_dispatch.ms:5:33
+  [34m|
+[0m5 [34m| [0m    fn greet(&self) -> int_32;
+  [34m| [0m                                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected parameter name[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_dyn_dispatch.ms:17:16
+  [34m|
+[0m17 [34m| [0m    fn greet(&self) -> int_32 {
+  [34m| [0m               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_dyn_dispatch.ms:19:5
+  [34m|
+[0m19 [34m| [0m    }
+  [34m| [0m    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected parameter name[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_dyn_dispatch.ms:23:16
+  [34m|
+[0m23 [34m| [0m    fn greet(&self) -> int_32 {
+  [34m| [0m               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_dyn_dispatch.ms:25:5
+  [34m|
+[0m25 [34m| [0m    }
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\valid\test_dyn_dispatch.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_external_symbol.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_external_symbol.ms:1:9
+  [34m|
+[0m1 [34m| [0mimport "external_mod";
+  [34m| [0m        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_external_symbol.ms:1:24
+  [34m|
+[0m1 [34m| [0mimport "external_mod";
+  [34m| [0m                       [1m[31m^[0m
+D:\fdlang\tests\valid\test_external_symbol.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_full_pipeline.ms:
+mellis : [1m[31merror: [0m[1mUse of undeclared name 'u8'.[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... name 'u8'.[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_full_pipeline.ms:7:34
+  [34m|
+[0m7 [34m| [0m    fn format(self) -> *const u8;
+  [34m| [0m                                 [1m[31m^[0m
+[1m[31merror: [0m[1mUse of undeclared name 'u8'.[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_full_pipeline.ms:11:34
+  [34m|
+[0m11 [34m| [0m    fn format(self) -> *const u8 {
+  [34m| [0m                                 [1m[31m^[0m
+D:\fdlang\tests\valid\test_full_pipeline.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test 
+MVIR...[0m
+
+=================
+test_full_pipeline_mlib_consumer.ms:
+[DEBUG] parseUseTree after segment: 50 {
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 51 }
+mellis : [1m[31merror: [0m[1mFailed to load module 'test_full_pipeline_mlib_producer': Section table out of bounds 
+in: D:\fdlang\tests\valid/test_full_pipeline_mlib_producer.mlib[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...oducer.mlib[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_full_pipeline_mlib_consumer.ms:1:6
+  [34m|
+[0m1 [34m| [0muse test_full_pipeline_mlib_producer::{Result, Process, handle_result};
+  [34m| [0m     [1m[31m^[0m
+D:\fdlang\tests\valid\test_full_pipeline_mlib_consumer.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc 
+de test MVIR...[0m
+
+=================
+test_full_pipeline_mlib_producer.ms:
+
+=================
+test_kitchen_sink.ms:
+
+=================
+test_labeled_break.ms:
+mellis : [1m[31merror: [0m[1mExpected ';' after expression[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:... expression[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_labeled_break.ms:10:10
+  [34m|
+[0m10 [34m| [0m        'inner: while (j < 5) {
+  [34m| [0m         [1m[31m^[0m
+[1m[31merror: [0m[1mExpected ';' after break[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_labeled_break.ms:13:28
+  [34m|
+[0m13 [34m| [0m                    break 'outer;
+  [34m| [0m                           [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_labeled_break.ms:18:33
+  [34m|
+[0m18 [34m| [0m                continue 'outer;
+  [34m| [0m                                [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_labeled_break.ms:20:29
+  [34m|
+[0m20 [34m| [0m            sum = sum + 1;
+  [34m| [0m                            [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_labeled_break.ms:21:25
+  [34m|
+[0m21 [34m| [0m            j = j + 1;
+  [34m| [0m                        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_labeled_break.ms:23:21
+  [34m|
+[0m23 [34m| [0m        i = i + 1;
+  [34m| [0m                    [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_labeled_break.ms:35:1
+  [34m|
+[0m35 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+D:\fdlang\tests\valid\test_labeled_break.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_metadata.ms:
+mellis : [1m[31merror: [0m[1mCannot find module 'metadata_mod' in library paths.[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...rary paths.[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_metadata.ms:1:6
+[DEBUG] parseUseTree after segment: 45 ;
+  [34m|
+[0m1 [34m| [0muse metadata_mod;
+  [34m| [0m     [1m[31m^[0m
+D:\fdlang\tests\valid\test_metadata.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+
+=================
+test_try.ms:
+
+=================
+test_unsafe.ms:
+mellis : [DEBUG] parseType failed at byte 297 token 83 text: unsafe
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([DEBUG] parseTy...83 text: unsafe:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe.ms:1:9
+  [34m|
+[0m1 [34m| [0munsafe fn dangerous_op() -> int_32 {
+  [34m| [0m        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe.ms:3:1
+  [34m|
+[0m3 [34m| [0m}
+  [34m| [0m[1m[31m^[0m
+[1m[31merror: [0m[1mExpected a type[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe.ms:20:16
+  [34m|
+[0m20 [34m| [0m    dec ptr: unsafe fn() -> int_32 = dangerous_op;
+  [34m| [0m               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected function name[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe.ms:20:27
+  [34m|
+[0m20 [34m| [0m    dec ptr: unsafe fn() -> int_32 = dangerous_op;
+  [34m| [0m                          [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe.ms:20:55
+  [34m|
+[0m20 [34m| [0m    dec ptr: unsafe fn() -> int_32 = dangerous_op;
+  [34m| [0m                                                      [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe.ms:25:5
+  [34m|
+[0m25 [34m| [0m    }
+  [34m| [0m    [1m[31m^[0m
+D:\fdlang\tests\valid\test_unsafe.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_unsafe_neg.ms:
+mellis : [DEBUG] parseType failed at byte 56 token 83 text: unsafe
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([DEBUG] parseTy...83 text: unsafe:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[1m[31merror: [0m[1mExpected '{' to start block[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe_neg.ms:1:9
+  [34m|
+[0m1 [34m| [0munsafe fn dangerous_op() {} 
+  [34m| [0m        [1m[31m^[0m
+[1m[31merror: [0m[1mExpected a type[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe_neg.ms:4:16
+  [34m|
+[0m4 [34m| [0m    dec ptr: unsafe fn() = dangerous_op; 
+  [34m| [0m               [1m[31m^[0m
+[1m[31merror: [0m[1mExpected function name[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe_neg.ms:4:27
+  [34m|
+[0m4 [34m| [0m    dec ptr: unsafe fn() = dangerous_op; 
+  [34m| [0m                          [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe_neg.ms:4:45
+  [34m|
+[0m4 [34m| [0m    dec ptr: unsafe fn() = dangerous_op; 
+  [34m| [0m                                            [1m[31m^[0m
+[1m[31merror: [0m[1mExpected expression (e.g., literal, identifier, or '(')[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_unsafe_neg.ms:5:11
+  [34m|
+[0m5 [34m| [0m    ptr(); 
+  [34m| [0m          [1m[31m^[0m
+D:\fdlang\tests\valid\test_unsafe_neg.ms: [1m[31merror: [0m[1mParsing that bai.[0m
+
+=================
+test_vec.ms:
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 50 {
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 51 }
+mellis : [1m[31merror: [0m[1mFailed to load module 'core': Section table out of bounds in: 
+D:\fdlang\lib/core.mlib[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...b/core.mlib[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\test_vec.ms:1:6
+  [34m|
+[0m1 [34m| [0muse core;
+  [34m| [0m     [1m[31m^[0m
+[1m[31merror: [0m[1mSymbol 'Option' not found in external module.[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_vec.ms:2:6
+  [34m|
+[0m2 [34m| [0muse core::option::Option;
+  [34m| [0m     [1m[31m^[0m
+[1m[31merror: [0m[1mFailed to load module 'alloc': Section table out of bounds in: D:\fdlang\lib/alloc.mlib[0m
+ [34m--> [0mD:\fdlang\tests\valid\test_vec.ms:3:6
+  [34m|
+[0m3 [34m| [0muse alloc::vec::{Vec, vec_new};
+  [34m| [0m     [1m[31m^[0m
+D:\fdlang\tests\valid\test_vec.ms: [1m[31merror: [0m[1mResolver that bai, nhung tiep tuc de test MVIR...[0m
+
+=================
+unsafe_intrinsic_method_call.ms:
+mellis : [1m[31merror: [0m[1mNo method named 'add' found for type '*mut int_32'[0m
+At line:1 char:178
++ ... s -Recurse | ForEach-Object { $out = (mellis $_.FullName 2>&1 | Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[31merror:...mut int_32'[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ [34m--> [0mD:\fdlang\tests\valid\unsafe_intrinsic_method_call.ms:4:13
+  [34m|
+[0m4 [34m| [0m    p.add(1);
+  [34m| [0m            [1m[31m^[0m
+[1m[31merror: [0m[1mType annotation needed[0m
+ [34m--> [0mD:\fdlang\tests\valid\unsafe_intrinsic_method_call.ms:4:13
+  [34m|
+[0m4 [34m| [0m    p.add(1);
+  [34m| [0m            [1m[31m^[0m
+D:\fdlang\tests\valid\unsafe_intrinsic_method_call.ms: [1m[31merror: [0m[1mCompilation aborted due to TypeChecker 
+errors.[0m
+

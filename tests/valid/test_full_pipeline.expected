@@ -1,0 +1,490 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG] Enum 'Option' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+[DEBUG resolvePath] Resolving path starting with 'opt'
+[DEBUG resolvePath] resolve('opt') returned 1 syms. First id=32
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000002445FBFD3C0, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=34
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000002445FBFD3C0, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000002445FBFD3C0, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000002445FBFD3C0, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'print_opt'
+[DEBUG resolvePath] resolve('print_opt') returned 1 syms. First id=30
+[DEBUG resolvePath] Resolving path starting with 'a'
+[DEBUG resolvePath] resolve('a') returned 1 syms. First id=36
+[DEBUG resolvePath] Resolving path starting with 'print_opt'
+[DEBUG resolvePath] resolve('print_opt') returned 1 syms. First id=30
+[DEBUG resolvePath] Resolving path starting with 'b'
+[DEBUG resolvePath] resolve('b') returned 1 syms. First id=37
+[DEBUG] Enum 'Option_int_32' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+Solving constraint: *const uint_8 == str
+Solving constraint: Enum<18<?T2>> == Enum<18<T (31)>>
+Solving constraint: ?T1 == void
+Solving constraint: Enum<18<?T4>> == Enum<18<T (31)>>
+Solving constraint: ?T1 == void
+Solving constraint: fn(int_32) -> Enum<18<?T5>> == fn(?T5) -> Enum<18<?T5>>
+Solving constraint: Enum<18<int_32>> == Enum<18<?T7>>
+Solving constraint: fn(Enum<18<?T5>>) -> void == fn(opt: Enum<18<?T11>>) -> void
+Solving constraint: fn(Enum<38>) -> void == fn(opt: Enum<18<?T15>>) -> void
+Solving constraint: int_32 == int_32
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+Solving constraint: Enum<18<?T18>> == Enum<18<T (31)>>
+Solving constraint: ?T17 == void
+Solving constraint: Enum<18<?T20>> == Enum<18<T (31)>>
+Solving constraint: ?T17 == void
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG] MacroResolver visiting VarDeclNode
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Option' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='T' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='Some' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='__field_0' kind=8 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='None' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=23 name='Display' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=24 name='Self' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=25 name='format' kind=4 scope=4
+[DEBUG SymbolTable] declareSymbol id=26 name='self' kind=3 scope=5
+[DEBUG SymbolTable] declareSymbol id=27 name='Self' kind=12 scope=6
+[DEBUG SymbolTable] declareSymbol id=28 name='format' kind=4 scope=6
+[DEBUG SymbolTable] declareSymbol id=29 name='self' kind=3 scope=7
+[DEBUG SymbolTable] declareSymbol id=30 name='print_opt' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=31 name='T' kind=13 scope=8
+[DEBUG SymbolTable] declareSymbol id=32 name='opt' kind=3 scope=8
+[DEBUG SymbolTable] declareSymbol id=33 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=19
+[DEBUG] Resolving function: format
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=24
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Display': i=1, currentSym=23
+[DEBUG] Resolving function: format
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=27
+[DEBUG] Resolving function: print_opt
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Display': i=1, currentSym=23
+[DEBUG] lookup 'Option' starting at scope 8
+[DEBUG] lookup 'Option' checking scope 8 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Option': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=31
+[DEBUG] Resolving identifier: opt
+[DEBUG] Finished resolvePath for opt
+[DEBUG] lookup 'Option' starting at scope 12
+[DEBUG] lookup 'Option' checking scope 12 (kind=3, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=3, parent=8)
+[DEBUG] lookup 'Option' checking scope 8 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG SymbolTable] declareSymbol id=34 name='val' kind=0 scope=12
+[DEBUG SymbolTable] declareSymbol id=35 name='msg' kind=0 scope=13
+[DEBUG] Resolving identifier: val
+[DEBUG] Finished resolvePath for val
+[DEBUG] lookup 'Option' starting at scope 14
+[DEBUG] lookup 'Option' checking scope 14 (kind=3, parent=11)
+[DEBUG] lookup 'Option' checking scope 11 (kind=3, parent=8)
+[DEBUG] lookup 'Option' checking scope 8 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG SymbolTable] declareSymbol id=36 name='a' kind=0 scope=16
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 16
+[DEBUG] lookup 'Option' checking scope 16 (kind=3, parent=9)
+[DEBUG] lookup 'Option' checking scope 9 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG] Finished resolvePath for Option
+[DEBUG SymbolTable] declareSymbol id=37 name='b' kind=0 scope=16
+[DEBUG] lookup 'Option' starting at scope 16
+[DEBUG] lookup 'Option' checking scope 16 (kind=3, parent=9)
+[DEBUG] lookup 'Option' checking scope 9 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Option': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: Option
+[DEBUG] lookup 'Option' starting at scope 16
+[DEBUG] lookup 'Option' checking scope 16 (kind=3, parent=9)
+[DEBUG] lookup 'Option' checking scope 9 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG] Finished resolvePath for Option
+[DEBUG] Resolving identifier: print_opt
+[DEBUG] Finished resolvePath for print_opt
+[DEBUG] Resolving identifier: a
+[DEBUG] Finished resolvePath for a
+[DEBUG] Resolving identifier: print_opt
+[DEBUG] Finished resolvePath for print_opt
+[DEBUG] Resolving identifier: b
+[DEBUG] Finished resolvePath for b
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 5 items
+[DEBUG] item kind: class fl::EnumDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=19
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='format' symbolId=25
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=24
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG TraitDeclNode] Method 'format' symbolId=25
+[DEBUG TraitDeclNode] typeTable[25] = 3
+[DEBUG TraitDeclNode] Registered trait method 'format'
+[DEBUG] item kind: class fl::ImplDeclNode
+[DEBUG] visit(ImplDeclNode) genericParams size: 0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ImplDeclNode evaluating selfType: 0
+[DEBUG] ImplDeclNode Self symbolId=27 selfType=0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Display' symbolId=23
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='format' symbolId=28
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=27
+[DEBUG self] Evaluated param->type for self -> 0
+[DEBUG] evaluateTypeNode called on class fl::PointerTypeNode
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG TraitSolver] addClause: selfType=int_32 traitId=23
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='print_opt' symbolId=30
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=31
+[DEBUG self] Evaluated param->type for opt -> 2
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Display' symbolId=23
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (31) traitId=23
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=33
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=32 name=opt tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC243A0 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=31 name='T' found=0
+[DEBUG IdentifierExpr] Substituted generic enum variant 'opt', new type: Enum<18<T (31)>>
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000002445FC243A0
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000002445FC37260
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=34 expectedType=000002445FC37260
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=val tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC37260 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=35 expectedType=000002445FC37300
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=20 name=Some tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC35B40 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG IdentifierExpr] Substituted generic enum variant 'Some', new type: fn(?T5) -> Enum<18<?T5>>
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=36 expectedType=000002445FC23EF0
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=22 name=None tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC24D50 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG IdentifierExpr] Substituted generic enum variant 'None', new type: Enum<18<?T7>>
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=37 expectedType=000002445FC23F90
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=30 name=print_opt tableSize=38
+[DEBUG] Running TypePrePass on generic function: print_opt
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='print_opt' symbolId=30
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=31
+[DEBUG self] Evaluated param->type for opt -> 2
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Display' symbolId=23
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (31) traitId=23
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC360F0 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG substitute] GenericParam id=31 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=36 name=a tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC23EF0 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG IdentifierExpr] Substituted generic enum variant 'a', new type: Enum<18<?T5>>
+[DEBUG CallExpr] fnDecl name: 'print_opt' symbolId: 30
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(opt: Enum<18<T (31)>>) -> void
+[DEBUG CallExpr] before substitute: fn(opt: Enum<18<T (31)>>) -> void
+[DEBUG substitute] GenericParam id=31 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(opt: Enum<18<?T11>>) -> void
+[DEBUG] ConstraintGen::visit(CallExpr)
+[DEBUG] ConstraintGen::visit(CallExpr) callee is NOT NULL. Type=class fl::IdentifierExpr
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=30 name=print_opt tableSize=38
+[DEBUG] Running TypePrePass on generic function: print_opt
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='print_opt' symbolId=30
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=31
+[DEBUG self] Evaluated param->type for opt -> 2
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Display' symbolId=23
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (31) traitId=23
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC35830 kind=3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast3
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside inner if
+[DEBUG substitute] GenericParam id=31 name='T' found=1
+[DEBUG] ConstraintGen::visit(CallExpr) callee accepted
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=37 name=b tableSize=38
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC23F90 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG SymbolTable] declareSymbol id=38 name='Option_int_32' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=39 name='Some' kind=7 scope=17
+[DEBUG SymbolTable] declareSymbol id=40 name='__field_0' kind=8 scope=18
+[DEBUG SymbolTable] declareSymbol id=41 name='None' kind=7 scope=17
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG IdentifierExpr] Substituted generic enum variant 'b', new type: Enum<38>
+[DEBUG CallExpr] fnDecl name: 'print_opt' symbolId: 30
+[DEBUG CallExpr] resolvedCalleeType kind=3: fn(opt: Enum<18<T (31)>>) -> void
+[DEBUG CallExpr] before substitute: fn(opt: Enum<18<T (31)>>) -> void
+[DEBUG substitute] GenericParam id=31 name='T' found=1
+[DEBUG CallExpr] after substitute: fn(opt: Enum<18<?T15>>) -> void
+[DEBUG] Starting UnificationEngine
+[DEBUG unify] Type mismatch at loc line 12 t1=*const uint_8 t2=str
+[DEBUG MethodResolver] Probing method 'format' for receiverType: T (31)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (31) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (31) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=24 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(T (31)) -> ?T3 with mInfo.type: fn(self: T (31)) -> *const uint_8
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::ImplDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG MethodResolver] Probing method 'format' for receiverType: T (31)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (31) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (31) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=24 name='Self' found=1
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG CallExpr] gFn->genericParams.size() = 1
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 1 bounds
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=int_32 traitId=23
+[DEBUG implementsTrait] type=int_32 traitId=23
+[DEBUG TraitSolver] Solving goal: kind=0 self=int_32 traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG implementsTrait] solve result=0
+[DEBUG] Setting type substitution for 'T' to a concrete type.
+[DEBUG] SubstitutionVisitor: NO substitution found for 'Option'.
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 1 stmts.
+[DEBUG] SubstitutionVisitor: visiting BlockStmtNode with 0 stmts.
+[DEBUG] Resolver::resolve: diag already has errors BEFORE pass1: 1 size: 1
+RAW ERROR: Type mismatch: expected '*const uint_8', found 'str'
+[DEBUG SymbolTable] declareSymbol id=42 name='print_opt_int_32' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=43 name='opt' kind=3 scope=20
+[DEBUG] Resolver::resolve: Aborting after pass1 due to previous errors (1).
+RAW ERROR: Type mismatch: expected '*const uint_8', found 'str'
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='print_opt_int_32' symbolId=42
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG self] Evaluated param->type for opt -> 2
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=32 name=opt tableSize=44
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC243A0 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=31 name='T' found=0
+[DEBUG IdentifierExpr] Substituted generic enum variant 'opt', new type: Enum<18<T (31)>>
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000002445FC243A0
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000002445FC37000
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=4294967295 expectedType=000002445FC37000
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=val tableSize=44
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002445FC27E80 kind=11
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG MethodResolver] Probing method 'format' for receiverType: T (31)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (31) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (31) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=24 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(T (31)) -> ?T19 with mInfo.type: fn(self: T (31)) -> *const uint_8
+[DEBUG] Starting TypeResolver
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG MethodResolver] Probing method 'format' for receiverType: T (31)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (31) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (31) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=24 name='Self' found=1
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 38
+[DEBUG CallExpr] gFn->genericParams.size() = 1
+[DEBUG MonomorphizationEngine] bounds check for param 'T' has 1 bounds
+[DEBUG MonomorphizationEngine] calling implementsTrait for argType=int_32 traitId=23
+[DEBUG implementsTrait] type=int_32 traitId=23
+[DEBUG TraitSolver] Solving goal: kind=0 self=int_32 traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG TraitSolver]   Checking env bound: self=T (31) traitId=23
+[DEBUG implementsTrait] solve result=0
+[PHASE] TypeChecker done, tcOk=0
+error: Type mismatch: expected '*const uint_8', found 'str'
+ --> D:\fdlang\tests\valid\test_full_pipeline.ms:12:9
+  |
+12 |         return "number";
+  |         ^
+D:\fdlang\tests\valid\test_full_pipeline.ms: error: Compilation aborted due to TypeChecker errors.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

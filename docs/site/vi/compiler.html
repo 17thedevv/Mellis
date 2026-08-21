@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Compiler · Mellis Docs</title>
+    <link rel="stylesheet" href="../assets/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-wrap">
+        <div class="brand">Mellis</div>
+        <nav class="nav" aria-label="Điều hướng chính">
+          <a href="index.html">Home</a>
+          <a href="language.html">Language</a>
+          <a href="compiler.html">Compiler</a>
+          <a href="../en/compiler.html" class="lang-switch">EN</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="section">
+      <div class="container">
+        <p class="eyebrow">Compiler</p>
+        <h1>Architecture</h1>
+
+        <div class="grid three-col">
+          <article class="card">
+            <h3>Frontend</h3>
+            <p class="muted">Lexer, parser, và AST construction.</p>
+          </article>
+
+          <article class="card">
+            <h3>Middle-end</h3>
+            <p class="muted">Type checking, borrow checking, semantic analysis, MVIR lowering.</p>
+          </article>
+
+          <article class="card">
+            <h3>Backend</h3>
+            <p class="muted">LLVM IR generation and native code emission.</p>
+          </article>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>Mellis Docs</span>
+        <span>Vietnamese</span>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,33 @@
+[DEBUG resolvePath] Resolving path starting with 'x'
+[DEBUG resolvePath] resolve('x') returned 1 syms. First id=19
+Solving constraint: ?T0 == int_32
+Solving constraint: ?T0 == int_32
+
+=== MVIR (Verification Failed) ===
+func @test_unreachable_arm(i32 %0) -> i32 {
+entry0:
+  %1 = local i32
+  %3 = local i32
+  store i32 %0, %1
+  %2 = load i32 %1
+  jump match_arm_02
+match_arm_02:
+  store i32 0, %3
+  jump match_end1
+match_arm_13:
+  store i32 1, %3
+  jump match_end1
+match_unreachable4:
+  unreachable
+match_end1:
+  %4 = load i32 %3
+  drop %1 : i32
+  ret
+}
+
+func @main() -> i32 {
+entry0:
+  ret
+}
+
+

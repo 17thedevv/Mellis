@@ -1,0 +1,225 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG] Enum 'Option' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+[DEBUG] Enum 'Result' has 2 variants
+[DEBUG] Visiting variant 'Ok'
+[DEBUG] Visiting variant 'Err'
+[DEBUG resolvePath] Resolving path starting with 'res'
+[DEBUG resolvePath] resolve('res') returned 1 syms. First id=31
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=23
+[DEBUG] resolvePath start: currentSym=23 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=23 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=4 (sym.decl=000002B008F2FCA0, bodyScopeId=4, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=1 (sym.decl=000002B008F2EF80, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'v'
+[DEBUG resolvePath] resolve('v') returned 1 syms. First id=33
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=23
+[DEBUG] resolvePath start: currentSym=23 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=23 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=4 (sym.decl=000002B008F2FCA0, bodyScopeId=4, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG] Enum 'Option_int_32' has 2 variants
+[DEBUG] Visiting variant 'Some'
+[DEBUG] Visiting variant 'None'
+[DEBUG] Enum 'Result_Option_int_32_int_32' has 2 variants
+[DEBUG] Visiting variant 'Ok'
+[DEBUG] Visiting variant 'Err'
+Solving constraint: Enum<23<?T3, ?T4>> == Enum<39>
+Solving constraint: Enum<18<?T5>> == ?T3
+Solving constraint: ?T2 == ?T5
+Solving constraint: Enum<23<?T6, ?T7>> == Enum<39>
+Solving constraint: ?T2 == ?T8
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Option' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='T' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='Some' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='v' kind=8 scope=2
+[DEBUG SymbolTable] declareSymbol id=22 name='None' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=23 name='Result' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=24 name='T' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=25 name='E' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=26 name='Ok' kind=7 scope=4
+[DEBUG SymbolTable] declareSymbol id=27 name='v' kind=8 scope=5
+[DEBUG SymbolTable] declareSymbol id=28 name='Err' kind=7 scope=4
+[DEBUG SymbolTable] declareSymbol id=29 name='e' kind=8 scope=6
+[DEBUG SymbolTable] declareSymbol id=30 name='test_deep_missing_witness' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=31 name='res' kind=3 scope=7
+[DEBUG SymbolTable] declareSymbol id=32 name='main' kind=4 scope=0
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=24
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'E': i=1, currentSym=25
+[DEBUG] Resolving function: test_deep_missing_witness
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Result': i=1, currentSym=23
+[DEBUG] lookup 'Option' starting at scope 7
+[DEBUG] lookup 'Option' checking scope 7 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Option': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolving identifier: res
+[DEBUG] Finished resolvePath for res
+[DEBUG] lookup 'Option' starting at scope 10
+[DEBUG] lookup 'Option' checking scope 10 (kind=3, parent=9)
+[DEBUG] lookup 'Option' checking scope 9 (kind=3, parent=7)
+[DEBUG] lookup 'Option' checking scope 7 (kind=2, parent=0)
+[DEBUG] lookup 'Option' checking scope 0 (kind=0, parent=4294967295)
+[DEBUG] lookup 'Option' FOUND in scope 0 -> symbolId 18
+[DEBUG SymbolTable] declareSymbol id=33 name='v' kind=0 scope=10
+[DEBUG] Resolving identifier: v
+[DEBUG] Finished resolvePath for v
+[DEBUG SymbolTable] declareSymbol id=34 name='e' kind=0 scope=11
+[DEBUG] Resolving function: main
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 4 items
+[DEBUG] item kind: class fl::EnumDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=19
+[DEBUG] item kind: class fl::EnumDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=24
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'E' symbolId=25
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='test_deep_missing_witness' symbolId=30
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Result' symbolId=23
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG self] Evaluated param->type for res -> 2
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='main' symbolId=32
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=31 name=res tableSize=35
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002B008F67280 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG SymbolTable] declareSymbol id=35 name='Option_int_32' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=36 name='Some' kind=7 scope=13
+[DEBUG SymbolTable] declareSymbol id=37 name='v' kind=8 scope=14
+[DEBUG SymbolTable] declareSymbol id=38 name='None' kind=7 scope=13
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] IN requestEnumSpecialization! mangledName=Result_Option_int_32_int_32
+[DEBUG] SubstitutionVisitor: checking type 'T'
+[DEBUG] SubstitutionVisitor: Substituted 'T' with its replacement.
+[DEBUG] SubstitutionVisitor: Substituted 'E' with its replacement.
+[DEBUG SymbolTable] declareSymbol id=39 name='Result_Option_int_32_int_32' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=40 name='Ok' kind=7 scope=16
+[DEBUG SymbolTable] declareSymbol id=41 name='v' kind=8 scope=17
+[DEBUG SymbolTable] declareSymbol id=42 name='Err' kind=7 scope=16
+[DEBUG SymbolTable] declareSymbol id=43 name='e' kind=8 scope=18
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Option_int_32' symbolId=35
+[DEBUG] evaluateTypeNode called on class fl::BuiltinTypeNode
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG IdentifierExpr] Substituted generic enum variant 'res', new type: Enum<39>
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000002B008F67780
+[DEBUG substitute] GenericParam id=24 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000002B008F7C4A0
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000002B008F7C4A0
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000002B008F7C600
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=33 expectedType=000002B008F7C600
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=33 name=v tableSize=44
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=000002B008F7C600 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=000002B008F67780
+[DEBUG substitute] GenericParam id=25 name='E' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=000002B008F7C0C0
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=34 expectedType=000002B008F7C0C0
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] Starting UnificationEngine
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] IN requestEnumSpecialization! mangledName=Option_int_32
+[DEBUG] Already specialized: 35
+[DEBUG] IN requestEnumSpecialization! mangledName=Result_Option_int_32_int_32
+[DEBUG] Already specialized: 39
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[DEBUG MatchAnalyzer] resolvedTy is EnumType. enumSymbolId=39
+[DEBUG MatchAnalyzer] resolvedTy is EnumType. enumSymbolId=35
+[PHASE] MatchAnalyzer done, ok=0
+error: non-exhaustive patterns: `Ok(None)` not covered
+ --> D:\fdlang\tests\valid\nested_nonexhaustive.ms:12:5
+  |
+12 |     match res {
+  |     ^
+D:\fdlang\tests\valid\nested_nonexhaustive.ms: error: Non-exhaustive match or invalid pattern. Aborting compilation.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

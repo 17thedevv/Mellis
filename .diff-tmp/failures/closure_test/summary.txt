@@ -1,0 +1,8 @@
+Test: D:\fdlang\tests\scratch\closure_test.ms
+
+Compiler:
+  C++  exit=0
+  Rust exit=1
+
+Classification:
+  CompilePhase

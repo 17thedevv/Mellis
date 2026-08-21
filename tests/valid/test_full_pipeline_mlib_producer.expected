@@ -1,0 +1,250 @@
+=== EXIT CODE ===
+65
+=== STDOUT ===
+[DEBUG] Enum 'Result' has 2 variants
+[DEBUG] Visiting variant 'Ok'
+[DEBUG] Visiting variant 'Err'
+[DEBUG resolvePath] Resolving path starting with 'res'
+[DEBUG resolvePath] resolve('res') returned 1 syms. First id=32
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=1 (sym.decl=0000025154AAF820, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 't'
+[DEBUG resolvePath] resolve('t') returned 1 syms. First id=33
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=1 (sym.decl=0000025154AAF820, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'e'
+[DEBUG resolvePath] resolve('e') returned 1 syms. First id=34
+Solving constraint: Enum<18<?T3, ?T4>> == Enum<18<T (30), E (31)>>
+Solving constraint: int_32 == ?T5
+Solving constraint: ?T2 == void
+Solving constraint: Enum<18<?T6, ?T7>> == Enum<18<T (30), E (31)>>
+Solving constraint: int_32 == ?T8
+Solving constraint: ?T2 == void
+; ModuleID = 'D:\fdlang\tests\valid\test_full_pipeline_mlib_producer.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\test_full_pipeline_mlib_producer.ms"
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
+=== STDERR ===
+[DEBUG SymbolTable] declareSymbol id=0 name='uint_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=1 name='uint_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=2 name='uint_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=3 name='uint_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=4 name='uint_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=5 name='uint_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=6 name='int_4' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=7 name='int_8' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=8 name='int_16' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=9 name='int_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=10 name='int_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=11 name='int_128' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=12 name='float_32' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=13 name='float_64' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=14 name='bool' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=15 name='char' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=16 name='str' kind=12 scope=0
+[INSTRUMENT] TypeContext Created
+[DEBUG] current type=54 peek type=43
+[DEBUG SymbolTable] declareSymbol id=17 name='void' kind=12 scope=0
+[DEBUG SymbolTable] declareSymbol id=18 name='Result' kind=6 scope=0
+[DEBUG SymbolTable] declareSymbol id=19 name='T' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=20 name='E' kind=13 scope=1
+[DEBUG SymbolTable] declareSymbol id=21 name='Ok' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=22 name='__field_0' kind=8 scope=2
+[DEBUG SymbolTable] declareSymbol id=23 name='Err' kind=7 scope=1
+[DEBUG SymbolTable] declareSymbol id=24 name='__field_0' kind=8 scope=3
+[DEBUG SymbolTable] declareSymbol id=25 name='Process' kind=9 scope=0
+[DEBUG SymbolTable] declareSymbol id=26 name='Self' kind=13 scope=4
+[DEBUG SymbolTable] declareSymbol id=27 name='process' kind=4 scope=4
+[DEBUG SymbolTable] declareSymbol id=28 name='self' kind=3 scope=5
+[DEBUG SymbolTable] declareSymbol id=29 name='handle_result' kind=4 scope=0
+[DEBUG SymbolTable] declareSymbol id=30 name='T' kind=13 scope=6
+[DEBUG SymbolTable] declareSymbol id=31 name='E' kind=13 scope=6
+[DEBUG SymbolTable] declareSymbol id=32 name='res' kind=3 scope=6
+[DEBUG] Resolver::resolve: Running pass2.
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=19
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'E': i=1, currentSym=20
+[DEBUG] Resolving function: process
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Self': i=1, currentSym=26
+[DEBUG] Resolving function: handle_result
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Process': i=1, currentSym=25
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Process': i=1, currentSym=25
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'int_32': i=1, currentSym=9
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'Result': i=1, currentSym=18
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'T': i=1, currentSym=30
+[DEBUG Resolver NamedTypeNode] Resolved path length for segment[0] 'E': i=1, currentSym=31
+[DEBUG] Resolving identifier: res
+[DEBUG] Finished resolvePath for res
+[DEBUG SymbolTable] declareSymbol id=33 name='t' kind=0 scope=8
+[DEBUG] Resolving identifier: t
+[DEBUG] Finished resolvePath for t
+[DEBUG SymbolTable] declareSymbol id=34 name='e' kind=0 scope=10
+[DEBUG] Resolving identifier: e
+[DEBUG] Finished resolvePath for e
+[DEBUG] Resolver finished!
+[DEBUG] Creating TypeChecker...
+[DEBUG] Creating MonomorphizationEngine...
+[DEBUG] Attaching MLibMetadataCache...
+[DEBUG] Calling TypeChecker::check...
+[DEBUG] injectedGenerics size=0
+[DEBUG] TypePrePass visiting ProgramNode with 3 items
+[DEBUG] item kind: class fl::EnumDeclNode
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=19
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'E' symbolId=20
+[DEBUG] item kind: class fl::TraitDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='process' symbolId=27
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Self' symbolId=26
+[DEBUG self] Evaluated param->type for self -> 11
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG TraitDeclNode] Method 'process' symbolId=27
+[DEBUG TraitDeclNode] typeTable[27] = 3
+[DEBUG TraitDeclNode] Registered trait method 'process'
+[DEBUG] item kind: class fl::FunctionDeclNode
+[DEBUG] TypePrePass::visit(FunctionDeclNode) name='handle_result' symbolId=29
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Result' symbolId=18
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'T' symbolId=30
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'E' symbolId=31
+[DEBUG self] Evaluated param->type for res -> 2
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'int_32' symbolId=9
+[DEBUG] Processing generic param: T with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Process' symbolId=25
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=T (30) traitId=25
+[DEBUG] Processing generic param: E with 1 bounds
+[DEBUG] evaluateTypeNode called on class fl::NamedTypeNode
+[DEBUG] NamedTypeNode segment[0]: 'Process' symbolId=25
+[DEBUG] Bound type evaluated to kind: 12
+[DEBUG] Added trait bound to solver: self=E (31) traitId=25
+[DEBUG] Starting ConstraintGenerator
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=32 name=res tableSize=35
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000025154AE4C30 kind=2
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside if (enumTy)
+[DEBUG substitute] GenericParam id=30 name='T' found=0
+[DEBUG substitute] GenericParam id=31 name='E' found=0
+[DEBUG IdentifierExpr] Substituted generic enum variant 'res', new type: Enum<18<T (30), E (31)>>
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=0000025154AE4C30
+[DEBUG substitute] GenericParam id=19 name='T' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=0000025154AF9500
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=33 expectedType=0000025154AF9500
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=33 name=t tableSize=35
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000025154AF9500 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] ConstraintGen::visit(EnumPatternNode) fnRetEnum constraint added. expectedType=0000025154AE4C30
+[DEBUG substitute] GenericParam id=20 name='E' found=1
+[DEBUG] ConstraintGen::visit(EnumPatternNode) sub-pattern field=0 fieldExpected=0000025154AF9220
+[DEBUG] ConstraintGen::visit(IdentifierPatternNode) symId=34 expectedType=0000025154AF9220
+[DEBUG] ConstraintGen::visit(IdentifierExpr) symId=4294967295 overloads=1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) overload[0]=34 name=e tableSize=35
+[DEBUG] ConstraintGen::visit(IdentifierExpr) baseType ptr=0000025154AF9220 kind=14
+[DEBUG] ConstraintGen::visit(IdentifierExpr) cast1
+[DEBUG] ConstraintGen::visit(IdentifierExpr) before if (enumTy)
+[DEBUG] ConstraintGen::visit(IdentifierExpr) inside else
+[DEBUG] ConstraintGen::visit(IdentifierExpr) got sym
+[DEBUG] ConstraintGen::visit(IdentifierExpr) assigning inferredType
+[DEBUG] ConstraintGen::visit(IdentifierExpr) FINISHED for symId=4294967295
+[DEBUG] Starting UnificationEngine
+[DEBUG MethodResolver] Probing method 'process' for receiverType: T (30)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (30) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (30) traitId=25
+[DEBUG TraitSolver]   Checking env bound: self=T (30) traitId=25
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=26 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(T (30)) -> ?T5 with mInfo.type: fn(self: T (30)) -> int_32
+[DEBUG MethodResolver] Probing method 'process' for receiverType: E (31)
+[DEBUG TraitSolver] Solving goal: kind=2 self=E (31) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=E (31) traitId=25
+[DEBUG TraitSolver]   Checking env bound: self=T (30) traitId=25
+[DEBUG TraitSolver]   Checking env bound: self=E (31) traitId=25
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=26 name='Self' found=1
+[DEBUG MethodCall] unifying expectedFnType: fn(E (31)) -> ?T8 with mInfo.type: fn(self: E (31)) -> int_32
+[DEBUG] Starting TypeResolver
+[DEBUG] CG visiting ProgramNode
+[DEBUG] CG visiting item: class fl::EnumDeclNode
+[DEBUG] CG visiting item: class fl::TraitDeclNode
+[DEBUG] CG visiting item: class fl::FunctionDeclNode
+[DEBUG MethodResolver] Probing method 'process' for receiverType: T (30)
+[DEBUG TraitSolver] Solving goal: kind=2 self=T (30) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=T (30) traitId=25
+[DEBUG TraitSolver]   Checking env bound: self=T (30) traitId=25
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=26 name='Self' found=1
+[DEBUG MethodResolver] Probing method 'process' for receiverType: E (31)
+[DEBUG TraitSolver] Solving goal: kind=2 self=E (31) traitId=4294967295
+[DEBUG TraitSolver] Solving goal: kind=0 self=E (31) traitId=25
+[DEBUG TraitSolver]   Checking env bound: self=T (30) traitId=25
+[DEBUG TraitSolver]   Checking env bound: self=E (31) traitId=25
+[DEBUG TraitSolver]     -> MATCHED env bound!
+[DEBUG substitute] GenericParam id=26 name='Self' found=1
+[PHASE] TypeChecker done, tcOk=1
+[PHASE] Injecting specialized ASTs...
+[PHASE] Specialized ASTs injected
+[PHASE] ComptimeEval done, ok=1
+[DEBUG MatchAnalyzer] resolvedTy is EnumType. enumSymbolId=18
+[PHASE] MatchAnalyzer done, ok=1
+[PHASE] MVIRGenerator starting
+[DEBUG MVIRGenerator] visiting item[0] typeid=class fl::EnumDeclNode
+[DEBUG MVIRGenerator] done item[0]
+[DEBUG MVIRGenerator] visiting item[1] typeid=class fl::TraitDeclNode
+[DEBUG MVIRGenerator] done item[1]
+[DEBUG MVIRGenerator] visiting item[2] typeid=class fl::FunctionDeclNode
+[DEBUG MVIRGenerator] done item[2]
+[PHASE] MVIRGenerator done
+lld-link: error: undefined symbol: main
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:78
+>>>               libcmt.lib(exe_main.obj):(int __cdecl invoke_main(void))
+>>> referenced by D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:288
+>>>               libcmt.lib(exe_main.obj):(int __cdecl __scrt_common_main_seh(void))
+D:\fdlang\tests\valid\test_full_pipeline_mlib_producer.ms: error: Trinh lien ket (lld-link) that bai khi tao D:\fdlang\tests\valid\test_full_pipeline_mlib_producer.exe. Kiem tra xem ban da cai dat LLVM chua.
+D:\fdlang\tests\valid\test_full_pipeline_mlib_producer.ms: error: Tao file thuc thi that bai.
+[INSTRUMENT] TypeContext Destroyed
+[INSTRUMENT] SourceManager Destroyed

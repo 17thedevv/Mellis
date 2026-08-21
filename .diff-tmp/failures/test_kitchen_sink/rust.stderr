@@ -1,0 +1,71 @@
+Number of diagnostics: 10
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 230, end: 234 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:12:16
+   |
+12 |     fn compute(self) -> int_32;
+   |                ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 248, end: 249 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:13:1
+   |
+13 | }
+   | ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 379, end: 383 }), message: "Expected parameter name" }
+error: Expected parameter name
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:22:16
+   |
+22 |     fn compute(self) -> int_32 {
+   |                ^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 434, end: 435 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:24:5
+   |
+24 |     }
+   |     ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 518, end: 519 }), message: "Expected '(' after function name" }
+error: Expected '(' after function name
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:28:18
+   |
+28 | fn process_option<T: Computable>(opt: Option<T>) -> int_32 {
+   |                  ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 723, end: 724 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:33:9
+   |
+33 |         },
+   |         ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 785, end: 786 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:36:9
+   |
+36 |         }
+   |         ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 1361, end: 1367 }), message: "Expected field name" }
+error: Expected field name
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:59:9
+   |
+59 |         return x + factor + sum;
+   |         ^^^^^^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 1391, end: 1392 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:60:5
+   |
+60 |     };
+   |     ^
+
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: Some(Span { file_id: FileId(0), start: 1463, end: 1464 }), message: "Expected expression." }
+error: Expected expression.
+  --> D:\fdlang\tests\valid\test_kitchen_sink.ms:65:1
+   |
+65 | }
+   | ^
+

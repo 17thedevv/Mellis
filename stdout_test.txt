@@ -1,0 +1,1135 @@
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 45 ;
+[DEBUG] parseUseTree after segment: 50 {
+[DEBUG] parseUseTree after segment: 46 ,
+[DEBUG] parseUseTree after segment: 51 }
+[DEBUG] Checking .\tests\e2e\core.ms and .\tests\e2e\core.mlib
+[DEBUG] Checking .\tests\e2e\core\mod.ms and .\tests\e2e\core\mod.mlib
+[DEBUG] Checking D:\fdlang\core.ms and D:\fdlang\core.mlib
+[DEBUG] Checking D:\fdlang\core\mod.ms and D:\fdlang\core\mod.mlib
+[DEBUG] Checking D:\fdlang\lib\core.ms and D:\fdlang\lib\core.mlib
+[DEBUG] Checking D:\fdlang\lib\core\mod.ms and D:\fdlang\lib\core\mod.mlib
+[MLibLoader] Section 0 type=10 offset=442 size=24
+[MLibLoader] Section 1 type=4 offset=466 size=215
+[MLibLoader] Section 2 type=1 offset=681 size=8
+[MLibLoader] Loading Functions...
+[MLibLoader] Found 0 functions
+[MLibLoader] Section 3 type=2 offset=689 size=630
+[MLibLoader] Loading 12 namespaces
+[MLibLoader] Namespace: arithmetic
+[MLibLoader] Namespace: clone
+[MLibLoader] Namespace: cmp
+[MLibLoader] Namespace: drop
+[MLibLoader] Namespace: index
+[MLibLoader] Namespace: iterator
+[MLibLoader] Namespace: marker
+[MLibLoader] Namespace: ops
+[MLibLoader] Namespace: option
+[MLibLoader] Namespace: prelude
+[MLibLoader] Namespace: result
+[MLibLoader] Namespace: slice
+[MLibLoader] Loading 2 types
+[MLibLoader] Type: Option
+[MLibLoader] Type: Result
+[MLibLoader] Loading 14 traits
+[MLibLoader]   Method:  (sigType=0)
+[MLibLoader] Loaded Trait: Add with 1 methods.
+[MLibLoader] Trait: Add
+[MLibLoader]   Method: clone (sigType=1)
+[MLibLoader] Loaded Trait: Clone with 1 methods.
+[MLibLoader] Trait: Clone
+[MLibLoader] Loaded Trait: Copy with 0 methods.
+[MLibLoader] Trait: Copy
+[MLibLoader]   Method:  (sigType=2)
+[MLibLoader] Loaded Trait: Div with 1 methods.
+[MLibLoader] Trait: Div
+[MLibLoader]   Method: drop (sigType=3)
+[MLibLoader] Loaded Trait: Drop with 1 methods.
+[MLibLoader] Trait: Drop
+[MLibLoader] Loaded Trait: Eq with 0 methods.
+[MLibLoader] Trait: Eq
+[MLibLoader]   Method: index (sigType=4)
+[MLibLoader] Loaded Trait: Index with 1 methods.
+[MLibLoader] Trait: Index
+[MLibLoader]   Method:  (sigType=5)
+[MLibLoader] Loaded Trait: IndexMut with 1 methods.
+[MLibLoader] Trait: IndexMut
+[MLibLoader]   Method:  (sigType=6)
+[MLibLoader] Loaded Trait: IntoIterator with 1 methods.
+[MLibLoader] Trait: IntoIterator
+[MLibLoader]   Method:  (sigType=7)
+[MLibLoader] Loaded Trait: Iterator with 1 methods.
+[MLibLoader] Trait: Iterator
+[MLibLoader]   Method:  (sigType=8)
+[MLibLoader] Loaded Trait: Mul with 1 methods.
+[MLibLoader] Trait: Mul
+[MLibLoader]   Method:  (sigType=9)
+[MLibLoader]   Method:  (sigType=10)
+[MLibLoader] Loaded Trait: PartialEq with 2 methods.
+[MLibLoader] Trait: PartialEq
+[MLibLoader]   Method:  (sigType=11)
+[MLibLoader] Loaded Trait: Rem with 1 methods.
+[MLibLoader] Trait: Rem
+[MLibLoader]   Method:  (sigType=12)
+[MLibLoader] Loaded Trait: Sub with 1 methods.
+[MLibLoader] Trait: Sub
+[MLibLoader] Loading Functions...
+[MLibLoader] Found 1 functions
+[MLibLoader] Function: __mellis_panic
+[MLibLoader] Section 4 type=3 offset=1319 size=64
+[MLibLoader] Section 5 type=12 offset=1383 size=4
+[MLibLoader] Section 6 type=13 offset=1387 size=3527
+[MLibLoader] Loading generic: Add rawSource size=92
+[MLibLoader] replacedSource: export trait Add<Rhs> {
+    type Output;
+    fn add(self: Self, rhs: Rhs) -> Self::Output;
+}
+[DEBUG] Updated kind to Trait for id 31
+[MLibLoader] Loading generic: Clone rawSource size=57
+[MLibLoader] replacedSource: export trait Clone {
+    fn clone(self: &Self) -> Self;
+}
+[DEBUG] Updated kind to Trait for id 32
+[MLibLoader] Loading generic: Copy rawSource size=20
+[MLibLoader] replacedSource: export trait Copy {}
+[DEBUG] Updated kind to Trait for id 33
+[MLibLoader] Loading generic: Div rawSource size=92
+[MLibLoader] replacedSource: export trait Div<Rhs> {
+    type Output;
+    fn div(self: Self, rhs: Rhs) -> Self::Output;
+}
+[DEBUG] Updated kind to Trait for id 34
+[MLibLoader] Loading generic: Drop rawSource size=50
+[MLibLoader] replacedSource: export trait Drop {
+    fn drop(self: &rw Self);
+}
+[DEBUG] Updated kind to Trait for id 35
+[MLibLoader] Loading generic: Eq rawSource size=18
+[MLibLoader] replacedSource: export trait Eq {}
+[DEBUG] Updated kind to Trait for id 36
+[MLibLoader] Loading generic: Index rawSource size=103
+[MLibLoader] replacedSource: export trait Index<Idx> {
+    type Output;
+    fn index(self: &Self, index: Idx) -> &Self::Output;
+}
+[DEBUG] Updated kind to Trait for id 37
+[MLibLoader] Loading generic: IndexMut rawSource size=98
+[MLibLoader] replacedSource: export trait IndexMut<Idx> {
+    fn index_mut(self: &rw Self, index: Idx) -> &rw Self::Output;
+}
+[DEBUG] Updated kind to Trait for id 38
+[MLibLoader] Loading generic: IntoIterator rawSource size=127
+[MLibLoader] replacedSource: export trait IntoIterator {
+    type Item;
+    type IntoIter: Iterator;
+
+    fn into_iter(self: Self) -> Self::IntoIter;
+}
+[DEBUG] Updated kind to Trait for id 39
+[MLibLoader] Loading generic: Iterator rawSource size=94
+[MLibLoader] replacedSource: export trait Iterator {
+    type Item;
+    fn next(self: &rw Self) -> Option<Self::Item>;
+}
+[DEBUG] Updated kind to Trait for id 40
+[MLibLoader] Loading generic: Mul rawSource size=92
+[MLibLoader] replacedSource: export trait Mul<Rhs> {
+    type Output;
+    fn mul(self: Self, rhs: Rhs) -> Self::Output;
+}
+[DEBUG] Updated kind to Trait for id 41
+[MLibLoader] Loading generic: Option rawSource size=51
+[MLibLoader] replacedSource: export enum Option<T> {
+    None,
+    Some(T),
+}
+[DEBUG] Updated kind to Enum for id 29
+[DEBUG] Enum 'Option' has 2 variants
+[DEBUG] Visiting variant 'None'
+[DEBUG] Visiting variant 'Some'
+[MLibLoader] Loading generic: PartialEq rawSource size=137
+[MLibLoader] replacedSource: export trait PartialEq { fn eq(self: &Self, other: &Self) -> bool; fn ne(self: &Self, other: &Self) -> bool { return !self.eq(other); } }
+[DEBUG] Updated kind to Trait for id 42
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=104
+[DEBUG resolvePath] Resolving path starting with 'other'
+[DEBUG resolvePath] resolve('other') returned 1 syms. First id=105
+[MLibLoader] Loading generic: Rem rawSource size=92
+[MLibLoader] replacedSource: export trait Rem<Rhs> {
+    type Output;
+    fn rem(self: Self, rhs: Rhs) -> Self::Output;
+}
+[DEBUG] Updated kind to Trait for id 43
+[MLibLoader] Loading generic: Result rawSource size=54
+[MLibLoader] replacedSource: export enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+[DEBUG] Updated kind to Enum for id 30
+[DEBUG] Enum 'Result' has 2 variants
+[DEBUG] Visiting variant 'Ok'
+[DEBUG] Visiting variant 'Err'
+[MLibLoader] Loading generic: Sub rawSource size=92
+[MLibLoader] replacedSource: export trait Sub<Rhs> {
+    type Output;
+    fn sub(self: Self, rhs: Rhs) -> Self::Output;
+}
+[DEBUG] Updated kind to Trait for id 44
+[MLibLoader] Loading generic: __mellis_panic rawSource size=27
+[MLibLoader] replacedSource: extern fn __mellis_panic();
+[MLibLoader] Loading generic: __mellis_panic rawSource size=27
+[MLibLoader] replacedSource: extern fn __mellis_panic();
+[MLibLoader] Loading generic: Option rawSource size=1048
+[MLibLoader] replacedSource: impl<T> Option<T> {
+    export fn is_some(self: &Self) -> bool {
+        match self {
+            Option::Some(_) -> true,
+            Option::None -> false,
+        }
+    }
+
+    export fn is_none(self: &Self) -> bool {
+        !self.is_some()
+    }
+
+    export fn unwrap(self: Self) -> T {
+        match self {
+            Option::Some(val) -> val,
+            Option::None -> {
+                __mellis_panic()
+            }
+        }
+    }
+
+    export fn unwrap_or(self: Self, default: T) -> T {
+        match self {
+            Option::Some(val) -> val,
+            Option::None -> default,
+        }
+    }
+
+    export fn map<U>(self: Self, f: fn(T) -> U) -> Option<U> {
+        match self {
+            Option::Some(val) -> Option::Some(f(val)),
+            Option::None -> Option::None,
+        }
+    }
+
+    export fn and_then<U>(self: Self, f: fn(T) -> Option<U>) -> Option<U> {
+        match self {
+            Option::Some(val) -> f(val),
+            Option::None -> Option::None,
+        }
+    }
+}
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=129
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=131
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=133
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=145
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with '__mellis_panic'
+[DEBUG resolvePath] resolve('__mellis_panic') returned 1 syms. First id=45
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=135
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=146
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'default'
+[DEBUG resolvePath] resolve('default') returned 1 syms. First id=136
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=139
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=140
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=147
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=143
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=144
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=148
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[MLibLoader] Loading generic: Result rawSource size=848
+[MLibLoader] replacedSource: impl<T, E> Result<T, E> {
+    export fn is_ok(self: &Self) -> bool {
+        match self {
+            Result::Ok(_) -> true,
+            Result::Err(_) -> false,
+        }
+    }
+
+    export fn is_err(self: &Self) -> bool {
+        !self.is_ok()
+    }
+
+    export fn unwrap(self: Self) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(_) -> {
+                __mellis_panic()
+            }
+        }
+    }
+
+    export fn unwrap_or(self: Self, default: T) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(_) -> default,
+        }
+    }
+
+    export fn map<U>(self: Self, f: fn(T) -> U) -> Result<U, E> {
+        match self {
+            Result::Ok(val) -> Result::Ok(f(val)),
+            Result::Err(e) -> Result::Err(e),
+        }
+    }
+}
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=153
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=155
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=157
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=165
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with '__mellis_panic'
+[DEBUG resolvePath] resolve('__mellis_panic') returned 1 syms. First id=45
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=159
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=166
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'default'
+[DEBUG resolvePath] resolve('default') returned 1 syms. First id=160
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=163
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=164
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=167
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'Result'
+[DEBUG resolvePath] resolve('Result') returned 1 syms. First id=30
+[DEBUG] resolvePath start: currentSym=30 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=30 kind=6
+[DEBUG] resolvePath Enum 'Result' nextScope=33 (sym.decl=0000019EC6523D70, bodyScopeId=33, mlibSymbolID=1)
+[DEBUG] bindings in nextScope: T E Ok Err 
+[DEBUG resolvePath] Resolving path starting with 'e'
+[DEBUG resolvePath] resolve('e') returned 1 syms. First id=168
+[MLibLoader] Section 7 type=8 offset=4914 size=338
+[DEBUG] Checking .\tests\e2e\core.ms and .\tests\e2e\core.mlib
+[DEBUG] Checking .\tests\e2e\core\mod.ms and .\tests\e2e\core\mod.mlib
+[DEBUG] Checking D:\fdlang\core.ms and D:\fdlang\core.mlib
+[DEBUG] Checking D:\fdlang\core\mod.ms and D:\fdlang\core\mod.mlib
+[DEBUG] Checking D:\fdlang\lib\core.ms and D:\fdlang\lib\core.mlib
+[DEBUG] Checking D:\fdlang\lib\core\mod.ms and D:\fdlang\lib\core\mod.mlib
+[DEBUG] Checking .\tests\e2e\alloc.ms and .\tests\e2e\alloc.mlib
+[DEBUG] Checking .\tests\e2e\alloc\mod.ms and .\tests\e2e\alloc\mod.mlib
+[DEBUG] Checking D:\fdlang\alloc.ms and D:\fdlang\alloc.mlib
+[DEBUG] Checking D:\fdlang\alloc\mod.ms and D:\fdlang\alloc\mod.mlib
+[DEBUG] Checking D:\fdlang\lib\alloc.ms and D:\fdlang\lib\alloc.mlib
+[DEBUG] Checking D:\fdlang\lib\alloc\mod.ms and D:\fdlang\lib\alloc\mod.mlib
+[MLibLoader] Section 0 type=10 offset=442 size=24
+[MLibLoader] Section 1 type=4 offset=466 size=326
+[MLibLoader] Section 2 type=1 offset=792 size=8
+[MLibLoader] Loading Functions...
+[MLibLoader] Found 0 functions
+[MLibLoader] Section 3 type=2 offset=800 size=1535
+[MLibLoader] Loading 28 namespaces
+[MLibLoader] Namespace: allocator
+[MLibLoader] Namespace: allocator
+[MLibLoader] Namespace: arithmetic
+[MLibLoader] Namespace: arithmetic
+[MLibLoader] Namespace: clone
+[MLibLoader] Namespace: clone
+[MLibLoader] Namespace: cmp
+[MLibLoader] Namespace: cmp
+[MLibLoader] Namespace: drop
+[MLibLoader] Namespace: drop
+[MLibLoader] Namespace: index
+[MLibLoader] Namespace: index
+[MLibLoader] Namespace: iterator
+[MLibLoader] Namespace: iterator
+[MLibLoader] Namespace: marker
+[MLibLoader] Namespace: marker
+[MLibLoader] Namespace: ops
+[MLibLoader] Namespace: ops
+[MLibLoader] Namespace: option
+[MLibLoader] Namespace: option
+[MLibLoader] Namespace: prelude
+[MLibLoader] Namespace: prelude
+[MLibLoader] Namespace: result
+[MLibLoader] Namespace: result
+[MLibLoader] Namespace: slice
+[MLibLoader] Namespace: slice
+[MLibLoader] Namespace: vec
+[MLibLoader] Namespace: vec
+[MLibLoader] Loading 8 types
+[MLibLoader] Type: GlobalAlloc
+[MLibLoader] Type: GlobalAlloc
+[MLibLoader] Type: Option
+[MLibLoader] Type: Option
+[MLibLoader] Type: Result
+[MLibLoader] Type: Result
+[MLibLoader] Type: Vec
+[MLibLoader] Type: Vec
+[MLibLoader] Loading 30 traits
+[MLibLoader] Loaded Trait: Add with 0 methods.
+[MLibLoader] Trait: Add
+[MLibLoader]   Method:  (sigType=0)
+[MLibLoader] Loaded Trait: Add with 1 methods.
+[MLibLoader] Trait: Add
+[MLibLoader]   Method:  (sigType=1)
+[MLibLoader]   Method:  (sigType=2)
+[MLibLoader] Loaded Trait: Allocator with 2 methods.
+[MLibLoader] Trait: Allocator
+[MLibLoader]   Method:  (sigType=3)
+[MLibLoader]   Method:  (sigType=4)
+[MLibLoader] Loaded Trait: Allocator with 2 methods.
+[MLibLoader] Trait: Allocator
+[MLibLoader] Loaded Trait: Clone with 0 methods.
+[MLibLoader] Trait: Clone
+[MLibLoader]   Method: clone (sigType=5)
+[MLibLoader] Loaded Trait: Clone with 1 methods.
+[MLibLoader] Trait: Clone
+[MLibLoader] Loaded Trait: Copy with 0 methods.
+[MLibLoader] Trait: Copy
+[MLibLoader] Loaded Trait: Copy with 0 methods.
+[MLibLoader] Trait: Copy
+[MLibLoader]   Method:  (sigType=6)
+[MLibLoader] Loaded Trait: Div with 1 methods.
+[MLibLoader] Trait: Div
+[MLibLoader] Loaded Trait: Div with 0 methods.
+[MLibLoader] Trait: Div
+[MLibLoader]   Method: drop (sigType=7)
+[MLibLoader] Loaded Trait: Drop with 1 methods.
+[MLibLoader] Trait: Drop
+[MLibLoader] Loaded Trait: Drop with 0 methods.
+[MLibLoader] Trait: Drop
+[MLibLoader] Loaded Trait: Eq with 0 methods.
+[MLibLoader] Trait: Eq
+[MLibLoader] Loaded Trait: Eq with 0 methods.
+[MLibLoader] Trait: Eq
+[MLibLoader]   Method: index (sigType=8)
+[MLibLoader] Loaded Trait: Index with 1 methods.
+[MLibLoader] Trait: Index
+[MLibLoader] Loaded Trait: Index with 0 methods.
+[MLibLoader] Trait: Index
+[MLibLoader] Loaded Trait: IndexMut with 0 methods.
+[MLibLoader] Trait: IndexMut
+[MLibLoader]   Method:  (sigType=9)
+[MLibLoader] Loaded Trait: IndexMut with 1 methods.
+[MLibLoader] Trait: IndexMut
+[MLibLoader]   Method:  (sigType=10)
+[MLibLoader] Loaded Trait: IntoIterator with 1 methods.
+[MLibLoader] Trait: IntoIterator
+[MLibLoader] Loaded Trait: IntoIterator with 0 methods.
+[MLibLoader] Trait: IntoIterator
+[MLibLoader]   Method:  (sigType=11)
+[MLibLoader] Loaded Trait: Iterator with 1 methods.
+[MLibLoader] Trait: Iterator
+[MLibLoader] Loaded Trait: Iterator with 0 methods.
+[MLibLoader] Trait: Iterator
+[MLibLoader]   Method:  (sigType=12)
+[MLibLoader] Loaded Trait: Mul with 1 methods.
+[MLibLoader] Trait: Mul
+[MLibLoader] Loaded Trait: Mul with 0 methods.
+[MLibLoader] Trait: Mul
+[MLibLoader]   Method:  (sigType=13)
+[MLibLoader]   Method:  (sigType=14)
+[MLibLoader] Loaded Trait: PartialEq with 2 methods.
+[MLibLoader] Trait: PartialEq
+[MLibLoader] Loaded Trait: PartialEq with 0 methods.
+[MLibLoader] Trait: PartialEq
+[MLibLoader]   Method:  (sigType=15)
+[MLibLoader] Loaded Trait: Rem with 1 methods.
+[MLibLoader] Trait: Rem
+[MLibLoader] Loaded Trait: Rem with 0 methods.
+[MLibLoader] Trait: Rem
+[MLibLoader]   Method:  (sigType=16)
+[MLibLoader] Loaded Trait: Sub with 1 methods.
+[MLibLoader] Trait: Sub
+[MLibLoader] Loaded Trait: Sub with 0 methods.
+[MLibLoader] Trait: Sub
+[MLibLoader] Loading Functions...
+[MLibLoader] Found 12 functions
+[MLibLoader] Function: __mellis_alloc
+[MLibLoader] Function: __mellis_alloc
+[MLibLoader] Function: __mellis_dealloc
+[MLibLoader] Function: __mellis_dealloc
+[MLibLoader] Function: __mellis_panic
+[MLibLoader] Function: __mellis_panic
+[MLibLoader] Function: __mellis_realloc
+[MLibLoader] Function: __mellis_realloc
+[MLibLoader] Function: vec_new
+[MLibLoader] Function: vec_new
+[MLibLoader] Function: vec_with_capacity
+[MLibLoader] Function: vec_with_capacity
+[MLibLoader] Section 4 type=3 offset=2335 size=64
+[MLibLoader] Section 5 type=12 offset=2399 size=4
+[MLibLoader] Section 6 type=13 offset=2403 size=3803
+[MLibLoader] Loading generic: Allocator rawSource size=161
+[MLibLoader] replacedSource: export trait Allocator {
+    fn alloc(self, size: uint_64, align: uint_64) -> *rw uint_8;
+    fn dealloc(self, ptr: *rw uint_8, size: uint_64, align: uint_64);
+}
+[DEBUG] Updated kind to Trait for id 190
+[MLibLoader] Loading generic: Vec rawSource size=101
+[MLibLoader] replacedSource: export struct Vec<T> {
+    export ptr: *rw T;
+    export len: uint_64;
+    export cap: uint_64;
+}
+[DEBUG] Updated kind to Struct for id 188
+[MLibLoader] Loading generic: __mellis_alloc rawSource size=77
+[MLibLoader] replacedSource: export extern fn __mellis_alloc(size: uint_64, align: uint_64) -> *rw uint_8;
+[MLibLoader] Loading generic: __mellis_dealloc rawSource size=82
+[MLibLoader] replacedSource: export extern fn __mellis_dealloc(ptr: *rw uint_8, size: uint_64, align: uint_64);
+[MLibLoader] Loading generic: __mellis_realloc rawSource size=119
+[MLibLoader] replacedSource: export extern fn __mellis_realloc(ptr: *rw uint_8, old_size: uint_64, new_size: uint_64, align: uint_64) -> *rw uint_8;
+[MLibLoader] Loading generic: vec_new rawSource size=145
+[MLibLoader] replacedSource: export fn vec_new<T>() -> Vec<T> {
+    return Vec {
+        ptr: 0 as *rw T,
+        len: 0 as uint_64,
+        cap: 0 as uint_64,
+    };
+}
+[DEBUG] Updated kind to Function for id 208
+[DEBUG resolvePath] Resolving path starting with 'Vec'
+[DEBUG resolvePath] resolve('Vec') returned 1 syms. First id=188
+[MLibLoader] Loading generic: vec_with_capacity rawSource size=356
+[MLibLoader] replacedSource: export fn vec_with_capacity<T>(capacity: uint_64) -> Vec<T> {
+    if capacity == (0 as uint_64) {
+        return vec_new@<T>();
+    }
+    dec size = capacity * sizeof(T);
+    dec align = alignof(T);
+    dec ptr = __mellis_alloc(size, align) as *rw T;
+    return Vec {
+        ptr: ptr,
+        len: 0 as uint_64,
+        cap: capacity,
+    };
+}
+[DEBUG] Updated kind to Function for id 209
+[DEBUG resolvePath] Resolving path starting with 'capacity'
+[DEBUG resolvePath] resolve('capacity') returned 1 syms. First id=235
+[DEBUG resolvePath] Resolving path starting with 'vec_new'
+[DEBUG resolvePath] resolve('vec_new') returned 1 syms. First id=208
+[DEBUG resolvePath] Resolving path starting with 'capacity'
+[DEBUG resolvePath] resolve('capacity') returned 1 syms. First id=235
+[DEBUG resolvePath] Resolving path starting with '__mellis_alloc'
+[DEBUG resolvePath] resolve('__mellis_alloc') returned 1 syms. First id=204
+[DEBUG resolvePath] Resolving path starting with 'size'
+[DEBUG resolvePath] resolve('size') returned 1 syms. First id=236
+[DEBUG resolvePath] Resolving path starting with 'align'
+[DEBUG resolvePath] resolve('align') returned 1 syms. First id=237
+[DEBUG resolvePath] Resolving path starting with 'Vec'
+[DEBUG resolvePath] resolve('Vec') returned 1 syms. First id=188
+[DEBUG resolvePath] Resolving path starting with 'ptr'
+[DEBUG resolvePath] resolve('ptr') returned 1 syms. First id=238
+[DEBUG resolvePath] Resolving path starting with 'capacity'
+[DEBUG resolvePath] resolve('capacity') returned 1 syms. First id=235
+[MLibLoader] Loading generic: GlobalAlloc rawSource size=271
+[MLibLoader] replacedSource: impl Allocator for GlobalAlloc {
+    fn alloc(self, size: uint_64, align: uint_64) -> *rw uint_8 {
+        return __mellis_alloc(size, align);
+    }
+    fn dealloc(self, ptr: *rw uint_8, size: uint_64, align: uint_64) {
+        __mellis_dealloc(ptr, size, align);
+    }
+}
+[DEBUG resolvePath] Resolving path starting with '__mellis_alloc'
+[DEBUG resolvePath] resolve('__mellis_alloc') returned 1 syms. First id=204
+[DEBUG resolvePath] Resolving path starting with 'size'
+[DEBUG resolvePath] resolve('size') returned 1 syms. First id=242
+[DEBUG resolvePath] Resolving path starting with 'align'
+[DEBUG resolvePath] resolve('align') returned 1 syms. First id=243
+[DEBUG resolvePath] Resolving path starting with '__mellis_dealloc'
+[DEBUG resolvePath] resolve('__mellis_dealloc') returned 1 syms. First id=205
+[DEBUG resolvePath] Resolving path starting with 'ptr'
+[DEBUG resolvePath] resolve('ptr') returned 1 syms. First id=246
+[DEBUG resolvePath] Resolving path starting with 'size'
+[DEBUG resolvePath] resolve('size') returned 1 syms. First id=247
+[DEBUG resolvePath] Resolving path starting with 'align'
+[DEBUG resolvePath] resolve('align') returned 1 syms. First id=248
+[MLibLoader] Loading generic: Vec rawSource size=1901
+[MLibLoader] replacedSource: impl<T> Vec<T> {
+
+    export fn push(self: &rw Self, item: T) {
+        if self.len == self.cap {
+            self.grow();
+        }
+        dec offset_ptr = (self.ptr as uint_64 + (self.len * sizeof(T))) as *rw T;
+        unsafe {
+            *offset_ptr = item;
+        }
+        self.len = self.len + (1 as uint_64);
+    }
+
+    export fn pop(self: &rw Self) -> core::option::Option<T> {
+        if self.len == (0 as uint_64) {
+            return core::option::Option::None;
+        }
+        self.len = self.len - (1 as uint_64);
+        dec offset_ptr = (self.ptr as uint_64 + (self.len * sizeof(T))) as *rw T;
+        unsafe {
+            return core::option::Option::Some(*offset_ptr);
+        }
+    }
+
+    export fn len(self: &Self) -> uint_64 {
+        return self.len;
+    }
+
+    export fn capacity(self: &Self) -> uint_64 {
+        return self.cap;
+    }
+
+    export fn grow(self: &rw Self) {
+        dec new_cap: uint_64 = 0 as uint_64;
+        if self.cap == (0 as uint_64) {
+            new_cap = 4 as uint_64;
+        } else {
+            new_cap = self.cap * (2 as uint_64);
+        }
+        
+        dec new_size = new_cap * sizeof(T);
+        dec align = alignof(T);
+        dec new_ptr = __mellis_alloc(new_size, align) as *rw T;
+
+        if self.cap > (0 as uint_64) {
+            dec i: uint_64 = 0 as uint_64;
+            while i < self.len {
+                dec src = (self.ptr as uint_64 + (i * sizeof(T))) as *rw T;
+                dec dst = (new_ptr as uint_64 + (i * sizeof(T))) as *rw T;
+                unsafe {
+                    *dst = *src;
+                }
+                i = i + (1 as uint_64);
+            }
+            dec old_size = self.cap * sizeof(T);
+            __mellis_dealloc(self.ptr as *rw uint_8, old_size, align);
+        }
+
+        self.ptr = new_ptr;
+        self.cap = new_cap;
+    }
+}
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=252
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=252
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=252
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=252
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=252
+[DEBUG resolvePath] Resolving path starting with 'offset_ptr'
+[DEBUG resolvePath] resolve('offset_ptr') returned 1 syms. First id=262
+[DEBUG resolvePath] Resolving path starting with 'item'
+[DEBUG resolvePath] resolve('item') returned 1 syms. First id=253
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=252
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=252
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=255
+[DEBUG resolvePath] Resolving path starting with 'core'
+[DEBUG resolvePath] resolve('core') returned 1 syms. First id=169
+[DEBUG] resolvePath start: currentSym=169 kind=18 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=169 kind=18
+[DEBUG] resolvePath start: currentSym=25 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=25 kind=15
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=255
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=255
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=255
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=255
+[DEBUG resolvePath] Resolving path starting with 'core'
+[DEBUG resolvePath] resolve('core') returned 1 syms. First id=169
+[DEBUG] resolvePath start: currentSym=169 kind=18 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=169 kind=18
+[DEBUG] resolvePath start: currentSym=25 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=25 kind=15
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'offset_ptr'
+[DEBUG resolvePath] resolve('offset_ptr') returned 1 syms. First id=263
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=257
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=259
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with 'new_cap'
+[DEBUG resolvePath] resolve('new_cap') returned 1 syms. First id=264
+[DEBUG resolvePath] Resolving path starting with 'new_cap'
+[DEBUG resolvePath] resolve('new_cap') returned 1 syms. First id=264
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with 'new_cap'
+[DEBUG resolvePath] resolve('new_cap') returned 1 syms. First id=264
+[DEBUG resolvePath] Resolving path starting with '__mellis_alloc'
+[DEBUG resolvePath] resolve('__mellis_alloc') returned 1 syms. First id=204
+[DEBUG resolvePath] Resolving path starting with 'new_size'
+[DEBUG resolvePath] resolve('new_size') returned 1 syms. First id=265
+[DEBUG resolvePath] Resolving path starting with 'align'
+[DEBUG resolvePath] resolve('align') returned 1 syms. First id=266
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=268
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=268
+[DEBUG resolvePath] Resolving path starting with 'new_ptr'
+[DEBUG resolvePath] resolve('new_ptr') returned 1 syms. First id=267
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=268
+[DEBUG resolvePath] Resolving path starting with 'dst'
+[DEBUG resolvePath] resolve('dst') returned 1 syms. First id=270
+[DEBUG resolvePath] Resolving path starting with 'src'
+[DEBUG resolvePath] resolve('src') returned 1 syms. First id=269
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=268
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=268
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with '__mellis_dealloc'
+[DEBUG resolvePath] resolve('__mellis_dealloc') returned 1 syms. First id=205
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with 'old_size'
+[DEBUG resolvePath] resolve('old_size') returned 1 syms. First id=271
+[DEBUG resolvePath] Resolving path starting with 'align'
+[DEBUG resolvePath] resolve('align') returned 1 syms. First id=266
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with 'new_ptr'
+[DEBUG resolvePath] resolve('new_ptr') returned 1 syms. First id=267
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=261
+[DEBUG resolvePath] Resolving path starting with 'new_cap'
+[DEBUG resolvePath] resolve('new_cap') returned 1 syms. First id=264
+[MLibLoader] Loading generic: Vec rawSource size=397
+[MLibLoader] replacedSource: impl<T> core::ops::drop::Drop for Vec<T> {
+    fn drop(self: &rw Self) {
+        if self.cap > (0 as uint_64) {
+            dec size = self.cap * sizeof(T);
+            dec align = alignof(T);
+            __mellis_dealloc(self.ptr as *rw uint_8, size, align);
+            self.cap = 0 as uint_64;
+            self.len = 0 as uint_64;
+            self.ptr = 0 as *rw T;
+        }
+    }
+}
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=275
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=275
+[DEBUG resolvePath] Resolving path starting with '__mellis_dealloc'
+[DEBUG resolvePath] resolve('__mellis_dealloc') returned 1 syms. First id=205
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=275
+[DEBUG resolvePath] Resolving path starting with 'size'
+[DEBUG resolvePath] resolve('size') returned 1 syms. First id=276
+[DEBUG resolvePath] Resolving path starting with 'align'
+[DEBUG resolvePath] resolve('align') returned 1 syms. First id=277
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=275
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=275
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=275
+[MLibLoader] Section 7 type=8 offset=6206 size=505
+[DEBUG resolvePath] Resolving path starting with 'vec_new'
+[DEBUG resolvePath] resolve('vec_new') returned 1 syms. First id=280
+[DEBUG resolvePath] Resolving path starting with 'v'
+[DEBUG resolvePath] resolve('v') returned 1 syms. First id=282
+[DEBUG resolvePath] Resolving path starting with 'v'
+[DEBUG resolvePath] resolve('v') returned 1 syms. First id=282
+[DEBUG resolvePath] Resolving path starting with 'item'
+[DEBUG resolvePath] resolve('item') returned 1 syms. First id=283
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=290
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=290
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=290
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=290
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=290
+[DEBUG resolvePath] Resolving path starting with 'offset_ptr'
+[DEBUG resolvePath] resolve('offset_ptr') returned 1 syms. First id=300
+[DEBUG resolvePath] Resolving path starting with 'item'
+[DEBUG resolvePath] resolve('item') returned 1 syms. First id=291
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=290
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=290
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=293
+[DEBUG resolvePath] Resolving path starting with 'core'
+[DEBUG resolvePath] resolve('core') returned 1 syms. First id=169
+[DEBUG] resolvePath start: currentSym=169 kind=18 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=169 kind=18
+[DEBUG] resolvePath start: currentSym=25 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=25 kind=15
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=293
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=293
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=293
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=293
+[DEBUG resolvePath] Resolving path starting with 'core'
+[DEBUG resolvePath] resolve('core') returned 1 syms. First id=169
+[DEBUG] resolvePath start: currentSym=169 kind=18 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=169 kind=18
+[DEBUG] resolvePath start: currentSym=25 kind=15 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=25 kind=15
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'offset_ptr'
+[DEBUG resolvePath] resolve('offset_ptr') returned 1 syms. First id=301
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=295
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=297
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with 'new_cap'
+[DEBUG resolvePath] resolve('new_cap') returned 1 syms. First id=302
+[DEBUG resolvePath] Resolving path starting with 'new_cap'
+[DEBUG resolvePath] resolve('new_cap') returned 1 syms. First id=302
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with 'new_cap'
+[DEBUG resolvePath] resolve('new_cap') returned 1 syms. First id=302
+[DEBUG resolvePath] Resolving path starting with '__mellis_alloc'
+[DEBUG resolvePath] resolve('__mellis_alloc') returned 1 syms. First id=204
+[DEBUG resolvePath] Resolving path starting with 'new_size'
+[DEBUG resolvePath] resolve('new_size') returned 1 syms. First id=303
+[DEBUG resolvePath] Resolving path starting with 'align'
+[DEBUG resolvePath] resolve('align') returned 1 syms. First id=304
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=306
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=306
+[DEBUG resolvePath] Resolving path starting with 'new_ptr'
+[DEBUG resolvePath] resolve('new_ptr') returned 1 syms. First id=305
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=306
+[DEBUG resolvePath] Resolving path starting with 'dst'
+[DEBUG resolvePath] resolve('dst') returned 1 syms. First id=308
+[DEBUG resolvePath] Resolving path starting with 'src'
+[DEBUG resolvePath] resolve('src') returned 1 syms. First id=307
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=306
+[DEBUG resolvePath] Resolving path starting with 'i'
+[DEBUG resolvePath] resolve('i') returned 1 syms. First id=306
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with '__mellis_dealloc'
+[DEBUG resolvePath] resolve('__mellis_dealloc') returned 1 syms. First id=205
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with 'old_size'
+[DEBUG resolvePath] resolve('old_size') returned 1 syms. First id=309
+[DEBUG resolvePath] Resolving path starting with 'align'
+[DEBUG resolvePath] resolve('align') returned 1 syms. First id=304
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with 'new_ptr'
+[DEBUG resolvePath] resolve('new_ptr') returned 1 syms. First id=305
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=299
+[DEBUG resolvePath] Resolving path starting with 'new_cap'
+[DEBUG resolvePath] resolve('new_cap') returned 1 syms. First id=302
+[DEBUG] Enum 'Option_int_32' has 2 variants
+[DEBUG] Visiting variant 'None'
+[DEBUG] Visiting variant 'Some'
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG] MatchExpr::cloneImpl called!
+[DEBUG] EnumPatternNode clone fields size: 1
+[DEBUG] EnumPatternNode clone fields size: 0
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=316
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: None T Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=318
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=320
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=332
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with '__mellis_panic'
+[DEBUG resolvePath] resolve('__mellis_panic') returned 1 syms. First id=45
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=322
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=333
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'default'
+[DEBUG resolvePath] resolve('default') returned 1 syms. First id=323
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=326
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=327
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=334
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=330
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'f'
+[DEBUG resolvePath] resolve('f') returned 1 syms. First id=331
+[DEBUG resolvePath] Resolving path starting with 'val'
+[DEBUG resolvePath] resolve('val') returned 1 syms. First id=335
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 
+[DEBUG resolvePath] Resolving path starting with 'Option'
+[DEBUG resolvePath] resolve('Option') returned 1 syms. First id=29
+[DEBUG] resolvePath start: currentSym=29 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=29 kind=6
+[DEBUG] resolvePath Enum 'Option' nextScope=23 (sym.decl=0000019EC6523B90, bodyScopeId=23, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: T None Some 

@@ -1,0 +1,45 @@
+[DEBUG resolvePath] Resolving path starting with 'GLOBAL_COUNT'
+[DEBUG resolvePath] resolve('GLOBAL_COUNT') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'GLOBAL_COUNT'
+[DEBUG resolvePath] resolve('GLOBAL_COUNT') returned 1 syms. First id=18
+[DEBUG resolvePath] Resolving path starting with 'GLOBAL_COUNT'
+[DEBUG resolvePath] resolve('GLOBAL_COUNT') returned 1 syms. First id=18
+Solving constraint: int_32 == ?T0
+Solving constraint: int_32 == int_32
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+; ModuleID = 'D:\fdlang\tests\codegen\static_global.ms'
+source_filename = "D:\\fdlang\\tests\\codegen\\static_global.ms"
+
+@GLOBAL_COUNT = private global i32 0
+
+define i32 @main() {
+entry0:
+  %"0" = load i32, ptr @GLOBAL_COUNT, align 4
+  %"1" = add i32 %"0", 1
+  store i32 %"1", ptr @GLOBAL_COUNT, align 4
+  %"2" = load i32, ptr @GLOBAL_COUNT, align 4
+  ret i32 %"2"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+[DEBUG Semantic] Analyzing function: @main
+
+=== FORCE DUMP LLVM IR ===

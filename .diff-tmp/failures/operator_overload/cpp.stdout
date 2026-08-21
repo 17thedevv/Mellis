@@ -1,0 +1,107 @@
+[DEBUG resolvePath] Resolving path starting with 'Point'
+[DEBUG resolvePath] resolve('Point') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=29
+[DEBUG resolvePath] Resolving path starting with 'rhs'
+[DEBUG resolvePath] resolve('rhs') returned 1 syms. First id=30
+[DEBUG resolvePath] Resolving path starting with 'self'
+[DEBUG resolvePath] resolve('self') returned 1 syms. First id=29
+[DEBUG resolvePath] Resolving path starting with 'rhs'
+[DEBUG resolvePath] resolve('rhs') returned 1 syms. First id=30
+[DEBUG resolvePath] Resolving path starting with 'Point'
+[DEBUG resolvePath] resolve('Point') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'Point'
+[DEBUG resolvePath] resolve('Point') returned 1 syms. First id=24
+[DEBUG resolvePath] Resolving path starting with 'p1'
+[DEBUG resolvePath] resolve('p1') returned 1 syms. First id=32
+[DEBUG resolvePath] Resolving path starting with 'p2'
+[DEBUG resolvePath] resolve('p2') returned 1 syms. First id=33
+Solving constraint: int_32 == ?T2
+Solving constraint: int_32 == ?T5
+Solving constraint: Struct<24> == Struct<24>
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+Solving constraint: int_32 == int_32
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[COMPTIME ERROR] BinaryExpr left operand failed.
+[DEBUG Semantic] Analyzing function: @add_28
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\valid\operator_overload.ms'
+source_filename = "D:\\fdlang\\tests\\valid\\operator_overload.ms"
+
+%Point = type { i32, i32 }
+
+define %Point @add_28(%Point %"0", %Point %"1") {
+entry0:
+  %"2" = alloca %Point, align 8
+  %"3" = alloca %Point, align 8
+  %"4" = alloca %Point, align 8
+  store %Point %"0", ptr %"2", align 4
+  store %Point %"1", ptr %"3", align 4
+  %fld = getelementptr inbounds %Point, ptr %"2", i32 0, i32 0
+  %"5" = load i32, ptr %fld, align 4
+  %fld1 = getelementptr inbounds %Point, ptr %"3", i32 0, i32 0
+  %"6" = load i32, ptr %fld1, align 4
+  %"7" = add i32 %"5", %"6"
+  %fld2 = getelementptr inbounds %Point, ptr %"4", i32 0, i32 0
+  store i32 %"7", ptr %fld2, align 4
+  %fld3 = getelementptr inbounds %Point, ptr %"2", i32 0, i32 1
+  %"8" = load i32, ptr %fld3, align 4
+  %fld4 = getelementptr inbounds %Point, ptr %"3", i32 0, i32 1
+  %"9" = load i32, ptr %fld4, align 4
+  %"10" = add i32 %"8", %"9"
+  %fld5 = getelementptr inbounds %Point, ptr %"4", i32 0, i32 1
+  store i32 %"10", ptr %fld5, align 4
+  %"11" = load %Point, ptr %"4", align 4
+  ret %Point %"11"
+}
+
+define i32 @main() {
+entry0:
+  %"0" = alloca %Point, align 8
+  %"1" = alloca %Point, align 8
+  %"3" = alloca %Point, align 8
+  %"4" = alloca %Point, align 8
+  %"6" = alloca %Point, align 8
+  %fld = getelementptr inbounds %Point, ptr %"1", i32 0, i32 0
+  store i32 10, ptr %fld, align 4
+  %fld1 = getelementptr inbounds %Point, ptr %"1", i32 0, i32 1
+  store i32 20, ptr %fld1, align 4
+  %"2" = load %Point, ptr %"1", align 4
+  store %Point %"2", ptr %"0", align 4
+  %fld2 = getelementptr inbounds %Point, ptr %"4", i32 0, i32 0
+  store i32 5, ptr %fld2, align 4
+  %fld3 = getelementptr inbounds %Point, ptr %"4", i32 0, i32 1
+  store i32 15, ptr %fld3, align 4
+  %"5" = load %Point, ptr %"4", align 4
+  store %Point %"5", ptr %"3", align 4
+  %"7" = load %Point, ptr %"0", align 4
+  %"8" = load %Point, ptr %"3", align 4
+  %"9" = call %Point @add_28(%Point %"7", %Point %"8")
+  store %Point %"9", ptr %"6", align 4
+  ret i32 0
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===

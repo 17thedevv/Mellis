@@ -1,10 +1,10 @@
 # 1. Overview & Philosophy
 
-**Language Name:** freedomLanguage (mellis)
+**Language Name:** mellis
 
 **Source Files**
-- `.fl`  — source file
-- `.flh` — optional interface/header file
+- `.ms`  — source file
+- `.mlib` — optional module file
 
 The compiler treats both file types uniformly. Project organization is entirely controlled by the programmer.
 
@@ -34,7 +34,7 @@ Game engines are one possible application—not a language-specific target.
 # 2. Compiler Architecture
 
 The mellis compiler is organized as a sequence of independent compiler passes.
-Source (.fl)
+Source (.ms)
         │
         ▼
 Lexer
@@ -63,11 +63,13 @@ Optimizer
 Back End
 ──────────────
 
+MLib Generator (Static Library)
+        ▼
 LLVM IR Generator
         ▼
 LLVM Optimizer
         ▼
-Machine Code
+Machine Code / Executable
 
 Each compiler pass has a single responsibility.
 
@@ -95,12 +97,29 @@ Explicit visibility:
 
 Long-term goals:
 
-- incremental compilation
-- compiler caching
-- fast linking
+- incremental compilation (via .mlib caching)
+- fast semantic analysis (Semantic Fingerprints)
+- deterministic/reproducible linking
 - hot reload
 
-# 4. Memory Model
+# 4. `.mlib` Interchange Format
+
+`.mlib` is not a traditional object file; it is the **Mellis semantic compilation artifact and module interchange format**. 
+
+It acts as a strict serialization boundary. The generator `.mlib` phase reads exclusively from the `SemanticSnapshot` and `MVIR`, completely decoupled from the AST. The consumer phase loads semantic metadata directly without needing to re-parse or type-check dependencies.
+
+This artifact provides **cached/incremental semantic compilation** and contains:
+- **Module Identity & Manifest**
+- **Public Semantic Metadata** (Structs, Enums, Traits, Constraints)
+- **Generic Information**
+- **MVIR (Generic & Concrete)**
+- **Deterministic Semantic Fingerprints** (used for structural caching/identification, not mathematical anti-collision UUIDs)
+- **Integrity Hashes**
+
+### Nominal Typing vs Structural Fingerprints
+Mellis uses **Nominal Typing**. While `SemanticFingerprint` hashes structural characteristics for deterministic caching, two structs with the exact same structure in different modules produce different Nominal Type Identities. Identical structure $\neq$ identical type.
+
+# 5. Memory Model
 
 Memory safety is a core design goal.
 
@@ -117,7 +136,7 @@ Heap allocation is explicit.
 
 Automatic garbage collection is not part of the language.
 
-# 5. Type System
+# 6. Type System
 
 The type system is statically checked.
 
@@ -130,7 +149,7 @@ Future compiler passes include:
 - trait resolution
 - lifetime checking
 
-# 6. Diagnostic Engine
+# 7. Diagnostic Engine
 
 Every compiler pass reports errors through a shared Diagnostic Engine.
 
@@ -148,7 +167,7 @@ Diagnostics should provide:
 - notes
 - suggestions
 
-# 7. Design Principles
+# 8. Design Principles
 
 The following principles guide every language feature.
 
@@ -185,3 +204,46 @@ Abstractions should not introduce unnecessary runtime overhead.
 ## Syntax follows semantics
 
 Language syntax should emerge from a well-defined semantic model rather than forcing compiler implementation.
+# 9. Standard Library and Runtime Architecture
+
+**Dependency Flow:**
+```
+core
+  ↑
+alloc
+  ↑
+std
+```
+
+**Stack Architecture:**
+```
+                     Mellis Program
+                           │
+                           ▼
+                    lib/std (Mellis)
+                           │
+                    lib/alloc (Mellis)
+                           │
+                     lib/core (Mellis)
+                           │
+                 Runtime ABI (__mellis_*)
+                           │
+                           ▼
+                 Mellis Runtime (C/C++)
+                           │
+                 ┌─────────┴─────────┐
+                 ▼                   ▼
+              Platform            libc/OS
+```
+
+### Component Responsibilities
+
+1. **`lib/core/`**: Defines abstractions, traits, and foundational generic types (`Option`, `Result`, `Slice`) that wrap around language built-in primitives (`int_32`, `bool`, `pointer`). It does *not* define the primitives themselves.
+
+2. **`lib/alloc/`**: Provides dynamic structures like `Vec` and `String`. It uses an `Allocator` API that delegates to the Runtime ABI (`__mellis_alloc`, `__mellis_dealloc`). This decouples higher-level data structures from hardcoded runtime implementations.
+
+3. **`lib/std/`**: The hosted environment library (`std::io`, `std::fs`, `std::thread`, etc.). It does not directly call OS or `libc` functions. Instead, it delegates to the Runtime ABI (e.g., `__mellis_thread_spawn`).
+
+4. **Mellis Runtime (`runtime/`)**: Written in C/C++, this layer implements the `__mellis_*` ABI. It abstracts away the platform specifics. **The Mellis Runtime is NOT the C Runtime (CRT).** It sits above the OS/Platform and the C Runtime (`libc`), translating `__mellis_*` calls into appropriate `malloc`/`pthread`/`Win32` calls depending on the compilation profile (hosted vs freestanding vs embedded).
+
+5. **Platform Implementations (`runtime/src/platform/`)**: Contains OS-specific details (`windows`, `linux`, `macos`, `freestanding`, `embedded`). The platform implementation is strictly kept inside the Mellis Runtime, ensuring that the public API in `std` remains pure and platform-agnostic.

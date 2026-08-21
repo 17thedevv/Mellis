@@ -1,0 +1,4 @@
+Number of diagnostics: 1
+RAW DIAGNOSTIC: Diagnostic { level: Error, span: None, message: "Backend Error: Compiler internal invariant violated: Global not found: MAX_SIZE" }
+error: Backend Error: Compiler internal invariant violated: Global not found: MAX_SIZE
+

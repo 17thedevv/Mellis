@@ -1,0 +1,124 @@
+[DEBUG] Enum 'Status' has 3 variants
+[DEBUG] Visiting variant 'Ok'
+[DEBUG] Visiting variant 'Err'
+[DEBUG] Visiting variant 'Pending'
+[DEBUG resolvePath] Resolving path starting with 'Status'
+[DEBUG resolvePath] resolve('Status') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Status' nextScope=1 (sym.decl=0000015638EA19C0, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: Ok Pending Err 
+[DEBUG resolvePath] Resolving path starting with 's'
+[DEBUG resolvePath] resolve('s') returned 1 syms. First id=23
+[DEBUG resolvePath] Resolving path starting with 'Status'
+[DEBUG resolvePath] resolve('Status') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Status' nextScope=1 (sym.decl=0000015638EA19C0, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: Ok Pending Err 
+[DEBUG resolvePath] Resolving path starting with 'Status'
+[DEBUG resolvePath] resolve('Status') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Status' nextScope=1 (sym.decl=0000015638EA19C0, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: Ok Pending Err 
+[DEBUG resolvePath] Resolving path starting with 'Status'
+[DEBUG resolvePath] resolve('Status') returned 1 syms. First id=18
+[DEBUG] resolvePath start: currentSym=18 kind=6 aliasTo=4294967295
+[DEBUG] resolvePath final: currentSym=18 kind=6
+[DEBUG] resolvePath Enum 'Status' nextScope=1 (sym.decl=0000015638EA19C0, bodyScopeId=1, mlibSymbolID=0)
+[DEBUG] bindings in nextScope: Ok Pending Err 
+[DEBUG resolvePath] Resolving path starting with 'result'
+[DEBUG resolvePath] resolve('result') returned 1 syms. First id=24
+Solving constraint: Enum<18> == Enum<18>
+Solving constraint: ?T0 == int_32
+Solving constraint: Enum<18> == Enum<18>
+Solving constraint: ?T0 == int_32
+Solving constraint: Enum<18> == Enum<18>
+Solving constraint: ?T0 == int_32
+Solving constraint: int_32 == ?T0
+[COMPTIME ERROR] IdentifierExpr without env or empty segments
+[DEBUG MVIRGenerator] EnumDeclNode Status symbolId=18
+[DEBUG Semantic] Analyzing function: @main
+; ModuleID = 'D:\fdlang\tests\modules\e7_exhaustive_match.ms'
+source_filename = "D:\\fdlang\\tests\\modules\\e7_exhaustive_match.ms"
+
+%Status = type { i32, {} }
+
+define i32 @main() {
+entry0:
+  %"0" = alloca %Status, align 8
+  %"2" = alloca i32, align 4
+  %"4" = alloca i32, align 4
+  %0 = alloca %Status, align 8
+  %1 = getelementptr inbounds %Status, ptr %0, i32 0, i32 0
+  store i32 2, ptr %1, align 4
+  %"1" = load %Status, ptr %0, align 4
+  store %Status %"1", ptr %"0", align 4
+  %"3" = load %Status, ptr %"0", align 4
+  %"5" = extractvalue %Status %"3", 0
+  %"6" = icmp eq i32 %"5", 0
+  br i1 %"6", label %match_tag_06, label %match_tag_next7
+
+match_tag_06:                                     ; preds = %entry0
+  br label %match_arm_02
+
+match_tag_next7:                                  ; preds = %entry0
+  %"7" = icmp eq i32 %"5", 1
+  br i1 %"7", label %match_tag_18, label %match_tag_next9
+
+match_tag_18:                                     ; preds = %match_tag_next7
+  br label %match_arm_13
+
+match_tag_next9:                                  ; preds = %match_tag_next7
+  %"8" = icmp eq i32 %"5", 2
+  br i1 %"8", label %match_tag_210, label %match_tag_next11
+
+match_tag_210:                                    ; preds = %match_tag_next9
+  br label %match_arm_24
+
+match_tag_next11:                                 ; preds = %match_tag_next9
+  br label %match_unreachable5
+
+match_arm_02:                                     ; preds = %match_tag_06
+  store i32 0, ptr %"4", align 4
+  br label %match_end1
+
+match_arm_13:                                     ; preds = %match_tag_18
+  store i32 1, ptr %"4", align 4
+  br label %match_end1
+
+match_arm_24:                                     ; preds = %match_tag_210
+  store i32 2, ptr %"4", align 4
+  br label %match_end1
+
+match_unreachable5:                               ; preds = %match_tag_next11
+  unreachable
+
+match_end1:                                       ; preds = %match_arm_24, %match_arm_13, %match_arm_02
+  %"9" = load i32, ptr %"4", align 4
+  store i32 %"9", ptr %"2", align 4
+  %"10" = load i32, ptr %"2", align 4
+  ret i32 %"10"
+}
+
+define linkonce i1 @mellis_coro_is_done(ptr %0) {
+entry:
+  %1 = call i1 @llvm.coro.done(ptr %0)
+  ret i1 %1
+}
+
+; Function Attrs: nounwind memory(argmem: readwrite)
+declare i1 @llvm.coro.done(ptr nocapture readonly) #0
+
+define linkonce void @mellis_coro_resume(ptr %0) {
+entry:
+  call void @llvm.coro.resume(ptr %0)
+  ret void
+}
+
+declare void @llvm.coro.resume(ptr)
+
+attributes #0 = { nounwind memory(argmem: readwrite) }
+
+=== FORCE DUMP LLVM IR ===
