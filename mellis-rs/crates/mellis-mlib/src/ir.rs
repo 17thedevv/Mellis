@@ -1,9 +1,20 @@
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct MlibModule {
     pub functions: Vec<MlibFunction>,
-    // In the future: structs, traits, globals
+    pub strings: Vec<String>,
+    pub types: Vec<MlibTypeEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MlibTypeEntry {
+    pub name: String,
+    pub namespace_id: u32,
+    pub size: u64,
+    pub alignment: u64,
+    pub visibility: u8,
+    pub module_id: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

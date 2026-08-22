@@ -56,6 +56,18 @@ impl Pass for DeadCodeElimination {
                         Instruction::Assign(Operand::Value(v)) => {
                             used_values.insert(v.0);
                         }
+                        Instruction::Extract { value, .. } | Instruction::Tag { value } => {
+                            if let Operand::Value(v) = value { used_values.insert(v.0); }
+                        }
+                        Instruction::Variant { args, .. } => {
+                            for arg in args {
+                                if let Operand::Value(v) = arg { used_values.insert(v.0); }
+                            }
+                        }
+                        Instruction::BoundsCheck { index, len } => {
+                            if let Operand::Value(v) = index { used_values.insert(v.0); }
+                            if let Operand::Value(v) = len { used_values.insert(v.0); }
+                        }
                         _ => {}
                     }
                 }

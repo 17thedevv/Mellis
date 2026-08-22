@@ -98,3 +98,12 @@ fn test_unknown_section() {
     // The reader errors because of Unknown section during reading the entry
     assert!(result.is_err());
 }
+
+#[test]
+fn test_load_core_mlib() {
+    use std::fs::File;
+    let mut f = File::open("../../../lib/core.mlib").unwrap();
+    let m = mellis_mlib::MlibReader::read_module(&mut f);
+    println!("{:?}", m);
+    m.unwrap();
+}

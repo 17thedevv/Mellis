@@ -79,13 +79,49 @@ impl<'a> MvirGenerator<'a> {
                 }
             }
             mellis_ast::Pattern::Struct { fields, .. } => {
-                for field in fields {
-                    if let Some(field_pat) = field.pattern {
-                        self.bind_pattern(&field_pat, Operand::Number("0".to_string()));
+                let ty_id = self.ctx.tables.pat_types.get(pat_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                let resolved_ty = self.ctx.types.get(ty_id).clone();
+                if let mellis_semantic::SemanticType::Struct(sym_id, _) = resolved_ty {
+                    if let Some(decl_id) = self.ctx.symbol_table.get_symbol(sym_id).decl_id {
+                        let decl = self.arena.decls[decl_id.0 as usize].clone();
+                        if let mellis_ast::Decl::Struct { fields: struct_fields, .. } = &decl {
+                            for field in fields {
+                                if let Some(field_pat) = field.pattern {
+                                    let field_name_str = &self.source[field.name.start as usize..field.name.end as usize];
+                                    let mut field_idx = 0;
+                                    for (idx, struct_field) in struct_fields.iter().enumerate() {
+                                        let struct_field_name = &self.source[struct_field.name.start as usize..struct_field.name.end as usize];
+                                        if field_name_str == struct_field_name {
+                                            field_idx = idx;
+                                            break;
+                                        }
+                                    }
+                                    let field_ty = self.ctx.tables.pat_types.get(&field_pat).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                                    let extract_val = self.push_inst(Instruction::Extract {
+                                        value: val_op.clone(),
+                                        variant_idx: 0,
+                                        field_idx: field_idx as u32,
+                                    }, field_ty);
+                                    self.bind_pattern(&field_pat, Operand::Value(extract_val));
+                                }
+                            }
+                        }
                     }
                 }
             }
-            mellis_ast::Pattern::Tuple { elements, .. } | mellis_ast::Pattern::Enum { fields: elements, .. } => {
+            mellis_ast::Pattern::Tuple { elements, .. } => {
+                for (idx, elem) in elements.iter().enumerate() {
+                    let field_ty = self.ctx.tables.pat_types.get(elem).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                    let extract_val = self.push_inst(Instruction::Extract {
+                        value: val_op.clone(),
+                        variant_idx: 0,
+                        field_idx: idx as u32,
+                    }, field_ty);
+                    self.bind_pattern(elem, Operand::Value(extract_val));
+                }
+            }
+            mellis_ast::Pattern::Enum { fields: elements, .. } => {
+                // TODO: enum extraction
                 for elem in elements {
                     self.bind_pattern(elem, Operand::Number("0".to_string()));
                 }
@@ -335,7 +371,24 @@ impl<'a> MvirGenerator<'a> {
                         value: val_op,
                     }, mellis_semantic::SemanticTypeId(0));
                 }
-                Operand::Value(struct_alloca)
+                let load_val = self.push_inst(Instruction::Load {
+                    ptr: Operand::Value(struct_alloca),
+                }, ty_id);
+                Operand::Value(load_val)
+            }
+            Expr::TupleLiteral { elements } => {
+                let tuple_alloca = self.push_inst(Instruction::Alloca, ty_id);
+                for elem in elements {
+                    let val_op = self.generate_expr(elem);
+                    self.push_inst(Instruction::Store {
+                        ptr: Operand::Value(tuple_alloca),
+                        value: val_op,
+                    }, mellis_semantic::SemanticTypeId(0));
+                }
+                let load_val = self.push_inst(Instruction::Load {
+                    ptr: Operand::Value(tuple_alloca),
+                }, ty_id);
+                Operand::Value(load_val)
             }
             Expr::Index { base, index } => {
                 let base_op = self.generate_expr(base);

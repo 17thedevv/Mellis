@@ -242,6 +242,7 @@ impl<'a> TypeChecker<'a> {
         if let Some(sym_id) = self.ctx.tables.pat_symbols.get(pat_id).copied() {
             self.ctx.tables.symbol_types.insert(sym_id, ty);
         }
+        self.ctx.tables.pat_types.insert(*pat_id, ty);
         
         let pattern = &self.arena.pats[pat_id.0 as usize];
         match pattern {
@@ -256,17 +257,35 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             mellis_ast::Pattern::Struct { fields, .. } => {
-                for field in fields {
-                    if let Some(field_pat) = field.pattern {
-                        // TODO: get field type
-                        let inf_var = self.ctx.types.new_inference_var();
-                        self.typecheck_pattern(&field_pat, inf_var);
+                let resolved_ty = self.ctx.types.get(ty).clone();
+                if let SemanticType::Struct(sym_id, _) = resolved_ty {
+                    let decl_id_opt = self.ctx.symbol_table.get_symbol(sym_id).decl_id;
+                    if let Some(decl_id) = decl_id_opt {
+                        let decl = self.arena.decls[decl_id.0 as usize].clone();
+                        if let mellis_ast::Decl::Struct { fields: struct_fields, .. } = &decl {
+                            for field in fields {
+                                if let Some(field_pat) = field.pattern {
+                                    let field_name_str = &self.source[field.name.start as usize..field.name.end as usize];
+                                    
+                                    let mut field_ty = self.ctx.types.new_inference_var();
+                                    for struct_field in struct_fields {
+                                        let struct_field_name = &self.source[struct_field.name.start as usize..struct_field.name.end as usize];
+                                        if field_name_str == struct_field_name {
+                                            field_ty = self.ctx.tables.ast_type_to_semantic.get(&struct_field.ty).copied().unwrap_or(field_ty);
+                                            break;
+                                        }
+                                    }
+                                    
+                                    self.typecheck_pattern(&field_pat, field_ty);
+                                }
+                            }
+                        }
                     }
                 }
             }
             mellis_ast::Pattern::Enum { fields, .. } => {
+                // TODO: enum variant extraction
                 for field in fields {
-                    // TODO: get field type
                     let inf_var = self.ctx.types.new_inference_var();
                     self.typecheck_pattern(field, inf_var);
                 }

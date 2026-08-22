@@ -46,9 +46,9 @@ impl<'a> Parser<'a> {
             if self.match_token(TokenKind::RBracket) {
                 return Ok(self.arena.alloc_type(Type::Slice { inner: element_type }));
             }
-            if !self.match_token(TokenKind::Semi) && !self.match_token(TokenKind::Comma) {
+            if !self.match_token(TokenKind::Semi) {
                 let span = self.peek().span;
-                self.error_at_current("Expected ';' or ',' in array type", span);
+                self.error_at_current("Expected ';' in array type", span);
                 return Err(());
             }
             let size = self.parse_expression(true)?;

@@ -479,9 +479,17 @@ impl<'a> Parser<'a> {
 
             segments.push(id_tok.span);
 
-            // Generic args `:: < ... >` or `<...>`? C++ Parser says `if (check(TokenType::GENERIC_START))`
-            // We'll skip generics in expression path for now to keep it simple, or implement if needed.
-
+            if self.match_token(TokenKind::GenericStart) {
+                if !self.check(TokenKind::GreaterThan) {
+                    loop {
+                        generic_args.push(self.parse_type()?);
+                        if !self.match_token(TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                }
+                self.consume(TokenKind::GreaterThan, "Expected '>' after generic arguments")?;
+            }
             if !self.match_token(TokenKind::ColonColon) {
                 break;
             }

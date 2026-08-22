@@ -1,6 +1,6 @@
 use std::io::{Write, Cursor};
 use crate::format::{MlibHeader, SectionEntry, SectionType};
-use crate::ir::{MlibModule, MlibFunction, MlibValue, MlibBlock, MlibInstruction, MlibTerminator, MlibOperand};
+use crate::ir::{MlibModule, MlibFunction, MlibValue, MlibBlock, MlibInstruction, MlibTerminator, MlibOperand, MlibTypeEntry};
 use mellis_mvir::{Module, Function, ValueData, BasicBlock, Instruction, Terminator, Operand};
 
 pub struct MlibWriter;
@@ -10,24 +10,29 @@ impl MlibWriter {
         let mlib_module = Self::convert_module(module);
         
         let mut mvir_payload = Vec::new();
-        bincode::serialize_into(&mut mvir_payload, &mlib_module)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        Self::serialize_module_internal(&mut mvir_payload, &mlib_module)?;
 
         let mut header = MlibHeader::new();
         header.section_count = 1;
         
+        let header_size = 122;
+        let section_table_size = 40;
+        let mvir_offset = (header_size + section_table_size) as u64;
+        
+        header.section_table_offset = header_size as u64;
+
         // Write header
         header.write_to(writer)?;
         
-        // Calculate offsets
-        let header_size = 4 + 2 + 2 + 32 + 4;
-        let section_table_size = 1 * (4 + 8 + 8);
-        let mvir_offset = (header_size + section_table_size) as u64;
-        
         let mvir_section = SectionEntry {
-            section_type: SectionType::Mvir,
+            section_id: 1,
+            section_type: SectionType::GenericMVIR,
             offset: mvir_offset,
-            length: mvir_payload.len() as u64,
+            size: mvir_payload.len() as u64,
+            version: 1,
+            compression: 0,
+            reserved: [0u8; 5],
+            hash: 0,
         };
         
         // Write section table
@@ -42,6 +47,8 @@ impl MlibWriter {
     fn convert_module(module: &Module) -> MlibModule {
         MlibModule {
             functions: module.functions.iter().map(Self::convert_function).collect(),
+            strings: Vec::new(),
+            types: Vec::new(),
         }
     }
     
@@ -153,5 +160,198 @@ impl MlibWriter {
             Operand::Block(id) => MlibOperand::Block(id.0),
             Operand::Global(g) => MlibOperand::Global(g.name.clone()),
         }
+    }
+
+    fn write_string<W: Write>(w: &mut W, s: &str) -> std::io::Result<()> {
+        let bytes = s.as_bytes();
+        w.write_all(&(bytes.len() as u32).to_le_bytes())?;
+        w.write_all(bytes)?;
+        Ok(())
+    }
+
+    fn serialize_operand<W: Write>(w: &mut W, op: &MlibOperand) -> std::io::Result<()> {
+        match op {
+            MlibOperand::Value(v) => {
+                w.write_all(&[0u8])?;
+                w.write_all(&v.to_le_bytes())?;
+            }
+            MlibOperand::Number(n) => {
+                w.write_all(&[1u8])?;
+                Self::write_string(w, n)?;
+            }
+            MlibOperand::Boolean(b) => {
+                w.write_all(&[2u8])?;
+                w.write_all(&[if *b { 1 } else { 0 }])?;
+            }
+            MlibOperand::Block(id) => {
+                w.write_all(&[3u8])?;
+                w.write_all(&id.to_le_bytes())?;
+            }
+            MlibOperand::Global(g) => {
+                w.write_all(&[4u8])?;
+                Self::write_string(w, g)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn serialize_instruction<W: Write>(w: &mut W, inst: &MlibInstruction) -> std::io::Result<()> {
+        match inst {
+            MlibInstruction::Alloca => {
+                w.write_all(&[0u8])?;
+            }
+            MlibInstruction::Assign(op) => {
+                w.write_all(&[1u8])?;
+                Self::serialize_operand(w, op)?;
+            }
+            MlibInstruction::Store { ptr, value } => {
+                w.write_all(&[2u8])?;
+                w.write_all(&ptr.to_le_bytes())?;
+                Self::serialize_operand(w, value)?;
+            }
+            MlibInstruction::Load { ptr } => {
+                w.write_all(&[3u8])?;
+                Self::serialize_operand(w, ptr)?;
+            }
+            MlibInstruction::Call { callee, args } => {
+                w.write_all(&[4u8])?;
+                Self::serialize_operand(w, callee)?;
+                w.write_all(&(args.len() as u32).to_le_bytes())?;
+                for arg in args {
+                    Self::serialize_operand(w, arg)?;
+                }
+            }
+            MlibInstruction::Add { left, right } => {
+                w.write_all(&[5u8])?;
+                Self::serialize_operand(w, left)?;
+                Self::serialize_operand(w, right)?;
+            }
+            MlibInstruction::Sub { left, right } => {
+                w.write_all(&[6u8])?;
+                Self::serialize_operand(w, left)?;
+                Self::serialize_operand(w, right)?;
+            }
+            MlibInstruction::Mul { left, right } => {
+                w.write_all(&[7u8])?;
+                Self::serialize_operand(w, left)?;
+                Self::serialize_operand(w, right)?;
+            }
+            MlibInstruction::Eq { left, right } => {
+                w.write_all(&[8u8])?;
+                Self::serialize_operand(w, left)?;
+                Self::serialize_operand(w, right)?;
+            }
+            MlibInstruction::Borrow { is_rw, base } => {
+                w.write_all(&[9u8])?;
+                w.write_all(&[if *is_rw { 1 } else { 0 }])?;
+                Self::serialize_operand(w, base)?;
+            }
+            MlibInstruction::Variant { enum_ty, variant_idx, args } => {
+                w.write_all(&[10u8])?;
+                w.write_all(&enum_ty.to_le_bytes())?;
+                w.write_all(&variant_idx.to_le_bytes())?;
+                w.write_all(&(args.len() as u32).to_le_bytes())?;
+                for arg in args {
+                    Self::serialize_operand(w, arg)?;
+                }
+            }
+            MlibInstruction::Tag { value } => {
+                w.write_all(&[11u8])?;
+                Self::serialize_operand(w, value)?;
+            }
+            MlibInstruction::Extract { value, variant_idx, field_idx } => {
+                w.write_all(&[12u8])?;
+                Self::serialize_operand(w, value)?;
+                w.write_all(&variant_idx.to_le_bytes())?;
+                w.write_all(&field_idx.to_le_bytes())?;
+            }
+        }
+        Ok(())
+    }
+
+    fn serialize_terminator<W: Write>(w: &mut W, term: &MlibTerminator) -> std::io::Result<()> {
+        match term {
+            MlibTerminator::Br { target } => {
+                w.write_all(&[0u8])?;
+                w.write_all(&target.to_le_bytes())?;
+            }
+            MlibTerminator::CondBr { condition, true_target, false_target } => {
+                w.write_all(&[1u8])?;
+                Self::serialize_operand(w, condition)?;
+                w.write_all(&true_target.to_le_bytes())?;
+                w.write_all(&false_target.to_le_bytes())?;
+            }
+            MlibTerminator::Ret { value } => {
+                w.write_all(&[2u8])?;
+                if let Some(val) = value {
+                    w.write_all(&[1u8])?;
+                    Self::serialize_operand(w, val)?;
+                } else {
+                    w.write_all(&[0u8])?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn serialize_block<W: Write>(w: &mut W, block: &MlibBlock) -> std::io::Result<()> {
+        w.write_all(&block.id.to_le_bytes())?;
+        Self::write_string(w, &block.label)?;
+        w.write_all(&(block.insts.len() as u32).to_le_bytes())?;
+        for inst_id in &block.insts {
+            w.write_all(&inst_id.to_le_bytes())?;
+        }
+        if let Some(term) = &block.terminator {
+            w.write_all(&[1u8])?;
+            Self::serialize_terminator(w, term)?;
+        } else {
+            w.write_all(&[0u8])?;
+        }
+        Ok(())
+    }
+
+    fn serialize_value<W: Write>(w: &mut W, value: &MlibValue) -> std::io::Result<()> {
+        w.write_all(&value.id.to_le_bytes())?;
+        Self::serialize_instruction(w, &value.inst)?;
+        Ok(())
+    }
+
+    fn serialize_function<W: Write>(w: &mut W, func: &MlibFunction) -> std::io::Result<()> {
+        Self::write_string(w, &func.name)?;
+        w.write_all(&(func.values.len() as u32).to_le_bytes())?;
+        for val in &func.values {
+            Self::serialize_value(w, val)?;
+        }
+        w.write_all(&(func.blocks.len() as u32).to_le_bytes())?;
+        for block in &func.blocks {
+            Self::serialize_block(w, block)?;
+        }
+        Ok(())
+    }
+
+    fn serialize_type_entry<W: Write>(w: &mut W, t: &MlibTypeEntry) -> std::io::Result<()> {
+        Self::write_string(w, &t.name)?;
+        w.write_all(&t.namespace_id.to_le_bytes())?;
+        w.write_all(&t.size.to_le_bytes())?;
+        w.write_all(&t.alignment.to_le_bytes())?;
+        w.write_all(&[t.visibility])?;
+        w.write_all(&t.module_id.to_le_bytes())?;
+        Ok(())
+    }
+
+    fn serialize_module_internal<W: Write>(w: &mut W, module: &MlibModule) -> std::io::Result<()> {
+        w.write_all(&(module.functions.len() as u32).to_le_bytes())?;
+        for func in &module.functions {
+            Self::serialize_function(w, func)?;
+        }
+        w.write_all(&(module.strings.len() as u32).to_le_bytes())?;
+        for s in &module.strings {
+            Self::write_string(w, s)?;
+        }
+        w.write_all(&(module.types.len() as u32).to_le_bytes())?;
+        for t in &module.types {
+            Self::serialize_type_entry(w, t)?;
+        }
+        Ok(())
     }
 }

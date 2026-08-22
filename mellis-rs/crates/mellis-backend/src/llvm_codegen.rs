@@ -117,8 +117,12 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             SemanticType::Primitive(BuiltinType::Int) => Ok(self.context.i32_type().into()),
             SemanticType::Primitive(BuiltinType::Bool) => Ok(self.context.bool_type().into()),
             SemanticType::Pointer(_) | SemanticType::Reference(..) | SemanticType::Primitive(BuiltinType::String) => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()),
-            SemanticType::Struct(..) => {
-                Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into())
+            SemanticType::Struct(_, generic_args) => {
+                let mut field_types = Vec::new();
+                for &e in generic_args {
+                    field_types.push(self.map_type(e)?);
+                }
+                Ok(self.context.struct_type(&field_types, false).into())
             }
             SemanticType::Enum(..) => {
                 let i32_ty = self.context.i32_type();
@@ -428,13 +432,25 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let tag = self.builder.build_extract_value(llvm_val.into_struct_value(), 0, "tag").unwrap();
                 Ok(tag)
             }
-            Instruction::Extract { value, .. } => {
+            Instruction::Extract { value, variant_idx: _, field_idx } => {
                 let llvm_val = self.generate_operand(value)?;
-                let payload = self.builder.build_extract_value(llvm_val.into_struct_value(), 1, "payload_arr").unwrap();
-                // For simplicity, assuming payload is array and we want the first element.
-                // extractvalue array, 0
-                let first_elem = self.builder.build_extract_value(payload.into_array_value(), 0, "first_elem").unwrap();
-                Ok(first_elem)
+                
+                let mut is_enum = false;
+                if let Operand::Value(vid) = value {
+                    let ty_id = _func.values[vid.0 as usize].ty;
+                    if let mellis_semantic::SemanticType::Enum(..) = self.semantic_ctx.types.get(ty_id) {
+                        is_enum = true;
+                    }
+                }
+                
+                if is_enum {
+                    let payload = self.builder.build_extract_value(llvm_val.into_struct_value(), 1, "payload_arr").unwrap();
+                    let first_elem = self.builder.build_extract_value(payload.into_array_value(), *field_idx, "enum_elem").unwrap();
+                    Ok(first_elem)
+                } else {
+                    let field = self.builder.build_extract_value(llvm_val.into_struct_value(), *field_idx, "struct_field").unwrap();
+                    Ok(field)
+                }
             }
         }
     }
