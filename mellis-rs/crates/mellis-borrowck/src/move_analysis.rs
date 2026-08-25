@@ -175,15 +175,19 @@ impl DataflowAnalysis<MoveStateData> for MoveAnalyzer {
     fn merge(&mut self, dest: &mut MoveStateData, src: &MoveStateData) -> bool {
         let mut changed = false;
         for (k, v) in &src.locals {
-            let entry = dest.locals.entry(k.clone()).or_insert(MoveState::Live);
-            let new_state = match (entry.clone(), v.clone()) {
-                (MoveState::Uninitialized, _) | (_, MoveState::Uninitialized) => MoveState::Uninitialized,
-                (MoveState::Dropped, _) | (_, MoveState::Dropped) => MoveState::Dropped,
-                (MoveState::Moved, _) | (_, MoveState::Moved) => MoveState::Moved,
-                _ => MoveState::Live,
-            };
-            if *entry != new_state {
-                *entry = new_state;
+            if let Some(entry) = dest.locals.get_mut(k) {
+                let new_state = match (entry.clone(), v.clone()) {
+                    (MoveState::Uninitialized, _) | (_, MoveState::Uninitialized) => MoveState::Uninitialized,
+                    (MoveState::Dropped, _) | (_, MoveState::Dropped) => MoveState::Dropped,
+                    (MoveState::Moved, _) | (_, MoveState::Moved) => MoveState::Moved,
+                    _ => MoveState::Live,
+                };
+                if *entry != new_state {
+                    *entry = new_state;
+                    changed = true;
+                }
+            } else {
+                dest.locals.insert(k.clone(), v.clone());
                 changed = true;
             }
         }
