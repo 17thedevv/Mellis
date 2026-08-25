@@ -127,7 +127,6 @@ pub enum TokenKind {
     KwMove,
     KwMatch,
     KwRw,
-    KwMut,
     KwTrue,
     KwFalse,
     KwType,

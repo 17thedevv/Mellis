@@ -85,12 +85,16 @@ pub enum Instruction {
         variant_idx: u32,
         field_idx: u32,
     },
+    Drop {
+        value: Operand,
+    },
 }
 
 #[derive(Clone, Debug)]
 pub struct ValueData {
     pub inst: Instruction,
     pub ty: SemanticTypeId,
+    pub span: Option<mellis_common::ids::Span>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -119,9 +123,11 @@ pub struct BasicBlock {
 #[derive(Clone, Debug)]
 pub struct Function {
     pub name: GlobalId,
+    pub is_extern: bool,
+    pub arg_count: usize,
+    pub ret_ty: SemanticTypeId,
     pub blocks: Vec<BasicBlock>,
     pub values: Vec<ValueData>,
-    pub ret_ty: SemanticTypeId,
 }
 
 impl Function {

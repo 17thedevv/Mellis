@@ -356,7 +356,7 @@ impl MlibReader {
         for _ in 0..block_count {
             blocks.push(Self::deserialize_block(r)?);
         }
-        Ok(MlibFunction { name, values, blocks })
+        Ok(MlibFunction { name, arg_count: 0, values, blocks })
     }
 
     fn deserialize_type_entry<R: Read>(r: &mut R) -> std::io::Result<MlibTypeEntry> {

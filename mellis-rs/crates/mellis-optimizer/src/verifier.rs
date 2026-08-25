@@ -118,6 +118,9 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
             Instruction::Extract { value, .. } => {
                 check_operand(value, &mut errors, &ctx);
             }
+            Instruction::Drop { value } => {
+                check_operand(value, &mut errors, &ctx);
+            }
         }
     }
     

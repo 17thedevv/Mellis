@@ -55,6 +55,7 @@ impl MlibWriter {
     fn convert_function(func: &Function) -> MlibFunction {
         MlibFunction {
             name: func.name.name.clone(),
+            arg_count: func.arg_count as u32,
             values: func.values.iter().enumerate().map(|(i, v)| MlibValue {
                 id: i as u32,
                 inst: Self::convert_instruction(&v.inst),
@@ -125,6 +126,9 @@ impl MlibWriter {
                 value: Self::convert_operand(value),
                 variant_idx: *variant_idx,
                 field_idx: *field_idx,
+            },
+            Instruction::Drop { value } => MlibInstruction::Drop {
+                value: Self::convert_operand(value),
             },
         }
     }
@@ -264,6 +268,10 @@ impl MlibWriter {
                 Self::serialize_operand(w, value)?;
                 w.write_all(&variant_idx.to_le_bytes())?;
                 w.write_all(&field_idx.to_le_bytes())?;
+            }
+            MlibInstruction::Drop { value } => {
+                w.write_all(&[13u8])?;
+                Self::serialize_operand(w, value)?;
             }
         }
         Ok(())

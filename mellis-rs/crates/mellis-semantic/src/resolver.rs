@@ -44,6 +44,7 @@ impl<'a> Resolver<'a> {
                 let decl = &self.arena.decls[decl_id.0 as usize];
                 match decl {
                     Decl::Function { name, params, body, visibility, .. } => {
+                        let func_scope = self.enter_scope(crate::symbol::ScopeKind::Function);
                         let name_str = self.source[name.start as usize..name.end as usize].to_string();
                         
                         let sym_id = self.ctx.symbol_table.declare_symbol(
@@ -59,9 +60,20 @@ impl<'a> Resolver<'a> {
                         
                         self.enter_scope(crate::symbol::ScopeKind::Function);
                         
+                        let mut noescapes = Vec::new();
                         for param_id in params {
-                            if let Decl::Param { name: p_name, visibility: p_vis, .. } = &self.arena.decls[param_id.0 as usize] {
-                                let p_name_str = format!("param_{}_{}", p_name.start, p_name.end);
+                            if let Decl::Param { name: p_name, visibility: p_vis, annotations, .. } = &self.arena.decls[param_id.0 as usize] {
+                                let mut is_noescape = false;
+                                for ann in annotations {
+                                    let ann_name = &self.source[ann.name.start as usize..ann.name.end as usize];
+                                    if ann_name == "sync_noescape" {
+                                        is_noescape = true;
+                                        break;
+                                    }
+                                }
+                                noescapes.push(is_noescape);
+
+                                let p_name_str = self.source[p_name.start as usize..p_name.end as usize].to_string();
                                 let p_sym_id = self.ctx.symbol_table.declare_symbol(
                                     p_name_str,
                                     SymbolKind::Variable,
@@ -74,6 +86,7 @@ impl<'a> Resolver<'a> {
                                 self.ctx.tables.symbol_decls.insert(p_sym_id, *param_id);
                             }
                         }
+                        self.ctx.tables.ffi_sync_noescape.insert(sym_id, noescapes);
                         
                         if let Some(body_stmt) = body {
                             self.resolve_stmt(body_stmt);
@@ -233,10 +246,26 @@ impl<'a> Resolver<'a> {
     fn resolve_pattern(&mut self, pat_id: &mellis_ast::PatId, visibility: mellis_ast::Visibility, is_mutable: bool) {
         match &self.arena.pats[pat_id.0 as usize] {
             Pattern::Identifier { segments } => {
-                if let Some(name) = segments.last() {
+                if segments.len() > 1 {
+                    // It's a path, like Color::Red
+                    let mut full_name = String::new();
+                    for (i, seg) in segments.iter().enumerate() {
+                        if i > 0 { full_name.push_str("::"); }
+                        full_name.push_str(&self.source[seg.start as usize..seg.end as usize]);
+                    }
+                    if let Some(existing_sym_id) = self.ctx.symbol_table.lookup(&full_name, self.current_scope) {
+                        let sym = self.ctx.symbol_table.get_symbol(existing_sym_id);
+                        if matches!(sym.kind, SymbolKind::EnumVariant(_)) {
+                            self.ctx.tables.pat_symbols.insert(*pat_id, existing_sym_id);
+                            return;
+                        }
+                    }
+                    // If not found, we shouldn't declare a variable with a path!
+                    // It's just unresolved. We might want to emit an error, but let's leave it for now.
+                } else if let Some(name) = segments.last() {
                     let name_str = self.source[name.start as usize..name.end as usize].to_string();
                     
-                    // Check if it's an enum variant
+                    // Check if it's an enum variant (brought into scope, though in Mellis they are usually Enum::Variant)
                     if let Some(existing_sym_id) = self.ctx.symbol_table.lookup(&name_str, self.current_scope) {
                         let sym = self.ctx.symbol_table.get_symbol(existing_sym_id);
                         if matches!(sym.kind, SymbolKind::EnumVariant(_)) {
@@ -285,7 +314,6 @@ impl<'a> Resolver<'a> {
                     if let Some(sym_id) = self.ctx.symbol_table.lookup(&name_str, self.current_scope) {
                         self.ctx.tables.expr_symbols.insert(*expr_id, sym_id);
                     } else {
-                        // We use dummy names so lookups will fail for non-local standard names unless we use SourceManager
                     }
                 }
             }

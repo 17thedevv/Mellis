@@ -20,7 +20,7 @@ impl<'a> Parser<'a> {
 
         if self.match_token(TokenKind::BitAnd) {
             let is_mutable =
-                self.match_token(TokenKind::KwMut) || self.match_token(TokenKind::KwRw);
+                self.match_token(TokenKind::KwRw);
             let lifetime = if self.check(TokenKind::Lifetime) {
                 Some(self.parse_type()?)
             } else {
@@ -36,7 +36,7 @@ impl<'a> Parser<'a> {
 
         if self.match_token(TokenKind::Multiply) {
             let is_mutable =
-                self.match_token(TokenKind::KwMut) || self.match_token(TokenKind::KwRw);
+                self.match_token(TokenKind::KwRw);
             let inner = self.parse_type()?;
             return Ok(self.arena.alloc_type(Type::Pointer { is_mutable, inner }));
         }

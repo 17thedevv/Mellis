@@ -1,13 +1,14 @@
-use std::collections::HashMap;
-use mellis_common::Diagnostic;
-use mellis_mvir::{Function, Instruction, Terminator, Operand};
 use crate::dataflow::DataflowAnalysis;
+use mellis_common::Diagnostic;
+use mellis_mvir::{Function, Instruction, Operand, Terminator};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MoveState {
     Uninitialized,
-    Initialized,
+    Live,
     Moved,
+    Dropped,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -17,43 +18,89 @@ pub struct MoveStateData {
 
 pub struct MoveAnalyzer {
     pub diagnostics: Vec<Diagnostic>,
+    pub emit_diagnostics: bool,
+    pub load_origins: std::collections::HashMap<mellis_mvir::ValueId, mellis_mvir::ValueId>,
 }
 
 impl MoveAnalyzer {
     pub fn new() -> Self {
         Self {
             diagnostics: Vec::new(),
+            emit_diagnostics: false,
+            load_origins: std::collections::HashMap::new(),
         }
     }
-    
+
+    fn resolve_val(&self, val: mellis_mvir::ValueId) -> mellis_mvir::ValueId {
+        let mut curr = val;
+        while let Some(&origin) = self.load_origins.get(&curr) {
+            if curr == origin { break; }
+            curr = origin;
+        }
+        curr
+    }
+
     fn check_operand(&mut self, op: &Operand, state: &MoveStateData) {
+        if !self.emit_diagnostics { return; }
         if let Operand::Value(val) = op {
-            let name = format!("%v{}", val.0);
-            let loc_state = state.locals.get(&name).unwrap_or(&MoveState::Initialized);
+            let actual_val = self.resolve_val(*val);
+            let name = format!("%v{}", actual_val.0);
+            let loc_state = state.locals.get(&name).unwrap_or(&MoveState::Live);
             if loc_state == &MoveState::Moved {
-                self.diagnostics.push(Diagnostic::error(
-                    format!("Use of moved value '{}'", name),
-                ));
+                let msg = format!("Use of moved value '{}'", name);
+                if !self.diagnostics.iter().any(|d| d.message == msg) {
+                    self.diagnostics.push(Diagnostic::error(msg));
+                }
+            } else if loc_state == &MoveState::Dropped {
+                let msg = format!("Use of dropped value '{}'", name);
+                if !self.diagnostics.iter().any(|d| d.message == msg) {
+                    self.diagnostics.push(Diagnostic::error(msg));
+                }
             } else if loc_state == &MoveState::Uninitialized {
-                self.diagnostics.push(Diagnostic::error(
-                    format!("Use of uninitialized value '{}'", name),
-                ));
+                let msg = format!("Use of uninitialized value '{}'", name);
+                if !self.diagnostics.iter().any(|d| d.message == msg) {
+                    self.diagnostics.push(Diagnostic::error(msg));
+                }
             }
         }
     }
 
     fn mark_moved(&mut self, op: &Operand, state: &mut MoveStateData) {
         if let Operand::Value(val) = op {
-            state.locals.insert(format!("%v{}", val.0), MoveState::Moved);
+            let actual_val = self.resolve_val(*val);
+            state
+                .locals
+                .insert(format!("%v{}", actual_val.0), MoveState::Moved);
+        }
+    }
+
+    fn mark_dropped(&mut self, op: &Operand, state: &mut MoveStateData) {
+        if let Operand::Value(val) = op {
+            let actual_val = self.resolve_val(*val);
+            let name = format!("%v{}", actual_val.0);
+            let loc_state = state.locals.get(&name).unwrap_or(&MoveState::Live).clone();
+            // If it is already Moved, leave it Moved. 
+            // If it is Live, mark it as Dropped.
+            if loc_state != MoveState::Moved {
+                state.locals.insert(name, MoveState::Dropped);
+            }
         }
     }
 }
 
 impl DataflowAnalysis<MoveStateData> for MoveAnalyzer {
-    fn transfer_instruction(&mut self, inst: &Instruction, state: &mut MoveStateData) {
+    fn transfer_instruction(
+        &mut self,
+        _val_id: mellis_mvir::ValueId,
+        inst: &Instruction,
+        state: &mut MoveStateData,
+    ) {
+        if !matches!(inst, Instruction::Alloca) {
+            state.locals.insert(format!("%v{}", _val_id.0), MoveState::Live);
+        }
+        
         match inst {
-            Instruction::Alloca => {
-            }
+            Instruction::Alloca => {}
             Instruction::Assign(op) => {
                 self.check_operand(op, state);
                 self.mark_moved(op, state);
@@ -61,13 +108,18 @@ impl DataflowAnalysis<MoveStateData> for MoveAnalyzer {
             Instruction::Store { ptr, value } => {
                 self.check_operand(value, state);
                 self.mark_moved(value, state); // Value is moved into ptr
-                
+
                 if let Operand::Value(dest_val) = ptr {
-                    state.locals.insert(format!("%v{}", dest_val.0), MoveState::Initialized);
+                    state
+                        .locals
+                        .insert(format!("%v{}", dest_val.0), MoveState::Live);
                 }
             }
             Instruction::Load { ptr, .. } => {
                 self.check_operand(ptr, state);
+                if let Operand::Value(ptr_val) = ptr {
+                    self.load_origins.insert(_val_id, *ptr_val);
+                }
             }
             Instruction::Call { args, callee, .. } => {
                 self.check_operand(callee, state);
@@ -83,7 +135,7 @@ impl DataflowAnalysis<MoveStateData> for MoveAnalyzer {
             Instruction::Borrow { base, .. } => {
                 self.check_operand(base, state);
             }
-            Instruction::Add { left, right, .. } 
+            Instruction::Add { left, right, .. }
             | Instruction::Sub { left, right, .. }
             | Instruction::Mul { left, right, .. }
             | Instruction::Eq { left, right, .. } => {
@@ -98,6 +150,9 @@ impl DataflowAnalysis<MoveStateData> for MoveAnalyzer {
             }
             Instruction::Tag { value } | Instruction::Extract { value, .. } => {
                 self.check_operand(value, state);
+            }
+            Instruction::Drop { value } => {
+                self.mark_dropped(value, state);
             }
         }
     }
@@ -120,25 +175,36 @@ impl DataflowAnalysis<MoveStateData> for MoveAnalyzer {
     fn merge(&mut self, dest: &mut MoveStateData, src: &MoveStateData) -> bool {
         let mut changed = false;
         for (k, v) in &src.locals {
-            let dest_val = dest.locals.entry(k.clone()).or_insert(MoveState::Uninitialized);
-            if dest_val != v {
-                // If one path moves, the joined path is moved
-                if *v == MoveState::Moved || *dest_val == MoveState::Moved {
-                    *dest_val = MoveState::Moved;
-                    changed = true;
-                } else if *v == MoveState::Initialized && *dest_val == MoveState::Uninitialized {
-                    *dest_val = MoveState::Initialized;
-                    changed = true;
-                }
+            let entry = dest.locals.entry(k.clone()).or_insert(MoveState::Live);
+            let new_state = match (entry.clone(), v.clone()) {
+                (MoveState::Uninitialized, _) | (_, MoveState::Uninitialized) => MoveState::Uninitialized,
+                (MoveState::Dropped, _) | (_, MoveState::Dropped) => MoveState::Dropped,
+                (MoveState::Moved, _) | (_, MoveState::Moved) => MoveState::Moved,
+                _ => MoveState::Live,
+            };
+            if *entry != new_state {
+                *entry = new_state;
+                changed = true;
             }
         }
         changed
     }
 
     fn init_entry_state(&mut self, func: &Function, state: &mut MoveStateData) {
+        let mut alloca_count = 0;
         for (idx, val_data) in func.values.iter().enumerate() {
             if matches!(val_data.inst, Instruction::Alloca) {
-                state.locals.insert(format!("%v{}", idx), MoveState::Uninitialized);
+                let init_state = if alloca_count < func.arg_count {
+                    MoveState::Live
+                } else {
+                    MoveState::Uninitialized
+                };
+                
+                state
+                    .locals
+                    .insert(format!("%v{}", idx), init_state);
+                    
+                alloca_count += 1;
             }
         }
     }

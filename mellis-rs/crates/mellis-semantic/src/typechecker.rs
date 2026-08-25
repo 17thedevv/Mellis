@@ -35,6 +35,44 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
+    pub fn is_ffi_safe(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let ty = self.ctx.types.get(ty_id).clone();
+        match ty {
+            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => Ok(()),
+            SemanticType::Pointer(_, _inner) | SemanticType::Reference(_, _, _inner) => {
+                // The C-ABI doesn't strictly require the pointee to be FFI-safe if it's opaque,
+                // but generally it's safer to ensure pointees are also FFI-safe. 
+                // We'll just allow it for now since C pointers can point to opaque structs.
+                Ok(())
+            },
+            SemanticType::Struct(sym_id, field_tys) => {
+                if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
+                    if let Decl::Struct { annotations, .. } = &self.arena.decls[decl_id.0 as usize] {
+                        let has_repr_c = annotations.iter().any(|a| {
+                            let name = &self.source[a.name.start as usize..a.name.end as usize];
+                            name == "repr"
+                        });
+                        if !has_repr_c {
+                            return Err(format!("Struct is not marked with @repr(C)"));
+                        }
+                    }
+                }
+                for f in field_tys {
+                    self.is_ffi_safe(f)?;
+                }
+                Ok(())
+            },
+            SemanticType::Function { params, return_type } => {
+                for p in params {
+                    self.is_ffi_safe(p)?;
+                }
+                self.is_ffi_safe(return_type)?;
+                Ok(())
+            },
+            _ => Err(format!("Type is not FFI-safe")),
+        }
+    }
+
     pub fn typecheck_items(&mut self, items: &[Item]) {
         self.populate_signatures(items);
         for item in items {
@@ -103,6 +141,9 @@ impl<'a> TypeChecker<'a> {
                             if let Decl::Param { ty, .. } = &self.arena.decls[param_id.0 as usize] {
                                 let param_ty = if let Some(t) = ty { self.lower_type(*t) } else { self.ctx.types.new_inference_var() };
                                 param_tys.push(param_ty);
+                                if let Some(param_sym) = self.ctx.tables.decl_symbols.get(param_id) {
+                                    self.ctx.tables.symbol_types.insert(*param_sym, param_ty);
+                                }
                             }
                         }
                         let ret_ty = if let Some(r) = return_type { self.lower_type(*r) } else { self.ctx.types.intern(SemanticType::Void) };
@@ -122,6 +163,42 @@ impl<'a> TypeChecker<'a> {
                         }
                     }
                     _ => {}
+                }
+            }
+        }
+
+        // Pass 3: Check Drop Impls
+        for item in items {
+            if let Item::Decl(decl_id) = item {
+                let decl = &self.arena.decls[decl_id.0 as usize];
+                if let Decl::Impl { trait_type, self_type, .. } = decl {
+                    if let Some(trait_ty_id) = trait_type {
+                        let trait_ast_ty = &self.arena.types[trait_ty_id.0 as usize];
+                        if let mellis_ast::Type::Named { segments, .. } = trait_ast_ty {
+                            if let Some(last_seg) = segments.last() {
+                                let trait_name = &self.source[last_seg.start as usize..last_seg.end as usize];
+                                if trait_name == "Drop" {
+                                    let self_ast_ty = &self.arena.types[self_type.0 as usize];
+                                    if let mellis_ast::Type::Named { segments: self_segs, .. } = self_ast_ty {
+                                        if let Some(self_last) = self_segs.last() {
+                                            let self_name = &self.source[self_last.start as usize..self_last.end as usize];
+                                            let mut found_sym_id = None;
+                                            for (sym_id, _decl_id) in self.ctx.tables.symbol_decls.iter() {
+                                                let sym = self.ctx.symbol_table.get_symbol(*sym_id);
+                                                if sym.name == self_name {
+                                                    found_sym_id = Some(*sym_id);
+                                                    break;
+                                                }
+                                            }
+                                            if let Some(sym_id) = found_sym_id {
+                                                self.ctx.tables.drop_impls.insert(sym_id);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -181,9 +258,10 @@ impl<'a> TypeChecker<'a> {
                 }
                 self.ctx.types.intern(SemanticType::Array(inner_ty, resolved_size))
             }
-            Type::Pointer { inner, .. } => {
+            Type::Pointer { is_mutable, inner, .. } => {
                 let inner_ty = self.lower_type(*inner);
-                self.ctx.types.intern(SemanticType::Pointer(inner_ty))
+                let mutability = if *is_mutable { crate::ty::Mutability::Mutable } else { crate::ty::Mutability::Immutable };
+                self.ctx.types.intern(SemanticType::Pointer(mutability, inner_ty))
             }
             _ => self.ctx.types.intern(SemanticType::Error),
         };
@@ -226,8 +304,14 @@ impl<'a> TypeChecker<'a> {
                         }
                     }
                     Decl::Extern { func, .. } => {
-                        let item = Item::Decl(*func);
-                        self.typecheck_item(&item);
+                        // The inner func is registered, we must check its FFI safety
+                        if let Some(sym_id) = self.ctx.tables.decl_symbols.get(func).copied() {
+                            if let Some(func_ty) = self.ctx.tables.symbol_types.get(&sym_id).copied() {
+                                if let Err(e) = self.is_ffi_safe(func_ty) {
+                                    self.ctx.diagnostics.push(Diagnostic::error(format!("Extern function signature is not FFI-safe: {}", e)));
+                                }
+                            }
+                        }
                     }
                     _ => {}
                 }
@@ -388,7 +472,7 @@ impl<'a> TypeChecker<'a> {
                 let l_sem_ty = self.ctx.types.get(l_ty).clone();
                 let r_sem_ty = self.ctx.types.get(r_ty).clone();
                 
-                if matches!(l_sem_ty, SemanticType::Pointer(_)) {
+                if matches!(l_sem_ty, SemanticType::Pointer(_, _)) {
                     use mellis_ast::expr::BinaryOp;
                     if matches!(op, BinaryOp::Add | BinaryOp::Sub) {
                         if !self.is_unsafe_context {
@@ -402,6 +486,18 @@ impl<'a> TypeChecker<'a> {
                 l_ty 
             }
             Expr::Call { callee, args, .. } => {
+                let callee_expr = &self.arena.exprs[callee.0 as usize];
+                if let Expr::Identifier { segments, .. } = callee_expr {
+                    if let Some(sym_id) = self.ctx.tables.expr_symbols.get(callee) {
+                        let symbol = self.ctx.symbol_table.get_symbol(*sym_id);
+                        if symbol.name == "drop" {
+                            let diag = Diagnostic::error("Explicit calls to drop() are forbidden. Values are dropped automatically at end of scope.".to_string());
+                            let diag = if let Some(span) = segments.last() { diag.with_span(*span) } else { diag };
+                            self.ctx.diagnostics.push(diag);
+                        }
+                    }
+                }
+                
                 let callee_ty_id = self.typecheck_expr(callee);
                 let mut ret_ty_id = self.ctx.types.new_inference_var();
                 let callee_ty = self.ctx.types.get(callee_ty_id).clone();
@@ -416,6 +512,7 @@ impl<'a> TypeChecker<'a> {
             Expr::Assign { lvalue, value, .. } => {
                 let l_ty = self.typecheck_expr(lvalue);
                 let r_ty = self.typecheck_expr(value);
+                self.enforce_mutability(lvalue);
                 let _ = self.unify(l_ty, r_ty);
                 self.ctx.types.intern(SemanticType::Void)
             }
@@ -533,7 +630,7 @@ impl<'a> TypeChecker<'a> {
                 }
 
                 let name_str = &self.source[method_name.start as usize..method_name.end as usize];
-                if matches!(obj_ty, SemanticType::Pointer(_)) {
+                if matches!(obj_ty, SemanticType::Pointer(_, _)) {
                     if name_str == "add" || name_str == "sub" || name_str == "offset" {
                         if !self.is_unsafe_context {
                             self.ctx.diagnostics.push(mellis_common::Diagnostic::error("Pointer arithmetic requires an unsafe block.").with_span(*method_name));
@@ -548,10 +645,48 @@ impl<'a> TypeChecker<'a> {
                 self.lower_type(*target_type)
             }
             Expr::Match { subject, arms } => {
-                let subject_ty = self.typecheck_expr(subject);
+                let subject_ty_id = self.typecheck_expr(subject);
+                let subject_ty = self.ctx.types.get(subject_ty_id).clone();
                 let mut result_ty = self.ctx.types.new_inference_var();
+                
+                let mut covered_variants = std::collections::HashSet::new();
+                let mut covered_bools = std::collections::HashSet::new();
+                let mut has_wildcard = false;
+
                 for (i, arm) in arms.iter().enumerate() {
-                    self.typecheck_pattern(&arm.pattern, subject_ty);
+                    self.typecheck_pattern(&arm.pattern, subject_ty_id);
+                    
+                    match &self.arena.pats[arm.pattern.0 as usize] {
+                        mellis_ast::Pattern::Wildcard => {
+                            has_wildcard = true;
+                        }
+                        mellis_ast::Pattern::Identifier { .. } => {
+                            if let Some(sym_id) = self.ctx.tables.pat_symbols.get(&arm.pattern) {
+                                let sym = self.ctx.symbol_table.get_symbol(*sym_id);
+                                if matches!(sym.kind, crate::symbol::SymbolKind::EnumVariant(_)) {
+                                    covered_variants.insert(*sym_id);
+                                } else {
+                                    has_wildcard = true;
+                                }
+                            } else {
+                                has_wildcard = true;
+                            }
+                        }
+                        mellis_ast::Pattern::Enum { .. } => {
+                            if let Some(sym_id) = self.ctx.tables.pat_symbols.get(&arm.pattern) {
+                                covered_variants.insert(*sym_id);
+                            }
+                        }
+                        mellis_ast::Pattern::Literal(tok) => {
+                            if tok.kind == mellis_lexer::TokenKind::KwTrue {
+                                covered_bools.insert(true);
+                            } else if tok.kind == mellis_lexer::TokenKind::KwFalse {
+                                covered_bools.insert(false);
+                            }
+                        }
+                        _ => {}
+                    }
+                    
                     // Typecheck arm body
                     self.typecheck_stmt(&arm.body);
                     // Use first arm's type as the result type
@@ -567,6 +702,37 @@ impl<'a> TypeChecker<'a> {
                         }
                     }
                 }
+                
+                // Exhaustiveness check
+                if !has_wildcard {
+                    match subject_ty {
+                        SemanticType::Primitive(crate::ty::BuiltinType::Bool) => {
+                            if !covered_bools.contains(&true) || !covered_bools.contains(&false) {
+                                self.ctx.diagnostics.push(
+                                    mellis_common::diagnostic::Diagnostic::error("Match is not exhaustive. Missing boolean values.")
+                                );
+                            }
+                        }
+                        SemanticType::Enum(sym_id, _) => {
+                            let decl_id = self.ctx.symbol_table.get_symbol(sym_id).decl_id;
+                            if let Some(decl_id) = decl_id {
+                                if let mellis_ast::Decl::Enum { variants, .. } = &self.arena.decls[decl_id.0 as usize] {
+                                    if covered_variants.len() < variants.len() {
+                                        self.ctx.diagnostics.push(
+                                            mellis_common::diagnostic::Diagnostic::error(format!("Match is not exhaustive. Covered {}/{} enum variants.", covered_variants.len(), variants.len()))
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            self.ctx.diagnostics.push(
+                                mellis_common::diagnostic::Diagnostic::error("Match is not exhaustive. A wildcard pattern `_` or variable binding is required for this type.")
+                            );
+                        }
+                    }
+                }
+                
                 result_ty
             }
             Expr::Lambda { body, params, .. } => {
@@ -579,13 +745,34 @@ impl<'a> TypeChecker<'a> {
             Expr::Try { expr: e } => {
                 self.typecheck_expr(e)
             }
-            Expr::Unary { operand, .. } => {
-                self.typecheck_expr(operand)
+            Expr::Unary { op, operand } => {
+                let inner_ty = self.typecheck_expr(operand);
+                use mellis_ast::expr::UnaryOp;
+                match op {
+                    UnaryOp::Ref => self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Immutable, inner_ty)),
+                    UnaryOp::RefMut => {
+                        self.enforce_mutability(operand);
+                        self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Mutable, inner_ty))
+                    },
+                    _ => inner_ty,
+                }
             }
             _ => self.ctx.types.intern(SemanticType::Error)
         };
         
         self.ctx.tables.expr_types.insert(*expr_id, ty_id);
         ty_id
+    }
+
+    fn enforce_mutability(&mut self, expr_id: &mellis_ast::ExprId) {
+        let expr = &self.arena.exprs[expr_id.0 as usize];
+        if let mellis_ast::Expr::Identifier { .. } = expr {
+            if let Some(sym_id) = self.ctx.tables.expr_symbols.get(expr_id) {
+                let symbol = self.ctx.symbol_table.get_symbol(*sym_id);
+                if matches!(symbol.kind, crate::symbol::SymbolKind::Constant) {
+                    self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error("Cannot mutate immutable variable"));
+                }
+            }
+        }
     }
 }

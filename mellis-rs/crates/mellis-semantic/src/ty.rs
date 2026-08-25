@@ -33,7 +33,7 @@ pub enum SemanticType {
     Array(SemanticTypeId, u64),
     Slice(SemanticTypeId),
     Function { params: Vec<SemanticTypeId>, return_type: SemanticTypeId },
-    Pointer(SemanticTypeId),
+    Pointer(Mutability, SemanticTypeId),
     Reference(LifetimeId, Mutability, SemanticTypeId),
     Void,
     Never,
@@ -114,9 +114,9 @@ impl TypeContext {
                 let new_ret = self.subst(return_type, subst);
                 self.intern(SemanticType::Function { params: new_params, return_type: new_ret })
             }
-            SemanticType::Pointer(inner) => {
+            SemanticType::Pointer(mutability, inner) => {
                 let new_inner = self.subst(inner, subst);
-                self.intern(SemanticType::Pointer(new_inner))
+                self.intern(SemanticType::Pointer(mutability, new_inner))
             }
             SemanticType::Reference(lt, mutability, inner) => {
                 let new_inner = self.subst(inner, subst);

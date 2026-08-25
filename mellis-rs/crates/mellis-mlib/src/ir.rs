@@ -20,6 +20,8 @@ pub struct MlibTypeEntry {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MlibFunction {
     pub name: String,
+    #[serde(default)]
+    pub arg_count: u32,
     pub values: Vec<MlibValue>,
     pub blocks: Vec<MlibBlock>,
 }
@@ -54,6 +56,7 @@ pub enum MlibInstruction {
     Variant { enum_ty: u32, variant_idx: u32, args: Vec<MlibOperand> },
     Tag { value: MlibOperand },
     Extract { value: MlibOperand, variant_idx: u32, field_idx: u32 },
+    Drop { value: MlibOperand },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

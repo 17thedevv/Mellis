@@ -58,7 +58,7 @@ fn print_instruction(inst: &Instruction) -> String {
             format!("bounds_check {} < {}", print_operand(index), print_operand(len))
         }
         Instruction::Borrow { is_rw, base } => {
-            let kw = if *is_rw { "mut " } else { "" };
+            let kw = if *is_rw { "rw " } else { "" };
             format!("borrow &{}{}", kw, print_operand(base))
         }
         Instruction::Variant { enum_ty, variant_idx, args } => {
@@ -73,6 +73,9 @@ fn print_instruction(inst: &Instruction) -> String {
         }
         Instruction::Extract { value, variant_idx, field_idx } => {
             format!("extract {}.{}.{}", print_operand(value), variant_idx, field_idx)
+        }
+        Instruction::Drop { value } => {
+            format!("drop {}", print_operand(value))
         }
     }
 }

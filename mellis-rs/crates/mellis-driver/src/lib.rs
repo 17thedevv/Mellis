@@ -26,9 +26,19 @@ pub fn check(file_name: &str, input: &str, quiet: bool) -> Result<(), Vec<Diagno
     let mut semantic_ctx = SemanticContext::new();
     Resolver::new(&mut semantic_ctx, &arena, input).resolve_items(&items);
     TypeChecker::new(&mut semantic_ctx, &arena, input).typecheck_items(&items);
+    
+    let mut monomorphizer = mellis_semantic::Monomorphizer::new(&semantic_ctx, &arena);
+    monomorphizer.run(&items);
+    semantic_ctx.mono_instances = monomorphizer.instances.into_iter().collect();
+    
     let mut diagnostics = semantic_ctx.diagnostics.clone();
-    for function in mellis_mvir::MvirGenerator::new(&arena, &semantic_ctx, input).generate(&items).functions {
-        diagnostics.extend(mellis_borrowck::borrow_check_function(&function, &semantic_ctx));
+    let module = mellis_mvir::MvirGenerator::new(&arena, &semantic_ctx, input).generate(&items);
+    
+    let mut interproc = mellis_borrowck::interprocedural::InterproceduralContext::new();
+    interproc.compute_summaries(&module);
+    
+    for function in module.functions {
+        diagnostics.extend(mellis_borrowck::borrow_check_function(&function, &semantic_ctx, &interproc.summaries));
     }
     if diagnostics.is_empty() { if !quiet { println!("check passed"); } Ok(()) } else { Err(diagnostics) }
 }
@@ -116,9 +126,14 @@ pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Resul
             if !options.quiet {
                 println!("\n--- Borrow Checker ---");
             }
+            
+            let mut interproc = mellis_borrowck::interprocedural::InterproceduralContext::new();
+            interproc.compute_summaries(&module);
+            let summaries = interproc.summaries;
+            
             let mut borrowck_errors = 0;
             for func in &module.functions {
-                let diagnostics = mellis_borrowck::borrow_check_function(func, &semantic_ctx);
+                let mut diagnostics = mellis_borrowck::borrow_check_function(func, &semantic_ctx, &summaries);
                 for diag in &diagnostics {
                     borrowck_errors += 1;
                     if !options.quiet {

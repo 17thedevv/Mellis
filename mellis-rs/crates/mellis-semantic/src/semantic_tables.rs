@@ -17,6 +17,12 @@ pub struct SemanticTables {
     
     pub ast_type_to_semantic: HashMap<AstTypeId, SemanticTypeId>,
     pub symbol_types: HashMap<SymbolId, SemanticTypeId>,
+    
+    // Maps a function's SymbolId to a boolean vector indicating which parameters are @sync_noescape
+    pub ffi_sync_noescape: HashMap<SymbolId, Vec<bool>>,
+    
+    // Structs that implement Drop
+    pub drop_impls: std::collections::HashSet<SymbolId>,
 }
 
 impl SemanticTables {
@@ -30,6 +36,8 @@ impl SemanticTables {
             symbol_decls: HashMap::new(),
             ast_type_to_semantic: HashMap::new(),
             symbol_types: HashMap::new(),
+            ffi_sync_noescape: HashMap::new(),
+            drop_impls: std::collections::HashSet::new(),
         }
     }
 }

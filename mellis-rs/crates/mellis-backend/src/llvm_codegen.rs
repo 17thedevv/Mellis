@@ -116,7 +116,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
         match ty {
             SemanticType::Primitive(BuiltinType::Int) => Ok(self.context.i32_type().into()),
             SemanticType::Primitive(BuiltinType::Bool) => Ok(self.context.bool_type().into()),
-            SemanticType::Pointer(_) | SemanticType::Reference(..) | SemanticType::Primitive(BuiltinType::String) => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()),
+            SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Primitive(BuiltinType::String) => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()),
             SemanticType::Struct(_, generic_args) => {
                 let mut field_types = Vec::new();
                 for &e in generic_args {
@@ -194,7 +194,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 SemanticType::Void => self.context.void_type().fn_type(&[], false),
                 SemanticType::Primitive(BuiltinType::Int) => self.context.i32_type().fn_type(&[], false),
                 SemanticType::Primitive(BuiltinType::Bool) => self.context.bool_type().fn_type(&[], false),
-                SemanticType::Pointer(_) | SemanticType::Reference(..) | SemanticType::Primitive(BuiltinType::String) => self.context.ptr_type(inkwell::AddressSpace::default()).fn_type(&[], false),
+                SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Primitive(BuiltinType::String) => self.context.ptr_type(inkwell::AddressSpace::default()).fn_type(&[], false),
                 SemanticType::Struct(..) => self.context.ptr_type(inkwell::AddressSpace::default()).fn_type(&[], false),
                 _ => self.context.i32_type().fn_type(&[], false),
             };
@@ -244,13 +244,14 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     .ok_or_else(|| BackendError::MissingMapping(*val_id))
             }
             Operand::Global(glb) => {
-                // If it's `puts`, we get it from module.
-                // Otherwise it's a global function?
                 let name = if glb.name.starts_with("global_") { "puts" } else { &glb.name };
                 if let Some(func) = self.llvm_module.get_function(name) {
                     Ok(func.as_global_value().as_pointer_value().into())
                 } else {
-                    Err(BackendError::InvariantViolation(format!("Global not found: {}", name)))
+                    // It's likely an extern function not in the module. Declare it.
+                    let fn_type = self.context.void_type().fn_type(&[], true);
+                    let func = self.llvm_module.add_function(name, fn_type, None);
+                    Ok(func.as_global_value().as_pointer_value().into())
                 }
             }
             Operand::Block(_) => Err(BackendError::InvariantViolation("Block operand unsupported as value".into())),
@@ -300,6 +301,11 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let r = self.generate_operand(right)?.into_int_value();
                 let res = self.builder.build_int_add(l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
+            }
+            Instruction::Drop { value } => {
+                let _val = self.generate_operand(value)?;
+                // Not emitting an actual drop call right now.
+                Ok(self.context.i32_type().const_int(0, false).into())
             }
             Instruction::Sub { left, right } => {
                 let l = self.generate_operand(left)?.into_int_value();
@@ -461,7 +467,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 if let Some(val_op) = value {
                     let val = self.generate_operand(val_op)?;
                     let ret_ty = self.semantic_ctx.types.get(_func.ret_ty);
-                    if matches!(ret_ty, SemanticType::Pointer(_) | SemanticType::Struct(..) | SemanticType::Primitive(BuiltinType::String)) {
+                    if matches!(ret_ty, SemanticType::Pointer(..) | SemanticType::Struct(..) | SemanticType::Primitive(BuiltinType::String)) {
                         if val.is_int_value() {
                             let null_ptr = self.context.ptr_type(inkwell::AddressSpace::default()).const_null();
                             self.builder.build_return(Some(&null_ptr)).unwrap();

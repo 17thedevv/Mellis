@@ -1,11 +1,45 @@
 use crate::Parser;
-use mellis_ast::{Annotation, Decl, DeclId, Item, Visibility, GenericParam, GenericParamKind};
+use mellis_ast::{Annotation, AnnotationArg, Decl, DeclId, Item, Visibility, GenericParam, GenericParamKind};
 use mellis_lexer::TokenKind;
 
 impl<'a> Parser<'a> {
+    pub fn parse_annotations(&mut self) -> Result<Vec<Annotation>, ()> {
+        let mut annotations = Vec::new();
+        while self.match_token(TokenKind::At) || self.match_token(TokenKind::AtBracket) {
+            let is_bracket = self.previous().kind == TokenKind::AtBracket;
+            
+            if !self.match_token(TokenKind::Identifier) {
+                let span = self.peek().span;
+                self.error_at_current("Expected annotation name", span);
+                return Err(());
+            }
+            let name = self.previous().span;
+            
+            let mut args = Vec::new();
+            if self.match_token(TokenKind::LParen) {
+                if !self.check(TokenKind::RParen) {
+                    loop {
+                        let value = self.parse_expr()?;
+                        args.push(AnnotationArg { key: None, value });
+                        if !self.match_token(TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                }
+                self.consume(TokenKind::RParen, "Expected ')' after annotation arguments")?;
+            }
+            
+            if is_bracket {
+                self.consume(TokenKind::RBracket, "Expected ']' after annotation")?;
+            }
+            
+            annotations.push(Annotation { name, args });
+        }
+        Ok(annotations)
+    }
+
     pub fn parse_item_impl(&mut self) -> Result<Item, ()> {
-        // annotations
-        let annotations = Vec::new(); // TODO: parse annotations
+        let annotations = self.parse_annotations()?;
         let mut visibility = Visibility::Internal;
 
         if self.match_token(TokenKind::KwExport) {
@@ -126,7 +160,7 @@ impl<'a> Parser<'a> {
             false
         } else {
             self.consume(TokenKind::KwDec, "Expected 'dec' or 'const'")?;
-            true
+            self.match_token(TokenKind::KwRw)
         };
         let pattern = Some(self.parse_pattern()?);
 
@@ -185,6 +219,8 @@ impl<'a> Parser<'a> {
                     break;
                 }
 
+                let p_annotations = self.parse_annotations()?;
+
                 let p_name = if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {
                     let span = self.peek().span;
                     self.advance();
@@ -201,7 +237,7 @@ impl<'a> Parser<'a> {
                 };
 
                 params.push(self.arena.alloc_decl(Decl::Param {
-                    annotations: Vec::new(),
+                    annotations: p_annotations,
                     visibility: Visibility::Private,
                     name: p_name,
                     ty,

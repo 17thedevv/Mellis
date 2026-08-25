@@ -16,6 +16,10 @@ pub struct MvirGenerator<'a> {
     
     // Track local variables to their Alloca ValueId
     locals: HashMap<mellis_common::ids::SymbolId, ValueId>,
+    lexical_scopes: Vec<Vec<mellis_common::ids::SymbolId>>,
+    loop_scopes: Vec<usize>,
+    loop_break_targets: Vec<LabelId>,
+    loop_continue_targets: Vec<LabelId>,
 }
 
 impl<'a> MvirGenerator<'a> {
@@ -29,6 +33,10 @@ impl<'a> MvirGenerator<'a> {
             current_block: None,
             next_label_id: 0,
             locals: HashMap::new(),
+            lexical_scopes: Vec::new(),
+            loop_scopes: Vec::new(),
+            loop_break_targets: Vec::new(),
+            loop_continue_targets: Vec::new(),
         }
     }
 
@@ -37,6 +45,35 @@ impl<'a> MvirGenerator<'a> {
             self.generate_mono_instance(instance);
         }
         self.module
+    }
+
+    fn push_scope(&mut self) {
+        self.lexical_scopes.push(Vec::new());
+    }
+
+    fn pop_scope_and_drop(&mut self, keep: Option<mellis_common::ids::SymbolId>) {
+        if let Some(scope) = self.lexical_scopes.pop() {
+            self.emit_drops_for_scope(&scope, keep);
+        }
+    }
+
+    fn emit_drops_for_scope(&mut self, scope: &[mellis_common::ids::SymbolId], keep: Option<mellis_common::ids::SymbolId>) {
+        for &sym in scope.iter().rev() {
+            if Some(sym) == keep { continue; }
+            if let Some(&val_id) = self.locals.get(&sym) {
+                let ty_id = self.ctx.tables.symbol_types.get(&sym).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                if self.ctx.needs_drop(ty_id) {
+                    self.push_inst(Instruction::Drop { value: Operand::Value(val_id) }, ty_id);
+                }
+            }
+        }
+    }
+
+    fn emit_drops_up_to(&mut self, target_depth: usize, keep: Option<mellis_common::ids::SymbolId>) {
+        for i in (target_depth..self.lexical_scopes.len()).rev() {
+            let scope = self.lexical_scopes[i].clone();
+            self.emit_drops_for_scope(&scope, keep);
+        }
     }
 
     fn generate_item(&mut self, item: &Item) {
@@ -71,6 +108,9 @@ impl<'a> MvirGenerator<'a> {
                     let ty_id = self.ctx.tables.symbol_types.get(&sym_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
                     let alloca_val = self.push_inst(Instruction::Alloca, ty_id);
                     self.locals.insert(sym_id, alloca_val);
+                    if let Some(scope) = self.lexical_scopes.last_mut() {
+                        scope.push(sym_id);
+                    }
                     
                     self.push_inst(Instruction::Store {
                         ptr: Operand::Value(alloca_val),
@@ -142,6 +182,9 @@ impl<'a> MvirGenerator<'a> {
                 }
                 Operand::Number("0".to_string())
             }
+            Expr::Unary { op: mellis_ast::expr::UnaryOp::Deref, operand } => {
+                self.generate_expr(operand)
+            }
             _ => Operand::Number("0".to_string()),
         }
     }
@@ -174,17 +217,39 @@ impl<'a> MvirGenerator<'a> {
                 symbol_id: sym_id_opt,
             };
             
+            let arg_count = if let Decl::Function { params, .. } = decl { params.len() } else { 0 };
+
             self.current_function = Some(Function {
                 name: global_id,
+                is_extern: matches!(decl, Decl::Extern { .. }),
+                ret_ty: ret_ty_id,
                 blocks: Vec::new(),
                 values: Vec::new(),
-                ret_ty: ret_ty_id,
+                arg_count,
             });
             self.locals.clear();
+            self.lexical_scopes.clear();
+            self.loop_scopes.clear();
+            self.loop_break_targets.clear();
+            self.loop_continue_targets.clear();
+            self.push_scope(); // Function root scope
             self.next_label_id = 0;
             
             let entry_label = self.new_label("entry");
             self.start_block(entry_label);
+            
+            if let Decl::Function { params, .. } = decl {
+                for param_id in params {
+                    if let Decl::Param { .. } = &self.arena.decls[param_id.0 as usize] {
+                        if let Some(sym_id) = self.ctx.tables.decl_symbols.get(param_id).copied() {
+                            let ty_id = self.ctx.tables.symbol_types.get(&sym_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                            let alloc_val = self.push_inst(Instruction::Alloca, ty_id);
+                            self.locals.insert(sym_id, alloc_val);
+                            self.lexical_scopes.last_mut().unwrap().push(sym_id);
+                        }
+                    }
+                }
+            }
             
             if let Some(body_stmt) = body {
                 self.generate_stmt(body_stmt);
@@ -192,6 +257,10 @@ impl<'a> MvirGenerator<'a> {
             
             if let Some(mut block) = self.current_block.take() {
                 if block.terminator.is_none() {
+                    self.current_block = Some(block);
+                    self.emit_drops_up_to(0, None);
+                    block = self.current_block.take().unwrap();
+
                     let ret_val = if ret_ty_id == mellis_semantic::SemanticTypeId(0) {
                         None
                     } else {
@@ -215,22 +284,100 @@ impl<'a> MvirGenerator<'a> {
                 self.generate_expr(expr);
             }
             Stmt::Block { body, tail_expr } => {
+                self.push_scope();
                 for item in body {
                     self.generate_item(item);
                 }
                 if let Some(expr) = tail_expr {
                     self.generate_expr(expr);
                 }
+                self.pop_scope_and_drop(None);
             }
             Stmt::Return { value } => {
-                let val_operand = if let Some(expr) = value {
-                    Some(self.generate_expr(expr))
+                let mut returned_sym = None;
+                let val_operand = if let Some(expr_id) = value {
+                    let expr = &self.arena.exprs[expr_id.0 as usize];
+                    if let Expr::Identifier { .. } = expr {
+                        if let Some(sym_id) = self.ctx.tables.expr_symbols.get(expr_id).copied() {
+                            if self.locals.contains_key(&sym_id) {
+                                returned_sym = Some(sym_id);
+                            }
+                        }
+                    }
+                    Some(self.generate_expr(expr_id))
                 } else {
                     None
                 };
+                
+                self.emit_drops_up_to(0, returned_sym);
                 self.terminate_block(Terminator::Ret { value: val_operand });
             }
-            // Add if, while, for loops here later
+            Stmt::While { condition, body, .. } => {
+                let cond_label = self.new_label("while_cond");
+                let body_label = self.new_label("while_body");
+                let end_label = self.new_label("while_end");
+
+                self.terminate_block(Terminator::Br { target: cond_label.clone() });
+                self.start_block(cond_label.clone());
+
+                let cond_op = self.generate_expr(condition);
+                self.terminate_block(Terminator::CondBr {
+                    condition: cond_op,
+                    true_target: body_label.clone(),
+                    false_target: end_label.clone(),
+                });
+
+                self.start_block(body_label.clone());
+                
+                self.loop_scopes.push(self.lexical_scopes.len());
+                self.loop_break_targets.push(end_label.clone());
+                self.loop_continue_targets.push(cond_label.clone());
+                
+                self.generate_stmt(body);
+                self.terminate_block(Terminator::Br { target: cond_label.clone() });
+
+                self.loop_scopes.pop();
+                self.loop_break_targets.pop();
+                self.loop_continue_targets.pop();
+
+                self.start_block(end_label.clone());
+            }
+            Stmt::Break { .. } => {
+                if let (Some(&target_depth), Some(end_label)) = (self.loop_scopes.last(), self.loop_break_targets.last().cloned()) {
+                    self.emit_drops_up_to(target_depth, None);
+                    self.terminate_block(Terminator::Br { target: end_label });
+                }
+            }
+            Stmt::Continue { .. } => {
+                if let (Some(&target_depth), Some(cond_label)) = (self.loop_scopes.last(), self.loop_continue_targets.last().cloned()) {
+                    self.emit_drops_up_to(target_depth, None);
+                    self.terminate_block(Terminator::Br { target: cond_label });
+                }
+            }
+            Stmt::If { condition, then_branch, else_branch } => {
+                let then_label = self.new_label("if_then");
+                let else_label = self.new_label("if_else");
+                let end_label = self.new_label("if_end");
+
+                let cond_op = self.generate_expr(condition);
+                self.terminate_block(Terminator::CondBr {
+                    condition: cond_op,
+                    true_target: then_label.clone(),
+                    false_target: if else_branch.is_some() { else_label.clone() } else { end_label.clone() },
+                });
+
+                self.start_block(then_label.clone());
+                self.generate_stmt(then_branch);
+                self.terminate_block(Terminator::Br { target: end_label.clone() });
+
+                if let Some(else_branch) = else_branch {
+                    self.start_block(else_label.clone());
+                    self.generate_stmt(else_branch);
+                    self.terminate_block(Terminator::Br { target: end_label.clone() });
+                }
+
+                self.start_block(end_label.clone());
+            }
             _ => {}
         }
     }
@@ -461,6 +608,25 @@ impl<'a> MvirGenerator<'a> {
                 
                 Operand::Value(load_val)
             }
+            Expr::Unary { op, operand } => {
+                use mellis_ast::expr::UnaryOp;
+                let inst = match op {
+                    UnaryOp::Ref => {
+                        let op_val = self.generate_lvalue(operand);
+                        Instruction::Borrow { is_rw: false, base: op_val }
+                    }
+                    UnaryOp::RefMut => {
+                        let op_val = self.generate_lvalue(operand);
+                        Instruction::Borrow { is_rw: true, base: op_val }
+                    }
+                    _ => {
+                        let _op_val = self.generate_expr(operand);
+                        return Operand::Number("0".to_string())
+                    }
+                };
+                let val_id = self.push_inst(inst, ty_id);
+                Operand::Value(val_id)
+            }
             _ => Operand::Number("0".to_string())
         }
     }
@@ -492,7 +658,7 @@ impl<'a> MvirGenerator<'a> {
     fn push_inst(&mut self, inst: Instruction, ty: mellis_semantic::SemanticTypeId) -> ValueId {
         let func = self.current_function.as_mut().expect("Must be in a function");
         let val_id = ValueId(func.values.len() as u32);
-        func.values.push(ValueData { inst, ty });
+        func.values.push(ValueData { inst, ty, span: None });
         
         if let Some(block) = &mut self.current_block {
             block.insts.push(val_id);
@@ -561,6 +727,9 @@ impl<'a> MvirGenerator<'a> {
                         // Enum variant matches do not bind a local variable.
                     } else if let Operand::Value(val_id) = subject {
                         self.locals.insert(sym_id, *val_id);
+                        if let Some(scope) = self.lexical_scopes.last_mut() {
+                            scope.push(sym_id);
+                        }
                     }
                 }
             }

@@ -7,14 +7,16 @@ use mellis_common::SymbolId;
 fn dummy_module() -> Module {
     let mut func = Function {
         name: GlobalId { name: "test_func".to_string(), symbol_id: Some(SymbolId(0)) },
+        arg_count: 0,
+        is_extern: false,
         ret_ty: SemanticTypeId(0),
         values: Vec::new(),
         blocks: Vec::new(),
     };
     
     // Add some dummy instructions
-    func.values.push(ValueData { inst: Instruction::Alloca, ty: SemanticTypeId(0) });
-    func.values.push(ValueData { inst: Instruction::Load { ptr: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
+    func.values.push(ValueData { inst: Instruction::Alloca, ty: SemanticTypeId(0), span: None });
+    func.values.push(ValueData { inst: Instruction::Load { ptr: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0), span: None });
     
     // Add block
     func.blocks.push(BasicBlock {

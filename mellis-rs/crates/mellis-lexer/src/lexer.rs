@@ -143,7 +143,6 @@ impl<'a> Lexer<'a> {
             "move" => TokenKind::KwMove,
             "match" => TokenKind::KwMatch,
             "rw" => TokenKind::KwRw,
-            "mut" => TokenKind::KwMut,
             "true" => TokenKind::KwTrue,
             "false" => TokenKind::KwFalse,
             "type" => TokenKind::KwType,
