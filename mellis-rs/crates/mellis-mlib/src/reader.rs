@@ -1,6 +1,6 @@
 use std::io::{Read, Seek, SeekFrom};
 use crate::format::{MlibHeader, SectionEntry, SectionType, MLIB_MAGIC, MLIB_FORMAT_VERSION};
-use crate::ir::{MlibModule, MlibFunction, MlibValue, MlibBlock, MlibInstruction, MlibTerminator, MlibOperand, MlibTypeEntry};
+use crate::ir::{MlibModule, MlibFunction, MlibValue, MlibBlock, MlibInstruction, MlibTerminator, MlibOperand, MlibTypeEntry, MlibCaptureInfo};
 
 #[derive(Debug)]
 pub enum MlibError {
@@ -20,7 +20,30 @@ impl From<std::io::Error> for MlibError {
 pub struct MlibReader;
 
 impl MlibReader {
-    pub fn read_module<R: Read + Seek>(reader: &mut R) -> Result<MlibModule, MlibError> {
+    pub fn read_manifest<R: Read + Seek>(reader: &mut R) -> Result<crate::format::Manifest, MlibError> {
+        let header = MlibHeader::read_from(reader)?;
+        if header.magic != MLIB_MAGIC {
+            return Err(MlibError::InvalidMagic);
+        }
+        if header.format_version != MLIB_FORMAT_VERSION {
+            return Err(MlibError::VersionMismatch(header.format_version));
+        }
+        reader.seek(SeekFrom::Start(header.section_table_offset))?;
+        for _ in 0..header.section_count {
+            let section = SectionEntry::read_from(reader)?;
+            if section.section_type == SectionType::Manifest {
+                reader.seek(SeekFrom::Start(section.offset))?;
+                let mut data = vec![0u8; section.size as usize];
+                reader.read_exact(&mut data)?;
+                let manifest: crate::format::Manifest = bincode::deserialize(&data)
+                    .map_err(|_| MlibError::CorruptedData)?;
+                return Ok(manifest);
+            }
+        }
+        Err(MlibError::CorruptedData) // Or MissingManifest
+    }
+
+    pub fn read_module<R: Read + Seek>(reader: &mut R) -> Result<(MlibModule, Option<crate::format::Manifest>, Option<Vec<u8>>), MlibError> {
         let header = MlibHeader::read_from(reader)?;
         
         if header.magic != MLIB_MAGIC {
@@ -48,11 +71,12 @@ impl MlibReader {
                 let mut data = vec![0u8; section.size as usize];
                 reader.read_exact(&mut data)?;
                 raw_string_table = data;
-                break;
             }
         }
         
         let mut mlib_module = MlibModule::default();
+        let mut manifest_opt = None;
+        let mut obj_bytes_opt = None;
         
         // Helper to extract string by offset
         let get_string = |offset: u32| -> String {
@@ -67,6 +91,25 @@ impl MlibReader {
         // Pass 2: Metadata and MVIR
         for section in &sections {
             match section.section_type {
+                SectionType::Manifest => {
+                    reader.seek(SeekFrom::Start(section.offset))?;
+                    let mut data = vec![0u8; section.size as usize];
+                    reader.read_exact(&mut data)?;
+                    let manifest: crate::format::Manifest = match bincode::deserialize(&data) {
+                        Ok(m) => m,
+                        Err(e) => {
+                            println!("Failed to deserialize manifest: {:?}", e);
+                            return Err(MlibError::CorruptedData);
+                        }
+                    };
+                    manifest_opt = Some(manifest);
+                }
+                SectionType::ObjectCode => {
+                    reader.seek(SeekFrom::Start(section.offset))?;
+                    let mut data = vec![0u8; section.size as usize];
+                    reader.read_exact(&mut data)?;
+                    obj_bytes_opt = Some(data);
+                }
                 SectionType::TypeMetadata => {
                     reader.seek(SeekFrom::Start(section.offset))?;
                     // Read TypeMetadata header/entries
@@ -120,8 +163,13 @@ impl MlibReader {
                     let mut data = vec![0u8; section.size as usize];
                     reader.read_exact(&mut data)?;
                     let mut cursor = std::io::Cursor::new(data);
-                    let m = Self::deserialize_module_internal(&mut cursor)
-                        .map_err(|_| MlibError::CorruptedData)?;
+                    let m = match Self::deserialize_module_internal(&mut cursor) {
+                        Ok(m) => m,
+                        Err(e) => {
+                            println!("Failed to deserialize module internal: {:?}", e);
+                            return Err(MlibError::CorruptedData);
+                        }
+                    };
                     mlib_module.functions = m.functions;
                     if !m.strings.is_empty() {
                         mlib_module.strings = m.strings;
@@ -141,7 +189,7 @@ impl MlibReader {
         println!("String table raw size: {}", raw_string_table.len());
         println!("Found {} types", mlib_module.types.len());
 
-        Ok(mlib_module)
+        Ok((mlib_module, manifest_opt, obj_bytes_opt))
     }
 
     fn read_string<R: Read>(r: &mut R) -> std::io::Result<String> {
@@ -180,6 +228,14 @@ impl MlibReader {
                 let s = Self::read_string(r)?;
                 Ok(MlibOperand::Global(s))
             }
+            5 => {
+                let s = Self::read_string(r)?;
+                Ok(MlibOperand::StringRef(s))
+            }
+            6 => {
+                let s = Self::read_string(r)?;
+                Ok(MlibOperand::Char(s))
+            }
             _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid operand tag")),
         }
     }
@@ -189,6 +245,7 @@ impl MlibReader {
         r.read_exact(&mut tag_buf)?;
         match tag_buf[0] {
             0 => Ok(MlibInstruction::Alloca),
+            0x20 => Ok(MlibInstruction::HeapAlloc),
             1 => {
                 let op = Self::deserialize_operand(r)?;
                 Ok(MlibInstruction::Assign(op))
@@ -205,6 +262,17 @@ impl MlibReader {
                 Ok(MlibInstruction::Load { ptr })
             }
             4 => {
+                let callee = Self::read_string(r)?;
+                let mut count_buf = [0u8; 4];
+                r.read_exact(&mut count_buf)?;
+                let count = u32::from_le_bytes(count_buf) as usize;
+                let mut args = Vec::with_capacity(count);
+                for _ in 0..count {
+                    args.push(Self::deserialize_operand(r)?);
+                }
+                Ok(MlibInstruction::CallDirect { callee, args })
+            }
+            28 => {
                 let callee = Self::deserialize_operand(r)?;
                 let mut count_buf = [0u8; 4];
                 r.read_exact(&mut count_buf)?;
@@ -213,7 +281,79 @@ impl MlibReader {
                 for _ in 0..count {
                     args.push(Self::deserialize_operand(r)?);
                 }
-                Ok(MlibInstruction::Call { callee, args })
+                Ok(MlibInstruction::CallIndirect { callee, args })
+            }
+            29 => {
+                let closure = Self::deserialize_operand(r)?;
+                let mut count_buf = [0u8; 4];
+                r.read_exact(&mut count_buf)?;
+                let count = u32::from_le_bytes(count_buf) as usize;
+                let mut args = Vec::with_capacity(count);
+                for _ in 0..count {
+                    args.push(Self::deserialize_operand(r)?);
+                }
+                Ok(MlibInstruction::CallClosure { closure, args })
+            }
+            0x23 => {
+                let mut len_buf = [0u8; 4];
+                r.read_exact(&mut len_buf)?;
+                let len = u32::from_le_bytes(len_buf) as usize;
+                let mut name_buf = vec![0u8; len];
+                r.read_exact(&mut name_buf)?;
+                let func = String::from_utf8(name_buf).unwrap();
+                let env_ptr = Self::deserialize_operand(r)?;
+                let mut count_buf = [0u8; 4];
+                r.read_exact(&mut count_buf)?;
+                let count = u32::from_le_bytes(count_buf) as usize;
+                let mut captures = Vec::with_capacity(count);
+                for _ in 0..count {
+                    let mut symbol_buf = [0u8; 4];
+                    let mut source_buf = [0u8; 4];
+                    let mut field_buf = [0u8; 4];
+                    let mut mode_buf = [0u8; 1];
+                    let mut ty_buf = [0u8; 4];
+                    let mut env_ty_buf = [0u8; 4];
+                    r.read_exact(&mut symbol_buf)?;
+                    r.read_exact(&mut source_buf)?;
+                    r.read_exact(&mut field_buf)?;
+                    r.read_exact(&mut mode_buf)?;
+                    r.read_exact(&mut ty_buf)?;
+                    r.read_exact(&mut env_ty_buf)?;
+                    if mode_buf[0] > 2 {
+                        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid closure capture mode"));
+                    }
+                    captures.push(MlibCaptureInfo {
+                        symbol: u32::from_le_bytes(symbol_buf),
+                        source: u32::from_le_bytes(source_buf),
+                        env_field: u32::from_le_bytes(field_buf),
+                        mode: mode_buf[0],
+                        ty: u32::from_le_bytes(ty_buf),
+                        env_ty: u32::from_le_bytes(env_ty_buf),
+                    });
+                }
+                Ok(MlibInstruction::MakeClosure { func, env_ptr, captures })
+            }
+            0x24 => {
+                let obj = Self::deserialize_operand(r)?;
+                let mut idx_buf = [0u8; 4];
+                r.read_exact(&mut idx_buf)?;
+                let method_idx = u32::from_le_bytes(idx_buf);
+                let mut count_buf = [0u8; 4];
+                r.read_exact(&mut count_buf)?;
+                let count = u32::from_le_bytes(count_buf) as usize;
+                let mut args = Vec::with_capacity(count);
+                for _ in 0..count {
+                    args.push(Self::deserialize_operand(r)?);
+                }
+                Ok(MlibInstruction::CallVirt { obj, method_idx, args })
+            }
+            0x25 => {
+                let data_ptr = Self::deserialize_operand(r)?;
+                let vtable = Self::read_string(r)?;
+                let mut trait_buf = [0u8; 4];
+                r.read_exact(&mut trait_buf)?;
+                let trait_sym = u32::from_le_bytes(trait_buf);
+                Ok(MlibInstruction::MakeTraitObject { data_ptr, vtable, trait_sym })
             }
             5 => {
                 let left = Self::deserialize_operand(r)?;
@@ -230,10 +370,75 @@ impl MlibReader {
                 let right = Self::deserialize_operand(r)?;
                 Ok(MlibInstruction::Mul { left, right })
             }
+            63 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::Div { left, right })
+            }
+            64 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::Rem { left, right })
+            }
             8 => {
                 let left = Self::deserialize_operand(r)?;
                 let right = Self::deserialize_operand(r)?;
                 Ok(MlibInstruction::Eq { left, right })
+            }
+            42 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::NotEq { left, right })
+            }
+            17 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::Eq { left, right })
+            }
+            22 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::LessThan { left, right })
+            }
+            65 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::LessOrEq { left, right })
+            }
+            66 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::GreaterThan { left, right })
+            }
+            67 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::GreaterOrEq { left, right })
+            }
+            68 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::BitAnd { left, right })
+            }
+            69 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::BitOr { left, right })
+            }
+            70 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::BitXor { left, right })
+            }
+            71 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::Shl { left, right })
+            }
+            72 => {
+                let left = Self::deserialize_operand(r)?;
+                let right = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::Shr { left, right })
             }
             9 => {
                 let mut rw_buf = [0u8; 1];
@@ -265,13 +470,83 @@ impl MlibReader {
                 let value = Self::deserialize_operand(r)?;
                 let mut var_buf = [0u8; 4];
                 r.read_exact(&mut var_buf)?;
-                let variant_idx = u32::from_le_bytes(var_buf);
-                let mut fld_buf = [0u8; 4];
-                r.read_exact(&mut fld_buf)?;
-                let field_idx = u32::from_le_bytes(fld_buf);
-                Ok(MlibInstruction::Extract { value, variant_idx, field_idx })
+                let mut field_buf = [0u8; 4];
+                r.read_exact(&mut field_buf)?;
+                Ok(MlibInstruction::Extract {
+                    value,
+                    variant_idx: u32::from_le_bytes(var_buf),
+                    field_idx: u32::from_le_bytes(field_buf),
+                })
             }
-            _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid instruction tag")),
+            27 => {
+                let base = Self::deserialize_operand(r)?;
+                let mut field_buf = [0u8; 4];
+                r.read_exact(&mut field_buf)?;
+                Ok(MlibInstruction::FieldPtr {
+                    base,
+                    field_idx: u32::from_le_bytes(field_buf),
+                })
+            }
+            13 => {
+                let value = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::Drop { value })
+            }
+            14 => {
+                let value = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::BoxNew { value })
+            }
+            15 => {
+                let value = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::BoxFree { value })
+            }
+            18 => Ok(MlibInstruction::ListNew),
+            0x21 => {
+                let value = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::MarkInit { value })
+            }
+            23 => {
+                let mut ty_buf = [0u8; 4];
+                r.read_exact(&mut ty_buf)?;
+                Ok(MlibInstruction::SizeOf { ty: u32::from_le_bytes(ty_buf) })
+            }
+            24 => {
+                let mut ty_buf = [0u8; 4];
+                r.read_exact(&mut ty_buf)?;
+                Ok(MlibInstruction::AlignOf { ty: u32::from_le_bytes(ty_buf) })
+            }
+            0x22 => {
+                let mut ty_buf = [0u8; 4];
+                r.read_exact(&mut ty_buf)?;
+                Ok(MlibInstruction::Null { ty: u32::from_le_bytes(ty_buf) })
+            }
+            25 => {
+                let value = Self::deserialize_operand(r)?;
+                let mut ty_buf = [0u8; 4];
+                r.read_exact(&mut ty_buf)?;
+                Ok(MlibInstruction::PtrCast { value, ty: u32::from_le_bytes(ty_buf) })
+            }
+            26 => {
+                let base = Self::deserialize_operand(r)?;
+                let offset = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::PtrOffset { base, offset })
+            }
+            19 => {
+                let list = Self::deserialize_operand(r)?;
+                let value = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::ListPush { list, value })
+            }
+            20 => {
+                let list = Self::deserialize_operand(r)?;
+                let index = Self::deserialize_operand(r)?;
+                let mut mut_buf = [0u8; 1];
+                r.read_exact(&mut mut_buf)?;
+                Ok(MlibInstruction::ListGet { list, index, is_mut: mut_buf[0] != 0 })
+            }
+            0x26 => {
+                let future = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::Await { future })
+            }
+            _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Unknown instruction opcode {}", tag_buf[0]))),
         }
     }
 
@@ -304,6 +579,8 @@ impl MlibReader {
                 };
                 Ok(MlibTerminator::Ret { value })
             }
+            4 => Ok(MlibTerminator::Unreachable),
+            5 => Ok(MlibTerminator::MissingReturn),
             _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid terminator tag")),
         }
     }
@@ -342,6 +619,12 @@ impl MlibReader {
 
     fn deserialize_function<R: Read>(r: &mut R) -> std::io::Result<MlibFunction> {
         let name = Self::read_string(r)?;
+        let mut arg_count_buf = [0u8; 4];
+        r.read_exact(&mut arg_count_buf)?;
+        let arg_count = u32::from_le_bytes(arg_count_buf);
+        let mut is_async_buf = [0u8; 1];
+        r.read_exact(&mut is_async_buf)?;
+        let is_async = is_async_buf[0] != 0;
         let mut val_count_buf = [0u8; 4];
         r.read_exact(&mut val_count_buf)?;
         let val_count = u32::from_le_bytes(val_count_buf) as usize;
@@ -356,7 +639,7 @@ impl MlibReader {
         for _ in 0..block_count {
             blocks.push(Self::deserialize_block(r)?);
         }
-        Ok(MlibFunction { name, arg_count: 0, values, blocks })
+        Ok(MlibFunction { name, arg_count, is_async, values, blocks })
     }
 
     fn deserialize_type_entry<R: Read>(r: &mut R) -> std::io::Result<MlibTypeEntry> {
@@ -402,5 +685,35 @@ impl MlibReader {
             types.push(Self::deserialize_type_entry(r)?);
         }
         Ok(MlibModule { functions, strings, types })
+    }
+
+    pub fn read_ast_interface<R: Read + Seek>(reader: &mut R) -> Result<Option<(mellis_ast::AstArena, Vec<mellis_ast::Item>, String)>, MlibError> {
+        let header = MlibHeader::read_from(reader)?;
+        
+        if header.magic != MLIB_MAGIC {
+            return Err(MlibError::InvalidMagic);
+        }
+        
+        reader.seek(SeekFrom::Start(header.section_table_offset))?;
+
+        let mut sections = Vec::new();
+        for _ in 0..header.section_count {
+            let section = SectionEntry::read_from(reader)?;
+            sections.push(section);
+        }
+        
+        for section in &sections {
+            if section.section_type == SectionType::AstInterface {
+                reader.seek(SeekFrom::Start(section.offset))?;
+                let mut data = vec![0u8; section.size as usize];
+                reader.read_exact(&mut data)?;
+                
+                let result = bincode::deserialize::<(mellis_ast::AstArena, Vec<mellis_ast::Item>, String)>(&data)
+                    .map_err(|e| MlibError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
+                return Ok(Some(result));
+            }
+        }
+        
+        Ok(None)
     }
 }

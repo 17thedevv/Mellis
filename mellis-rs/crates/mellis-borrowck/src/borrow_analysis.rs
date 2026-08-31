@@ -23,6 +23,19 @@ impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
             Instruction::Load { ptr } => {
                 if let Operand::Value(v) = ptr { state.live.insert(*v); }
             }
+            Instruction::MakeClosure { env_ptr, captures, .. } => {
+                if let Operand::Value(v) = env_ptr { state.live.insert(*v); }
+                for capture in captures { state.live.insert(capture.source); }
+            }
+            Instruction::MakeTraitObject { data_ptr, .. } => {
+                if let Operand::Value(v) = data_ptr { state.live.insert(*v); }
+            }
+            Instruction::CallVirt { obj, args, .. } => {
+                if let Operand::Value(v) = obj { state.live.insert(*v); }
+                for arg in args {
+                    if let Operand::Value(v) = arg { state.live.insert(*v); }
+                }
+            }
             Instruction::Store { ptr, value } => {
                 if let Operand::Value(v) = ptr { state.live.insert(*v); }
                 if let Operand::Value(v) = value { state.live.insert(*v); }
@@ -30,17 +43,22 @@ impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
             Instruction::Borrow { base, .. } => {
                 if let Operand::Value(v) = base { state.live.insert(*v); }
             }
-            Instruction::Call { args, callee, .. } => {
+            Instruction::CallDirect { args, .. } => {
+                for arg in args {
+                    if let Operand::Value(v) = arg { state.live.insert(*v); }
+                }
+            }
+            Instruction::CallIndirect { callee, args } | Instruction::CallClosure { closure: callee, args } => {
                 if let Operand::Value(v) = callee { state.live.insert(*v); }
                 for arg in args {
                     if let Operand::Value(v) = arg { state.live.insert(*v); }
                 }
             }
-            Instruction::Add { left, right } | Instruction::Sub { left, right } | Instruction::Mul { left, right } | Instruction::Eq { left, right } => {
+            Instruction::Add { left, right } | Instruction::Sub { left, right } | Instruction::Mul { left, right } | Instruction::Div { left, right } | Instruction::Rem { left, right } | Instruction::Eq { left, right } | Instruction::LessThan { left, right } | Instruction::LessOrEq { left, right } | Instruction::GreaterThan { left, right } | Instruction::GreaterOrEq { left, right } => {
                 if let Operand::Value(v) = left { state.live.insert(*v); }
                 if let Operand::Value(v) = right { state.live.insert(*v); }
             }
-            Instruction::Drop { value } => {
+            Instruction::Drop { value, .. } => {
                 if let Operand::Value(v) = value { state.live.insert(*v); }
             }
             Instruction::Alloca | _ => {}
@@ -106,8 +124,11 @@ pub struct Loan {
 
 #[derive(Clone, Default, PartialEq, Debug)]
 pub struct BorrowStateData {
-    pub provenance: HashMap<ValueId, HashSet<Loan>>,
+    pub direct_provenance: HashMap<ValueId, HashSet<Loan>>,
+    pub carried_provenance: HashMap<ValueId, HashSet<Loan>>,
     pub escaped_loans: HashSet<Loan>,
+    pub aliases: HashMap<ValueId, Operand>,
+    pub closure_captures: HashMap<ValueId, Vec<mellis_semantic::CaptureMode>>,
 }
 
 use mellis_semantic::SemanticContext;
@@ -146,17 +167,57 @@ impl<'a> BorrowAnalyzer<'a> {
                 let val_data = func.value(val_id);
                 analyzer.transfer_instruction(val_id, &val_data.inst, &mut current_state);
             }
+            if let Some(term) = &block.terminator {
+                analyzer.transfer_terminator(term, &mut current_state);
+            }
         }
         
         analyzer.diagnostics
     }
 
+    fn resolve_alias<'b>(&self, op: &'b Operand, state: &'b BorrowStateData) -> &'b Operand {
+        let mut current = op;
+        while let Operand::Value(v) = current {
+            if let Some(alias) = state.aliases.get(v) {
+                current = alias;
+            } else {
+                break;
+            }
+        }
+        current
+    }
+
     fn active_loans(&self, val_id: ValueId, state: &BorrowStateData) -> HashSet<Loan> {
         let mut active = state.escaped_loans.clone();
+        let mut queue = Vec::new();
+        
         if let Some(live_set) = self.live_before.get(&val_id) {
-            for v in live_set {
-                if let Some(loans) = state.provenance.get(v) {
-                    active.extend(loans.iter().cloned());
+            for &v in live_set {
+                queue.push(v);
+            }
+        }
+        
+        let mut visited = std::collections::HashSet::new();
+
+        while let Some(v) = queue.pop() {
+            if visited.insert(v) {
+                if let Some(loans) = state.direct_provenance.get(&v) {
+                    for loan in loans {
+                        active.insert(loan.clone());
+                        let resolved = self.resolve_alias(&loan.place, state);
+                        if let Operand::Value(place_v) = resolved {
+                            queue.push(*place_v);
+                        }
+                    }
+                }
+                if let Some(loans) = state.carried_provenance.get(&v) {
+                    for loan in loans {
+                        active.insert(loan.clone());
+                        let resolved = self.resolve_alias(&loan.place, state);
+                        if let Operand::Value(place_v) = resolved {
+                            queue.push(*place_v);
+                        }
+                    }
                 }
             }
         }
@@ -168,18 +229,25 @@ impl<'a> BorrowAnalyzer<'a> {
         let place_name = print_operand_name(place);
         let active = self.active_loans(val_id, state);
         
+        println!("DEBUG: check_access place_name={} active_loans_len={} is_write={}", place_name, active.len(), is_write);
+
+        
         for loan in &active {
             if print_operand_name(&loan.place) == place_name {
                 if loan.is_rw {
-                    self.diagnostics.push(Diagnostic::error(format!(
+                    let mut diag = Diagnostic::error(format!(
                         "Cannot access '{}' because it is borrowed as &rw",
                         place_name
-                    )));
+                    ));
+                    diag.span = self.func.values[val_id.0 as usize].span.clone();
+                    self.diagnostics.push(diag);
                 } else if is_write {
-                    self.diagnostics.push(Diagnostic::error(format!(
+                    let mut diag = Diagnostic::error(format!(
                         "Cannot write to '{}' because it is borrowed as &",
                         place_name
-                    )));
+                    ));
+                    diag.span = self.func.values[val_id.0 as usize].span.clone();
+                    self.diagnostics.push(diag);
                 }
             }
         }
@@ -193,16 +261,20 @@ impl<'a> BorrowAnalyzer<'a> {
             for loan in &active {
                 if print_operand_name(&loan.place) == place_name {
                     if loan.is_rw {
-                        self.diagnostics.push(Diagnostic::error(format!(
+                        let mut diag = Diagnostic::error(format!(
                             "Cannot borrow '{}' as {} because it is already borrowed as &rw",
                             place_name,
                             if is_rw { "&rw" } else { "&" }
-                        )));
+                        ));
+                        diag.span = self.func.values[val_id.0 as usize].span.clone();
+                        self.diagnostics.push(diag);
                     } else if is_rw {
-                        self.diagnostics.push(Diagnostic::error(format!(
+                        let mut diag = Diagnostic::error(format!(
                             "Cannot borrow '{}' as &rw because it is already borrowed as &",
                             place_name
-                        )));
+                        ));
+                        diag.span = self.func.values[val_id.0 as usize].span.clone();
+                        self.diagnostics.push(diag);
                     }
                 }
             }
@@ -214,17 +286,19 @@ impl<'a> BorrowAnalyzer<'a> {
             is_rw,
         };
         
-        state.provenance.entry(val_id).or_default().insert(new_loan);
+        state.direct_provenance.entry(val_id).or_default().insert(new_loan);
     }
 }
 
 fn print_operand_name(op: &Operand) -> String {
     match op {
         Operand::Value(val) => format!("%v{}", val.0),
-        Operand::Global(glb) => glb.name.clone(),
-        Operand::Block(blk) => format!("%block_{}", blk.0),
+        Operand::Global(id) => format!("@g{}", id.name.clone()),
+        Operand::Block(id) => format!("block_{}", id.0),
         Operand::Number(n) => n.clone(),
         Operand::Boolean(b) => b.to_string(),
+        Operand::StringRef(s) => format!("\"{}\"", s),
+        Operand::Char(c) => format!("'{}'", c),
     }
 }
 
@@ -233,6 +307,25 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
 
     fn transfer_instruction(&mut self, val_id: ValueId, inst: &Instruction, state: &mut BorrowStateData) {
         match inst {
+            Instruction::MakeClosure { env_ptr, captures, .. } => {
+                self.check_access(env_ptr, false, val_id, state);
+                state.closure_captures.insert(val_id, captures.iter().map(|capture| capture.mode).collect());
+                for capture in captures {
+                    if matches!(capture.mode, mellis_semantic::CaptureMode::SharedBorrow | mellis_semantic::CaptureMode::MutableBorrow) {
+                        let source = Operand::Value(capture.source);
+                        self.issue_loan(&source, capture.mode == mellis_semantic::CaptureMode::MutableBorrow, val_id, state);
+                    }
+                }
+            }
+            Instruction::MakeTraitObject { data_ptr, .. } => {
+                self.check_access(data_ptr, false, val_id, state);
+            }
+            Instruction::CallVirt { obj, args, .. } => {
+                self.check_access(obj, false, val_id, state);
+                for arg in args {
+                    self.check_access(arg, false, val_id, state);
+                }
+            }
             Instruction::Store { ptr, value } => {
                 self.check_access(value, false, val_id, state);
                 self.check_access(ptr, true, val_id, state);
@@ -243,9 +336,22 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                 // If %v1 is an Alloca, %v1 now contains the provenance of %v2.
                 // To keep it simple, if ptr is Operand::Value, we add provenance of value to ptr.
                 if let Operand::Value(ptr_val) = ptr {
+                    let mut resolved_ptr = *ptr_val;
+                    let mut current_op = Operand::Value(*ptr_val);
+                    while let Operand::Value(v) = current_op {
+                        if let Some(alias) = state.aliases.get(&v) {
+                            current_op = alias.clone();
+                            if let Operand::Value(alias_v) = current_op {
+                                resolved_ptr = alias_v;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    
                     if let Operand::Value(val_v) = value {
-                        if let Some(prov) = state.provenance.get(val_v).cloned() {
-                            state.provenance.entry(*ptr_val).or_default().extend(prov);
+                        if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
+                            state.direct_provenance.entry(resolved_ptr).or_default().extend(prov);
                         }
                     }
                 }
@@ -254,100 +360,84 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                 self.check_access(ptr, false, val_id, state);
                 // Load from a pointer inherits its provenance
                 if let Operand::Value(ptr_val) = ptr {
-                    if let Some(prov) = state.provenance.get(ptr_val).cloned() {
-                        state.provenance.entry(val_id).or_default().extend(prov);
+                    if let Some(prov) = state.direct_provenance.get(ptr_val).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
                     }
                 }
             }
-            Instruction::Call { args, callee, .. } => {
-                self.check_access(callee, false, val_id, state);
+            Instruction::CallDirect { args, callee, .. } => {
                 for arg in args {
                     self.check_access(arg, false, val_id, state);
                 }
                 
                 let mut applied_summary = None;
-                if let Operand::Global(gid) = callee {
-                    if let Some(map) = self.callee_summaries {
-                        if let Some(sum) = map.get(gid) {
-                            applied_summary = Some(sum.clone());
-                        }
+                if let Some(map) = self.callee_summaries {
+                    if let Some(sum) = map.get(callee) {
+                        applied_summary = Some(sum.clone());
                     }
+                }
+                if callee.name == "register_callback" {
+                    println!("DEBUG: CallDirect callee={:?} map.contains_key={}", callee, self.callee_summaries.map_or(false, |m| m.contains_key(callee)));
                 }
                 
                 if let Some(sum) = applied_summary {
                     for (i, arg) in args.iter().enumerate() {
                         if i < sum.args.len() {
                             let arg_effect = &sum.args[i];
-                            // If callee escapes the arg, add its provenance to escaped_loans
-                            if arg_effect.escape == EscapeKind::MayEscape {
+                            
+                            // Check specific access (write access if required)
+                            if arg_effect.access == crate::effect::AccessKind::Write || arg_effect.access == crate::effect::AccessKind::ReadWrite {
+                                self.check_access(arg, true, val_id, state);
+                            }
+                            
+                            // Handle escapes
+                            if arg_effect.escape == crate::effect::EscapeKind::MayEscape {
                                 if let Operand::Value(arg_v) = arg {
-                                    if let Some(prov) = state.provenance.get(arg_v).cloned() {
+                                    if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
+                                        state.escaped_loans.extend(prov);
+                                    }
+                                    if let Some(prov) = state.carried_provenance.get(arg_v).cloned() {
                                         state.escaped_loans.extend(prov);
                                     }
                                 }
-                            }
-                            
-                            // Check access based on access kind
-                            // If callee reads, check read. If callee writes, check write.
-                            use crate::effect::AccessKind;
-                            if arg_effect.access == AccessKind::Read || arg_effect.access == AccessKind::ReadWrite {
-                                self.check_access(arg, false, val_id, state);
-                            }
-                            if arg_effect.access == AccessKind::Write || arg_effect.access == AccessKind::ReadWrite {
-                                self.check_access(arg, true, val_id, state);
                             }
                         }
                     }
                     
                     // Return provenance
-                    if let ReturnEffect::BorrowsFrom(indices) = &sum.ret {
-                        for &idx in indices {
-                            if idx < args.len() {
-                                if let Operand::Value(arg_v) = &args[idx] {
-                                    if let Some(prov) = state.provenance.get(arg_v).cloned() {
-                                        state.provenance.entry(val_id).or_default().extend(prov);
+                    match &sum.ret {
+                        ReturnEffect::BorrowsFrom(indices) => {
+                            for &idx in indices {
+                                if idx < args.len() {
+                                    if let Operand::Value(arg_v) = &args[idx] {
+                                        if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
+                                            state.direct_provenance.entry(val_id).or_default().extend(prov);
+                                        }
                                     }
                                 }
                             }
                         }
+                        ReturnEffect::BorrowsCarried(indices) => {
+                            for &idx in indices {
+                                if idx < args.len() {
+                                    if let Operand::Value(arg_v) = &args[idx] {
+                                        if let Some(prov) = state.carried_provenance.get(arg_v).cloned() {
+                                            state.direct_provenance.entry(val_id).or_default().extend(prov);
+                                        }
+                                        if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
+                                            state.direct_provenance.entry(val_id).or_default().extend(prov);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 } else {
                     // Opaque call conservative fallback using CE6 ABI rules
                     let mut callee_sym_id = None;
-                    if let Operand::Global(gid) = callee {
-                        if let Some(sym_id) = gid.symbol_id {
-                            callee_sym_id = Some(sym_id);
-                        }
-                    }
-
-                    // Pre-compute callback effects to union into this call
-                    let mut cb_worst_access = crate::effect::AccessKind::None;
-                    let mut cb_worst_escape = crate::effect::EscapeKind::NoEscape;
-
-                    for arg in args {
-                        if let Operand::Global(cb_gid) = arg {
-                            if let Some(summaries) = self.callee_summaries {
-                                if let Some(cb_sum) = summaries.get(cb_gid) {
-                                    for cb_arg in &cb_sum.args {
-                                        cb_worst_access = cb_worst_access.merge(&cb_arg.access);
-                                        cb_worst_escape = cb_worst_escape.merge(&cb_arg.escape);
-                                    }
-                                } else {
-                                    // Static callback but no summary? Fallback to unknown.
-                                    cb_worst_access = crate::effect::AccessKind::Unknown;
-                                    cb_worst_escape = crate::effect::EscapeKind::Unknown;
-                                }
-                            }
-                        } else if let Operand::Value(val_id) = arg {
-                            if let Some(ctx) = self.ctx {
-                                let val_data = self.func.value(*val_id);
-                                if let mellis_semantic::ty::SemanticType::Function { .. } = ctx.types.get(val_data.ty) {
-                                    // Dynamic callback fallback
-                                    cb_worst_access = crate::effect::AccessKind::Unknown;
-                                    cb_worst_escape = crate::effect::EscapeKind::Unknown;
-                                }
-                            }
-                        }
+                    if let Some(sym_id) = callee.symbol_id {
+                        callee_sym_id = Some(sym_id);
                     }
 
                     for (arg_pos, arg) in args.iter().enumerate() {
@@ -408,16 +498,17 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                             escape_kind = crate::effect::EscapeKind::NoEscape;
                             access_kind = crate::effect::AccessKind::None;
                         }
-
-                        // Union the callback's worst effect into this argument's access and escape
-                        access_kind = access_kind.merge(&cb_worst_access);
-                        if escape_kind != crate::effect::EscapeKind::Unknown {
-                             escape_kind = escape_kind.merge(&cb_worst_escape);
-                        }
+                        println!("DEBUG: arg {:?} has escape_kind {:?} (has_sync_noescape: {})", arg, escape_kind, has_sync_noescape);
 
                         if escape_kind == crate::effect::EscapeKind::MayEscape || escape_kind == crate::effect::EscapeKind::Unknown {
                             if let Operand::Value(arg_v) = arg {
-                                if let Some(prov) = state.provenance.get(arg_v).cloned() {
+                                if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
+                                    println!("DEBUG: extending escaped_loans with prov of {:?}: {:?}", arg_v, prov);
+                                    state.escaped_loans.extend(prov);
+                                } else {
+                                    println!("DEBUG: direct_provenance for {:?} is None", arg_v);
+                                }
+                                if let Some(prov) = state.carried_provenance.get(arg_v).cloned() {
                                     state.escaped_loans.extend(prov);
                                 }
                             }
@@ -432,17 +523,149 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     }
                 }
             }
-            Instruction::Borrow { is_rw, base, .. } => {
+            Instruction::CallIndirect { args, callee } | Instruction::CallClosure { args, closure: callee } => {
+                self.check_access(callee, false, val_id, state);
+                for arg in args {
+                    self.check_access(arg, false, val_id, state);
+                }
+                
+                // Pre-compute callback effects to union into this call
+                let mut cb_worst_access = crate::effect::AccessKind::None;
+                let mut cb_worst_escape = crate::effect::EscapeKind::NoEscape;
+
+                for arg in args {
+                    if let Operand::Global(cb_gid) = arg {
+                        if let Some(summaries) = self.callee_summaries {
+                            if let Some(cb_sum) = summaries.get(cb_gid) {
+                                for cb_arg in &cb_sum.args {
+                                    cb_worst_access = cb_worst_access.merge(&cb_arg.access);
+                                    cb_worst_escape = cb_worst_escape.merge(&cb_arg.escape);
+                                }
+                            } else {
+                                cb_worst_access = crate::effect::AccessKind::Unknown;
+                                cb_worst_escape = crate::effect::EscapeKind::Unknown;
+                            }
+                        }
+                    } else if let Operand::Value(arg_v) = arg {
+                        if let Some(ctx) = self.ctx {
+                            let val_data = self.func.value(*arg_v);
+                            if let mellis_semantic::ty::SemanticType::Function { .. } = ctx.types.get(val_data.ty) {
+                                cb_worst_access = crate::effect::AccessKind::Unknown;
+                                cb_worst_escape = crate::effect::EscapeKind::Unknown;
+                            }
+                        }
+                    }
+                }
+
+                for arg in args.iter() {
+                    let mut escape_kind = crate::effect::EscapeKind::Unknown;
+                    let mut access_kind = crate::effect::AccessKind::ReadWrite;
+
+                    if let Operand::Value(arg_v) = arg {
+                        if let Some(ctx) = self.ctx {
+                            let val_data = self.func.value(*arg_v);
+                            use mellis_semantic::ty::SemanticType;
+                            match ctx.types.get(val_data.ty) {
+                                SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => {
+                                    escape_kind = crate::effect::EscapeKind::NoEscape;
+                                    access_kind = crate::effect::AccessKind::None;
+                                }
+                                SemanticType::Struct(_, _) | SemanticType::Enum(_, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) => {
+                                    escape_kind = crate::effect::EscapeKind::NoEscape;
+                                    access_kind = crate::effect::AccessKind::None;
+                                }
+                                SemanticType::Reference(_, is_mut, _) => {
+                                    escape_kind = crate::effect::EscapeKind::NoEscape;
+                                    access_kind = if *is_mut == mellis_semantic::ty::Mutability::Mutable { 
+                                        crate::effect::AccessKind::ReadWrite 
+                                    } else { 
+                                        crate::effect::AccessKind::Read 
+                                    };
+                                }
+                                SemanticType::Pointer(is_mut, _) => {
+                                    escape_kind = crate::effect::EscapeKind::MayEscape;
+                                    access_kind = if *is_mut == mellis_semantic::ty::Mutability::Mutable { 
+                                        crate::effect::AccessKind::ReadWrite 
+                                    } else { 
+                                        crate::effect::AccessKind::Read 
+                                    };
+                                }
+                                _ => {}
+                            }
+                        }
+                    } else {
+                        escape_kind = crate::effect::EscapeKind::NoEscape;
+                        access_kind = crate::effect::AccessKind::None;
+                    }
+
+                    // Union the callback's worst effect into this argument's access and escape
+                    access_kind = access_kind.merge(&cb_worst_access);
+                    if escape_kind != crate::effect::EscapeKind::Unknown {
+                         escape_kind = escape_kind.merge(&cb_worst_escape);
+                    }
+
+                    if escape_kind == crate::effect::EscapeKind::MayEscape || escape_kind == crate::effect::EscapeKind::Unknown {
+                        if let Operand::Value(arg_v) = arg {
+                            if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
+                                state.escaped_loans.extend(prov);
+                            }
+                            if let Some(prov) = state.carried_provenance.get(arg_v).cloned() {
+                                state.escaped_loans.extend(prov);
+                            }
+                        }
+                    }
+
+                    if access_kind == crate::effect::AccessKind::Read || access_kind == crate::effect::AccessKind::ReadWrite {
+                        self.check_access(arg, false, val_id, state);
+                    }
+                    if access_kind == crate::effect::AccessKind::Write || access_kind == crate::effect::AccessKind::ReadWrite {
+                        self.check_access(arg, true, val_id, state);
+                    }
+                }
+            }
+            Instruction::Borrow { is_rw, base } => {
+                // Issue a loan
                 self.issue_loan(base, *is_rw, val_id, state);
+                
+                // If base has provenance, the borrow carries it
+                if let Operand::Value(base_v) = base {
+                    let mut current = *base_v;
+                    let mut resolved_base = *base_v;
+                    while let Some(alias) = state.aliases.get(&current) {
+                        if let Operand::Value(alias_v) = alias {
+                            resolved_base = *alias_v;
+                            current = *alias_v;
+                        } else { break; }
+                    }
+                    if let Some(prov) = state.direct_provenance.get(&resolved_base).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(&resolved_base).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    state.aliases.insert(val_id, Operand::Value(*base_v));
+                }
+            }
+            Instruction::Extract { .. } | Instruction::Tag { .. } => {}
+            Instruction::FieldPtr { base, .. } => {
+                if let Operand::Value(b) = base {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
             }
             Instruction::Add { left, right, .. }
             | Instruction::Sub { left, right, .. }
             | Instruction::Mul { left, right, .. }
-            | Instruction::Eq { left, right, .. } => {
+            | Instruction::Div { left, right, .. }
+            | Instruction::Rem { left, right, .. }
+            | Instruction::Eq { left, right, .. }
+            | Instruction::LessThan { left, right, .. }
+            | Instruction::LessOrEq { left, right, .. }
+            | Instruction::GreaterThan { left, right, .. }
+            | Instruction::GreaterOrEq { left, right, .. } => {
                 self.check_access(left, false, val_id, state);
                 self.check_access(right, false, val_id, state);
             }
-            Instruction::Drop { value } => {
+            Instruction::Drop { value, .. } => {
                 self.check_access(value, true, val_id, state);
             }
             Instruction::Alloca | _ => {}
@@ -450,26 +673,52 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
     }
 
     fn transfer_terminator(&mut self, term: &Terminator, state: &mut BorrowStateData) {
-        // We don't have val_id for terminator, but we can assume it doesn't conflict directly unless it uses a value.
-        // Wait, check_access needs a val_id to know active loans.
-        // For terminators, active loans are those live BEFORE the terminator.
-        // Wait, terminators don't have val_id!
-        // So we can't use check_access easily.
-        // But we don't strictly need to check access for Return/Br, they just read the value.
+        if !self.emit_diagnostics {
+            return;
+        }
+        if let Terminator::Ret { value: Some(Operand::Value(value)) } = term {
+            if let Some(modes) = state.closure_captures.get(value) {
+                if modes.iter().any(|mode| matches!(mode, mellis_semantic::CaptureMode::SharedBorrow | mellis_semantic::CaptureMode::MutableBorrow)) {
+                    let mut diag = Diagnostic::error("Cannot return a closure that captures a local borrow");
+                    diag.span = self.func.value(*value).span.clone();
+                    if !self.diagnostics.iter().any(|existing| existing.message == diag.message) {
+                        self.diagnostics.push(diag);
+                    }
+                }
+            }
+        }
     }
 
     fn merge(&mut self, dest: &mut BorrowStateData, src: &BorrowStateData) -> bool {
         let mut changed = false;
-        for (v, loans) in &src.provenance {
-            let dest_loans = dest.provenance.entry(*v).or_default();
+        for (v, loans) in &src.direct_provenance {
+            let dest_loans = dest.direct_provenance.entry(*v).or_default();
             for loan in loans {
                 if dest_loans.insert(loan.clone()) {
                     changed = true;
                 }
             }
         }
+        for (v, loans) in &src.carried_provenance {
+            let dest_loans = dest.carried_provenance.entry(*v).or_default();
+            for loan in loans {
+                if dest_loans.insert(loan.clone()) {
+                    changed = true;
+                }
+            }
+        }
+        for (v, alias) in &src.aliases {
+            if dest.aliases.insert(*v, alias.clone()) != Some(alias.clone()) {
+                changed = true;
+            }
+        }
         for loan in &src.escaped_loans {
             if dest.escaped_loans.insert(loan.clone()) {
+                changed = true;
+            }
+        }
+        for (closure, modes) in &src.closure_captures {
+            if dest.closure_captures.insert(*closure, modes.clone()).is_none() {
                 changed = true;
             }
         }

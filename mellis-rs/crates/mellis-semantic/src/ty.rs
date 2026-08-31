@@ -6,8 +6,20 @@ pub struct SemanticTypeId(pub u32);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BuiltinType {
-    Int,
-    Float,
+    I8,
+    I16,
+    I32,
+    I64,
+    I128,
+    Isize,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    Usize,
+    F32,
+    F64,
     Bool,
     String,
     Char,
@@ -22,8 +34,24 @@ pub enum Mutability {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct LifetimeId(pub u32);
 
-pub type TypeSubst = HashMap<String, SemanticTypeId>;
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+pub struct Substitution {
+    pub map: std::collections::BTreeMap<SymbolId, SemanticTypeId>,
+}
 
+impl Substitution {
+    pub fn new() -> Self {
+        Self { map: std::collections::BTreeMap::new() }
+    }
+    
+    pub fn insert(&mut self, param: SymbolId, ty: SemanticTypeId) {
+        self.map.insert(param, ty);
+    }
+    
+    pub fn get(&self, param: SymbolId) -> Option<&SemanticTypeId> {
+        self.map.get(&param)
+    }
+}
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SemanticType {
     Primitive(BuiltinType),
@@ -39,14 +67,20 @@ pub enum SemanticType {
     Never,
     Error,
     InferenceVar(u32),
-    Generic(String),
+    GenericParam(SymbolId),
+    Box(SemanticTypeId),
+    Closure(mellis_ast::ExprId, Vec<SemanticTypeId>, SemanticTypeId),
+    DynTrait(SymbolId),
+    Future(SemanticTypeId),
+    Range(SemanticTypeId),
 }
 
+#[derive(Clone, Debug)]
 pub struct TypeContext {
     types: Vec<SemanticType>,
-    // Hash-consing map to reuse types
     type_interner: HashMap<SemanticType, SemanticTypeId>,
     next_inference_var: u32,
+    pub inference_bindings: std::collections::BTreeMap<u32, SemanticTypeId>,
 }
 
 impl TypeContext {
@@ -55,14 +89,15 @@ impl TypeContext {
             types: Vec::new(),
             type_interner: HashMap::new(),
             next_inference_var: 0,
+            inference_bindings: std::collections::BTreeMap::new(),
         };
         // Pre-populate standard types so they have fixed IDs if we want
         ctx.intern(SemanticType::Void);
         ctx.intern(SemanticType::Error);
         ctx.intern(SemanticType::Never);
-        ctx.intern(SemanticType::Primitive(BuiltinType::Int));
+        ctx.intern(SemanticType::Primitive(BuiltinType::I32));
         ctx.intern(SemanticType::Primitive(BuiltinType::Bool));
-        ctx.intern(SemanticType::Primitive(BuiltinType::Float));
+        ctx.intern(SemanticType::Primitive(BuiltinType::F64));
         ctx.intern(SemanticType::Primitive(BuiltinType::String));
         ctx
     }
@@ -87,12 +122,25 @@ impl TypeContext {
         self.intern(SemanticType::InferenceVar(id))
     }
     
-    pub fn subst(&mut self, id: SemanticTypeId, subst: &TypeSubst) -> SemanticTypeId {
+    pub fn resolve_inference(&self, id: SemanticTypeId) -> SemanticTypeId {
+        let mut current = id;
+        let mut seen = std::collections::HashSet::new();
+        loop {
+            let ty = self.get(current);
+            let SemanticType::InferenceVar(var_id) = ty else { return current };
+            if !seen.insert(*var_id) { return current; }
+            let Some(&bound) = self.inference_bindings.get(var_id) else { return current };
+            current = bound;
+        }
+    }
+    
+    pub fn subst(&mut self, id: SemanticTypeId, subst: &Substitution) -> SemanticTypeId {
+        let id = self.resolve(id);
         let ty = self.get(id).clone();
         match ty {
-            SemanticType::Generic(name) => {
-                if let Some(&new_id) = subst.get(&name) {
-                    new_id
+            SemanticType::GenericParam(sym_id) => {
+                if let Some(&new_id) = subst.get(sym_id) {
+                    if new_id == id { id } else { self.subst(new_id, subst) }
                 } else {
                     id
                 }
@@ -122,7 +170,112 @@ impl TypeContext {
                 let new_inner = self.subst(inner, subst);
                 self.intern(SemanticType::Reference(lt, mutability, new_inner))
             }
+            SemanticType::Box(inner) => {
+                let new_inner = self.subst(inner, subst);
+                self.intern(SemanticType::Box(new_inner))
+            }
+            SemanticType::Closure(expr_id, params, return_type) => {
+                let new_params = params.iter().map(|&param| self.subst(param, subst)).collect();
+                let new_return_type = self.subst(return_type, subst);
+                self.intern(SemanticType::Closure(expr_id, new_params, new_return_type))
+            }
+            SemanticType::Future(inner) => {
+                let new_inner = self.subst(inner, subst);
+                self.intern(SemanticType::Future(new_inner))
+            }
             _ => id, // Primitive, Void, Error, Never, InferenceVar
+        }
+    }
+    
+    pub fn resolve(&self, id: SemanticTypeId) -> SemanticTypeId {
+        let mut current = id;
+        loop {
+            let ty = self.get(current).clone();
+            if let SemanticType::InferenceVar(var_id) = ty {
+                if let Some(&bound) = self.inference_bindings.get(&var_id) {
+                    current = bound;
+                    continue;
+                }
+            }
+            break;
+        }
+        current
+    }
+
+    pub fn clone_type_from(&mut self, id: SemanticTypeId, source_ctx: &TypeContext, symbol_map: &std::collections::HashMap<SymbolId, SymbolId>) -> SemanticTypeId {
+        let ty = source_ctx.get(id).clone();
+        match ty {
+            SemanticType::Primitive(p) => self.intern(SemanticType::Primitive(p)),
+            SemanticType::Struct(sym, args) => {
+                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
+                let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
+                self.intern(SemanticType::Struct(new_sym, new_args))
+            }
+            SemanticType::Enum(sym, args) => {
+                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
+                let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
+                self.intern(SemanticType::Enum(new_sym, new_args))
+            }
+            SemanticType::Tuple(args) => {
+                let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
+                self.intern(SemanticType::Tuple(new_args))
+            }
+            SemanticType::Array(elem, len) => {
+                let new_elem = self.clone_type_from(elem, source_ctx, symbol_map);
+                self.intern(SemanticType::Array(new_elem, len))
+            }
+            SemanticType::Slice(elem) => {
+                let new_elem = self.clone_type_from(elem, source_ctx, symbol_map);
+                self.intern(SemanticType::Slice(new_elem))
+            }
+            SemanticType::Function { params, return_type } => {
+                let new_params: Vec<_> = params.iter().map(|&p| self.clone_type_from(p, source_ctx, symbol_map)).collect();
+                let new_ret = self.clone_type_from(return_type, source_ctx, symbol_map);
+                self.intern(SemanticType::Function { params: new_params, return_type: new_ret })
+            }
+            SemanticType::Pointer(mutability, inner) => {
+                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                self.intern(SemanticType::Pointer(mutability, new_inner))
+            }
+            SemanticType::Reference(lt, mutability, inner) => {
+                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                self.intern(SemanticType::Reference(lt, mutability, new_inner))
+            }
+            SemanticType::Box(inner) => {
+                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                self.intern(SemanticType::Box(new_inner))
+            }
+            SemanticType::GenericParam(sym) => {
+                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
+                self.intern(SemanticType::GenericParam(new_sym))
+            }
+            SemanticType::InferenceVar(v) => {
+                if let Some(&bound) = source_ctx.inference_bindings.get(&v) {
+                    self.clone_type_from(bound, source_ctx, symbol_map)
+                } else {
+                    self.new_inference_var()
+                }
+            }
+            SemanticType::Void => self.intern(SemanticType::Void),
+            SemanticType::Never => self.intern(SemanticType::Never),
+            SemanticType::Error => self.intern(SemanticType::Error),
+            SemanticType::Closure(expr_id, params, ret) => {
+                let new_params = params.iter().map(|p| self.clone_type_from(*p, source_ctx, symbol_map)).collect();
+                let new_ret = self.clone_type_from(ret, source_ctx, symbol_map);
+                self.intern(SemanticType::Closure(expr_id, new_params, new_ret))
+            }
+            SemanticType::DynTrait(sym) => {
+                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
+                self.intern(SemanticType::DynTrait(new_sym))
+            }
+            SemanticType::Future(inner) => {
+                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                self.intern(SemanticType::Future(new_inner))
+            }
+            SemanticType::Range(inner) => {
+                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                self.intern(SemanticType::Range(new_inner))
+            }
         }
     }
 }

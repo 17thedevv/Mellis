@@ -9,12 +9,13 @@ fn build_massive_graph(num_blocks: usize, deep_scc: bool) -> Function {
         name: GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: 0,
         is_extern: false,
+            is_async: false,
         ret_ty: SemanticTypeId(0),
         blocks: vec![],
         values: vec![],
     };
 
-    func.values.push(mellis_mvir::ValueData { inst: mellis_mvir::Instruction::Alloca, ty: SemanticTypeId(0) });
+    func.values.push(mellis_mvir::ValueData { span: None, inst: mellis_mvir::Instruction::Alloca, ty: SemanticTypeId(0) });
 
     for i in 0..num_blocks {
         let block_name = format!("block_{}", i);
@@ -52,7 +53,7 @@ fn build_massive_graph(num_blocks: usize, deep_scc: bool) -> Function {
 #[test]
 fn test_perf_stress_move_analysis() {
     let func = build_massive_graph(1000, true);
-    let mut analyzer = MoveAnalyzer::new();
+    let mut analyzer = MoveAnalyzer::new(&func, None, None);
     
     let (_, iterations) = DataflowEngine::run_forward_with_stats(&func, &mut analyzer);
     

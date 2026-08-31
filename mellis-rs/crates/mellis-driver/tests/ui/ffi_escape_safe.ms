@@ -5,7 +5,7 @@ fn my_callback(x: *rw i32) {}
 
 fn main() {
     dec rw x = 10;
-    dec ptr = &rw x;
+    dec ptr: *rw i32 = &rw x;
     register_callback(ptr, my_callback);
     // Passing ptr into FFI function without @sync_noescape means it MayEscape
     // thus holding the borrow indefinitely.

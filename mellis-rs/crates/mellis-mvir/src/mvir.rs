@@ -31,11 +31,24 @@ pub enum Operand {
     Block(BlockId),
     Number(String),
     Boolean(bool),
+    StringRef(String),
+    Char(String),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CaptureInfo {
+    pub symbol: mellis_common::ids::SymbolId,
+    pub source: ValueId,
+    pub env_field: u32,
+    pub mode: mellis_semantic::CaptureMode,
+    pub ty: SemanticTypeId,
+    pub env_ty: SemanticTypeId,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Instruction {
     Alloca, // ty is kept in ValueData
+    HeapAlloc, // ty is kept in ValueData, dynamically allocates memory
     Assign(Operand), // For constant folding or aliases
     Store {
         ptr: Operand,
@@ -56,13 +69,84 @@ pub enum Instruction {
         left: Operand,
         right: Operand,
     },
+    Div {
+        left: Operand,
+        right: Operand,
+    },
+    Rem {
+        left: Operand,
+        right: Operand,
+    },
     Eq {
         left: Operand,
         right: Operand,
     },
-    Call {
+    NotEq {
+        left: Operand,
+        right: Operand,
+    },
+    LessThan {
+        left: Operand,
+        right: Operand,
+    },
+    LessOrEq {
+        left: Operand,
+        right: Operand,
+    },
+    GreaterThan {
+        left: Operand,
+        right: Operand,
+    },
+    GreaterOrEq {
+        left: Operand,
+        right: Operand,
+    },
+    BitAnd {
+        left: Operand,
+        right: Operand,
+    },
+    BitOr {
+        left: Operand,
+        right: Operand,
+    },
+    BitXor {
+        left: Operand,
+        right: Operand,
+    },
+    Shl {
+        left: Operand,
+        right: Operand,
+    },
+    Shr {
+        left: Operand,
+        right: Operand,
+    },
+    CallDirect {
+        callee: GlobalId,
+        args: Vec<Operand>,
+    },
+    CallIndirect {
         callee: Operand,
         args: Vec<Operand>,
+    },
+    CallClosure {
+        closure: Operand,
+        args: Vec<Operand>,
+    },
+    MakeClosure {
+        func: GlobalId,
+        env_ptr: Operand,
+        captures: Vec<CaptureInfo>,
+    },
+    CallVirt {
+        obj: Operand,
+        method_idx: u32,
+        args: Vec<Operand>,
+    },
+    MakeTraitObject {
+        data_ptr: Operand,
+        vtable: GlobalId,
+        trait_sym: SymbolId,
     },
     BoundsCheck {
         index: Operand,
@@ -85,8 +169,43 @@ pub enum Instruction {
         variant_idx: u32,
         field_idx: u32,
     },
+    FieldPtr {
+        base: Operand,
+        field_idx: u32,
+    },
+    BoxNew {
+        value: Operand,
+    },
+    BoxFree {
+        value: Operand,
+    },
+    MarkInit {
+        value: Operand,
+    },
     Drop {
         value: Operand,
+        ty: mellis_semantic::SemanticTypeId,
+        callee: Option<GlobalId>,
+    },
+    PtrOffset {
+        ptr: Operand,
+        offset: Operand,
+    },
+    PtrCast {
+        ptr: Operand,
+        target_ty: SemanticTypeId,
+    },
+    SizeOf {
+        ty: SemanticTypeId,
+    },
+    AlignOf {
+        ty: SemanticTypeId,
+    },
+    Null {
+        ty: SemanticTypeId,
+    },
+    Await {
+        future: Operand,
     },
 }
 
@@ -111,6 +230,7 @@ pub enum Terminator {
         false_target: LabelId,
     },
     Unreachable,
+    MissingReturn,
 }
 
 #[derive(Clone, Debug)]
@@ -124,6 +244,7 @@ pub struct BasicBlock {
 pub struct Function {
     pub name: GlobalId,
     pub is_extern: bool,
+    pub is_async: bool,
     pub arg_count: usize,
     pub ret_ty: SemanticTypeId,
     pub blocks: Vec<BasicBlock>,

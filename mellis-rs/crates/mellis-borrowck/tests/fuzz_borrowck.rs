@@ -35,7 +35,7 @@ fn arb_fuzz_inst(num_vars: u32) -> impl Strategy<Value = FuzzInst> {
 
 fn arb_semantic_type(ctx: &mut SemanticContext) -> impl Strategy<Value = SemanticTypeId> {
     // We pre-intern a few types to use in fuzzing.
-    let prim = ctx.types.intern(SemanticType::Primitive(mellis_semantic::ty::BuiltinType::Int));
+    let prim = ctx.types.intern(SemanticType::Primitive(mellis_semantic::ty::BuiltinType::I32));
     let ptr_mut = ctx.types.intern(SemanticType::Pointer(Mutability::Mutable, prim));
     let ptr_const = ctx.types.intern(SemanticType::Pointer(Mutability::Immutable, prim));
     let ref_mut = ctx.types.intern(SemanticType::Reference(mellis_semantic::ty::LifetimeId(0), Mutability::Mutable, prim));
@@ -58,7 +58,7 @@ proptest! {
         let mut ctx = SemanticContext::new();
         
         // Setup types
-        let prim = ctx.types.intern(SemanticType::Primitive(mellis_semantic::ty::BuiltinType::Int));
+        let prim = ctx.types.intern(SemanticType::Primitive(mellis_semantic::ty::BuiltinType::I32));
         let ptr_mut = ctx.types.intern(SemanticType::Pointer(Mutability::Mutable, prim));
         let ptr_const = ctx.types.intern(SemanticType::Pointer(Mutability::Immutable, prim));
         
@@ -66,6 +66,7 @@ proptest! {
         name: mellis_mvir::GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: 0,
         is_extern: false,
+            is_async: false,
         
         blocks: vec![],
             values: vec![],
@@ -97,9 +98,9 @@ proptest! {
                         1 => Instruction::Borrow { is_rw: (r % 2 == 0), base: Operand::Value(ValueId(base)) },
                         2 => Instruction::Load { ptr: Operand::Value(ValueId(base)) },
                         3 => Instruction::Store { ptr: Operand::Value(ValueId(base)), value: Operand::Value(ValueId(val2)) },
-                        _ => Instruction::Call { 
-                            callee: Operand::Global(GlobalId { name: "opaque_func".to_string(), symbol_id: None }), 
-                            args: vec![Operand::Value(ValueId(base))] 
+                        _ => Instruction::CallDirect {
+                            callee: GlobalId { name: "opaque_func".to_string(), symbol_id: None },
+                            args: vec![Operand::Value(ValueId(base))]
                         },
                     }
                 };
@@ -110,7 +111,7 @@ proptest! {
                     _ => prim,
                 };
                 
-                func.values.push(ValueData { inst, ty });
+                func.values.push(ValueData { span: None, inst, ty });
                 block.insts.push(ValueId(val_id_counter));
                 val_id_counter += 1;
             }

@@ -1,0 +1,20 @@
+struct Error { code: i32 }
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+struct ErrorB {
+    code: i32,
+}
+
+fn inner() -> Result<i32, Error> {
+    return Result::Ok(42);
+}
+
+fn outer() -> Result<i32, ErrorB> {
+    dec x = inner()?; //~ ERROR Error type mismatch for `?`: Struct type mismatch
+    return Result::Ok(x + 1);
+}
+
+fn main() {}

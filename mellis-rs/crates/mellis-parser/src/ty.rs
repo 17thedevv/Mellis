@@ -19,13 +19,13 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_token(TokenKind::BitAnd) {
-            let is_mutable =
-                self.match_token(TokenKind::KwRw);
             let lifetime = if self.check(TokenKind::Lifetime) {
                 Some(self.parse_type()?)
             } else {
                 None
             };
+            let is_mutable =
+                self.match_token(TokenKind::KwRw);
             let inner = self.parse_type()?;
             return Ok(self.arena.alloc_type(Type::Reference {
                 is_mutable,
@@ -100,7 +100,7 @@ impl<'a> Parser<'a> {
             }));
         }
 
-        if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfTyp) {
+        if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfTyp) || matches!(self.peek().kind, TokenKind::BuiltinType(_)) {
             let mut segments = Vec::new();
             let mut generic_args = Vec::new();
             let mut associated_bindings = Vec::new();
@@ -108,12 +108,49 @@ impl<'a> Parser<'a> {
             loop {
                 if self.match_token(TokenKind::KwSelfTyp) {
                     segments.push(self.previous().span);
-                } else if self.check(TokenKind::Identifier) {
+                } else if self.check(TokenKind::Identifier) || matches!(self.peek().kind, TokenKind::BuiltinType(_)) {
                     segments.push(self.advance().span);
                 } else {
                     let span = self.peek().span;
                     self.error_at_current("Expected identifier in named type", span);
                     return Err(());
+                }
+
+                if self.match_token(TokenKind::Bang) {
+                    let name_span = *segments.last().unwrap();
+                    let (delimiter, close_kind) = if self.match_token(TokenKind::LParen) {
+                        (mellis_ast::MacroDelimiter::Paren, TokenKind::RParen)
+                    } else if self.match_token(TokenKind::LBracket) {
+                        (mellis_ast::MacroDelimiter::Bracket, TokenKind::RBracket)
+                    } else if self.match_token(TokenKind::LBrace) {
+                        (mellis_ast::MacroDelimiter::Brace, TokenKind::RBrace)
+                    } else {
+                        let span = self.peek().span;
+                        self.error_at_current("Expected '(', '[', or '{' after macro '!'", span);
+                        return Err(());
+                    };
+
+                    let start_pos = self.pos;
+                    let mut args = Vec::new();
+                    while !self.check(close_kind) && !self.is_at_end() {
+                        args.push(self.parse_token_tree()?);
+                    }
+                    let raw_tokens = self.tokens[start_pos..self.pos].to_vec();
+                    let end_tok = self.consume(close_kind, &format!("Expected closing {:?}", close_kind))?;
+                    let full_span = mellis_common::Span::new(
+                        segments[0].file_id,
+                        segments[0].start,
+                        end_tok.span.end,
+                    ).with_ctxt(segments[0].ctxt);
+
+                    return Ok(self.arena.alloc_type(Type::MacroCall {
+                        name: name_span,
+                        path: segments,
+                        delimiter,
+                        args,
+                        raw_tokens,
+                        span: full_span,
+                    }));
                 }
 
                 if self.match_token(TokenKind::LessThan) {
@@ -131,7 +168,7 @@ impl<'a> Parser<'a> {
                     }
                     self.consume(
                         TokenKind::GreaterThan,
-                        "Expected '>' after generic arguments",
+                        "Expected '>' after type generic arguments",
                     )?;
                 }
 
@@ -145,6 +182,13 @@ impl<'a> Parser<'a> {
                 generic_args,
                 associated_bindings,
             }));
+        }
+
+        if self.match_token(TokenKind::KwTypeof) {
+            self.consume(TokenKind::LParen, "Expected '(' after typeof")?;
+            let expr = self.parse_expression(true)?;
+            self.consume(TokenKind::RParen, "Expected ')' after typeof expression")?;
+            return Ok(self.arena.alloc_type(Type::Typeof { expr }));
         }
 
         if self.match_token(TokenKind::KwDyn) {

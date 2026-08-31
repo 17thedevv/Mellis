@@ -1,66 +1,188 @@
-use mellis_ast::{AstArena, Item, Stmt, Expr, Decl, DeclId};
-use crate::{SemanticContext, ty::{TypeSubst, SemanticTypeId, SemanticType}};
+use mellis_ast::{AstArena, Item, Stmt, Expr, Decl, DeclId, ExprId, StmtId};
+use crate::{SemanticContext, ty::{SemanticTypeId, SemanticType, Substitution}};
+use mellis_common::ids::SymbolId;
 use std::collections::{HashSet, HashMap};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MonoInstance {
     pub decl_id: DeclId,
-    // We sort the subst keys to make it Hashable, or just use a stable struct
-    // For simplicity in this compiler, we'll store a serialized string of types, or just the subst map
-    // Because HashMap doesn't implement Hash, we'll use a Vec of pairs sorted by string
-    pub subst: Vec<(String, SemanticTypeId)>,
+    pub subst: Vec<(SymbolId, SemanticTypeId)>,
+    pub closure_id: Option<mellis_ast::ExprId>,
 }
 
-pub struct Monomorphizer<'a> {
-    ctx: &'a SemanticContext,
+#[derive(Debug, Clone)]
+pub struct InstantiatedFunction {
+    pub instance: MonoInstance,
+    pub expr_types: HashMap<ExprId, SemanticTypeId>,
+    pub symbol_types: HashMap<SymbolId, SemanticTypeId>,
+    pub pat_types: HashMap<mellis_ast::PatId, SemanticTypeId>,
+    pub mono_calls: HashMap<ExprId, MonoInstance>,
+    pub mono_for_loops: HashMap<StmtId, MonoInstance>,
+    pub closure_capture_bindings: Vec<crate::semantic_tables::CaptureBinding>,
+    pub closure_env_type: Option<SemanticTypeId>,
+    pub closure_env_ptr_type: Option<SemanticTypeId>,
+}
+
+pub struct MonoCollector<'a> {
+    ctx: &'a mut SemanticContext,
     arena: &'a AstArena,
-    pub instances: HashSet<MonoInstance>,
+    
+    pub worklist: Vec<MonoInstance>,
+    pub instantiated: HashMap<MonoInstance, InstantiatedFunction>,
+    
+    // Temporary state
+    current_instance: Option<MonoInstance>,
+    current_expr_types: HashMap<ExprId, SemanticTypeId>,
+    current_symbol_types: HashMap<SymbolId, SemanticTypeId>,
+    current_pat_types: HashMap<mellis_ast::PatId, SemanticTypeId>,
+    current_mono_calls: HashMap<ExprId, MonoInstance>,
+    current_mono_for_loops: HashMap<StmtId, MonoInstance>,
+    current_subst: Substitution,
 }
 
-impl<'a> Monomorphizer<'a> {
-    pub fn new(ctx: &'a SemanticContext, arena: &'a AstArena) -> Self {
+impl<'a> MonoCollector<'a> {
+    pub fn new(ctx: &'a mut SemanticContext, arena: &'a AstArena) -> Self {
         Self {
             ctx,
             arena,
-            instances: HashSet::new(),
+            worklist: Vec::new(),
+            instantiated: HashMap::new(),
+            current_instance: None,
+            current_expr_types: HashMap::new(),
+            current_symbol_types: HashMap::new(),
+            current_pat_types: HashMap::new(),
+            current_mono_calls: HashMap::new(),
+            current_mono_for_loops: HashMap::new(),
+            current_subst: Substitution::new(),
         }
     }
 
     pub fn run(&mut self, items: &[Item]) {
         for item in items {
-            self.visit_item(item);
-        }
-    }
-
-    fn visit_item(&mut self, item: &Item) {
-        match item {
-            Item::Decl(decl_id) => {
+            if let Item::Decl(decl_id) = item {
                 let decl = &self.arena.decls[decl_id.0 as usize];
-                match decl {
-                    Decl::Function { body, generic_params, .. } => {
-                        // Only visit the body of non-generic functions as starting points.
-                        // Generic functions are only visited when instantiated.
-                        if generic_params.is_empty() {
-                            if let Some(body_stmt) = body {
-                                self.visit_stmt(body_stmt);
-                            }
-                            // Add to instances with empty subst
-                            self.instances.insert(MonoInstance {
-                                decl_id: *decl_id,
-                                subst: vec![],
-                            });
-                        }
+                if let Decl::Function { generic_params, .. } = decl {
+                    if generic_params.is_empty() {
+                        self.worklist.push(MonoInstance {
+                            decl_id: *decl_id,
+                            subst: vec![],
+                            closure_id: None,
+                        });
                     }
-                    _ => {}
                 }
             }
-            Item::Stmt(stmt_id) => {
-                self.visit_stmt(stmt_id);
+        }
+
+        self.process_worklist();
+    }
+
+    pub fn run_on_expr(&mut self, expr_id: ExprId) {
+        let dummy_instance = MonoInstance {
+            decl_id: DeclId(0), // Dummy for local visit
+            subst: vec![],
+            closure_id: None,
+        };
+        self.current_instance = Some(dummy_instance);
+        self.current_expr_types.clear();
+        self.current_symbol_types.clear();
+        self.current_pat_types.clear();
+        self.current_mono_calls.clear();
+        self.current_mono_for_loops.clear();
+        self.current_subst.map.clear();
+        
+        self.visit_expr(&expr_id);
+        
+        self.process_worklist();
+    }
+
+    pub fn run_on_stmt(&mut self, stmt_id: StmtId) {
+        let dummy_instance = MonoInstance {
+            decl_id: DeclId(0), // Dummy for local visit
+            subst: vec![],
+            closure_id: None,
+        };
+        self.current_instance = Some(dummy_instance);
+        self.current_expr_types.clear();
+        self.current_symbol_types.clear();
+        self.current_pat_types.clear();
+        self.current_mono_calls.clear();
+        self.current_mono_for_loops.clear();
+        self.current_subst.map.clear();
+        
+        self.visit_stmt(&stmt_id);
+        
+        self.process_worklist();
+    }
+
+    fn process_worklist(&mut self) {
+        while let Some(instance) = self.worklist.pop() {
+            if self.instantiated.contains_key(&instance) {
+                continue;
             }
+
+            self.current_instance = Some(instance.clone());
+            self.current_expr_types.clear();
+            self.current_symbol_types.clear();
+            self.current_pat_types.clear();
+            self.current_mono_calls.clear();
+            self.current_mono_for_loops.clear();
+            self.current_subst.map.clear();
+
+            for &(sym, ty) in &instance.subst {
+                self.current_subst.insert(sym, ty);
+            }
+
+            if let Some(&sym_id) = self.ctx.tables.decl_symbols.get(&instance.decl_id) {
+                if let Some(&ty) = self.ctx.tables.symbol_types.get(&sym_id) {
+                    let sub_ty = self.substitute(ty);
+                    self.current_symbol_types.insert(sym_id, sub_ty);
+                }
+            }
+
+            if let Some(closure_id) = instance.closure_id {
+                if let Expr::Lambda { body, .. } = &self.arena.exprs[closure_id.0 as usize] {
+                    self.visit_stmt(body);
+                }
+            } else {
+                let decl = &self.arena.decls[instance.decl_id.0 as usize];
+                if let Decl::Function { body: Some(body_stmt), .. } = decl {
+                    self.visit_stmt(body_stmt);
+                }
+            }
+
+            let closure_bindings = instance.closure_id
+                .and_then(|id| self.ctx.tables.closure_capture_bindings.get(&id).cloned())
+                .unwrap_or_default();
+            let closure_env_type = instance.closure_id
+                .and_then(|id| self.ctx.tables.closure_env_types.get(&id).copied());
+            let closure_env_ptr_type = instance.closure_id
+                .and_then(|id| self.ctx.tables.closure_env_ptr_types.get(&id).copied());
+            let closure_capture_bindings = closure_bindings.into_iter().map(|mut binding| {
+                binding.ty = self.substitute(binding.ty);
+                binding.env_ty = self.substitute(binding.env_ty);
+                binding
+            }).collect();
+            let instantiated_fn = InstantiatedFunction {
+                instance: instance.clone(),
+                expr_types: std::mem::take(&mut self.current_expr_types),
+                symbol_types: std::mem::take(&mut self.current_symbol_types),
+                pat_types: std::mem::take(&mut self.current_pat_types),
+                mono_calls: std::mem::take(&mut self.current_mono_calls),
+                mono_for_loops: std::mem::take(&mut self.current_mono_for_loops),
+                closure_capture_bindings,
+                closure_env_type: closure_env_type.map(|ty| self.substitute(ty)),
+                closure_env_ptr_type: closure_env_ptr_type.map(|ty| self.substitute(ty)),
+            };
+
+            self.instantiated.insert(instance, instantiated_fn);
         }
     }
 
-    fn visit_stmt(&mut self, stmt_id: &mellis_ast::StmtId) {
+    fn substitute(&mut self, ty: SemanticTypeId) -> SemanticTypeId {
+        self.ctx.types.subst(ty, &self.current_subst)
+    }
+
+    fn visit_stmt(&mut self, stmt_id: &StmtId) {
         let stmt = &self.arena.stmts[stmt_id.0 as usize];
         match stmt {
             Stmt::Block { body, tail_expr } => {
@@ -85,11 +207,36 @@ impl<'a> Monomorphizer<'a> {
                 self.visit_expr(condition);
                 self.visit_stmt(body);
             }
-            Stmt::For { init, cond, step, body, iterable, .. } => {
+            Stmt::For { init, cond, step, body, iterable, pattern, .. } => {
                 if let Some(i) = init { self.visit_item(i); }
                 if let Some(c) = cond { self.visit_expr(c); }
                 if let Some(s) = step { self.visit_expr(s); }
                 if let Some(it) = iterable { self.visit_expr(it); }
+                if let Some(pat) = pattern { self.visit_pattern(pat); }
+
+                // Record for_loop next instantiation
+                if let Some(&next_sym) = self.ctx.tables.for_loop_next.get(stmt_id) {
+                    if let Some(&next_decl) = self.ctx.tables.symbol_decls.get(&next_sym) {
+                        if let Some(subst) = self.ctx.tables.for_loop_subst.get(stmt_id).cloned() {
+                            let mut instance_subst = Vec::new();
+                            for (sym, ty) in subst.map {
+                                let sub_ty = self.substitute(ty);
+                                instance_subst.push((sym, sub_ty));
+                            }
+                            instance_subst.sort_by_key(|k| k.0);
+                            let instance = MonoInstance {
+                                decl_id: next_decl,
+                                subst: instance_subst,
+                                closure_id: None,
+                            };
+                            self.current_mono_for_loops.insert(*stmt_id, instance.clone());
+                            if !self.instantiated.contains_key(&instance) {
+                                self.worklist.push(instance);
+                            }
+                        }
+                    }
+                }
+
                 self.visit_stmt(body);
             }
             Stmt::Return { value } => {
@@ -97,51 +244,151 @@ impl<'a> Monomorphizer<'a> {
                     self.visit_expr(val);
                 }
             }
-            _ => {}
+            Stmt::Unsafe { body } => {
+                self.visit_stmt(body);
+            }
+            Stmt::Comptime { body } => {
+                self.visit_stmt(body);
+            }
+            // Leaf variants with no children to traverse
+            Stmt::Break { .. } | Stmt::Continue { .. } => {}
         }
     }
 
-    fn visit_expr(&mut self, expr_id: &mellis_ast::ExprId) {
+    fn visit_item(&mut self, item: &Item) {
+        match item {
+            Item::Decl(decl_id) => {
+                let decl = &self.arena.decls[decl_id.0 as usize];
+                match decl {
+                    Decl::Function { body: Some(body_stmt), .. } => {
+                        self.visit_stmt(body_stmt);
+                    }
+                    Decl::Var { initializer, pattern, .. } => {
+                        if let Some(expr) = initializer {
+                            self.visit_expr(expr);
+                        }
+                        if let Some(pat_id) = pattern {
+                            self.visit_pattern(pat_id);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            Item::Stmt(stmt_id) => {
+                self.visit_stmt(stmt_id);
+            }
+        }
+    }
+
+    fn visit_pattern(&mut self, pat_id: &mellis_ast::PatId) {
+        if let Some(&ty) = self.ctx.tables.pat_types.get(pat_id) {
+            let sub_ty = self.substitute(ty);
+            self.current_pat_types.insert(*pat_id, sub_ty);
+        }
+
+        let pattern = &self.arena.pats[pat_id.0 as usize];
+        match pattern {
+            mellis_ast::Pattern::Tuple { elements, .. } => {
+                for elem in elements {
+                    self.visit_pattern(elem);
+                }
+            }
+            mellis_ast::Pattern::Struct { fields, .. } => {
+                for field in fields {
+                    if let Some(field_pat) = field.pattern {
+                        self.visit_pattern(&field_pat);
+                    }
+                }
+            }
+            mellis_ast::Pattern::Enum { fields, .. } => {
+                for field in fields {
+                    self.visit_pattern(field);
+                }
+            }
+            // Leaf variants with no children to traverse
+            mellis_ast::Pattern::Wildcard | mellis_ast::Pattern::Literal(_) | mellis_ast::Pattern::Identifier { .. } => {}
+        }
+    }
+
+    fn visit_expr(&mut self, expr_id: &ExprId) {
         let expr = &self.arena.exprs[expr_id.0 as usize];
+        
+        // Save the substituted type of the expression
+        if let Some(&ty) = self.ctx.tables.expr_types.get(expr_id) {
+            let sub_ty = self.substitute(ty);
+            self.current_expr_types.insert(*expr_id, sub_ty);
+        }
+
         match expr {
-            Expr::Call { callee, generic_args, args } => {
+            Expr::Call { callee, args, .. } => {
                 self.visit_expr(callee);
                 for arg in args {
                     self.visit_expr(&arg.value);
                 }
-                
-                // If it's a generic function, instantiate it
-                if let Expr::Identifier { segments, .. } = &self.arena.exprs[callee.0 as usize] {
-                    if let Some(sym_id) = self.ctx.tables.expr_symbols.get(callee) {
-                        if let Some(decl_id) = self.ctx.tables.symbol_decls.get(sym_id) {
-                            if let Decl::Function { generic_params, .. } = &self.arena.decls[decl_id.0 as usize] {
-                                if !generic_params.is_empty() && generic_params.len() == generic_args.len() {
-                                    let mut subst_vec = Vec::new();
-                                    // In a real compiler, we need to extract string names of generic parameters
-                                    // For simplicity here, we assume generic_params names are "T", "U", etc.
-                                    // But actually we have to lower `generic_args` to `SemanticTypeId`
-                                    for (i, param) in generic_params.iter().enumerate() {
-                                        let name = format!("T{}", i); // stub
-                                        if let Some(sem_ty) = self.ctx.tables.ast_type_to_semantic.get(&generic_args[i]) {
-                                            subst_vec.push((name, *sem_ty));
-                                        }
-                                    }
-                                    subst_vec.sort_by(|a, b| a.0.cmp(&b.0));
-                                    
-                                    let instance = MonoInstance {
-                                        decl_id: *decl_id,
-                                        subst: subst_vec,
-                                    };
-                                    
-                                    if self.instances.insert(instance) {
-                                        // Recursively visit the instantiated generic function body
-                                        // Wait, the generic function body needs to be visited!
-                                        if let Decl::Function { body: Some(body_stmt), .. } = &self.arena.decls[decl_id.0 as usize] {
-                                            self.visit_stmt(body_stmt);
-                                        }
+
+                // Generic Call Instantiation
+                if let Some(&sym_id) = self.ctx.tables.expr_symbols.get(callee) {
+                    let symbol = self.ctx.symbol_table.get_symbol(sym_id);
+                    if matches!(symbol.kind, crate::SymbolKind::Function | crate::SymbolKind::ExternFunction) {
+                        if let Some(&decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
+                            if let Some(subst) = self.ctx.tables.expr_substs.get(callee).cloned() {
+                                let mut instance_subst = Vec::new();
+                                for (sym, ty) in subst.map {
+                                    let sub_ty = self.substitute(ty);
+                                    instance_subst.push((sym, sub_ty));
+                                }
+                                instance_subst.sort_by_key(|k| k.0);
+                                let instance = MonoInstance {
+                                    decl_id,
+                                    subst: instance_subst,
+                                    closure_id: None,
+                                };
+                                self.current_mono_calls.insert(*expr_id, instance.clone());
+                                if !self.instantiated.contains_key(&instance) {
+                                    self.worklist.push(instance);
+                                }
+                            } else {
+                                // Non-generic call, record it anyway with empty subst
+                                let instance = MonoInstance {
+                                    decl_id,
+                                    subst: vec![],
+                                    closure_id: None,
+                                };
+                                self.current_mono_calls.insert(*expr_id, instance.clone());
+                                if symbol.provider_id.is_none() {
+                                    if !self.instantiated.contains_key(&instance) {
+                                        self.worklist.push(instance);
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+            Expr::MethodCall { object, args, .. } => {
+                self.visit_expr(object);
+                for arg in args {
+                    self.visit_expr(&arg.value);
+                }
+                // Handle instantiation for generic method calls
+                if let Some(&sym_id) = self.ctx.tables.expr_symbols.get(expr_id) {
+                    if let Some(&decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
+                        let mut instance_subst = Vec::new();
+                        if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id).cloned() {
+                            for (sym, ty) in subst.map {
+                                let sub_ty = self.substitute(ty);
+                                instance_subst.push((sym, sub_ty));
+                            }
+                        }
+                        instance_subst.sort_by_key(|k| k.0);
+                        let instance = MonoInstance {
+                            decl_id,
+                            subst: instance_subst,
+                            closure_id: None,
+                        };
+                        self.current_mono_calls.insert(*expr_id, instance.clone());
+                        if !self.instantiated.contains_key(&instance) {
+                            self.worklist.push(instance);
                         }
                     }
                 }
@@ -157,14 +404,65 @@ impl<'a> Monomorphizer<'a> {
             Expr::Member { object, .. } => {
                 self.visit_expr(object);
             }
+            Expr::MethodCall { object, args, .. } => {
+                self.visit_expr(object);
+                for arg in args {
+                    self.visit_expr(&arg.value);
+                }
+            }
             Expr::StructInit { fields, .. } => {
                 for field in fields {
                     self.visit_expr(&field.value);
                 }
-                // (Instantiate struct generic types if needed, though usually they don't produce code bodies,
-                // but we might need them for sizes in LLVM codegen)
             }
-            _ => {}
+            Expr::TupleLiteral { elements } => {
+                for element in elements {
+                    self.visit_expr(element);
+                }
+            }
+            Expr::ArrayLiteral { elements } => {
+                for element in elements {
+                    self.visit_expr(element);
+                }
+            }
+            Expr::Cast { expr: inner, .. } => {
+                self.visit_expr(inner);
+            }
+            Expr::Unary { operand, .. } => {
+                self.visit_expr(operand);
+            }
+            Expr::Index { base, index } => {
+                self.visit_expr(base);
+                self.visit_expr(index);
+            }
+            Expr::TupleIndex { object, .. } => {
+                self.visit_expr(object);
+            }
+            Expr::Match { subject, arms, .. } => {
+                self.visit_expr(subject);
+                for arm in arms {
+                    self.visit_pattern(&arm.pattern);
+                    self.visit_stmt(&arm.body);
+                }
+            }
+            Expr::Lambda { body, .. } => {
+                let enclosing = self.current_instance.as_ref().unwrap();
+                let closure_instance = MonoInstance {
+                    decl_id: enclosing.decl_id,
+                    subst: enclosing.subst.clone(),
+                    closure_id: Some(*expr_id),
+                };
+                self.worklist.push(closure_instance);
+                self.visit_stmt(body);
+            }
+            Expr::Try { expr: inner, .. } | Expr::Await { expr: inner } => {
+                self.visit_expr(inner);
+            }
+            Expr::Comptime { body } => {
+                self.visit_stmt(body);
+            }
+            // Leaf variants with no children to traverse
+            Expr::Literal(_) | Expr::Identifier { .. } | Expr::Sizeof { .. } | Expr::Alignof { .. } | Expr::MacroCall { .. } => {}
         }
     }
 }

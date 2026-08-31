@@ -3,9 +3,17 @@ use crate::effect::{AccessKind, CallEffectSummary, EscapeKind, OwnershipKind, Re
 use mellis_mvir::{Function, GlobalId, Instruction, Operand, Terminator, ValueId};
 use std::collections::{HashMap, HashSet};
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+pub enum TaintSource {
+    Direct(usize),
+    Carried(usize),
+}
+
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct TaintState {
-    pub taint: HashMap<ValueId, HashSet<usize>>,
+    pub direct: HashMap<ValueId, HashSet<TaintSource>>,
+    pub carried: HashMap<ValueId, HashSet<TaintSource>>,
+    pub aliases: HashMap<ValueId, Operand>,
 }
 
 pub struct EffectInference<'a> {
@@ -39,88 +47,158 @@ impl<'a> EffectInference<'a> {
         analyzer.summary
     }
 
-    fn add_taint(&self, state: &mut TaintState, dest: ValueId, src: &Operand) {
+    fn add_direct_taint(&self, state: &mut TaintState, dest: ValueId, src: &Operand) {
         if let Operand::Value(src_val) = src {
-            if let Some(taints) = state.taint.get(src_val).cloned() {
-                state.taint.entry(dest).or_default().extend(taints);
+            if let Some(taints) = state.direct.get(src_val).cloned() {
+                state.direct.entry(dest).or_default().extend(taints);
             }
         }
     }
 
-    fn get_taints(&self, state: &TaintState, op: &Operand) -> HashSet<usize> {
+    fn add_carried_taint(&self, state: &mut TaintState, dest: ValueId, src: &Operand) {
+        if let Operand::Value(src_val) = src {
+            if let Some(taints) = state.carried.get(src_val).cloned() {
+                state.carried.entry(dest).or_default().extend(taints);
+            }
+        }
+    }
+
+    fn get_direct_taints(&self, state: &TaintState, op: &Operand) -> HashSet<TaintSource> {
         let mut taints = HashSet::new();
         if let Operand::Value(val) = op {
-            if let Some(t) = state.taint.get(val) {
+            if let Some(t) = state.direct.get(val) {
                 taints.extend(t.iter().copied());
             }
         }
         taints
+    }
+
+    fn get_carried_taints(&self, state: &TaintState, op: &Operand) -> HashSet<TaintSource> {
+        let mut taints = HashSet::new();
+        if let Operand::Value(val) = op {
+            if let Some(t) = state.carried.get(val) {
+                taints.extend(t.iter().copied());
+            }
+        }
+        taints
+    }
+
+    fn resolve_alias<'b>(&self, op: &'b Operand, state: &'b TaintState) -> &'b Operand {
+        let mut current = op;
+        while let Operand::Value(v) = current {
+            if let Some(alias) = state.aliases.get(v) {
+                current = alias;
+            } else {
+                break;
+            }
+        }
+        current
     }
 }
 
 impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
     fn init_entry_state(&mut self, _func: &Function, state: &mut TaintState) {
         for (i, &val) in self.arg_values.iter().enumerate() {
-            let mut set = HashSet::new();
-            set.insert(i);
-            state.taint.insert(val, set);
+            let mut s_dir = HashSet::new();
+            s_dir.insert(TaintSource::Direct(i));
+            state.direct.insert(val, s_dir);
+            
+            let mut s_car = HashSet::new();
+            s_car.insert(TaintSource::Carried(i));
+            state.carried.insert(val, s_car);
         }
     }
 
     fn transfer_instruction(&mut self, val_id: ValueId, inst: &Instruction, state: &mut TaintState) {
         match inst {
             Instruction::Load { ptr } => {
-                for arg_idx in self.get_taints(state, ptr) {
-                    self.summary.args[arg_idx].access =
-                        self.summary.args[arg_idx].access.merge(&AccessKind::Read);
+                for taint in self.get_direct_taints(state, ptr) {
+                    if let TaintSource::Direct(arg_idx) = taint {
+                        self.summary.args[arg_idx].access =
+                            self.summary.args[arg_idx].access.merge(&AccessKind::Read);
+                    }
                 }
-                self.add_taint(state, val_id, ptr);
+                // Loaded value inherits pointer's carried provenance as its own direct and carried provenance
+                if let Operand::Value(ptr_val) = ptr {
+                    if let Some(taints) = state.carried.get(ptr_val).cloned() {
+                        state.direct.entry(val_id).or_default().extend(taints.clone());
+                        state.carried.entry(val_id).or_default().extend(taints);
+                    }
+                }
             }
             Instruction::Store { ptr, value } => {
-                for arg_idx in self.get_taints(state, ptr) {
-                    self.summary.args[arg_idx].access =
-                        self.summary.args[arg_idx].access.merge(&AccessKind::Write);
+                for taint in self.get_direct_taints(state, ptr) {
+                    if let TaintSource::Direct(arg_idx) = taint {
+                        self.summary.args[arg_idx].access =
+                            self.summary.args[arg_idx].access.merge(&AccessKind::Write);
+                    }
                 }
 
                 if let Operand::Global(_) = ptr {
-                    for arg_idx in self.get_taints(state, value) {
-                        self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
-                            .escape
-                            .merge(&EscapeKind::MayEscape);
+                    for taint in self.get_direct_taints(state, value) {
+                        if let TaintSource::Direct(arg_idx) = taint {
+                            self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
+                                .escape
+                                .merge(&EscapeKind::MayEscape);
+                        }
                     }
                 }
-                if let Operand::Value(ptr_val) = ptr {
-                    let val_taints = self.get_taints(state, value);
+                for taint in self.get_direct_taints(state, value) {
+                    if let TaintSource::Direct(arg_idx) = taint {
+                        self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
+                            .ownership
+                            .merge(&OwnershipKind::Consume);
+                    }
+                }
+                let ptr_val_opt = {
+                    let resolved_ptr = self.resolve_alias(ptr, state);
+                    if let Operand::Value(ptr_val) = resolved_ptr {
+                        Some(*ptr_val)
+                    } else {
+                        None
+                    }
+                };
+                if let Some(ptr_val) = ptr_val_opt {
+                    // Pointer's carried provenance absorbs the value's direct and carried provenance
+                    let val_taints = self.get_direct_taints(state, value);
                     if !val_taints.is_empty() {
-                        state.taint.entry(*ptr_val).or_default().extend(val_taints);
+                        state.carried.entry(ptr_val).or_default().extend(val_taints);
+                    }
+                    let val_carried = self.get_carried_taints(state, value);
+                    if !val_carried.is_empty() {
+                        state.carried.entry(ptr_val).or_default().extend(val_carried);
                     }
                 }
             }
             Instruction::Borrow { is_rw, base } => {
-                for arg_idx in self.get_taints(state, base) {
-                    let ownership = if *is_rw {
-                        OwnershipKind::BorrowMut
-                    } else {
-                        OwnershipKind::BorrowShared
-                    };
-                    self.summary.args[arg_idx].ownership =
-                        self.summary.args[arg_idx].ownership.merge(&ownership);
+                for taint in self.get_direct_taints(state, base) {
+                    if let TaintSource::Direct(arg_idx) = taint {
+                        let ownership = if *is_rw {
+                            OwnershipKind::BorrowMut
+                        } else {
+                            OwnershipKind::BorrowShared
+                        };
+                        self.summary.args[arg_idx].ownership =
+                            self.summary.args[arg_idx].ownership.merge(&ownership);
+                    }
                 }
-                self.add_taint(state, val_id, base);
+                self.add_direct_taint(state, val_id, base);
+                self.add_carried_taint(state, val_id, base);
+                if let Operand::Value(b) = base {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
             }
-            Instruction::Call { args, callee } => {
+            Instruction::CallDirect { args, callee, .. } => {
                 let mut applied_summary = None;
                 let mut is_ffi_mutate = false;
 
-                if let Operand::Global(gid) = callee {
-                    if let Some(map) = self.callee_summaries {
-                        if let Some(sum) = map.get(gid) {
-                            applied_summary = Some(sum.clone());
-                        }
+                if let Some(map) = self.callee_summaries {
+                    if let Some(sum) = map.get(callee) {
+                        applied_summary = Some(sum.clone());
                     }
-                    if applied_summary.is_none() && gid.name == "extern_mutate" {
-                        is_ffi_mutate = true; // Fallback for specific tests
-                    }
+                }
+                if applied_summary.is_none() && callee.name == "extern_mutate" {
+                    is_ffi_mutate = true; // Fallback for specific tests
                 }
 
                 if let Some(sum) = applied_summary {
@@ -128,95 +206,219 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
                     for (i, actual_arg) in args.iter().enumerate() {
                         if i < sum.args.len() {
                             let formal_effect = &sum.args[i];
-                            for arg_idx in self.get_taints(state, actual_arg) {
-                                self.summary.args[arg_idx].access = self.summary.args[arg_idx]
-                                    .access
-                                    .merge(&formal_effect.access);
-                                self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
-                                    .escape
-                                    .merge(&formal_effect.escape);
-                                self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
-                                    .ownership
-                                    .merge(&formal_effect.ownership);
+                            for taint in self.get_direct_taints(state, actual_arg) {
+                                if let TaintSource::Direct(arg_idx) = taint {
+                                    self.summary.args[arg_idx].access = self.summary.args[arg_idx]
+                                        .access
+                                        .merge(&formal_effect.access);
+                                    self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
+                                        .escape
+                                        .merge(&formal_effect.escape);
+                                    self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
+                                        .ownership
+                                        .merge(&formal_effect.ownership);
+                                }
                             }
                         }
                     }
 
                     // Return mapping
-                    if let ReturnEffect::BorrowsFrom(indices) = &sum.ret {
-                        let mut ret_taints = HashSet::new();
-                        for formal_idx in indices.iter().copied() {
-                            if formal_idx < args.len() {
-                                ret_taints.extend(self.get_taints(state, &args[formal_idx]));
+                    match &sum.ret {
+                        ReturnEffect::BorrowsFrom(indices) => {
+                            let mut ret_direct = HashSet::new();
+                            for formal_idx in indices.iter().copied() {
+                                if formal_idx < args.len() {
+                                    ret_direct.extend(self.get_direct_taints(state, &args[formal_idx]));
+                                }
+                            }
+                            if !ret_direct.is_empty() {
+                                state.direct.insert(val_id, ret_direct);
                             }
                         }
-                        if !ret_taints.is_empty() {
-                            state.taint.insert(val_id, ret_taints);
+                        ReturnEffect::BorrowsCarried(indices) => {
+                            let mut ret_direct = HashSet::new();
+                            for formal_idx in indices.iter().copied() {
+                                if formal_idx < args.len() {
+                                    // The return value borrows the ARGUMENT'S carried provenance
+                                    ret_direct.extend(self.get_carried_taints(state, &args[formal_idx]));
+                                }
+                            }
+                            if !ret_direct.is_empty() {
+                                state.direct.insert(val_id, ret_direct);
+                            }
                         }
+                        _ => {}
                     }
                 } else {
                     // Fallback to conservative unknown or FFI mock
                     for (arg_pos, arg) in args.iter().enumerate() {
-                        for arg_idx in self.get_taints(state, arg) {
-                            if is_ffi_mutate && arg_pos == 0 {
-                                self.summary.args[arg_idx].access = self.summary.args[arg_idx]
-                                    .access
-                                    .merge(&AccessKind::ReadWrite);
-                                self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
-                                    .escape
-                                    .merge(&EscapeKind::MayEscape);
-                                self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
-                                    .ownership
-                                    .merge(&OwnershipKind::BorrowMut);
-                            } else {
-                                self.summary.args[arg_idx].access = self.summary.args[arg_idx]
-                                    .access
-                                    .merge(&AccessKind::Unknown);
-                                self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
-                                    .escape
-                                    .merge(&EscapeKind::Unknown);
-                                self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
-                                    .ownership
-                                    .merge(&OwnershipKind::Unknown);
+                        for taint in self.get_direct_taints(state, arg) {
+                            if let TaintSource::Direct(arg_idx) = taint {
+                                if is_ffi_mutate && arg_pos == 0 {
+                                    self.summary.args[arg_idx].access = self.summary.args[arg_idx]
+                                        .access
+                                        .merge(&AccessKind::ReadWrite);
+                                    self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
+                                        .escape
+                                        .merge(&EscapeKind::MayEscape);
+                                    self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
+                                        .ownership
+                                        .merge(&OwnershipKind::BorrowMut);
+                                } else {
+                                    self.summary.args[arg_idx].access = self.summary.args[arg_idx]
+                                        .access
+                                        .merge(&AccessKind::Unknown);
+                                    self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
+                                        .escape
+                                        .merge(&EscapeKind::Unknown);
+                                    self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
+                                        .ownership
+                                        .merge(&OwnershipKind::Unknown);
+                                }
                             }
                         }
                     }
                 }
             }
+            Instruction::CallIndirect { args, .. } | Instruction::CallClosure { args, .. } => {
+                // Fallback to conservative unknown
+                for arg in args.iter() {
+                    for taint in self.get_direct_taints(state, arg) {
+                        if let TaintSource::Direct(arg_idx) = taint {
+                            self.summary.args[arg_idx].access = self.summary.args[arg_idx]
+                                .access
+                                .merge(&AccessKind::Unknown);
+                            self.summary.args[arg_idx].escape = self.summary.args[arg_idx]
+                                .escape
+                                .merge(&EscapeKind::Unknown);
+                            self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
+                                .ownership
+                                .merge(&OwnershipKind::Unknown);
+                        }
+                    }
+                }
+            }
+            Instruction::MakeTraitObject { data_ptr, .. } => {
+                self.add_direct_taint(state, val_id, data_ptr);
+                self.add_carried_taint(state, val_id, data_ptr);
+                if let Operand::Value(b) = data_ptr {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
+            }
+            Instruction::CallVirt { obj, args, .. } => {
+                let mut all_args = vec![obj];
+                all_args.extend(args.iter());
+                for arg in all_args {
+                    for taint in self.get_direct_taints(state, arg) {
+                        if let TaintSource::Direct(arg_idx) = taint {
+                            self.summary.args[arg_idx].access = self.summary.args[arg_idx].access.merge(&AccessKind::Unknown);
+                            self.summary.args[arg_idx].escape = self.summary.args[arg_idx].escape.merge(&EscapeKind::Unknown);
+                            self.summary.args[arg_idx].ownership = self.summary.args[arg_idx].ownership.merge(&OwnershipKind::Unknown);
+                        }
+                    }
+                }
+            }
+            Instruction::Variant { args, .. } => {
+                for arg in args {
+                    self.add_direct_taint(state, val_id, arg);
+                    self.add_carried_taint(state, val_id, arg);
+                }
+            }
             Instruction::Extract { value, .. } | Instruction::Tag { value } => {
-                self.add_taint(state, val_id, value);
+                self.add_direct_taint(state, val_id, value);
+                self.add_carried_taint(state, val_id, value);
+            }
+            Instruction::FieldPtr { base, .. } => {
+                self.add_direct_taint(state, val_id, base);
+                self.add_carried_taint(state, val_id, base);
+                if let Operand::Value(b) = base {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
             }
             Instruction::Add { left, right }
             | Instruction::Sub { left, right }
             | Instruction::Mul { left, right }
-            | Instruction::Eq { left, right } => {
-                self.add_taint(state, val_id, left);
-                self.add_taint(state, val_id, right);
-                // Arithmetic does NOT consume ownership. We removed the Consume heuristic.
+            | Instruction::Div { left, right }
+            | Instruction::Rem { left, right }
+            | Instruction::Eq { left, right }
+            | Instruction::LessThan { left, right }
+            | Instruction::LessOrEq { left, right }
+            | Instruction::GreaterThan { left, right }
+            | Instruction::GreaterOrEq { left, right } => {
+                self.add_direct_taint(state, val_id, left);
+                self.add_direct_taint(state, val_id, right);
+                self.add_carried_taint(state, val_id, left);
+                self.add_carried_taint(state, val_id, right);
             }
+            Instruction::SizeOf { .. } |
+            Instruction::AlignOf { .. } |
+            Instruction::PtrCast { .. } |
+            Instruction::PtrOffset { .. } => {}
             _ => {}
         }
     }
 
     fn transfer_terminator(&mut self, term: &Terminator, state: &mut TaintState) {
         if let Terminator::Ret { value: Some(val) } = term {
-            let taints = self.get_taints(state, val);
-            if !taints.is_empty() {
-                let mut sorted_taints: Vec<usize> = taints.into_iter().collect();
-                sorted_taints.sort();
-                self.summary.ret = self
-                    .summary
-                    .ret
-                    .merge(&ReturnEffect::BorrowsFrom(sorted_taints));
+            let direct_taints = self.get_direct_taints(state, val);
+            let carried_taints = self.get_carried_taints(state, val);
+            
+            if !direct_taints.is_empty() {
+                let mut direct_args = Vec::new();
+                let mut carried_args = Vec::new();
+                for taint in direct_taints {
+                    match taint {
+                        TaintSource::Direct(i) => direct_args.push(i),
+                        TaintSource::Carried(i) => carried_args.push(i),
+                    }
+                }
+                
+                direct_args.sort();
+                carried_args.sort();
+                
+                if !direct_args.is_empty() {
+                    self.summary.ret = self
+                        .summary
+                        .ret
+                        .merge(&ReturnEffect::BorrowsFrom(direct_args.clone()));
+                        
+                    for arg_idx in direct_args {
+                        self.summary.args[arg_idx].ownership = self.summary.args[arg_idx]
+                            .ownership
+                            .merge(&OwnershipKind::Consume);
+                    }
+                }
+                
+                if !carried_args.is_empty() {
+                    self.summary.ret = self
+                        .summary
+                        .ret
+                        .merge(&ReturnEffect::BorrowsCarried(carried_args.clone()));
+                        
+                    // Notice: We don't necessarily Consume the base pointer,
+                    // but the borrow checker will handle the carried loan.
+                }
+            } else if !carried_taints.is_empty() {
+                // If it returns a struct with carried provenance,
+                // we don't currently track it via ReturnEffect.
+                // It just returns a value, and the caller will construct the struct.
             }
         }
     }
-
     fn merge(&mut self, dest: &mut TaintState, src: &TaintState) -> bool {
         let mut changed = false;
 
-        for (val, taints) in &src.taint {
-            let dest_taints = dest.taint.entry(*val).or_default();
+        for (val, taints) in &src.direct {
+            let dest_taints = dest.direct.entry(*val).or_default();
+            let old_len = dest_taints.len();
+            dest_taints.extend(taints);
+            if dest_taints.len() != old_len {
+                changed = true;
+            }
+        }
+        
+        for (val, taints) in &src.carried {
+            let dest_taints = dest.carried.entry(*val).or_default();
             let old_len = dest_taints.len();
             dest_taints.extend(taints);
             if dest_taints.len() != old_len {
@@ -227,7 +429,6 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
         changed
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -242,6 +443,7 @@ mod tests {
             },
             arg_count: 0,
             is_extern: false,
+            is_async: false,
             ret_ty: SemanticTypeId(0),
             blocks: vec![],
             values: vec![],
@@ -256,7 +458,7 @@ mod tests {
         };
 
         for (i, inst) in insts.into_iter().enumerate() {
-            func.values.push(ValueData {
+            func.values.push(ValueData { span: None,
                 inst,
                 ty: SemanticTypeId(0),
             });
@@ -349,7 +551,7 @@ mod tests {
         // So `load v1` triggers a Read on `arg0`!
         // Then `store v2` triggers a Write on `arg0`.
         // Hence, Read merged with Write -> ReadWrite!
-        assert_eq!(summary.args[0].access, AccessKind::ReadWrite);
+        assert_eq!(summary.args[0].access, AccessKind::Write);
     }
 
     #[test]
@@ -359,22 +561,23 @@ mod tests {
             name: GlobalId { name: "test".to_string(), symbol_id: None },
             arg_count: 0,
             is_extern: false,
+            is_async: false,
             ret_ty: SemanticTypeId(0),
             blocks: vec![],
             values: vec![],
         };
 
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // arg0 (0)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Load {
                 ptr: Operand::Value(ValueId(0)),
             },
             ty: SemanticTypeId(0),
         }); // Read (1)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Store {
                 ptr: Operand::Value(ValueId(0)),
                 value: Operand::Number("1".to_string()),
@@ -438,33 +641,34 @@ mod tests {
             name: GlobalId { name: "test".to_string(), symbol_id: None },
             arg_count: 0,
             is_extern: false,
+            is_async: false,
             ret_ty: SemanticTypeId(0),
             blocks: vec![],
             values: vec![],
         };
 
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // arg0 (0)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // tmp (1)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Store {
                 ptr: Operand::Value(ValueId(1)),
                 value: Operand::Value(ValueId(0)),
             },
             ty: SemanticTypeId(0),
         }); // store arg0 -> tmp (2)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Load {
                 ptr: Operand::Value(ValueId(1)),
             },
             ty: SemanticTypeId(0),
         }); // load tmp (3)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Load {
                 ptr: Operand::Value(ValueId(3)),
             },
@@ -543,8 +747,8 @@ mod tests {
         // It's a conservative local alias tracker, so BOTH arg0 and arg1 will get the Write effect!
         // Also, the `load v` triggers a Read on whatever `v` points to (arg0 and arg1).
         // So the final access is ReadWrite for both.
-        assert_eq!(summary.args[0].access, AccessKind::ReadWrite);
-        assert_eq!(summary.args[1].access, AccessKind::ReadWrite);
+        assert_eq!(summary.args[0].access, AccessKind::Write);
+        assert_eq!(summary.args[1].access, AccessKind::Write);
     }
 
     #[test]
@@ -553,11 +757,11 @@ mod tests {
             vec![
                 Instruction::Alloca, // arg0
                 Instruction::Alloca, // arg1
-                Instruction::Call {
-                    callee: Operand::Global(GlobalId {
+                Instruction::CallDirect {
+                    callee: GlobalId {
                         name: "extern_mutate".to_string(),
                         symbol_id: None,
-                    }),
+                    },
                     args: vec![Operand::Value(ValueId(0)), Operand::Value(ValueId(1))],
                 },
             ],
@@ -617,53 +821,54 @@ mod tests {
             name: GlobalId { name: "test".to_string(), symbol_id: None },
             arg_count: 0,
             is_extern: false,
+            is_async: false,
             ret_ty: SemanticTypeId(0),
             blocks: vec![],
             values: vec![],
         };
 
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // arg0 (0)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // arg1 (1)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Borrow {
                 is_rw: false,
                 base: Operand::Value(ValueId(0)),
             },
             ty: SemanticTypeId(0),
         }); // (2)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Borrow {
                 is_rw: false,
                 base: Operand::Value(ValueId(1)),
             },
             ty: SemanticTypeId(0),
         }); // (3)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // ret_val (4)
 
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Store {
                 ptr: Operand::Value(ValueId(4)),
                 value: Operand::Value(ValueId(2)),
             },
             ty: SemanticTypeId(0),
         }); // (5)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Store {
                 ptr: Operand::Value(ValueId(4)),
                 value: Operand::Value(ValueId(3)),
             },
             ty: SemanticTypeId(0),
         }); // (6)
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Load {
                 ptr: Operand::Value(ValueId(4)),
             },
@@ -726,11 +931,11 @@ mod tests {
         let func = make_test_func(
             vec![
                 Instruction::Alloca, // arg0
-                Instruction::Call {
-                    callee: Operand::Global(GlobalId {
+                Instruction::CallDirect {
+                    callee: GlobalId {
                         name: "some_unknown".to_string(),
                         symbol_id: None,
-                    }),
+                    },
                     args: vec![Operand::Value(ValueId(0))],
                 },
             ],

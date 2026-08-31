@@ -9,6 +9,7 @@ fn dummy_module() -> Module {
         name: GlobalId { name: "test_func".to_string(), symbol_id: Some(SymbolId(0)) },
         arg_count: 0,
         is_extern: false,
+        is_async: false,
         ret_ty: SemanticTypeId(0),
         values: Vec::new(),
         blocks: Vec::new(),
@@ -34,11 +35,26 @@ fn dummy_module() -> Module {
 fn test_golden_roundtrip() {
     let module = dummy_module();
     let mut buffer = Vec::new();
+    let arena = mellis_ast::AstArena::new();
+    let source = "";
     
-    MlibWriter::write_module(&module, &mut buffer).expect("write failed");
+    let manifest = mellis_mlib::Manifest {
+        identity: mellis_mlib::ArtifactIdentity { package_id: "".into(), version: "".into(), module_id: "".into(), artifact_id: "".into() },
+        target: mellis_mlib::TargetContract { target_triple: "".into(), object_format: "".into(), abi: "".into(), pointer_width: 64, endianness: "".into() },
+        dependencies: mellis_mlib::DependencyTable::default(),
+        object_metadata: None,
+        provenance: mellis_mlib::Provenance {
+            source_fingerprint: [0; 32],
+            compiler_version: "".into(),
+            codegen_options: "".into(),
+            interface_hash: [0; 32],
+        },
+        export_table: Default::default(),
+    };
+    MlibWriter::write_module(&module, &arena, &[], source, manifest, None, &mut buffer).expect("write failed");
     
     let mut cursor = Cursor::new(buffer);
-    let mlib_module = MlibReader::read_module(&mut cursor).expect("read failed");
+    let (mlib_module, _, _) = MlibReader::read_module(&mut cursor).expect("read failed");
     
     assert_eq!(mlib_module.functions.len(), 1);
     assert_eq!(mlib_module.functions[0].name, "test_func");
@@ -53,7 +69,7 @@ fn test_version_mismatch() {
     header.write_to(&mut buffer).unwrap();
     
     let mut cursor = Cursor::new(buffer);
-    let result = MlibReader::read_module(&mut cursor);
+    let result = MlibReader::read_module(&mut cursor).map(|(m, _, _)| m);
     assert!(matches!(result, Err(mellis_mlib::MlibError::VersionMismatch(999))));
 }
 
@@ -65,21 +81,36 @@ fn test_invalid_magic() {
     header.write_to(&mut buffer).unwrap();
     
     let mut cursor = Cursor::new(buffer);
-    let result = MlibReader::read_module(&mut cursor);
+    let result = MlibReader::read_module(&mut cursor).map(|(m, _, _)| m);
     assert!(matches!(result, Err(mellis_mlib::MlibError::InvalidMagic)));
 }
 
 #[test]
 fn test_corrupted_data() {
     let module = dummy_module();
+    let arena = mellis_ast::AstArena::new();
+    let source = "";
     let mut buffer = Vec::new();
-    MlibWriter::write_module(&module, &mut buffer).unwrap();
+    let manifest = mellis_mlib::Manifest {
+        identity: mellis_mlib::ArtifactIdentity { package_id: "".into(), version: "".into(), module_id: "".into(), artifact_id: "".into() },
+        target: mellis_mlib::TargetContract { target_triple: "".into(), object_format: "".into(), abi: "".into(), pointer_width: 64, endianness: "".into() },
+        dependencies: mellis_mlib::DependencyTable::default(),
+        object_metadata: None,
+        provenance: mellis_mlib::Provenance {
+            source_fingerprint: [0; 32],
+            compiler_version: "".into(),
+            codegen_options: "".into(),
+            interface_hash: [0; 32],
+        },
+        export_table: Default::default(),
+    };
+    MlibWriter::write_module(&module, &arena, &[], source, manifest, None, &mut buffer).unwrap();
     
     // truncate buffer
     buffer.truncate(buffer.len() / 2);
     
     let mut cursor = Cursor::new(buffer);
-    let result = MlibReader::read_module(&mut cursor);
+    let result = MlibReader::read_module(&mut cursor).map(|(m, _, _)| m);
     assert!(result.is_err()); // Either Io or BincodeError
 }
 
@@ -96,7 +127,7 @@ fn test_unknown_section() {
     buffer.extend_from_slice(&0u64.to_le_bytes()); // length
     
     let mut cursor = Cursor::new(buffer);
-    let result = MlibReader::read_module(&mut cursor);
+    let result = MlibReader::read_module(&mut cursor).map(|(m, _, _)| m);
     // The reader errors because of Unknown section during reading the entry
     assert!(result.is_err());
 }
@@ -105,7 +136,7 @@ fn test_unknown_section() {
 fn test_load_core_mlib() {
     use std::fs::File;
     let mut f = File::open("../../../lib/core.mlib").unwrap();
-    let m = mellis_mlib::MlibReader::read_module(&mut f);
+    let m = mellis_mlib::MlibReader::read_module(&mut f).map(|(m, _, _)| m);
     println!("{:?}", m);
     m.unwrap();
 }

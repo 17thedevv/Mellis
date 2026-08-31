@@ -1,0 +1,34 @@
+
+
+struct Error { code: i32 }
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+struct Resource {
+    id: i32,
+}
+
+fn borrow_resource(r: &rw Resource) -> Result<&rw i32, Error> {
+    return Result::Ok(&rw r.id);
+}
+
+fn test_func(r: &rw Resource) -> Result<&rw i32, Error> {
+    dec val = borrow_resource(r)?;
+    return Result::Ok(val);
+}
+
+fn main() {
+    dec rw r = Resource { id: 1 };
+    dec res = test_func(&rw r); // Borrows `r` mutably, and stores it in `res` via Result payload
+    
+    // Attempting to borrow `r` mutably again while `res` is active should fail!
+    dec r2 = &rw r; //~ ERROR Cannot borrow '%v4' as &rw because it is already borrowed as &rw
+    
+    // Keep `res` active
+    dec use_res = match res {
+        Result::Ok(v) -> v,
+        Result::Err(e) -> &rw r2.id,
+    };
+}

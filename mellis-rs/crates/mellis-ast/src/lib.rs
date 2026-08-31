@@ -3,31 +3,35 @@ pub mod expr;
 pub mod pat;
 pub mod stmt;
 pub mod ty;
+pub mod relocator;
 
 pub use decl::*;
 pub use expr::*;
 pub use pat::*;
 pub use stmt::*;
 pub use ty::*;
+pub use relocator::*;
 
 use mellis_common::ids::{FileId, Span};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ExprId(pub u32);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct StmtId(pub u32);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DeclId(pub u32);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TypeId(pub u32);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PatId(pub u32);
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AstArena {
     pub exprs: Vec<Expr>,
     pub stmts: Vec<Stmt>,

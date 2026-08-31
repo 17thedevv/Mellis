@@ -20,6 +20,8 @@ pub struct MvirGenerator<'a> {
     loop_scopes: Vec<usize>,
     loop_break_targets: Vec<LabelId>,
     loop_continue_targets: Vec<LabelId>,
+    current_span: Option<mellis_common::Span>,
+    current_async_future: Option<ValueId>,
 }
 
 impl<'a> MvirGenerator<'a> {
@@ -37,14 +39,111 @@ impl<'a> MvirGenerator<'a> {
             loop_scopes: Vec::new(),
             loop_break_targets: Vec::new(),
             loop_continue_targets: Vec::new(),
+            current_span: None,
+            current_async_future: None,
         }
     }
 
-    pub fn generate(mut self, items: &[Item]) -> Module {
-        for instance in &self.ctx.mono_instances {
+    pub fn generate(mut self, _items: &[Item]) -> Module {
+        for instance in &self.ctx.instantiated_functions {
             self.generate_mono_instance(instance);
         }
         self.module
+    }
+
+    pub fn generate_function_by_decl_id(&mut self, decl_id: mellis_ast::DeclId) {
+        let instance = mellis_semantic::mono::InstantiatedFunction {
+            instance: mellis_semantic::mono::MonoInstance {
+                decl_id,
+                subst: Vec::new(),
+                closure_id: None,
+            },
+            expr_types: std::collections::HashMap::new(),
+            symbol_types: std::collections::HashMap::new(),
+            pat_types: std::collections::HashMap::new(),
+            mono_calls: std::collections::HashMap::new(),
+            mono_for_loops: std::collections::HashMap::new(),
+            closure_capture_bindings: Vec::new(),
+            closure_env_type: None,
+            closure_env_ptr_type: None,
+        };
+        self.generate_mono_instance(&instance);
+    }
+
+    pub fn generate_all_known_functions(&mut self) {
+        for instance in &self.ctx.instantiated_functions {
+            self.generate_mono_instance(instance);
+        }
+        for (decl_id_idx, decl) in self.arena.decls.iter().enumerate() {
+            if let mellis_ast::Decl::Function { generic_params, body: Some(_), .. } = decl {
+                if generic_params.is_empty() {
+                    let decl_id = mellis_ast::DeclId(decl_id_idx as u32);
+                    let sym_id_opt = self.ctx.tables.decl_symbols.get(&decl_id).copied();
+                    let fn_name = sym_id_opt.map(|s| {
+                        if (s.0 as usize) < self.ctx.symbol_table.symbols.len() {
+                            self.ctx.symbol_table.symbols[s.0 as usize].name.clone()
+                        } else {
+                            String::new()
+                        }
+                    }).unwrap_or_default();
+                    if !fn_name.is_empty() && !self.module.functions.iter().any(|f| f.name.name == fn_name) {
+                        self.generate_function_by_decl_id(decl_id);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn current_module(&self) -> &Module {
+        &self.module
+    }
+
+    pub fn generate_expr_as_function(&mut self, expr_id: &mellis_ast::ExprId, ret_ty: mellis_semantic::SemanticTypeId) -> Function {
+        let global_id = GlobalId {
+            name: format!("__comptime_eval_{}", expr_id.0),
+            symbol_id: None,
+        };
+        self.current_function = Some(Function {
+            name: global_id,
+            is_extern: false,
+            is_async: false,
+            arg_count: 0,
+            ret_ty,
+            blocks: Vec::new(),
+            values: Vec::new(),
+        });
+        self.start_block(LabelId { name: "entry".to_string() });
+        let val_op = self.generate_expr(expr_id);
+        self.terminate_block(Terminator::Ret { value: Some(val_op) });
+        if let Some(block) = self.current_block.take() {
+            self.current_function.as_mut().unwrap().blocks.push(block);
+        }
+        self.current_function.take().unwrap()
+    }
+
+    pub fn generate_stmt_as_function(&mut self, stmt_id: &mellis_ast::StmtId, ret_ty: mellis_semantic::SemanticTypeId) -> Function {
+        let global_id = GlobalId {
+            name: format!("__comptime_eval_stmt_{}", stmt_id.0),
+            symbol_id: None,
+        };
+        self.current_function = Some(Function {
+            name: global_id,
+            is_extern: false,
+            is_async: false,
+            arg_count: 0,
+            ret_ty,
+            blocks: Vec::new(),
+            values: Vec::new(),
+        });
+        self.start_block(LabelId { name: "entry".to_string() });
+        let ret_val = self.generate_block_expr(stmt_id);
+        if let Some(mut block) = self.current_block.take() {
+            if block.terminator.is_none() {
+                block.terminator = Some(Terminator::Ret { value: Some(ret_val) });
+            }
+            self.current_function.as_mut().unwrap().blocks.push(block);
+        }
+        self.current_function.take().unwrap()
     }
 
     fn push_scope(&mut self) {
@@ -63,7 +162,7 @@ impl<'a> MvirGenerator<'a> {
             if let Some(&val_id) = self.locals.get(&sym) {
                 let ty_id = self.ctx.tables.symbol_types.get(&sym).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
                 if self.ctx.needs_drop(ty_id) {
-                    self.push_inst(Instruction::Drop { value: Operand::Value(val_id) }, ty_id);
+                    self.push_inst(Instruction::Drop { value: Operand::Value(val_id), callee: None, ty: ty_id }, ty_id);
                 }
             }
         }
@@ -81,16 +180,17 @@ impl<'a> MvirGenerator<'a> {
             Item::Decl(decl_id) => {
                 let decl = &self.arena.decls[decl_id.0 as usize];
                 match decl {
-                    Decl::Var { name: _, initializer, pattern, .. } => {
-                        let init_op = if let Some(init_expr) = initializer {
-                            self.generate_expr(init_expr)
-                        } else {
-                            Operand::Number("0".to_string())
-                        };
+                    Decl::Var { name, initializer, pattern, .. } => {
+                        let init_op = initializer.as_ref().map(|init_expr| self.generate_expr(init_expr));
+                        
+                        let prev_span = self.current_span.clone();
+                        self.current_span = Some(*name);
                         
                         if let Some(pat_id) = pattern {
                             self.bind_pattern(pat_id, init_op);
                         }
+                        
+                        self.current_span = prev_span;
                     }
                     _ => {} // Functions are handled by generate_mono_instance
                 }
@@ -101,7 +201,7 @@ impl<'a> MvirGenerator<'a> {
         }
     }
 
-    fn bind_pattern(&mut self, pat_id: &mellis_ast::PatId, val_op: Operand) {
+    fn bind_pattern(&mut self, pat_id: &mellis_ast::PatId, val_op: Option<Operand>) {
         match &self.arena.pats[pat_id.0 as usize] {
             mellis_ast::Pattern::Identifier { .. } => {
                 if let Some(sym_id) = self.ctx.tables.pat_symbols.get(pat_id).copied() {
@@ -112,10 +212,12 @@ impl<'a> MvirGenerator<'a> {
                         scope.push(sym_id);
                     }
                     
-                    self.push_inst(Instruction::Store {
-                        ptr: Operand::Value(alloca_val),
-                        value: val_op,
-                    }, ty_id);
+                    if let Some(val) = val_op {
+                        self.push_inst(Instruction::Store {
+                            ptr: Operand::Value(alloca_val),
+                            value: val,
+                        }, ty_id);
+                    }
                 }
             }
             mellis_ast::Pattern::Struct { fields, .. } => {
@@ -137,12 +239,15 @@ impl<'a> MvirGenerator<'a> {
                                         }
                                     }
                                     let field_ty = self.ctx.tables.pat_types.get(&field_pat).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
-                                    let extract_val = self.push_inst(Instruction::Extract {
-                                        value: val_op.clone(),
-                                        variant_idx: 0,
-                                        field_idx: field_idx as u32,
-                                    }, field_ty);
-                                    self.bind_pattern(&field_pat, Operand::Value(extract_val));
+                                    let extract_op = val_op.as_ref().map(|v| {
+                                        let extract_val = self.push_inst(Instruction::Extract {
+                                            value: v.clone(),
+                                            variant_idx: 0,
+                                            field_idx: field_idx as u32,
+                                        }, field_ty);
+                                        Operand::Value(extract_val)
+                                    });
+                                    self.bind_pattern(&field_pat, extract_op);
                                 }
                             }
                         }
@@ -152,18 +257,21 @@ impl<'a> MvirGenerator<'a> {
             mellis_ast::Pattern::Tuple { elements, .. } => {
                 for (idx, elem) in elements.iter().enumerate() {
                     let field_ty = self.ctx.tables.pat_types.get(elem).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
-                    let extract_val = self.push_inst(Instruction::Extract {
-                        value: val_op.clone(),
-                        variant_idx: 0,
-                        field_idx: idx as u32,
-                    }, field_ty);
-                    self.bind_pattern(elem, Operand::Value(extract_val));
+                    let extract_op = val_op.as_ref().map(|v| {
+                        let extract_val = self.push_inst(Instruction::Extract {
+                            value: v.clone(),
+                            variant_idx: 0,
+                            field_idx: idx as u32,
+                        }, field_ty);
+                        Operand::Value(extract_val)
+                    });
+                    self.bind_pattern(elem, extract_op);
                 }
             }
             mellis_ast::Pattern::Enum { fields: elements, .. } => {
                 // TODO: enum extraction
                 for elem in elements {
-                    self.bind_pattern(elem, Operand::Number("0".to_string()));
+                    self.bind_pattern(elem, val_op.clone());
                 }
             }
             _ => {}
@@ -182,17 +290,157 @@ impl<'a> MvirGenerator<'a> {
                 }
                 Operand::Number("0".to_string())
             }
-            Expr::Unary { op: mellis_ast::expr::UnaryOp::Deref, operand } => {
+            Expr::Member { object, member } => {
+                let base_op = self.generate_lvalue(object);
+                let obj_ty_id = self.ctx.tables.expr_types.get(object).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                let mut field_idx = 0;
+                
+                if let mellis_semantic::SemanticType::Struct(sym_id, _) = self.ctx.types.get(obj_ty_id) {
+                    let sym = self.ctx.symbol_table.get_symbol(*sym_id);
+                    if let Some(decl_id) = sym.decl_id {
+                        if let mellis_ast::Decl::Struct { fields, .. } = &self.arena.decls[decl_id.0 as usize] {
+                            let member_name = self.source[member.start as usize..member.end as usize].to_string();
+                            for (i, f) in fields.iter().enumerate() {
+                                let f_name = self.source[f.name.start as usize..f.name.end as usize].to_string();
+                                if f_name == member_name {
+                                    field_idx = i as u32;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Ty_id of lvalue is a pointer, but in MVIR we just generate the FieldPtr instruction
+                // The type of the field pointer isn't strictly tracked in ValueData, but we can assign the field type.
+                let field_ty = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                let field_ptr_val = self.push_inst(Instruction::FieldPtr {
+                    base: base_op,
+                    field_idx,
+                }, field_ty);
+                Operand::Value(field_ptr_val)
+            }
+            Expr::Unary { op: mellis_ast::expr::UnaryOp::Deref, operand } |
+            Expr::Unary { op: mellis_ast::expr::UnaryOp::DerefMut, operand } => {
                 self.generate_expr(operand)
             }
             _ => Operand::Number("0".to_string()),
         }
     }
 
-    fn generate_mono_instance(&mut self, instance: &mellis_semantic::MonoInstance) {
-        let decl = &self.arena.decls[instance.decl_id.0 as usize];
+    fn generate_closure_mono_instance(&mut self, instance: &mellis_semantic::mono::InstantiatedFunction, expr_id: mellis_ast::ExprId) {
+        let expr = &self.arena.exprs[expr_id.0 as usize];
+        if let Expr::Lambda { body, params, return_type: _, is_move: _ } = expr {
+            let mut fn_name = format!("closure_{}", expr_id.0);
+            if !instance.instance.subst.is_empty() {
+                fn_name = format!("{}_mono", fn_name);
+            }
+            let global_id = GlobalId {
+                name: fn_name,
+                symbol_id: None, // No symbol for anonymous closure
+            };
+            
+            // The environment is passed as the first parameter to the closure (the environment pointer)
+            let env_ty_id = instance.closure_env_ptr_type
+                .or_else(|| self.ctx.tables.closure_env_ptr_types.get(&expr_id).copied())
+                .unwrap_or(mellis_semantic::SemanticTypeId(0));
+            
+            let mut ret_ty_id = mellis_semantic::SemanticTypeId(0);
+            if let Some(mellis_semantic::SemanticType::Closure(_, _, ret)) = instance.expr_types.get(&expr_id).map(|id| self.ctx.types.get(*id)) {
+                ret_ty_id = *ret;
+            } else if let Some(mellis_semantic::SemanticType::Closure(_, _, ret)) = self.ctx.tables.expr_types.get(&expr_id).map(|id| self.ctx.types.get(*id)) {
+                ret_ty_id = *ret;
+            }
+
+            self.current_function = Some(Function {
+                name: global_id,
+                is_extern: false,
+                is_async: false,
+                ret_ty: ret_ty_id,
+                blocks: Vec::new(),
+                values: Vec::new(),
+                arg_count: params.len() + 1, // environment is the extra argument (first)
+            });
+            self.locals.clear();
+            self.lexical_scopes.clear();
+            self.loop_scopes.clear();
+            self.loop_break_targets.clear();
+            self.loop_continue_targets.clear();
+            self.push_scope(); // Function root scope
+            self.next_label_id = 0;
+            
+            let entry_label = self.new_label("entry");
+            self.start_block(entry_label);
+            
+            // The first values must be allocas for the hidden environment and explicit parameters.
+            let env_param = self.push_inst(Instruction::Alloca, env_ty_id);
+            for param_id in params {
+                if let Decl::Param { .. } = &self.arena.decls[param_id.0 as usize] {
+                    if let Some(sym_id) = self.ctx.tables.decl_symbols.get(&param_id).copied() {
+                        let ty_id = instance.symbol_types.get(&sym_id).copied()
+                            .or_else(|| self.ctx.tables.symbol_types.get(&sym_id).copied())
+                            .unwrap_or(mellis_semantic::SemanticTypeId(0));
+                        let alloc_val = self.push_inst(Instruction::Alloca, ty_id);
+                        self.locals.insert(sym_id, alloc_val);
+                        self.lexical_scopes.last_mut().unwrap().push(sym_id);
+                    }
+                }
+            }
+
+            // Bind captured variables to environment fields after parameter allocas exist.
+            let closure_bindings = if instance.closure_capture_bindings.is_empty() {
+                self.ctx.tables.closure_capture_bindings.get(&expr_id).cloned().unwrap_or_default()
+            } else {
+                instance.closure_capture_bindings.clone()
+            };
+            if !closure_bindings.is_empty() {
+                for binding in &closure_bindings {
+                    let field_ptr = self.push_inst(Instruction::FieldPtr {
+                        base: Operand::Value(env_param),
+                        field_idx: binding.env_field,
+                    }, binding.env_ty);
+                    let val = match binding.mode {
+                        mellis_semantic::semantic_tables::CaptureMode::SharedBorrow |
+                        mellis_semantic::semantic_tables::CaptureMode::MutableBorrow => {
+                            self.push_inst(Instruction::Load { ptr: Operand::Value(field_ptr) }, binding.env_ty)
+                        }
+                        mellis_semantic::semantic_tables::CaptureMode::Move => field_ptr,
+                    };
+                    self.locals.insert(binding.symbol, val);
+                }
+            }
+                        
+            self.generate_stmt(body);
+            
+            if let Some(mut block) = self.current_block.take() {
+                if block.terminator.is_none() {
+                    self.current_block = Some(block);
+                    self.emit_drops_up_to(0, None);
+                    block = self.current_block.take().unwrap();
+
+                    let ret_val = if ret_ty_id == mellis_semantic::SemanticTypeId(0) {
+                        None
+                    } else {
+                        Some(Operand::Number("0".to_string()))
+                    };
+                    block.terminator = Some(Terminator::Ret { value: ret_val });
+                }
+                
+                let mut func = self.current_function.take().unwrap();
+                func.blocks.push(block);
+                self.module.functions.push(func);
+            }
+        }
+    }
+
+    fn generate_mono_instance(&mut self, instance: &mellis_semantic::mono::InstantiatedFunction) {
+        if let Some(closure_id) = instance.instance.closure_id {
+            self.generate_closure_mono_instance(instance, closure_id);
+            return;
+        }
+        let decl = &self.arena.decls[instance.instance.decl_id.0 as usize];
         if let Decl::Function { body, .. } = decl {
-            let sym_id_opt = self.ctx.tables.decl_symbols.get(&instance.decl_id).copied();
+            let sym_id_opt = self.ctx.tables.decl_symbols.get(&instance.instance.decl_id).copied();
             let mut fn_name = "func".to_string();
             let mut ret_ty_id = mellis_semantic::SemanticTypeId(0);
             
@@ -208,7 +456,7 @@ impl<'a> MvirGenerator<'a> {
             }
             
             let mut suffix = String::new();
-            if !instance.subst.is_empty() {
+            if !instance.instance.subst.is_empty() {
                 suffix = "_mono".to_string();
             }
             let name_str = format!("{}{}", fn_name, suffix);
@@ -219,9 +467,12 @@ impl<'a> MvirGenerator<'a> {
             
             let arg_count = if let Decl::Function { params, .. } = decl { params.len() } else { 0 };
 
+            let is_async = if let Decl::Function { is_async, .. } = decl { *is_async } else { false };
+
             self.current_function = Some(Function {
                 name: global_id,
-                is_extern: matches!(decl, Decl::Extern { .. }),
+                is_extern: body.is_none(),
+                is_async,
                 ret_ty: ret_ty_id,
                 blocks: Vec::new(),
                 values: Vec::new(),
@@ -241,7 +492,7 @@ impl<'a> MvirGenerator<'a> {
             if let Decl::Function { params, .. } = decl {
                 for param_id in params {
                     if let Decl::Param { .. } = &self.arena.decls[param_id.0 as usize] {
-                        if let Some(sym_id) = self.ctx.tables.decl_symbols.get(param_id).copied() {
+                        if let Some(sym_id) = self.ctx.tables.decl_symbols.get(&param_id).copied() {
                             let ty_id = self.ctx.tables.symbol_types.get(&sym_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
                             let alloc_val = self.push_inst(Instruction::Alloca, ty_id);
                             self.locals.insert(sym_id, alloc_val);
@@ -250,22 +501,53 @@ impl<'a> MvirGenerator<'a> {
                     }
                 }
             }
+
+            if is_async {
+                let future_alloca = self.push_inst(Instruction::Alloca, ret_ty_id);
+                self.push_inst(Instruction::MarkInit { value: Operand::Value(future_alloca) }, ret_ty_id);
+                self.current_async_future = Some(future_alloca);
+                let i32_ty = mellis_semantic::SemanticTypeId(3);
+                let state_ptr = self.push_inst(Instruction::FieldPtr {
+                    base: Operand::Value(future_alloca),
+                    field_idx: 0,
+                }, i32_ty);
+                self.push_inst(Instruction::Store {
+                    ptr: Operand::Value(state_ptr),
+                    value: Operand::Number("0".to_string()),
+                }, i32_ty);
+            } else {
+                self.current_async_future = None;
+            }
             
             if let Some(body_stmt) = body {
-                self.generate_stmt(body_stmt);
+                self.generate_stmt(&body_stmt);
             }
             
             if let Some(mut block) = self.current_block.take() {
                 if block.terminator.is_none() {
                     self.current_block = Some(block);
                     self.emit_drops_up_to(0, None);
-                    block = self.current_block.take().unwrap();
 
-                    let ret_val = if ret_ty_id == mellis_semantic::SemanticTypeId(0) {
+                    let ret_val = if let Some(fut_alloca) = self.current_async_future {
+                        let i32_ty = mellis_semantic::SemanticTypeId(3);
+                        let state_ptr = self.push_inst(Instruction::FieldPtr {
+                            base: Operand::Value(fut_alloca),
+                            field_idx: 0,
+                        }, i32_ty);
+                        self.push_inst(Instruction::Store {
+                            ptr: Operand::Value(state_ptr),
+                            value: Operand::Number("-1".to_string()),
+                        }, i32_ty);
+                        let load_fut = self.push_inst(Instruction::Load {
+                            ptr: Operand::Value(fut_alloca),
+                        }, ret_ty_id);
+                        Some(Operand::Value(load_fut))
+                    } else if ret_ty_id == mellis_semantic::SemanticTypeId(0) {
                         None
                     } else {
                         Some(Operand::Number("0".to_string()))
                     };
+                    block = self.current_block.take().unwrap();
                     block.terminator = Some(Terminator::Ret { value: ret_val });
                 }
                 self.current_function.as_mut().unwrap().blocks.push(block);
@@ -294,6 +576,39 @@ impl<'a> MvirGenerator<'a> {
                 self.pop_scope_and_drop(None);
             }
             Stmt::Return { value } => {
+                if let Some(fut_alloca) = self.current_async_future {
+                    let i32_ty = mellis_semantic::SemanticTypeId(3);
+                    if let Some(expr_id) = value {
+                        let ret_ty = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                        let val_op = self.generate_expr(expr_id);
+                        let val_ptr = self.push_inst(Instruction::FieldPtr {
+                            base: Operand::Value(fut_alloca),
+                            field_idx: 1,
+                        }, ret_ty);
+                        self.push_inst(Instruction::Store {
+                            ptr: Operand::Value(val_ptr),
+                            value: val_op,
+                        }, ret_ty);
+                    }
+                    let state_ptr = self.push_inst(Instruction::FieldPtr {
+                        base: Operand::Value(fut_alloca),
+                        field_idx: 0,
+                    }, i32_ty);
+                    self.push_inst(Instruction::Store {
+                        ptr: Operand::Value(state_ptr),
+                        value: Operand::Number("-1".to_string()),
+                    }, i32_ty);
+                    
+                    self.emit_drops_up_to(0, None);
+                    
+                    let ret_ty_id = self.current_function.as_ref().unwrap().ret_ty;
+                    let load_fut = self.push_inst(Instruction::Load {
+                        ptr: Operand::Value(fut_alloca),
+                    }, ret_ty_id);
+                    self.terminate_block(Terminator::Ret { value: Some(Operand::Value(load_fut)) });
+                    return;
+                }
+
                 let mut returned_sym = None;
                 let val_operand = if let Some(expr_id) = value {
                     let expr = &self.arena.exprs[expr_id.0 as usize];
@@ -378,6 +693,9 @@ impl<'a> MvirGenerator<'a> {
 
                 self.start_block(end_label.clone());
             }
+            Stmt::Unsafe { body } => {
+                self.generate_stmt(body);
+            }
             _ => {}
         }
     }
@@ -397,16 +715,98 @@ impl<'a> MvirGenerator<'a> {
         Operand::Number("0".to_string())
     }
 
+    fn get_expr_span(&self, expr: &mellis_ast::Expr) -> Option<mellis_common::Span> {
+        use mellis_ast::Expr;
+        match expr {
+            Expr::Literal(tok) => Some(tok.span),
+            Expr::Identifier { segments, .. } => segments.first().copied(),
+            Expr::Member { member, .. } => Some(*member),
+            Expr::Call { callee, .. } => self.get_expr_span(&self.arena.exprs[callee.0 as usize]),
+            Expr::MethodCall { method_name, .. } => Some(*method_name),
+            Expr::StructInit { path, .. } => path.first().copied(),
+            Expr::Match { match_span, .. } => Some(*match_span),
+            Expr::Try { try_span, .. } => Some(*try_span),
+            Expr::Lambda { .. } => None,
+            Expr::Assign { lvalue, .. } => self.get_expr_span(&self.arena.exprs[lvalue.0 as usize]),
+            Expr::Binary { left, .. } => self.get_expr_span(&self.arena.exprs[left.0 as usize]),
+            Expr::Unary { operand, .. } => self.get_expr_span(&self.arena.exprs[operand.0 as usize]),
+            Expr::Cast { expr, .. } => self.get_expr_span(&self.arena.exprs[expr.0 as usize]),
+            Expr::Index { base, .. } => self.get_expr_span(&self.arena.exprs[base.0 as usize]),
+            Expr::TupleIndex { object, .. } => self.get_expr_span(&self.arena.exprs[object.0 as usize]),
+            Expr::Await { expr } => self.get_expr_span(&self.arena.exprs[expr.0 as usize]),
+            Expr::Sizeof { .. } | Expr::Alignof { .. } | Expr::Comptime { .. } => None,
+            Expr::MacroCall { span, .. } => Some(*span),
+            Expr::ArrayLiteral { elements } | Expr::TupleLiteral { elements } => {
+                elements.first().and_then(|e| self.get_expr_span(&self.arena.exprs[e.0 as usize]))
+            }
+        }
+    }
+
     fn generate_expr(&mut self, expr_id: &mellis_ast::ExprId) -> Operand {
         let expr = &self.arena.exprs[expr_id.0 as usize];
+        let span = self.get_expr_span(expr);
+        let prev_span = self.current_span.clone();
+        if span.is_some() {
+            self.current_span = span;
+        }
+
+        let mut result = self.generate_expr_inner(expr_id);
+        
+        if let Some(&(trait_sym, concrete_sym)) = self.ctx.tables.dyn_coercions.get(expr_id) {
+            let trait_name = self.ctx.symbol_table.get_symbol(trait_sym).name.clone();
+            let concrete_name = self.ctx.symbol_table.get_symbol(concrete_sym).name.clone();
+            let vtable_global = GlobalId {
+                name: format!("vtable_{}_{}", trait_name, concrete_name),
+                symbol_id: Some(trait_sym),
+            };
+            let ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+            let trait_obj_val = self.push_inst(Instruction::MakeTraitObject {
+                data_ptr: result,
+                vtable: vtable_global,
+                trait_sym,
+            }, ty_id);
+            result = Operand::Value(trait_obj_val);
+        }
+        
         let ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+        let ty = self.ctx.types.get(ty_id);
+        if let mellis_semantic::SemanticType::Never = ty {
+            self.terminate_block(Terminator::Unreachable);
+        }
+        
+        self.current_span = prev_span;
+        result
+    }
+
+    fn generate_expr_inner(&mut self, expr_id: &mellis_ast::ExprId) -> Operand {
+        let expr = &self.arena.exprs[expr_id.0 as usize];
+        let ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+        
+        if let Some(ct_val) = self.ctx.comptime_values.get(expr_id) {
+            match ct_val {
+                mellis_semantic::ComptimeValue::Int { val, .. } => return Operand::Number(val.to_string()),
+                mellis_semantic::ComptimeValue::Float { val, .. } => return Operand::Number(val.to_string()),
+                mellis_semantic::ComptimeValue::Bool(b) => return Operand::Boolean(*b),
+                mellis_semantic::ComptimeValue::Str(s) => return Operand::Number(format!("\"{}\"", s)),
+                mellis_semantic::ComptimeValue::Char(c) => return Operand::Number((*c as u32).to_string()),
+                _ => {}
+            }
+        }
         
         match expr {
             Expr::Literal(tok) => {
                 match tok.kind {
-                    mellis_lexer::TokenKind::IntegerLiteral => {
+                    mellis_lexer::TokenKind::IntegerLiteral | mellis_lexer::TokenKind::FloatLiteral => {
                         let text = self.source[tok.span.start as usize..tok.span.end as usize].to_string();
                         Operand::Number(text)
+                    }
+                    mellis_lexer::TokenKind::StringLiteral => {
+                        let text = self.source[tok.span.start as usize..tok.span.end as usize].to_string();
+                        Operand::StringRef(text)
+                    }
+                    mellis_lexer::TokenKind::CharLiteral => {
+                        let text = self.source[tok.span.start as usize..tok.span.end as usize].to_string();
+                        Operand::Char(text)
                     }
                     mellis_lexer::TokenKind::KwTrue => Operand::Boolean(true),
                     mellis_lexer::TokenKind::KwFalse => Operand::Boolean(false),
@@ -414,18 +814,109 @@ impl<'a> MvirGenerator<'a> {
                 }
             }
             Expr::Binary { op, left, right, .. } => {
-                let left_op = self.generate_expr(left);
-                let right_op = self.generate_expr(right);
-                let inst = match op {
-                    mellis_ast::expr::BinaryOp::Add => Instruction::Add { left: left_op, right: right_op },
-                    mellis_ast::expr::BinaryOp::Sub => Instruction::Sub { left: left_op, right: right_op },
-                    mellis_ast::expr::BinaryOp::Mul => Instruction::Mul { left: left_op, right: right_op },
-                    _ => Instruction::Add { left: left_op, right: right_op },
-                };
-                let val_id = self.push_inst(inst, ty_id);
-                Operand::Value(val_id)
+                if matches!(op, mellis_ast::expr::BinaryOp::LogicAnd | mellis_ast::expr::BinaryOp::LogicOr) {
+                    let left_op = self.generate_expr(left);
+                    let result_alloca = self.push_inst(Instruction::Alloca, ty_id);
+                    self.push_inst(Instruction::Store {
+                        ptr: Operand::Value(result_alloca),
+                        value: left_op.clone(),
+                    }, ty_id);
+                    
+                    let right_label = self.new_label("logical_right");
+                    let end_label = self.new_label("logical_end");
+                    
+                    if *op == mellis_ast::expr::BinaryOp::LogicAnd {
+                        self.terminate_block(Terminator::CondBr {
+                            condition: left_op,
+                            true_target: right_label.clone(),
+                            false_target: end_label.clone(),
+                        });
+                    } else {
+                        self.terminate_block(Terminator::CondBr {
+                            condition: left_op,
+                            true_target: end_label.clone(),
+                            false_target: right_label.clone(),
+                        });
+                    }
+                    
+                    self.start_block(right_label);
+                    let right_op = self.generate_expr(right);
+                    self.push_inst(Instruction::Store {
+                        ptr: Operand::Value(result_alloca),
+                        value: right_op,
+                    }, ty_id);
+                    self.terminate_block(Terminator::Br { target: end_label.clone() });
+                    
+                    self.start_block(end_label);
+                    let load_val = self.push_inst(Instruction::Load {
+                        ptr: Operand::Value(result_alloca),
+                    }, ty_id);
+                    Operand::Value(load_val)
+                } else {
+                    let left_op = self.generate_expr(left);
+                    let right_op = self.generate_expr(right);
+                    let inst = match op {
+                        mellis_ast::expr::BinaryOp::Add => Instruction::Add { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Sub => Instruction::Sub { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Mul => Instruction::Mul { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Div => Instruction::Div { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Mod => Instruction::Rem { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Eq => Instruction::Eq { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Ne => Instruction::NotEq { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Lt => Instruction::LessThan { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Le => Instruction::LessOrEq { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Gt => Instruction::GreaterThan { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::Ge => Instruction::GreaterOrEq { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::BitAnd => Instruction::BitAnd { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::BitOr => Instruction::BitOr { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::BitXor => Instruction::BitXor { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::LShift => Instruction::Shl { left: left_op, right: right_op },
+                        mellis_ast::expr::BinaryOp::RShift => Instruction::Shr { left: left_op, right: right_op },
+                        _ => panic!("Unsupported binary operator in MVIR generation: {:?}", op),
+                    };
+                    let val_id = self.push_inst(inst, ty_id);
+                    Operand::Value(val_id)
+                }
             }
             Expr::Call { callee, args, .. } => {
+                if let Some(&method_idx) = self.ctx.tables.dyn_method_indices.get(callee) {
+                    let callee_expr = &self.arena.exprs[callee.0 as usize];
+                    if let mellis_ast::Expr::Member { object, .. } = callee_expr {
+                        let obj_op = self.generate_expr(object);
+                        let mut arg_ops = Vec::new();
+                        for arg in args {
+                            arg_ops.push(self.generate_expr(&arg.value));
+                        }
+                        let call_val = self.push_inst(Instruction::CallVirt {
+                            obj: obj_op,
+                            method_idx,
+                            args: arg_ops,
+                        }, ty_id);
+                        return Operand::Value(call_val);
+                    }
+                }
+
+                // Check if callee is a struct method call: obj.method(args...)
+                let callee_expr = &self.arena.exprs[callee.0 as usize];
+                if let mellis_ast::Expr::Member { object, .. } = callee_expr {
+                    if let Some(&m_sym) = self.ctx.tables.expr_symbols.get(callee) {
+                        let m_name = self.ctx.symbol_table.get_symbol(m_sym).name.clone();
+                        let obj_op = self.generate_expr(object);
+                        let mut arg_ops = vec![obj_op];
+                        for arg in args {
+                            arg_ops.push(self.generate_expr(&arg.value));
+                        }
+                        let call_val = self.push_inst(Instruction::CallDirect {
+                            callee: GlobalId {
+                                name: m_name,
+                                symbol_id: Some(m_sym),
+                            },
+                            args: arg_ops,
+                        }, ty_id);
+                        return Operand::Value(call_val);
+                    }
+                }
+                
                 let callee_op = self.generate_expr(callee);
                 let mut arg_ops = Vec::new();
                 for arg in args {
@@ -450,9 +941,16 @@ impl<'a> MvirGenerator<'a> {
                     }, ty_id);
                     Operand::Value(call_val)
                 } else {
-                    let call_val = self.push_inst(Instruction::Call {
-                        callee: callee_op,
-                        args: arg_ops,
+                    let callee_ty_id = self.ctx.tables.expr_types.get(callee).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                    let is_closure = matches!(self.ctx.types.get(callee_ty_id), mellis_semantic::SemanticType::Closure(..));
+                    
+                    let call_val = self.push_inst(if is_closure {
+                        Instruction::CallClosure { closure: callee_op, args: arg_ops }
+                    } else {
+                        match callee_op {
+                            Operand::Global(id) => Instruction::CallDirect { callee: id, args: arg_ops },
+                            _ => Instruction::CallIndirect { callee: callee_op, args: arg_ops },
+                        }
                     }, ty_id);
                     Operand::Value(call_val)
                 }
@@ -480,6 +978,16 @@ impl<'a> MvirGenerator<'a> {
                         }
                     }
                     
+                    if let Some(ct_val) = self.ctx.const_values.get(&sym_id) {
+                        match ct_val {
+                            mellis_semantic::ComptimeValue::Int { val: n, .. } => return Operand::Number(n.to_string()),
+                            mellis_semantic::ComptimeValue::Float { val: n, .. } => return Operand::Number(n.to_string()),
+                            mellis_semantic::ComptimeValue::Bool(b) => return Operand::Boolean(*b),
+                            mellis_semantic::ComptimeValue::Str(s) => return Operand::Number(format!("\"{}\"", s)),
+                            _ => {}
+                        }
+                    }
+
                     if let Some(&val_id) = self.locals.get(&sym_id) {
                         let load_val = self.push_inst(Instruction::Load {
                             ptr: Operand::Value(val_id),
@@ -503,20 +1011,34 @@ impl<'a> MvirGenerator<'a> {
                 let ptr_op = self.generate_lvalue(lvalue);
                 let val_op = self.generate_expr(value);
                 let val_ty_id = self.ctx.tables.expr_types.get(value).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
-                self.push_inst(Instruction::Store {
+                self.push_inst_span(Instruction::Store {
                     ptr: ptr_op,
                     value: val_op,
-                }, val_ty_id);
+                }, val_ty_id, self.extract_expr_span(expr_id));
                 Operand::Number("0".to_string())
             }
             Expr::StructInit { fields, .. } => {
                 let struct_alloca = self.push_inst(Instruction::Alloca, ty_id);
-                for field in fields {
-                    let val_op = self.generate_expr(&field.value);
-                    self.push_inst(Instruction::Store {
-                        ptr: Operand::Value(struct_alloca),
-                        value: val_op,
-                    }, mellis_semantic::SemanticTypeId(0));
+                // We use MarkInit if empty struct so it's considered initialized
+                if fields.is_empty() {
+                    self.push_inst(Instruction::MarkInit { value: Operand::Value(struct_alloca) }, ty_id);
+                } else if let Some(indices) = self.ctx.tables.expr_struct_init_indices.get(expr_id) {
+                    for (i, field) in fields.iter().enumerate() {
+                        let field_idx = indices[i];
+                        if field_idx != u32::MAX {
+                            let val_op = self.generate_expr(&field.value);
+                            // Ensure proper field ptr type
+                            let ptr = self.push_inst(Instruction::FieldPtr {
+                                base: Operand::Value(struct_alloca),
+                                field_idx,
+                            }, ty_id);
+                            
+                            self.push_inst(Instruction::Store {
+                                ptr: Operand::Value(ptr),
+                                value: val_op,
+                            }, mellis_semantic::SemanticTypeId(0));
+                        }
+                    }
                 }
                 let load_val = self.push_inst(Instruction::Load {
                     ptr: Operand::Value(struct_alloca),
@@ -525,17 +1047,105 @@ impl<'a> MvirGenerator<'a> {
             }
             Expr::TupleLiteral { elements } => {
                 let tuple_alloca = self.push_inst(Instruction::Alloca, ty_id);
-                for elem in elements {
-                    let val_op = self.generate_expr(elem);
-                    self.push_inst(Instruction::Store {
-                        ptr: Operand::Value(tuple_alloca),
-                        value: val_op,
-                    }, mellis_semantic::SemanticTypeId(0));
+                if elements.is_empty() {
+                    self.push_inst(Instruction::MarkInit { value: Operand::Value(tuple_alloca) }, ty_id);
+                } else {
+                    for (i, elem) in elements.iter().enumerate() {
+                        let val_op = self.generate_expr(elem);
+                        let ptr = self.push_inst(Instruction::FieldPtr {
+                            base: Operand::Value(tuple_alloca),
+                            field_idx: i as u32,
+                        }, ty_id);
+                        
+                        self.push_inst(Instruction::Store {
+                            ptr: Operand::Value(ptr),
+                            value: val_op,
+                        }, mellis_semantic::SemanticTypeId(0));
+                    }
                 }
                 let load_val = self.push_inst(Instruction::Load {
                     ptr: Operand::Value(tuple_alloca),
                 }, ty_id);
                 Operand::Value(load_val)
+            }
+            Expr::ArrayLiteral { elements } => {
+                let array_alloca = self.push_inst(Instruction::Alloca, ty_id);
+                if elements.is_empty() {
+                    self.push_inst(Instruction::MarkInit { value: Operand::Value(array_alloca) }, ty_id);
+                } else {
+                    for (i, elem) in elements.iter().enumerate() {
+                        let val_op = self.generate_expr(elem);
+                        let ptr = self.push_inst(Instruction::FieldPtr {
+                            base: Operand::Value(array_alloca),
+                            field_idx: i as u32,
+                        }, ty_id);
+                        
+                        self.push_inst(Instruction::Store {
+                            ptr: Operand::Value(ptr),
+                            value: val_op,
+                        }, mellis_semantic::SemanticTypeId(0));
+                    }
+                }
+                let load_val = self.push_inst(Instruction::Load {
+                    ptr: Operand::Value(array_alloca),
+                }, ty_id);
+                Operand::Value(load_val)
+            }
+            Expr::Member { .. } => {
+                let ptr_op = self.generate_lvalue(expr_id);
+                let load_val = self.push_inst(Instruction::Load {
+                    ptr: ptr_op,
+                }, ty_id);
+                Operand::Value(load_val)
+            }
+            Expr::MethodCall { object, args, .. } => {
+                if let Some(&method_idx) = self.ctx.tables.dyn_method_indices.get(expr_id) {
+                    let obj_op = self.generate_expr(object);
+                    let mut arg_ops = Vec::new();
+                    for arg in args {
+                        arg_ops.push(self.generate_expr(&arg.value));
+                    }
+                    let call_val = self.push_inst(Instruction::CallVirt {
+                        obj: obj_op,
+                        method_idx,
+                        args: arg_ops,
+                    }, ty_id);
+                    return Operand::Value(call_val);
+                }
+
+                if let Some(&m_sym) = self.ctx.tables.expr_symbols.get(expr_id) {
+                    let m_name = self.ctx.symbol_table.get_symbol(m_sym).name.clone();
+                    let m_ty_opt = self.ctx.tables.symbol_types.get(&m_sym).copied();
+                    let is_ref_self = if let Some(m_ty) = m_ty_opt {
+                        if let mellis_semantic::SemanticType::Function { params, .. } = self.ctx.types.get(m_ty) {
+                            if let Some(&first_param) = params.first() {
+                                matches!(self.ctx.types.get(first_param), mellis_semantic::SemanticType::Reference(..))
+                            } else { false }
+                        } else { false }
+                    } else { false };
+
+                    let obj_op = if is_ref_self {
+                        let lval = self.generate_lvalue(object);
+                        let borrow_val = self.push_inst(Instruction::Borrow { is_rw: false, base: lval }, ty_id);
+                        Operand::Value(borrow_val)
+                    } else {
+                        self.generate_expr(object)
+                    };
+
+                    let mut arg_ops = vec![obj_op];
+                    for arg in args {
+                        arg_ops.push(self.generate_expr(&arg.value));
+                    }
+                    let call_val = self.push_inst(Instruction::CallDirect {
+                        callee: GlobalId {
+                            name: m_name,
+                            symbol_id: Some(m_sym),
+                        },
+                        args: arg_ops,
+                    }, ty_id);
+                    return Operand::Value(call_val);
+                }
+                Operand::Number("0".to_string())
             }
             Expr::Index { base, index } => {
                 let base_op = self.generate_expr(base);
@@ -557,7 +1167,7 @@ impl<'a> MvirGenerator<'a> {
                 // For now we just return an invalid operand or 0 since full code-gen for elements isn't done.
                 Operand::Number("0".to_string())
             }
-            Expr::Match { subject, arms } => {
+            Expr::Match { subject, arms, match_span: _ } => {
                 let subject_op = self.generate_expr(subject);
                 let match_ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
                 
@@ -621,11 +1231,95 @@ impl<'a> MvirGenerator<'a> {
                     }
                     _ => {
                         let _op_val = self.generate_expr(operand);
-                        return Operand::Number("0".to_string())
+                        return Operand::Number("0".to_string());
                     }
                 };
                 let val_id = self.push_inst(inst, ty_id);
                 Operand::Value(val_id)
+            }
+            Expr::Lambda { .. } => {
+                let env_ty_id = self.ctx.tables.closure_env_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                let env_ptr = self.push_inst(Instruction::HeapAlloc, env_ty_id);
+                
+                let mut captures_info = Vec::new();
+                if let Some(bindings) = self.ctx.tables.closure_capture_bindings.get(expr_id) {
+                    for binding in bindings {
+                        let local_val = self.locals.get(&binding.symbol).copied().unwrap_or(crate::ValueId(0));
+                        captures_info.push(crate::CaptureInfo {
+                            symbol: binding.symbol,
+                            mode: binding.mode,
+                            source: local_val,
+                            env_field: binding.env_field,
+                            ty: binding.ty,
+                            env_ty: binding.env_ty,
+                        });
+                    }
+                }
+                
+                let mut fn_name = format!("closure_{}", expr_id.0);
+                if let Some(instance) = &self.current_function {
+                    if instance.name.name.ends_with("_mono") {
+                        fn_name = format!("{}_mono", fn_name);
+                    }
+                }
+                let func_id = GlobalId {
+                    name: fn_name,
+                    symbol_id: None,
+                };
+                
+                let make_closure_val = self.push_inst(Instruction::MakeClosure {
+                    func: func_id,
+                    env_ptr: Operand::Value(env_ptr),
+                    captures: captures_info,
+                }, ty_id);
+                Operand::Value(make_closure_val)
+            }
+            Expr::Await { expr } => {
+                let fut_op = self.generate_expr(expr);
+                let out_ty = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                
+                let await_val = self.push_inst(Instruction::Await { future: fut_op }, out_ty);
+                Operand::Value(await_val)
+            }
+            Expr::Try { expr: inner, .. } => {
+                self.generate_expr(inner)
+            }
+            Expr::Unary { op, operand } => {
+                use mellis_ast::expr::UnaryOp;
+                match op {
+                    UnaryOp::Ref => {
+                        let lval = self.generate_lvalue(operand);
+                        let val = self.push_inst(Instruction::Borrow { is_rw: false, base: lval }, ty_id);
+                        Operand::Value(val)
+                    }
+                    UnaryOp::RefMut => {
+                        let lval = self.generate_lvalue(operand);
+                        let val = self.push_inst(Instruction::Borrow { is_rw: true, base: lval }, ty_id);
+                        Operand::Value(val)
+                    }
+                    UnaryOp::Deref => {
+                        let ptr_op = self.generate_expr(operand);
+                        let val = self.push_inst(Instruction::Load { ptr: ptr_op }, ty_id);
+                        Operand::Value(val)
+                    }
+                    UnaryOp::Neg => {
+                        let val_op = self.generate_expr(operand);
+                        let val = self.push_inst(Instruction::Sub { left: Operand::Number("0".to_string()), right: val_op }, ty_id);
+                        Operand::Value(val)
+                    }
+                    _ => self.generate_expr(operand),
+                }
+            }
+            Expr::Sizeof { target_type } => {
+                let target_ty_id = self.ctx.tables.ast_type_to_semantic.get(target_type).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                Operand::Value(self.push_inst(Instruction::SizeOf { ty: target_ty_id }, ty_id))
+            }
+            Expr::Alignof { target_type } => {
+                let target_ty_id = self.ctx.tables.ast_type_to_semantic.get(target_type).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                Operand::Value(self.push_inst(Instruction::AlignOf { ty: target_ty_id }, ty_id))
+            }
+            Expr::Comptime { body } => {
+                self.generate_block_expr(body)
             }
             _ => Operand::Number("0".to_string())
         }
@@ -655,16 +1349,42 @@ impl<'a> MvirGenerator<'a> {
         });
     }
     
-    fn push_inst(&mut self, inst: Instruction, ty: mellis_semantic::SemanticTypeId) -> ValueId {
+    fn extract_expr_span(&self, expr_id: &mellis_ast::ExprId) -> Option<mellis_common::Span> {
+        match &self.arena.exprs[expr_id.0 as usize] {
+            mellis_ast::Expr::Literal(tok) => Some(tok.span.clone()),
+            mellis_ast::Expr::Identifier { segments, .. } => segments.last().copied(),
+            mellis_ast::Expr::MethodCall { method_name, .. } => Some(method_name.clone()),
+            mellis_ast::Expr::Member { member, .. } => Some(member.clone()),
+            mellis_ast::Expr::Match { match_span, .. } => Some(match_span.clone()),
+            mellis_ast::Expr::Try { try_span, .. } => Some(try_span.clone()),
+            mellis_ast::Expr::StructInit { path, .. } => path.last().copied(),
+            mellis_ast::Expr::Binary { left, .. } => self.extract_expr_span(left),
+            mellis_ast::Expr::Unary { operand, .. } => self.extract_expr_span(operand),
+            mellis_ast::Expr::Assign { lvalue, .. } => self.extract_expr_span(lvalue),
+            mellis_ast::Expr::Call { callee, .. } => self.extract_expr_span(callee),
+            mellis_ast::Expr::Index { base, .. } => self.extract_expr_span(base),
+            mellis_ast::Expr::TupleIndex { object, .. } => self.extract_expr_span(object),
+            mellis_ast::Expr::Cast { expr, .. } => self.extract_expr_span(expr),
+            _ => None,
+        }
+    }
+
+    fn push_inst_span(&mut self, inst: Instruction, ty: mellis_semantic::SemanticTypeId, span: Option<mellis_common::Span>) -> ValueId {
         let func = self.current_function.as_mut().expect("Must be in a function");
         let val_id = ValueId(func.values.len() as u32);
-        func.values.push(ValueData { inst, ty, span: None });
+        func.values.push(ValueData { inst, ty, span });
         
         if let Some(block) = &mut self.current_block {
             block.insts.push(val_id);
         }
         val_id
     }
+
+    fn push_inst(&mut self, inst: Instruction, ty: mellis_semantic::SemanticTypeId) -> ValueId {
+        let span = self.current_span.clone();
+        self.push_inst_span(inst, ty, span)
+    }
+
     
     fn terminate_block(&mut self, term: Terminator) {
         if let Some(mut block) = self.current_block.take() {
@@ -709,6 +1429,23 @@ impl<'a> MvirGenerator<'a> {
                     left: Operand::Value(tag_val),
                     right: expected_tag,
                 }, mellis_semantic::SemanticTypeId(0));
+                
+                Operand::Value(eq_val)
+            }
+            Pattern::Literal(token) => {
+                let text = self.source[token.span.start as usize..token.span.end as usize].to_string();
+                let expected = match token.kind {
+                    mellis_lexer::TokenKind::KwTrue => Operand::Boolean(true),
+                    mellis_lexer::TokenKind::KwFalse => Operand::Boolean(false),
+                    mellis_lexer::TokenKind::StringLiteral => Operand::StringRef(text),
+                    mellis_lexer::TokenKind::CharLiteral => Operand::Char(text),
+                    _ => Operand::Number(text),
+                };
+                
+                let eq_val = self.push_inst(Instruction::Eq {
+                    left: subject.clone(),
+                    right: expected,
+                }, mellis_semantic::SemanticTypeId(0)); // Boolean type
                 
                 Operand::Value(eq_val)
             }

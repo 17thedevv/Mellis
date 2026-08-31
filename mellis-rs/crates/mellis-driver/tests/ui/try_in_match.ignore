@@ -1,0 +1,25 @@
+struct Error { code: i32 }
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+fn fallible(fail: bool) -> Result<i32, Error> {
+    if fail {
+        return Result::Err(Error { code: 2 });
+    }
+    return Result::Ok(20);
+}
+
+fn test_match(opt: Result<bool, Error>) -> Result<i32, Error> {
+    dec val = match opt {
+        Result::Ok(b) -> fallible(b),
+        Result::Err(e) -> Result::Err(e),
+    };
+    dec res = val?;
+    return Result::Ok(res);
+}
+
+fn main() {
+    dec res = test_match(Result::Ok(true));
+}

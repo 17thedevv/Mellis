@@ -28,10 +28,8 @@ impl InterproceduralContext {
             for block in &f.blocks {
                 for &val_id in &block.insts {
                     let val_data = &f.values[val_id.0 as usize];
-                    if let Instruction::Call { callee, .. } = &val_data.inst {
-                        if let Operand::Global(callee_id) = callee {
-                            callers.entry(callee_id.clone()).or_default().push(f.name.clone());
-                        }
+                    if let Instruction::CallDirect { callee, .. } = &val_data.inst {
+                        callers.entry(callee.clone()).or_default().push(f.name.clone());
                     }
                 }
             }
@@ -39,6 +37,9 @@ impl InterproceduralContext {
         
         // Initialize default summaries
         for f in &module.functions {
+            if f.is_extern {
+                continue;
+            }
             // Find argument count by looking at values up to the first non-Alloca?
             // Wait, we need to know how many arguments the function has.
             // In MVIR, arguments are represented as Alloca instructions at the beginning of the entry block.
@@ -55,6 +56,7 @@ impl InterproceduralContext {
             
             for gid in current_worklist {
                 if let Some(&func) = f_map.get(&gid) {
+                    if func.is_extern { continue; }
                     let arg_count = count_arguments(func);
                     let mut arg_values = vec![];
                     for i in 0..arg_count {
@@ -66,7 +68,6 @@ impl InterproceduralContext {
                     
                     if old_summary != new_summary {
                         self.summaries.insert(func.name.clone(), new_summary.clone());
-                        println!("Interprocedural: inferred summary for {} = {:?}", func.name.name, new_summary);
                         changed = true;
                         
                         // Add all callers to worklist

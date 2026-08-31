@@ -18,6 +18,10 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    pub fn source(&self) -> &'a str {
+        self.source
+    }
+
     fn is_at_end(&self) -> bool {
         self.pos >= self.bytes.len()
     }
@@ -91,22 +95,22 @@ impl<'a> Lexer<'a> {
     fn make_token(&self, kind: TokenKind, start_offset: usize) -> Token {
         Token::new(
             kind,
-            Span {
-                file_id: self.file_id,
-                start: start_offset as u32,
-                end: self.pos as u32,
-            },
+            Span::new(
+                self.file_id,
+                start_offset as u32,
+                self.pos as u32,
+            ),
         )
     }
 
     fn error_token(&self, start_offset: usize) -> Token {
         Token::new(
             TokenKind::Error,
-            Span {
-                file_id: self.file_id,
-                start: start_offset as u32,
-                end: self.pos as u32,
-            },
+            Span::new(
+                self.file_id,
+                start_offset as u32,
+                self.pos as u32,
+            ),
         )
     }
 
@@ -128,7 +132,9 @@ impl<'a> Lexer<'a> {
             "in" => TokenKind::KwIn,
             "break" => TokenKind::KwBreak,
             "continue" => TokenKind::KwContinue,
-            "mod" => TokenKind::KwMod,
+            "import" => TokenKind::KwImport,
+            "module" => TokenKind::KwModule,
+            "using" => TokenKind::KwUsing,
             "export" => TokenKind::KwExport,
             "extern" => TokenKind::KwExtern,
             "intrinsic" => TokenKind::KwIntrinsic,
@@ -138,7 +144,6 @@ impl<'a> Lexer<'a> {
             "trait" => TokenKind::KwTrait,
             "impl" => TokenKind::KwImpl,
             "unsafe" => TokenKind::KwUnsafe,
-            "use" => TokenKind::KwUse,
             "as" => TokenKind::KwAs,
             "move" => TokenKind::KwMove,
             "match" => TokenKind::KwMatch,
@@ -149,6 +154,7 @@ impl<'a> Lexer<'a> {
             "sizeof" => TokenKind::KwSizeof,
             "alignof" => TokenKind::KwAlignof,
             "typeof" => TokenKind::KwTypeof,
+            "cast" => TokenKind::KwCast,
             "await" => TokenKind::KwAwait,
             "async" => TokenKind::KwAsync,
             "comptime" => TokenKind::KwComptime,
@@ -156,23 +162,24 @@ impl<'a> Lexer<'a> {
             "self" => TokenKind::KwSelfVal,
             "Self" => TokenKind::KwSelfTyp,
 
-            "i4" => TokenKind::BuiltinType(BuiltinKind::I4),
             "i8" => TokenKind::BuiltinType(BuiltinKind::I8),
             "i16" => TokenKind::BuiltinType(BuiltinKind::I16),
             "i32" => TokenKind::BuiltinType(BuiltinKind::I32),
             "i64" => TokenKind::BuiltinType(BuiltinKind::I64),
             "i128" => TokenKind::BuiltinType(BuiltinKind::I128),
-            "u4" => TokenKind::BuiltinType(BuiltinKind::U4),
+            "isize" => TokenKind::BuiltinType(BuiltinKind::Isize),
             "u8" => TokenKind::BuiltinType(BuiltinKind::U8),
             "u16" => TokenKind::BuiltinType(BuiltinKind::U16),
             "u32" => TokenKind::BuiltinType(BuiltinKind::U32),
             "u64" => TokenKind::BuiltinType(BuiltinKind::U64),
             "u128" => TokenKind::BuiltinType(BuiltinKind::U128),
+            "usize" => TokenKind::BuiltinType(BuiltinKind::Usize),
             "f32" => TokenKind::BuiltinType(BuiltinKind::F32),
             "f64" => TokenKind::BuiltinType(BuiltinKind::F64),
             "bool" => TokenKind::BuiltinType(BuiltinKind::Bool),
             "char" => TokenKind::BuiltinType(BuiltinKind::Char),
             "str" => TokenKind::BuiltinType(BuiltinKind::Str),
+            "void" => TokenKind::BuiltinType(BuiltinKind::Void),
 
             _ => TokenKind::Identifier,
         };
@@ -410,6 +417,8 @@ impl<'a> Iterator for Lexer<'a> {
             b'=' => {
                 if self.match_char(b'=') {
                     TokenKind::EqualEqual
+                } else if self.match_char(b'>') {
+                    TokenKind::FatArrow
                 } else {
                     TokenKind::Equal
                 }
@@ -497,12 +506,18 @@ impl<'a> Iterator for Lexer<'a> {
             b'@' => {
                 if self.match_char(b'[') {
                     TokenKind::AtBracket
-                } else if self.match_char(b'<') {
-                    TokenKind::GenericStart
                 } else {
                     TokenKind::At
                 }
             }
+            b'#' => {
+                if self.match_char(b'[') {
+                    TokenKind::AtBracket
+                } else {
+                    TokenKind::Error
+                }
+            }
+            b'$' => TokenKind::Dollar,
             b';' => TokenKind::Semi,
             b',' => TokenKind::Comma,
             b'(' => TokenKind::LParen,

@@ -68,7 +68,7 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
                         check_operand(v, &mut errors, &format!("Block '{}' Ret", block.label.name));
                     }
                 }
-                Terminator::Unreachable => {}
+                Terminator::Unreachable | Terminator::MissingReturn => {}
             }
         } else {
             errors.push(format!("Block '{}' is missing a terminator", block.label.name));
@@ -79,7 +79,13 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
     for (i, value) in func.values.iter().enumerate() {
         let ctx = format!("Value {}", i);
         match &value.inst {
-            Instruction::Alloca => {}
+            Instruction::MarkInit { value } | Instruction::BoxNew { value } | Instruction::BoxFree { value } | Instruction::Drop { value, .. } => {
+                check_operand(value, &mut errors, &ctx);
+            }
+            Instruction::Await { future } => {
+                check_operand(future, &mut errors, &ctx);
+            }
+            Instruction::Alloca | Instruction::HeapAlloc => {}
             Instruction::Assign(val) => {
                 check_operand(val, &mut errors, &ctx);
             }
@@ -90,14 +96,40 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
             Instruction::Load { ptr } => {
                 check_operand(ptr, &mut errors, &ctx);
             }
-            Instruction::Add { left, right } | Instruction::Sub { left, right } | Instruction::Mul { left, right } | Instruction::Eq { left, right } => {
+            Instruction::Add { left, right } | Instruction::Sub { left, right } | Instruction::Mul { left, right } | Instruction::Div { left, right } | Instruction::Rem { left, right } | Instruction::Eq { left, right } | Instruction::NotEq { left, right } | Instruction::LessThan { left, right } | Instruction::LessOrEq { left, right } | Instruction::GreaterThan { left, right } | Instruction::GreaterOrEq { left, right } | Instruction::BitAnd { left, right } | Instruction::BitOr { left, right } | Instruction::BitXor { left, right } | Instruction::Shl { left, right } | Instruction::Shr { left, right } => {
                 check_operand(left, &mut errors, &ctx);
                 check_operand(right, &mut errors, &ctx);
             }
-            Instruction::Call { callee, args } => {
+            Instruction::CallDirect { args, .. } => {
+                for arg in args {
+                    check_operand(arg, &mut errors, &ctx);
+                }
+            }
+            Instruction::CallIndirect { callee, args } | Instruction::CallClosure { closure: callee, args } => {
                 check_operand(callee, &mut errors, &ctx);
                 for arg in args {
                     check_operand(arg, &mut errors, &ctx);
+                }
+            }
+            Instruction::CallVirt { obj, args, .. } => {
+                check_operand(obj, &mut errors, &ctx);
+                for arg in args {
+                    check_operand(arg, &mut errors, &ctx);
+                }
+            }
+            Instruction::MakeTraitObject { data_ptr, .. } => {
+                check_operand(data_ptr, &mut errors, &ctx);
+            }
+            Instruction::MakeClosure { env_ptr, captures, .. } => {
+                check_operand(env_ptr, &mut errors, &ctx);
+                let mut fields = HashSet::new();
+                for capture in captures {
+                    if !fields.insert(capture.env_field) {
+                        errors.push(format!("{}: Duplicate closure environment field {}", ctx, capture.env_field));
+                    }
+                    if capture.source.0 as usize >= func.values.len() {
+                        errors.push(format!("{}: Invalid closure capture source ValueId {}", ctx, capture.source.0));
+                    }
                 }
             }
             Instruction::BoundsCheck { index, len } => {
@@ -112,14 +144,22 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
                     check_operand(arg, &mut errors, &ctx);
                 }
             }
+            Instruction::SizeOf { .. } |
+            Instruction::AlignOf { .. } |
+            Instruction::Null { .. } |
+            Instruction::PtrCast { .. } |
+            Instruction::PtrOffset { .. } => {}
+            Instruction::Drop { value, .. } => {
+                check_operand(value, &mut errors, &ctx);
+            }
             Instruction::Tag { value } => {
                 check_operand(value, &mut errors, &ctx);
             }
             Instruction::Extract { value, .. } => {
                 check_operand(value, &mut errors, &ctx);
             }
-            Instruction::Drop { value } => {
-                check_operand(value, &mut errors, &ctx);
+            Instruction::FieldPtr { base, .. } => {
+                check_operand(base, &mut errors, &ctx);
             }
         }
     }

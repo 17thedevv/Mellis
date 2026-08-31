@@ -4,6 +4,30 @@ use mellis_common::Span;
 use mellis_lexer::TokenKind;
 
 impl<'a> Parser<'a> {
+    fn is_value_generic_args(&self) -> bool {
+        if !self.check(TokenKind::LessThan) {
+            return false;
+        }
+        let mut p = self.pos + 1;
+        let mut depth = 1;
+        while p < self.tokens.len() {
+            let kind = self.tokens[p].kind;
+            if kind == TokenKind::LessThan {
+                depth += 1;
+            } else if kind == TokenKind::GreaterThan {
+                depth -= 1;
+                if depth == 0 {
+                    let next_kind = self.tokens.get(p + 1).map(|t| t.kind).unwrap_or(TokenKind::Eof);
+                    return matches!(next_kind, TokenKind::ColonColon | TokenKind::LParen | TokenKind::LBrace);
+                }
+            } else if kind == TokenKind::Eof || kind == TokenKind::Semi {
+                return false;
+            }
+            p += 1;
+        }
+        false
+    }
+
     pub fn parse_expr(&mut self) -> Result<ExprId, ()> {
         self.parse_expression(true)
     }
@@ -210,7 +234,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_factor(&mut self, allow_struct_literal: bool) -> Result<ExprId, ()> {
-        let mut expr = self.parse_cast(allow_struct_literal)?;
+        let mut expr = self.parse_unary(allow_struct_literal)?;
         while self.check(TokenKind::Multiply)
             || self.check(TokenKind::Divide)
             || self.check(TokenKind::Modulo)
@@ -222,7 +246,7 @@ impl<'a> Parser<'a> {
                 _ => unreachable!(),
             };
             self.advance();
-            let right = self.parse_cast(allow_struct_literal)?;
+            let right = self.parse_unary(allow_struct_literal)?;
             expr = self.arena.alloc_expr(Expr::Binary {
                 op,
                 left: expr,
@@ -232,16 +256,21 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn parse_cast(&mut self, allow_struct_literal: bool) -> Result<ExprId, ()> {
-        let mut expr = self.parse_unary(allow_struct_literal)?;
-        while self.match_token(TokenKind::KwAs) {
-            let target_type = self.parse_type()?;
-            expr = self.arena.alloc_expr(Expr::Cast { expr, target_type });
-        }
-        Ok(expr)
-    }
-
     fn parse_unary(&mut self, allow_struct_literal: bool) -> Result<ExprId, ()> {
+        if self.match_token(TokenKind::KwCast) {
+            self.consume(TokenKind::LParen, "Expected '(' after cast")?;
+            let target_type = self.parse_type()?;
+            self.consume(TokenKind::RParen, "Expected ')'")?;
+            let expr = self.parse_unary(allow_struct_literal)?;
+            return Ok(self.arena.alloc_expr(Expr::Cast { expr, target_type }));
+        }
+
+
+        if self.match_token(TokenKind::KwAwait) {
+            let expr = self.parse_unary(allow_struct_literal)?;
+            return Ok(self.arena.alloc_expr(Expr::Await { expr }));
+        }
+
         if self.check(TokenKind::Minus)
             || self.check(TokenKind::Bang)
             || self.check(TokenKind::BitNot)
@@ -253,7 +282,13 @@ impl<'a> Parser<'a> {
                 TokenKind::Minus => UnaryOp::Neg,
                 TokenKind::Bang => UnaryOp::Not,
                 TokenKind::BitNot => UnaryOp::BitNot,
-                TokenKind::Multiply => UnaryOp::Deref,
+                TokenKind::Multiply => {
+                    if self.match_token(TokenKind::KwRw) {
+                        UnaryOp::DerefMut
+                    } else {
+                        UnaryOp::Deref
+                    }
+                }
                 TokenKind::BitAnd => {
                     if self.match_token(TokenKind::KwRw) {
                         UnaryOp::RefMut
@@ -274,7 +309,8 @@ impl<'a> Parser<'a> {
 
         loop {
             if self.match_token(TokenKind::Question) {
-                expr = self.arena.alloc_expr(Expr::Try { expr });
+                let try_span = self.previous().span;
+                expr = self.arena.alloc_expr(Expr::Try { expr, try_span });
                 continue;
             }
             if self.match_token(TokenKind::PlusPlus) {
@@ -292,40 +328,52 @@ impl<'a> Parser<'a> {
                 continue;
             }
             if self.match_token(TokenKind::Bang) {
-                // Macro Call `name!(...)`
-                // Ensure `expr` is an IdentifierExpr with no generic args
+                // Macro Call `name!(...)` or `name![...]` or `name!{...}`
                 if let Expr::Identifier {
                     segments,
                     generic_args,
                 } = &self.arena.exprs[expr.0 as usize]
                 {
-                    if segments.len() == 1 && generic_args.is_empty() {
-                        let name = segments[0];
-                        self.consume(TokenKind::LParen, "Expected '(' after macro '!'")?;
+                    if generic_args.is_empty() && !segments.is_empty() {
+                        let path = segments.clone();
+                        let name_span = *path.last().unwrap();
+                        let (delimiter, close_kind) = if self.match_token(TokenKind::LParen) {
+                            (mellis_ast::MacroDelimiter::Paren, TokenKind::RParen)
+                        } else if self.match_token(TokenKind::LBracket) {
+                            (mellis_ast::MacroDelimiter::Bracket, TokenKind::RBracket)
+                        } else if self.match_token(TokenKind::LBrace) {
+                            (mellis_ast::MacroDelimiter::Brace, TokenKind::RBrace)
+                        } else {
+                            let span = self.peek().span;
+                            self.error_at_current("Expected '(', '[', or '{' after macro '!'", span);
+                            return Err(());
+                        };
+
+                        let start_pos = self.pos;
                         let mut args = Vec::new();
-                        if !self.check(TokenKind::RParen) {
-                            loop {
-                                args.push(CallArg {
-                                    label: None,
-                                    value: self.parse_expression(true)?,
-                                });
-                                if !self.match_token(TokenKind::Comma) {
-                                    break;
-                                }
-                            }
+                        while !self.check(close_kind) && !self.is_at_end() {
+                            args.push(self.parse_token_tree()?);
                         }
-                        self.consume(TokenKind::RParen, "Expected ')' after macro arguments")?;
-                        // For now we map macro calls to a Call Expr or we would need a MacroCallExpr.
-                        // Wait, ast doesn't have MacroCallExpr, let me represent it as a regular Call for now
-                        // or add MacroCall to AST. Looking at `expr.rs`, it's not there. We'll use Call.
-                        expr = self.arena.alloc_expr(Expr::Call {
-                            callee: expr,
-                            generic_args: Vec::new(),
+                        let raw_tokens = self.tokens[start_pos..self.pos].to_vec();
+                        let end_tok = self.consume(close_kind, &format!("Expected closing {:?}", close_kind))?;
+                        let full_span = Span {
+                            file_id: path[0].file_id,
+                            start: path[0].start,
+                            end: end_tok.span.end,
+                            ctxt: path[0].ctxt,
+                        };
+
+                        expr = self.arena.alloc_expr(Expr::MacroCall {
+                            name: name_span,
+                            path,
+                            delimiter,
                             args,
+                            raw_tokens,
+                            span: full_span,
                         });
                     } else {
                         let span = self.previous().span;
-                        self.error_at_current("Macro call must be a simple identifier", span);
+                        self.error_at_current("Macro call path cannot have generic arguments", span);
                     }
                 } else {
                     let span = self.previous().span;
@@ -354,9 +402,22 @@ impl<'a> Parser<'a> {
                     }
                 }
                 self.consume(TokenKind::RParen, "Expected ')' after function arguments")?;
+                
+                let mut generic_args = Vec::new();
+                let mut final_callee = expr;
+                if let Expr::Identifier { segments, generic_args: id_args } = &self.arena.exprs[expr.0 as usize] {
+                    if !id_args.is_empty() {
+                        generic_args = id_args.clone();
+                        final_callee = self.arena.alloc_expr(Expr::Identifier {
+                            segments: segments.clone(),
+                            generic_args: Vec::new(),
+                        });
+                    }
+                }
+                
                 expr = self.arena.alloc_expr(Expr::Call {
-                    callee: expr,
-                    generic_args: Vec::new(),
+                    callee: final_callee,
+                    generic_args,
                     args,
                 });
             } else if self.match_token(TokenKind::LBracket) {
@@ -389,6 +450,20 @@ impl<'a> Parser<'a> {
                         return Err(());
                     };
 
+                let mut method_generic_args = Vec::new();
+                if self.is_value_generic_args() {
+                    self.advance(); // consume '<'
+                    if !self.check(TokenKind::GreaterThan) {
+                        loop {
+                            method_generic_args.push(self.parse_type()?);
+                            if !self.match_token(TokenKind::Comma) {
+                                break;
+                            }
+                        }
+                    }
+                    self.consume(TokenKind::GreaterThan, "Expected '>' after generic arguments")?;
+                }
+
                 if self.match_token(TokenKind::LParen) {
                     let mut args = Vec::new();
                     if !self.check(TokenKind::RParen) {
@@ -413,10 +488,14 @@ impl<'a> Parser<'a> {
                     expr = self.arena.alloc_expr(Expr::MethodCall {
                         object: expr,
                         method_name: member_tok.span,
-                        generic_args: Vec::new(),
+                        generic_args: method_generic_args,
                         args,
                     });
                 } else {
+                    if !method_generic_args.is_empty() {
+                        let span = self.previous().span;
+                        self.error_at_current("Generic arguments are not allowed on field access", span);
+                    }
                     expr = self.arena.alloc_expr(Expr::Member {
                         object: expr,
                         member: member_tok.span,
@@ -477,9 +556,11 @@ impl<'a> Parser<'a> {
                 return Err(());
             };
 
+            if id_tok.span.start == 495 {
+            }
             segments.push(id_tok.span);
-
-            if self.match_token(TokenKind::GenericStart) {
+            if self.is_value_generic_args() {
+                self.advance(); // consume '<'
                 if !self.check(TokenKind::GreaterThan) {
                     loop {
                         generic_args.push(self.parse_type()?);
@@ -495,6 +576,8 @@ impl<'a> Parser<'a> {
             }
         }
 
+        if segments.len() > 0 && segments[0].start == 495 {
+        }
         Ok(self.arena.alloc_expr(Expr::Identifier {
             segments,
             generic_args,
@@ -502,7 +585,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_match_expr(&mut self) -> Result<ExprId, ()> {
-        self.consume(TokenKind::KwMatch, "Expected 'match'")?;
+        let match_tok = self.consume(TokenKind::KwMatch, "Expected 'match'")?;
         let subject = self.parse_expression(false)?;
         self.consume(TokenKind::LBrace, "Expected '{' for match body")?;
 
@@ -527,41 +610,44 @@ impl<'a> Parser<'a> {
             arms.push(MatchArm { pattern, body });
         }
         self.consume(TokenKind::RBrace, "Expected '}'")?;
-        Ok(self.arena.alloc_expr(Expr::Match { subject, arms }))
+        Ok(self.arena.alloc_expr(Expr::Match { match_span: match_tok.span, subject, arms }))
     }
 
     fn parse_lambda_expr(&mut self) -> Result<ExprId, ()> {
         let is_move = self.match_token(TokenKind::KwMove);
-        self.consume(TokenKind::BitOr, "Expected '|'")?;
 
         let mut params = Vec::new();
-        if !self.check(TokenKind::BitOr) {
-            loop {
-                let name = self
-                    .consume(TokenKind::Identifier, "Expected lambda param name")?
-                    .span;
-                let ty = if self.match_token(TokenKind::Colon) {
-                    Some(self.parse_type()?)
-                } else {
-                    None
-                };
+        
+        if !self.match_token(TokenKind::LogicalOr) {
+            self.consume(TokenKind::BitOr, "Expected '|'")?;
+            if !self.check(TokenKind::BitOr) {
+                loop {
+                    let name = self
+                        .consume(TokenKind::Identifier, "Expected lambda param name")?
+                        .span;
+                    let ty = if self.match_token(TokenKind::Colon) {
+                        Some(self.parse_type()?)
+                    } else {
+                        None
+                    };
 
-                let param_decl = self.arena.alloc_decl(mellis_ast::Decl::Param {
-                    annotations: Vec::new(),
-                    visibility: mellis_ast::Visibility::Private,
-                    name,
-                    ty,
-                    is_variadic: false,
-                    is_self: false,
-                });
-                params.push(param_decl);
+                    let param_decl = self.arena.alloc_decl(mellis_ast::Decl::Param {
+                        annotations: Vec::new(),
+                        visibility: mellis_ast::Visibility::Private,
+                        name,
+                        ty,
+                        is_variadic: false,
+                        is_self: false,
+                    });
+                    params.push(param_decl);
 
-                if !self.match_token(TokenKind::Comma) {
-                    break;
+                    if !self.match_token(TokenKind::Comma) {
+                        break;
+                    }
                 }
             }
+            self.consume(TokenKind::BitOr, "Expected '|'")?;
         }
-        self.consume(TokenKind::BitOr, "Expected '|'")?;
         // Simplified lambda return type parsing logic for now (omitting bookmark rollback for brevity)
         let return_type = if self.match_token(TokenKind::Arrow) {
             Some(self.parse_type()?)
@@ -608,7 +694,7 @@ impl<'a> Parser<'a> {
             return self.parse_match_expr();
         }
 
-        if self.check(TokenKind::KwMove) || self.check(TokenKind::BitOr) {
+        if self.check(TokenKind::KwMove) || self.check(TokenKind::BitOr) || self.check(TokenKind::LogicalOr) {
             return self.parse_lambda_expr();
         }
 
@@ -664,15 +750,62 @@ impl<'a> Parser<'a> {
             return Ok(self.arena.alloc_expr(Expr::Alignof { target_type }));
         }
 
+        if self.match_token(TokenKind::KwComptime) {
+            let body = if self.check(TokenKind::LBrace) {
+                self.parse_block_stmt()?
+            } else {
+                let expr = self.parse_expression(true)?;
+                self.arena.alloc_stmt(mellis_ast::Stmt::Block {
+                    body: Vec::new(),
+                    tail_expr: Some(expr),
+                })
+            };
+            return Ok(self.arena.alloc_expr(Expr::Comptime { body }));
+        }
+
         if self.match_token(TokenKind::KwTypeof) {
-            self.consume(TokenKind::LParen, "Expected '(' after typeof")?;
-            let expr = self.parse_expression(true)?;
-            self.consume(TokenKind::RParen, "Expected ')'")?;
-            return Ok(self.arena.alloc_expr(Expr::Typeof { expr }));
+            let span = self.previous().span;
+            self.error_at_current("'typeof' is a type-level query and cannot be used as an expression", span);
+            return Err(());
         }
 
         let span = self.peek().span;
         self.error_at_current("Expected expression.", span);
         Err(())
+    }
+
+    pub fn parse_token_tree(&mut self) -> Result<mellis_ast::TokenTree, ()> {
+        if self.check(TokenKind::LParen) || self.check(TokenKind::LBracket) || self.check(TokenKind::LBrace) {
+            let (delimiter, close_kind) = match self.peek().kind {
+                TokenKind::LParen => (mellis_ast::MacroDelimiter::Paren, TokenKind::RParen),
+                TokenKind::LBracket => (mellis_ast::MacroDelimiter::Bracket, TokenKind::RBracket),
+                TokenKind::LBrace => (mellis_ast::MacroDelimiter::Brace, TokenKind::RBrace),
+                _ => unreachable!(),
+            };
+            let start_span = self.advance().span;
+            let mut tokens = Vec::new();
+            while !self.check(close_kind) && !self.is_at_end() {
+                tokens.push(self.parse_token_tree()?);
+            }
+            let end_tok = self.consume(close_kind, &format!("Expected closing {:?}", close_kind))?;
+            let span = Span {
+                file_id: start_span.file_id,
+                start: start_span.start,
+                end: end_tok.span.end,
+                ctxt: start_span.ctxt,
+            };
+            Ok(mellis_ast::TokenTree::Group {
+                delimiter,
+                tokens,
+                span,
+            })
+        } else if self.is_at_end() {
+            let span = self.peek().span;
+            self.error_at_current("Unexpected EOF inside macro call", span);
+            Err(())
+        } else {
+            let tok = self.advance();
+            Ok(mellis_ast::TokenTree::Leaf { token: tok })
+        }
     }
 }

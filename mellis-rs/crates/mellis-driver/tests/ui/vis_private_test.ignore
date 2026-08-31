@@ -1,0 +1,11 @@
+import "mock_core";
+
+module a {
+    export fn b() {}
+    fn c() {}
+}
+
+fn main() {
+    a::b();
+    a::c(); //~ ERROR Symbol 'c' is internal and not accessible from this scope
+}

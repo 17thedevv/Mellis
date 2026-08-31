@@ -1,14 +1,14 @@
-use crate::{ExprId, TypeId};
+use crate::{expr::TokenTree, ExprId, MacroDelimiter, TypeId};
 use mellis_common::Span;
 use mellis_lexer::BuiltinKind;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct AssociatedBinding {
     pub name: Span,
     pub ty: TypeId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum Type {
     Builtin(BuiltinKind),
     Lifetime(Span),
@@ -44,5 +44,16 @@ pub enum Type {
     Never,
     TraitObject {
         trait_type: TypeId,
+    },
+    Typeof {
+        expr: ExprId,
+    },
+    MacroCall {
+        name: Span,
+        path: Vec<Span>,
+        delimiter: MacroDelimiter,
+        args: Vec<TokenTree>,
+        raw_tokens: Vec<mellis_lexer::Token>,
+        span: Span,
     },
 }

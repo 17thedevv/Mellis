@@ -45,19 +45,21 @@ pub fn compile_ll_to_exe(ll_file: &str, obj_file: &str, exe_file: &str) -> Resul
         return Err(format!("llc exited with status {}", llc_status));
     }
     
-    // Call clang.exe to link
-    // Assuming MSVC environment or generic Clang
+    // Call gcc.exe to link
+    // Assuming MinGW environment
     let runtime = runtime_library()?;
-    let clang_status = Command::new(tool("clang.exe"))
+    let gcc_status = Command::new(tool("gcc.exe"))
         .arg(obj_file)
         .arg(runtime)
         .arg("-o")
         .arg(exe_file)
+        // Optionally try ASan:
+        // .arg("-fsanitize=address")
         .status()
-        .map_err(|e| format!("Failed to invoke clang: {}", e))?;
+        .map_err(|e| format!("Failed to invoke gcc: {}", e))?;
         
-    if !clang_status.success() {
-        return Err(format!("clang exited with status {}", clang_status));
+    if !gcc_status.success() {
+        return Err(format!("gcc exited with status {}", gcc_status));
     }
     
     // Cleanup temporary files
@@ -69,16 +71,18 @@ pub fn compile_ll_to_exe(ll_file: &str, obj_file: &str, exe_file: &str) -> Resul
 
 pub fn link_obj_to_exe(obj_file: &str, exe_file: &str) -> Result<(), String> {
     let runtime = runtime_library()?;
-    let clang_status = Command::new(tool("clang.exe"))
+    let gcc_status = Command::new(tool("gcc.exe"))
         .arg(obj_file)
         .arg(runtime)
         .arg("-o")
         .arg(exe_file)
+        // Optionally try ASan:
+        // .arg("-fsanitize=address")
         .status()
-        .map_err(|e| format!("Failed to invoke clang: {}", e))?;
+        .map_err(|e| format!("Failed to invoke gcc: {}", e))?;
         
-    if !clang_status.success() {
-        return Err(format!("clang exited with status {}", clang_status));
+    if !gcc_status.success() {
+        return Err(format!("gcc exited with status {}", gcc_status));
     }
     
     // Optionally cleanup

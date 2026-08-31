@@ -6,9 +6,8 @@ enum Color {
 
 fn main() {
     dec c = Color::Red;
-    match c {
+    match c { //~ ERROR Match is not exhaustive. Covered 2/3 enum variants.
         Color::Red -> {},
         Color::Green -> {},
-        //~ ERROR Match is not exhaustive
     }
 }

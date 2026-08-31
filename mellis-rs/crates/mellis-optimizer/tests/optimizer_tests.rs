@@ -8,22 +8,25 @@ fn dummy_module() -> Module {
         name: GlobalId { name: "test_func".to_string(), symbol_id: Some(SymbolId(0)) },
         arg_count: 0,
         is_extern: false,
+            is_async: false,
         ret_ty: SemanticTypeId(0),
         values: Vec::new(),
         blocks: Vec::new(),
     };
     
     // v0 = const 2
-    func.values.push(ValueData { inst: Instruction::Assign(Operand::Number("2".to_string())), ty: SemanticTypeId(0) });
-    // v1 = const 3
-    func.values.push(ValueData { inst: Instruction::Assign(Operand::Number("3".to_string())), ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, inst: Instruction::Assign(Operand::Number("2".to_string())), ty: SemanticTypeId(0) });
+    
+    func.values.push(ValueData { span: None, inst: Instruction::Assign(Operand::Number("3".to_string())), ty: SemanticTypeId(0) });
     // v2 = add v0, v1 (can be constant folded to 5)
-    func.values.push(ValueData { 
+    func.values.push(ValueData {
+            span: None, 
         inst: Instruction::Add { left: Operand::Value(ValueId(0)), right: Operand::Value(ValueId(1)) }, 
         ty: SemanticTypeId(0) 
     });
     // v3 = add v2, 10 (can be folded to 15, then DCE removes v0, v1, v2 if not returned)
-    func.values.push(ValueData { 
+    func.values.push(ValueData {
+            span: None, 
         inst: Instruction::Add { left: Operand::Value(ValueId(2)), right: Operand::Number("10".to_string()) }, 
         ty: SemanticTypeId(0) 
     });

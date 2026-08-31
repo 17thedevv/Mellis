@@ -1,0 +1,16 @@
+struct Error { code: i32 }
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+fn normal() -> i32 {
+    return 1;
+}
+
+fn outer() -> Result<i32, Error> {
+    dec x = normal()?; //~ ERROR The `?` operator can only be applied to values of type `Result<T, E>`
+    return Result::Ok(x);
+}
+
+fn main() {}

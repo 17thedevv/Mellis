@@ -1,19 +1,19 @@
 use mellis_common::Span;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum BuiltinKind {
-    I4,
     I8,
     I16,
     I32,
     I64,
     I128,
-    U4,
+    Isize,
     U8,
     U16,
     U32,
     U64,
     U128,
+    Usize,
     F32,
     F64,
     Bool,
@@ -22,7 +22,7 @@ pub enum BuiltinKind {
     Void,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Eof,
     Error,
@@ -63,6 +63,7 @@ pub enum TokenKind {
     RShift,
 
     Arrow,
+    FatArrow,
     PlusPlus,
     MinusMinus,
     DotDot,
@@ -70,7 +71,7 @@ pub enum TokenKind {
     DotDotDot,
     AtBracket,
     At,
-    GenericStart,
+    Dollar,
     Question,
 
     // Punctuation
@@ -111,7 +112,9 @@ pub enum TokenKind {
     KwIn,
     KwBreak,
     KwContinue,
-    KwMod,
+    KwImport,
+    KwModule,
+    KwUsing,
     KwExport,
     KwExtern,
     KwIntrinsic,
@@ -122,7 +125,6 @@ pub enum TokenKind {
     KwDyn,
     KwImpl,
     KwUnsafe,
-    KwUse,
     KwAs,
     KwMove,
     KwMatch,
@@ -133,6 +135,7 @@ pub enum TokenKind {
     KwSizeof,
     KwAlignof,
     KwTypeof,
+    KwCast,
     KwAwait,
     KwAsync,
     KwComptime,
@@ -141,7 +144,7 @@ pub enum TokenKind {
     KwSelfTyp,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,

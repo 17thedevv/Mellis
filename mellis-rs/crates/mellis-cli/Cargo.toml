@@ -9,4 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
+mellis-ast = { path = "../mellis-ast" }
 mellis-driver = { path = "../mellis-driver" }
+serde_json = "1.0"
+mellis-mlib = { path = "../mellis-mlib" }

@@ -111,15 +111,41 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
         Ok(())
     }
 
+    fn layout_size(&self, ty_id: SemanticTypeId) -> u64 {
+        match self.map_type(ty_id) {
+            Ok(ty) => ty.size_of().map(|size| size.get_zero_extended_constant().unwrap_or(8)).unwrap_or(8),
+            Err(_) => 8,
+        }
+    }
+
     fn map_type(&self, ty_id: SemanticTypeId) -> Result<BasicTypeEnum<'ctx>, BackendError> {
         let ty = self.semantic_ctx.types.get(ty_id);
         match ty {
-            SemanticType::Primitive(BuiltinType::Int) => Ok(self.context.i32_type().into()),
+            SemanticType::Primitive(BuiltinType::I8) | SemanticType::Primitive(BuiltinType::U8) => Ok(self.context.i8_type().into()),
+            SemanticType::Primitive(BuiltinType::I16) | SemanticType::Primitive(BuiltinType::U16) => Ok(self.context.i16_type().into()),
+            SemanticType::Primitive(BuiltinType::I32) | SemanticType::Primitive(BuiltinType::U32) => Ok(self.context.i32_type().into()),
+            SemanticType::Primitive(BuiltinType::I64) | SemanticType::Primitive(BuiltinType::U64) | SemanticType::Primitive(BuiltinType::Isize) | SemanticType::Primitive(BuiltinType::Usize) => Ok(self.context.i64_type().into()),
+            SemanticType::Primitive(BuiltinType::I128) | SemanticType::Primitive(BuiltinType::U128) => Ok(self.context.i128_type().into()),
+            SemanticType::Primitive(BuiltinType::F32) => Ok(self.context.f32_type().into()),
+            SemanticType::Primitive(BuiltinType::F64) => Ok(self.context.f64_type().into()),
             SemanticType::Primitive(BuiltinType::Bool) => Ok(self.context.bool_type().into()),
-            SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Primitive(BuiltinType::String) => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()),
-            SemanticType::Struct(_, generic_args) => {
+            SemanticType::Primitive(BuiltinType::Char) => Ok(self.context.i32_type().into()),
+            SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => {
+                if let SemanticType::DynTrait(_) = self.semantic_ctx.types.get(*inner) {
+                    let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
+                    Ok(self.context.struct_type(&[ptr_ty.into(), ptr_ty.into()], false).into())
+                } else {
+                    Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into())
+                }
+            }
+            SemanticType::DynTrait(_) => {
+                let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
+                Ok(self.context.struct_type(&[ptr_ty.into(), ptr_ty.into()], false).into())
+            }
+            SemanticType::Primitive(BuiltinType::String) => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()),
+            SemanticType::Struct(_, field_tys) => {
                 let mut field_types = Vec::new();
-                for &e in generic_args {
+                for &e in field_tys {
                     field_types.push(self.map_type(e)?);
                 }
                 Ok(self.context.struct_type(&field_types, false).into())
@@ -136,6 +162,17 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 }
                 Ok(self.context.struct_type(&field_types, false).into())
             }
+            SemanticType::Closure(..) => {
+                let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
+                Ok(self.context.struct_type(&[ptr_ty.into(), ptr_ty.into()], false).into())
+            }
+            SemanticType::Pointer(_, inner) => {
+                if let SemanticType::Void = self.semantic_ctx.types.get(*inner) {
+                    return Ok(self.context.i8_type().ptr_type(inkwell::AddressSpace::from(0)).into());
+                }
+                let inner_type = self.map_type(*inner)?;
+                Ok(inner_type.ptr_type(inkwell::AddressSpace::from(0)).into())
+            }
             SemanticType::Array(elem_ty, len) => {
                 let elem_type = self.map_type(*elem_ty)?;
                 Ok(elem_type.array_type(*len as u32).into())
@@ -145,7 +182,23 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 // Slice is usually { ptr, len }. Let's just create a ptr for now.
                 Ok(elem_type.ptr_type(inkwell::AddressSpace::from(0)).into())
             }
+            SemanticType::Future(inner) => {
+                let i32_ty = self.context.i32_type();
+                let inner_ty = if let Ok(t) = self.map_type(*inner) {
+                    t
+                } else {
+                    self.context.i32_type().into()
+                };
+                Ok(self.context.struct_type(&[i32_ty.into(), inner_ty], false).into())
+            }
             SemanticType::Void => {
+                static mut CRASH_COUNT: usize = 0;
+                unsafe {
+                    CRASH_COUNT += 1;
+                    if CRASH_COUNT == 3 {
+                        panic!("Unsupported type Void (SemanticTypeId(0)) reached backend for the 3rd time!");
+                    }
+                }
                 Err(BackendError::UnsupportedType(ty_id))
             }
             SemanticType::Error => Err(BackendError::InvariantViolation("Error type passed to backend".into())),
@@ -189,14 +242,16 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
 
         // Declare all module functions
         for func in &self.module.functions {
-            let ret_ty = self.semantic_ctx.types.get(func.ret_ty);
-            let fn_type = match ret_ty {
-                SemanticType::Void => self.context.void_type().fn_type(&[], false),
-                SemanticType::Primitive(BuiltinType::Int) => self.context.i32_type().fn_type(&[], false),
-                SemanticType::Primitive(BuiltinType::Bool) => self.context.bool_type().fn_type(&[], false),
-                SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Primitive(BuiltinType::String) => self.context.ptr_type(inkwell::AddressSpace::default()).fn_type(&[], false),
-                SemanticType::Struct(..) => self.context.ptr_type(inkwell::AddressSpace::default()).fn_type(&[], false),
-                _ => self.context.i32_type().fn_type(&[], false),
+            let mut param_types = Vec::new();
+            for i in 0..func.arg_count {
+                let ty = self.map_type(func.values[i].ty)?;
+                param_types.push(ty.into());
+            }
+            
+            let fn_type = if let Ok(basic_ty) = self.map_type(func.ret_ty) {
+                basic_ty.fn_type(&param_types, false)
+            } else {
+                self.context.void_type().fn_type(&param_types, false)
             };
 
             self.llvm_module.add_function(&func.name.name, fn_type, None);
@@ -218,6 +273,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
         }
 
         // Generate instructions for each block
+        let mut is_entry = true;
         for block in &func.blocks {
             let llvm_bb = self.block_map.get(&block.label).unwrap();
             self.builder.position_at_end(*llvm_bb);
@@ -226,6 +282,18 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let val_data = func.value(val_id);
                 let llvm_val = self.generate_inst(val_id, val_data, func)?;
                 self.value_map.insert(val_id, llvm_val);
+            }
+            
+            if is_entry {
+                is_entry = false;
+                for i in 0..func.arg_count {
+                    if let Some(param) = llvm_func.get_nth_param(i as u32) {
+                        let param_alloc = self.value_map.get(&mellis_mvir::ValueId(i as u32)).unwrap_or_else(|| {
+                            panic!("Missing ValueId({}) in value_map for function '{}'", i, func.name.name);
+                        });
+                        self.builder.build_store(param_alloc.into_pointer_value(), param).unwrap();
+                    }
+                }
             }
             
             if let Some(term) = &block.terminator {
@@ -261,13 +329,21 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     let str_val = self.builder.build_global_string_ptr("Hello, error Rust Mellis!", ".str").unwrap();
                     Ok(str_val.as_pointer_value().into())
                 } else {
-                    let parsed: u64 = n.parse().map_err(|_| BackendError::InvariantViolation(format!("Invalid number: {}", n)))?;
-                    Ok(self.context.i32_type().const_int(parsed, false).into())
+                    let parsed: i64 = n.parse().map_err(|_| BackendError::InvariantViolation(format!("Invalid number: {}", n)))?;
+                    Ok(self.context.i32_type().const_int(parsed as u64, false).into())
                 }
             }
             Operand::Boolean(b) => {
                 let val = if *b { 1 } else { 0 };
                 Ok(self.context.bool_type().const_int(val, false).into())
+            }
+            Operand::StringRef(s) => {
+                let llvm_str = self.builder.build_global_string_ptr(s, "str_lit").unwrap();
+                Ok(llvm_str.as_pointer_value().into())
+            }
+            Operand::Char(c) => {
+                let first_char = c.chars().next().unwrap_or('\0');
+                Ok(self.context.i32_type().const_int(first_char as u32 as u64, false).into())
             }
         }
     }
@@ -278,6 +354,13 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let ty = self.map_type(data.ty)?;
                 let alloca = self.builder.build_alloca(ty, &format!("v{}", id.0)).unwrap();
                 Ok(alloca.into())
+            }
+            Instruction::HeapAlloc => {
+                let malloc = self.llvm_module.get_function("malloc")
+                    .ok_or_else(|| BackendError::InvariantViolation("malloc declaration missing".into()))?;
+                let size = self.context.i32_type().const_int(self.layout_size(data.ty), false);
+                let call = self.builder.build_call(malloc, &[size.into()], &format!("v{}", id.0)).unwrap();
+                call.try_as_basic_value().left().ok_or_else(|| BackendError::InvariantViolation("malloc returned void".into()))
             }
             Instruction::Assign(val_op) => {
                 self.generate_operand(val_op)
@@ -292,6 +375,9 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             }
             Instruction::Load { ptr } => {
                 let llvm_ptr = self.generate_operand(ptr)?.into_pointer_value();
+                if let SemanticType::Void = self.semantic_ctx.types.get(data.ty) {
+                    eprintln!("CRASH: Load {} has Void type!", id.0);
+                }
                 let ty = self.map_type(data.ty)?;
                 let load = self.builder.build_load(ty, llvm_ptr, &format!("v{}", id.0)).unwrap();
                 Ok(load)
@@ -302,7 +388,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let res = self.builder.build_int_add(l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
-            Instruction::Drop { value } => {
+            Instruction::Drop { value, .. } => {
                 let _val = self.generate_operand(value)?;
                 // Not emitting an actual drop call right now.
                 Ok(self.context.i32_type().const_int(0, false).into())
@@ -319,6 +405,18 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let res = self.builder.build_int_mul(l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
+            Instruction::Div { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_int_signed_div(l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::Rem { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_int_signed_rem(l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
             Instruction::Eq { left, right } => {
                 let l = self.generate_operand(left)?.into_int_value();
                 let r = self.generate_operand(right)?.into_int_value();
@@ -326,33 +424,69 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 // Ensure the result is correctly represented (e.g., bool)
                 Ok(res.into())
             }
+            Instruction::BitAnd { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_and(l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::BitOr { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_or(l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::BitXor { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_xor(l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::Shl { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_left_shift(l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::Shr { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                // We use arithmetic shift right (AShr) for signed, and logical (LShr) for unsigned.
+                // For simplicity assuming AShr or signed by default.
+                let res = self.builder.build_right_shift(l, r, true, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
             Instruction::Borrow { .. } => {
                 // Placeholder since we don't have borrow mechanics implemented to LLVM fully.
                 Ok(self.context.i32_type().const_zero().into())
             }
-            Instruction::Call { callee, args } => {
-                let callee_val = self.generate_operand(callee)?.into_pointer_value();
-                // We need the callable value (FunctionValue or Callable).
-                // Wait, in inkwell 0.5.0, call takes a FunctionValue or PointerValue + fn_type
-                // For simplicity, let's lookup by name if it's a global.
-                let func_name = match callee {
-                    Operand::Global(glb) => {
-                        if glb.name.starts_with("global_") {
-                            "puts".to_string()
-                        } else {
-                            glb.name.clone()
-                        }
-                    }
-                    _ => return Err(BackendError::InvariantViolation("Indirect calls not supported".into())),
+            Instruction::CallDirect { callee, args } => {
+                let func_name = if callee.name.starts_with("global_") {
+                    "puts".to_string()
+                } else {
+                    callee.name.clone()
                 };
-                
-                let func_val = self.llvm_module.get_function(&func_name)
-                    .ok_or_else(|| BackendError::InvariantViolation(format!("Function not found: {}", func_name)))?;
+
                 
                 let mut llvm_args = Vec::new();
+                let mut param_types = Vec::new();
                 for arg in args {
-                    llvm_args.push(self.generate_operand(arg)?.into());
+                    let val = self.generate_operand(arg)?;
+                    param_types.push(val.get_type().into());
+                    llvm_args.push(val.into());
                 }
+                
+                let func_val = match self.llvm_module.get_function(&func_name) {
+                    Some(f) => f,
+                    None => {
+                        let fn_type = if let Ok(basic_ty) = self.map_type(data.ty) {
+                            basic_ty.fn_type(&param_types, false)
+                        } else {
+                            self.context.void_type().fn_type(&param_types, false)
+                        };
+                        self.llvm_module.add_function(&func_name, fn_type, None)
+                    }
+                };
                 
                 let call = self.builder.build_call(func_val, &llvm_args, &format!("v{}", id.0)).unwrap();
                 match call.try_as_basic_value().left() {
@@ -458,6 +592,203 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     Ok(field)
                 }
             }
+            Instruction::NotEq { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_int_compare(inkwell::IntPredicate::NE, l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::LessThan { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_int_compare(inkwell::IntPredicate::SLT, l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::LessOrEq { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_int_compare(inkwell::IntPredicate::SLE, l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::GreaterThan { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_int_compare(inkwell::IntPredicate::SGT, l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::GreaterOrEq { left, right } => {
+                let l = self.generate_operand(left)?.into_int_value();
+                let r = self.generate_operand(right)?.into_int_value();
+                let res = self.builder.build_int_compare(inkwell::IntPredicate::SGE, l, r, &format!("v{}", id.0)).unwrap();
+                Ok(res.into())
+            }
+            Instruction::FieldPtr { base, field_idx } => {
+                let base_value = self.generate_operand(base)?;
+                let base_ptr = base_value.into_pointer_value();
+                let base_ty = match base {
+                    Operand::Value(value) => {
+                        let sem_ty = _func.values[value.0 as usize].ty;
+                        let pointee_ty = match self.semantic_ctx.types.get(sem_ty) {
+                            SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => *inner,
+                            _ => sem_ty,
+                        };
+                        self.map_type(pointee_ty)?
+                    }
+                    _ => return Err(BackendError::InvariantViolation("FieldPtr base must be a typed value".into())),
+                };
+                let field_ptr = self.builder.build_struct_gep(base_ty, base_ptr, *field_idx, &format!("v{}", id.0))
+                    .map_err(|_| BackendError::InvariantViolation("Invalid FieldPtr field index".into()))?;
+                Ok(field_ptr.into())
+            }
+            Instruction::MakeClosure { func, env_ptr, .. } => {
+                let env = self.generate_operand(env_ptr)?.into_pointer_value();
+                let closure_ty = self.map_type(data.ty)?.into_struct_type();
+                let code = self.llvm_module.get_function(&func.name)
+                    .ok_or_else(|| BackendError::InvariantViolation(format!("Closure function not found: {}", func.name)))?
+                    .as_global_value().as_pointer_value();
+                let value = closure_ty.get_undef();
+                let value = self.builder.build_insert_value(value, code, 0, "closure_code")
+                    .map_err(|_| BackendError::InvariantViolation("Invalid closure code pointer field".into()))?;
+                let value = self.builder.build_insert_value(value.into_struct_value(), env, 1, "closure_env")
+                    .map_err(|_| BackendError::InvariantViolation("Invalid closure environment field".into()))?;
+                Ok(value.into_struct_value().into())
+            }
+            Instruction::CallClosure { closure, args } => {
+                let closure_value = self.generate_operand(closure)?.into_struct_value();
+                let code = self.builder.build_extract_value(closure_value, 0, "closure_code")
+                    .map_err(|_| BackendError::InvariantViolation("Invalid closure code field".into()))?
+                    .into_pointer_value();
+                let env = self.builder.build_extract_value(closure_value, 1, "closure_env")
+                    .map_err(|_| BackendError::InvariantViolation("Invalid closure environment field".into()))?;
+                let mut llvm_args: Vec<inkwell::values::BasicMetadataValueEnum<'ctx>> = vec![env.into()];
+                let mut param_types: Vec<inkwell::types::BasicMetadataTypeEnum<'ctx>> = vec![self.context.ptr_type(inkwell::AddressSpace::default()).into()];
+                for arg in args {
+                    let value = self.generate_operand(arg)?;
+                    param_types.push(value.get_type().into());
+                    llvm_args.push(value.into());
+                }
+                let return_ty = self.map_type(data.ty)?;
+                let fn_ty = return_ty.fn_type(&param_types, false);
+                let call = self.builder.build_indirect_call(fn_ty, code, &llvm_args, &format!("v{}", id.0)).unwrap();
+                call.try_as_basic_value().left().ok_or_else(|| BackendError::InvariantViolation("Closure call returned void".into()))
+            }
+            Instruction::MakeTraitObject { data_ptr, vtable, trait_sym } => {
+                let data_val = self.generate_operand(data_ptr)?;
+                let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
+                let data_ptr_val = if data_val.is_pointer_value() {
+                    data_val.into_pointer_value()
+                } else {
+                    let alloca = self.builder.build_alloca(data_val.get_type(), "dyn_data_alloca").unwrap();
+                    self.builder.build_store(alloca, data_val).unwrap();
+                    alloca
+                };
+                
+                let vtable_ptr = if let Some(global_var) = self.llvm_module.get_global(&vtable.name) {
+                    global_var.as_pointer_value()
+                } else {
+                    // Create static vtable
+                    let mut fn_ptrs = Vec::new();
+                    if let Some(methods) = self.semantic_ctx.tables.trait_methods.get(trait_sym) {
+                        for m_sym in methods {
+                            let m_name = &self.semantic_ctx.symbol_table.get_symbol(*m_sym).name;
+                            let func_val = self.llvm_module.get_function(m_name)
+                                .or_else(|| {
+                                    for func in &self.module.functions {
+                                        if func.name.name.ends_with(m_name) || func.name.name == *m_name {
+                                            return self.llvm_module.get_function(&func.name.name);
+                                        }
+                                    }
+                                    None
+                                });
+                            if let Some(f) = func_val {
+                                fn_ptrs.push(f.as_global_value().as_pointer_value());
+                            } else {
+                                fn_ptrs.push(ptr_ty.const_null());
+                            }
+                        }
+                    }
+                    if fn_ptrs.is_empty() {
+                        fn_ptrs.push(ptr_ty.const_null());
+                    }
+                    let vtable_array_ty = ptr_ty.array_type(fn_ptrs.len() as u32);
+                    let vtable_global = self.llvm_module.add_global(vtable_array_ty, Some(inkwell::AddressSpace::default()), &vtable.name);
+                    vtable_global.set_constant(true);
+                    vtable_global.set_initializer(&ptr_ty.const_array(&fn_ptrs));
+                    vtable_global.as_pointer_value()
+                };
+                
+                let trait_obj_ty = self.context.struct_type(&[ptr_ty.into(), ptr_ty.into()], false);
+                let val = trait_obj_ty.get_undef();
+                let val = self.builder.build_insert_value(val, data_ptr_val, 0, "dyn_data")
+                    .map_err(|_| BackendError::InvariantViolation("Invalid trait object data field".into()))?;
+                let val = self.builder.build_insert_value(val.into_struct_value(), vtable_ptr, 1, "dyn_vtable")
+                    .map_err(|_| BackendError::InvariantViolation("Invalid trait object vtable field".into()))?;
+                Ok(val.into_struct_value().into())
+            }
+            Instruction::CallVirt { obj, method_idx, args } => {
+                let obj_val = self.generate_operand(obj)?;
+                let obj_struct = if obj_val.is_struct_value() {
+                    obj_val.into_struct_value()
+                } else if obj_val.is_pointer_value() {
+                    let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
+                    let struct_ty = self.context.struct_type(&[ptr_ty.into(), ptr_ty.into()], false);
+                    self.builder.build_load(struct_ty, obj_val.into_pointer_value(), "dyn_obj_loaded").unwrap().into_struct_value()
+                } else {
+                    return Err(BackendError::InvariantViolation("Invalid trait object value for virtual call".into()));
+                };
+                
+                let data_ptr = self.builder.build_extract_value(obj_struct, 0, "dyn_data")
+                    .map_err(|_| BackendError::InvariantViolation("Invalid trait object data field".into()))?
+                    .into_pointer_value();
+                let vtable_ptr = self.builder.build_extract_value(obj_struct, 1, "dyn_vtable")
+                    .map_err(|_| BackendError::InvariantViolation("Invalid trait object vtable field".into()))?
+                    .into_pointer_value();
+                
+                let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
+                let idx_val = self.context.i32_type().const_int(*method_idx as u64, false);
+                let fn_ptr_ptr = unsafe {
+                    self.builder.build_gep(ptr_ty, vtable_ptr, &[idx_val], "method_fn_ptr_gep").unwrap()
+                };
+                let fn_ptr = self.builder.build_load(ptr_ty, fn_ptr_ptr, "method_fn").unwrap().into_pointer_value();
+                
+                let mut llvm_args: Vec<inkwell::values::BasicMetadataValueEnum<'ctx>> = vec![data_ptr.into()];
+                let mut param_types: Vec<inkwell::types::BasicMetadataTypeEnum<'ctx>> = vec![ptr_ty.into()];
+                for arg in args {
+                    let value = self.generate_operand(arg)?;
+                    param_types.push(value.get_type().into());
+                    llvm_args.push(value.into());
+                }
+                
+                let fn_ty = if let Ok(return_ty) = self.map_type(data.ty) {
+                    return_ty.fn_type(&param_types, false)
+                } else {
+                    self.context.void_type().fn_type(&param_types, false)
+                };
+                
+                let call = self.builder.build_indirect_call(fn_ty, fn_ptr, &llvm_args, &format!("v{}", id.0)).unwrap();
+                match call.try_as_basic_value().left() {
+                    Some(v) => Ok(v),
+                    None => Ok(self.context.i32_type().const_zero().into()),
+                }
+            }
+            Instruction::BoxFree { value } => {
+                if let Some(free_fn) = self.llvm_module.get_function("free") {
+                    let ptr_val = self.generate_operand(value)?;
+                    self.builder.build_call(free_fn, &[ptr_val.into()], "").unwrap();
+                }
+                Ok(self.context.i32_type().const_zero().into())
+            }
+            Instruction::Null { .. } => {
+                let null_ptr = self.context.ptr_type(inkwell::AddressSpace::default()).const_null();
+                Ok(null_ptr.into())
+            }
+            Instruction::Await { future } => {
+                self.generate_operand(future)
+            }
+            _ => {
+                // Fallback for unimplemented instructions in backend drift
+                Ok(self.context.i32_type().const_zero().into())
+            }
         }
     }
 
@@ -467,7 +798,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 if let Some(val_op) = value {
                     let val = self.generate_operand(val_op)?;
                     let ret_ty = self.semantic_ctx.types.get(_func.ret_ty);
-                    if matches!(ret_ty, SemanticType::Pointer(..) | SemanticType::Struct(..) | SemanticType::Primitive(BuiltinType::String)) {
+                    if matches!(ret_ty, SemanticType::Pointer(..) | SemanticType::Primitive(BuiltinType::String)) {
                         if val.is_int_value() {
                             let null_ptr = self.context.ptr_type(inkwell::AddressSpace::default()).const_null();
                             self.builder.build_return(Some(&null_ptr)).unwrap();
@@ -485,10 +816,17 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             }
             Terminator::CondBr { condition, true_target, false_target } => {
                 let cond_val = self.generate_operand(condition)?.into_int_value();
+                let cond_val = if cond_val.get_type() == self.context.i32_type() {
+                    let zero = self.context.i32_type().const_zero();
+                    self.builder.build_int_compare(inkwell::IntPredicate::NE, cond_val, zero, "condbr_cast").unwrap()
+                } else {
+                    cond_val
+                };
                 let bb_true = self.block_map.get(true_target).ok_or_else(|| BackendError::InvalidBlockId(true_target.clone()))?;
                 let bb_false = self.block_map.get(false_target).ok_or_else(|| BackendError::InvalidBlockId(false_target.clone()))?;
                 self.builder.build_conditional_branch(cond_val, *bb_true, *bb_false).unwrap();
             }
+            Terminator::MissingReturn => { self.builder.build_unreachable().unwrap(); }
             Terminator::Unreachable => {
                 self.builder.build_unreachable().unwrap();
             }

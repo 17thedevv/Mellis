@@ -4,7 +4,7 @@ pub mod interner;
 pub mod source;
 
 pub use diagnostic::{Diagnostic, DiagnosticLevel};
-pub use ids::{FileId, Span, SymbolId};
+pub use ids::{FileId, Span, SymbolId, SyntaxContext};
 pub use interner::StringInterner;
 pub use source::{SourceFile, SourceManager};
 

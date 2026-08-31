@@ -6,7 +6,7 @@ fn test_loop_borrows() {
     dec rw a = 10;
     while true {
         dec rw b = &rw a;
-        *b = 20;
+        unsafe { *rw b = 20; }
     } // b dies here, so a can be borrowed again in next iteration
 }
 
@@ -28,5 +28,5 @@ fn test_branch_join() {
     // So both x and y are borrowed!
     x = 3; //~ ERROR Cannot access '%v0'
     y = 4; //~ ERROR Cannot access '%v2'
-    *z = 5;
+    unsafe { *rw z = 5; }
 }

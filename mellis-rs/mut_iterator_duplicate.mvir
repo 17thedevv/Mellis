@@ -1,0 +1,2123 @@
+Module {
+    functions: [
+        Function {
+            name: GlobalId {
+                name: "next::M_51_",
+                symbol_id: Some(
+                    SymbolId(
+                        21,
+                    ),
+                ),
+            },
+            is_extern: false,
+            arg_count: 1,
+            ret_ty: SemanticTypeId(
+                55,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                        ValueId(
+                            1,
+                        ),
+                        ValueId(
+                            2,
+                        ),
+                        ValueId(
+                            3,
+                        ),
+                        ValueId(
+                            4,
+                        ),
+                        ValueId(
+                            5,
+                        ),
+                    ],
+                    terminator: Some(
+                        Ret {
+                            value: Some(
+                                Value(
+                                    ValueId(
+                                        5,
+                                    ),
+                                ),
+                            ),
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        22,
+                    ),
+                    span: None,
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        53,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 535,
+                            end: 538,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: FieldPtr {
+                        base: Value(
+                            ValueId(
+                                1,
+                            ),
+                        ),
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        73,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 535,
+                            end: 538,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                2,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        73,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 535,
+                            end: 538,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Variant {
+                        enum_ty: SemanticTypeId(
+                            12,
+                        ),
+                        variant_idx: 1,
+                        args: [],
+                    },
+                    ty: SemanticTypeId(
+                        12,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 525,
+                            end: 529,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Variant {
+                        enum_ty: SemanticTypeId(
+                            12,
+                        ),
+                        variant_idx: 1,
+                        args: [
+                            Value(
+                                ValueId(
+                                    3,
+                                ),
+                            ),
+                        ],
+                    },
+                    ty: SemanticTypeId(
+                        35,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 525,
+                            end: 529,
+                        },
+                    ),
+                },
+            ],
+        },
+        Function {
+            name: GlobalId {
+                name: "iter_mut::M_46_",
+                symbol_id: Some(
+                    SymbolId(
+                        16,
+                    ),
+                ),
+            },
+            is_extern: false,
+            arg_count: 1,
+            ret_ty: SemanticTypeId(
+                49,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                        ValueId(
+                            1,
+                        ),
+                        ValueId(
+                            2,
+                        ),
+                        ValueId(
+                            3,
+                        ),
+                        ValueId(
+                            4,
+                        ),
+                        ValueId(
+                            5,
+                        ),
+                        ValueId(
+                            6,
+                        ),
+                        ValueId(
+                            7,
+                        ),
+                        ValueId(
+                            8,
+                        ),
+                        ValueId(
+                            9,
+                        ),
+                        ValueId(
+                            10,
+                        ),
+                        ValueId(
+                            11,
+                        ),
+                        ValueId(
+                            12,
+                        ),
+                    ],
+                    terminator: Some(
+                        Ret {
+                            value: Some(
+                                Value(
+                                    ValueId(
+                                        12,
+                                    ),
+                                ),
+                            ),
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        19,
+                    ),
+                    span: None,
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        20,
+                    ),
+                    span: None,
+                },
+                ValueData {
+                    inst: FieldPtr {
+                        base: Value(
+                            ValueId(
+                                1,
+                            ),
+                        ),
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        75,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 287,
+                            end: 290,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        48,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 298,
+                            end: 302,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: FieldPtr {
+                        base: Value(
+                            ValueId(
+                                3,
+                            ),
+                        ),
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        75,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 298,
+                            end: 302,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                4,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        75,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 298,
+                            end: 302,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                2,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                5,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        75,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 287,
+                            end: 290,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: FieldPtr {
+                        base: Value(
+                            ValueId(
+                                1,
+                            ),
+                        ),
+                        field_idx: 1,
+                    },
+                    ty: SemanticTypeId(
+                        75,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 309,
+                            end: 312,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        48,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 320,
+                            end: 324,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: FieldPtr {
+                        base: Value(
+                            ValueId(
+                                8,
+                            ),
+                        ),
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        75,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 320,
+                            end: 324,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                9,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        75,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 320,
+                            end: 324,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                7,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                10,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        75,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 309,
+                            end: 312,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                1,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        49,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 333,
+                            end: 337,
+                        },
+                    ),
+                },
+            ],
+        },
+        Function {
+            name: GlobalId {
+                name: "use_val::M_",
+                symbol_id: Some(
+                    SymbolId(
+                        23,
+                    ),
+                ),
+            },
+            is_extern: false,
+            arg_count: 1,
+            ret_ty: SemanticTypeId(
+                0,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                    ],
+                    terminator: Some(
+                        Ret {
+                            value: None,
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        27,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 333,
+                            end: 337,
+                        },
+                    ),
+                },
+            ],
+        },
+        Function {
+            name: GlobalId {
+                name: "main",
+                symbol_id: Some(
+                    SymbolId(
+                        28,
+                    ),
+                ),
+            },
+            is_extern: false,
+            arg_count: 0,
+            ret_ty: SemanticTypeId(
+                0,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                        ValueId(
+                            1,
+                        ),
+                        ValueId(
+                            2,
+                        ),
+                        ValueId(
+                            3,
+                        ),
+                        ValueId(
+                            4,
+                        ),
+                        ValueId(
+                            5,
+                        ),
+                        ValueId(
+                            6,
+                        ),
+                        ValueId(
+                            7,
+                        ),
+                        ValueId(
+                            8,
+                        ),
+                        ValueId(
+                            9,
+                        ),
+                        ValueId(
+                            10,
+                        ),
+                        ValueId(
+                            11,
+                        ),
+                        ValueId(
+                            12,
+                        ),
+                        ValueId(
+                            13,
+                        ),
+                        ValueId(
+                            14,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_arm2",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_arm2",
+                    },
+                    insts: [
+                        ValueId(
+                            15,
+                        ),
+                        ValueId(
+                            16,
+                        ),
+                        ValueId(
+                            17,
+                        ),
+                        ValueId(
+                            18,
+                        ),
+                    ],
+                    terminator: Some(
+                        CondBr {
+                            condition: Value(
+                                ValueId(
+                                    17,
+                                ),
+                            ),
+                            true_target: LabelId {
+                                name: "match_enum_fields4",
+                            },
+                            false_target: LabelId {
+                                name: "match_enum_end5",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_enum_fields4",
+                    },
+                    insts: [
+                        ValueId(
+                            19,
+                        ),
+                    ],
+                    terminator: Some(
+                        CondBr {
+                            condition: Boolean(
+                                true,
+                            ),
+                            true_target: LabelId {
+                                name: "match_next_field6",
+                            },
+                            false_target: LabelId {
+                                name: "match_enum_end5",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_next_field6",
+                    },
+                    insts: [
+                        ValueId(
+                            20,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_enum_end5",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_enum_end5",
+                    },
+                    insts: [
+                        ValueId(
+                            21,
+                        ),
+                    ],
+                    terminator: Some(
+                        CondBr {
+                            condition: Value(
+                                ValueId(
+                                    21,
+                                ),
+                            ),
+                            true_target: LabelId {
+                                name: "match_body7",
+                            },
+                            false_target: LabelId {
+                                name: "match_arm3",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_body7",
+                    },
+                    insts: [
+                        ValueId(
+                            22,
+                        ),
+                        ValueId(
+                            23,
+                        ),
+                        ValueId(
+                            24,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_end1",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_arm3",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        CondBr {
+                            condition: Boolean(
+                                true,
+                            ),
+                            true_target: LabelId {
+                                name: "match_body9",
+                            },
+                            false_target: LabelId {
+                                name: "match_unreachable8",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_body9",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_end1",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_unreachable8",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        Unreachable,
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_end1",
+                    },
+                    insts: [
+                        ValueId(
+                            25,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_arm11",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_arm11",
+                    },
+                    insts: [
+                        ValueId(
+                            26,
+                        ),
+                        ValueId(
+                            27,
+                        ),
+                        ValueId(
+                            28,
+                        ),
+                        ValueId(
+                            29,
+                        ),
+                    ],
+                    terminator: Some(
+                        CondBr {
+                            condition: Value(
+                                ValueId(
+                                    28,
+                                ),
+                            ),
+                            true_target: LabelId {
+                                name: "match_enum_fields13",
+                            },
+                            false_target: LabelId {
+                                name: "match_enum_end14",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_enum_fields13",
+                    },
+                    insts: [
+                        ValueId(
+                            30,
+                        ),
+                    ],
+                    terminator: Some(
+                        CondBr {
+                            condition: Boolean(
+                                true,
+                            ),
+                            true_target: LabelId {
+                                name: "match_next_field15",
+                            },
+                            false_target: LabelId {
+                                name: "match_enum_end14",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_next_field15",
+                    },
+                    insts: [
+                        ValueId(
+                            31,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_enum_end14",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_enum_end14",
+                    },
+                    insts: [
+                        ValueId(
+                            32,
+                        ),
+                    ],
+                    terminator: Some(
+                        CondBr {
+                            condition: Value(
+                                ValueId(
+                                    32,
+                                ),
+                            ),
+                            true_target: LabelId {
+                                name: "match_body16",
+                            },
+                            false_target: LabelId {
+                                name: "match_arm12",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_body16",
+                    },
+                    insts: [
+                        ValueId(
+                            33,
+                        ),
+                        ValueId(
+                            34,
+                        ),
+                        ValueId(
+                            35,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_end10",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_arm12",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        CondBr {
+                            condition: Boolean(
+                                true,
+                            ),
+                            true_target: LabelId {
+                                name: "match_body18",
+                            },
+                            false_target: LabelId {
+                                name: "match_unreachable17",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_body18",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_end10",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_unreachable17",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        Unreachable,
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_end10",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        Ret {
+                            value: None,
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: Call {
+                        callee: Global(
+                            GlobalId {
+                                name: "get_vec::M_",
+                                symbol_id: Some(
+                                    SymbolId(
+                                        26,
+                                    ),
+                                ),
+                            },
+                        ),
+                        args: [],
+                    },
+                    ty: SemanticTypeId(
+                        29,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 740,
+                            end: 747,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        29,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 333,
+                            end: 337,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                1,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        29,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 333,
+                            end: 337,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Borrow {
+                        is_rw: true,
+                        base: Value(
+                            ValueId(
+                                1,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        19,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 774,
+                            end: 782,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Call {
+                        callee: Global(
+                            GlobalId {
+                                name: "iter_mut::M_46_",
+                                symbol_id: Some(
+                                    SymbolId(
+                                        16,
+                                    ),
+                                ),
+                            },
+                        ),
+                        args: [
+                            Value(
+                                ValueId(
+                                    3,
+                                ),
+                            ),
+                        ],
+                    },
+                    ty: SemanticTypeId(
+                        49,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 774,
+                            end: 782,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        49,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 333,
+                            end: 337,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                5,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                4,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        49,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 333,
+                            end: 337,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Borrow {
+                        is_rw: true,
+                        base: Value(
+                            ValueId(
+                                5,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        22,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 851,
+                            end: 855,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Call {
+                        callee: Global(
+                            GlobalId {
+                                name: "next::M_51_",
+                                symbol_id: Some(
+                                    SymbolId(
+                                        21,
+                                    ),
+                                ),
+                            },
+                        ),
+                        args: [
+                            Value(
+                                ValueId(
+                                    7,
+                                ),
+                            ),
+                        ],
+                    },
+                    ty: SemanticTypeId(
+                        55,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 851,
+                            end: 855,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        55,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 333,
+                            end: 337,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                9,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                8,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        55,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 333,
+                            end: 337,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                9,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        55,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 876,
+                            end: 881,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        55,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 876,
+                            end: 881,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                12,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                11,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        55,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 876,
+                            end: 881,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                9,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        55,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Tag {
+                        value: Value(
+                            ValueId(
+                                14,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Eq {
+                        left: Value(
+                            ValueId(
+                                16,
+                            ),
+                        ),
+                        right: Number(
+                            "1",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                15,
+                            ),
+                        ),
+                        value: Boolean(
+                            false,
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Extract {
+                        value: Value(
+                            ValueId(
+                                14,
+                            ),
+                        ),
+                        variant_idx: 1,
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        54,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                15,
+                            ),
+                        ),
+                        value: Boolean(
+                            true,
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                15,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Extract {
+                        value: Value(
+                            ValueId(
+                                14,
+                            ),
+                        ),
+                        variant_idx: 1,
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 926,
+                            end: 931,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                22,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        54,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1004,
+                            end: 1005,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Call {
+                        callee: Global(
+                            GlobalId {
+                                name: "use_val::M_",
+                                symbol_id: Some(
+                                    SymbolId(
+                                        23,
+                                    ),
+                                ),
+                            },
+                        ),
+                        args: [
+                            Value(
+                                ValueId(
+                                    23,
+                                ),
+                            ),
+                        ],
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1004,
+                            end: 1005,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                12,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        55,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Tag {
+                        value: Value(
+                            ValueId(
+                                25,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Eq {
+                        left: Value(
+                            ValueId(
+                                27,
+                            ),
+                        ),
+                        right: Number(
+                            "1",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                26,
+                            ),
+                        ),
+                        value: Boolean(
+                            false,
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Extract {
+                        value: Value(
+                            ValueId(
+                                25,
+                            ),
+                        ),
+                        variant_idx: 1,
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        54,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                26,
+                            ),
+                        ),
+                        value: Boolean(
+                            true,
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                26,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        4,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Extract {
+                        value: Value(
+                            ValueId(
+                                25,
+                            ),
+                        ),
+                        variant_idx: 1,
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1062,
+                            end: 1067,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                33,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        54,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1111,
+                            end: 1112,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Call {
+                        callee: Global(
+                            GlobalId {
+                                name: "use_val::M_",
+                                symbol_id: Some(
+                                    SymbolId(
+                                        23,
+                                    ),
+                                ),
+                            },
+                        ),
+                        args: [
+                            Value(
+                                ValueId(
+                                    34,
+                                ),
+                            ),
+                        ],
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 1111,
+                            end: 1112,
+                        },
+                    ),
+                },
+            ],
+        },
+        Function {
+            name: GlobalId {
+                name: "get_vec::M_",
+                symbol_id: Some(
+                    SymbolId(
+                        26,
+                    ),
+                ),
+            },
+            is_extern: false,
+            arg_count: 0,
+            ret_ty: SemanticTypeId(
+                29,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                        ValueId(
+                            1,
+                        ),
+                        ValueId(
+                            2,
+                        ),
+                        ValueId(
+                            3,
+                        ),
+                        ValueId(
+                            4,
+                        ),
+                        ValueId(
+                            5,
+                        ),
+                        ValueId(
+                            6,
+                        ),
+                        ValueId(
+                            7,
+                        ),
+                        ValueId(
+                            8,
+                        ),
+                        ValueId(
+                            9,
+                        ),
+                        ValueId(
+                            10,
+                        ),
+                    ],
+                    terminator: Some(
+                        Ret {
+                            value: Some(
+                                Value(
+                                    ValueId(
+                                        10,
+                                    ),
+                                ),
+                            ),
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 876,
+                            end: 881,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                        value: Number(
+                            "0",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 876,
+                            end: 881,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        29,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 648,
+                            end: 651,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Borrow {
+                        is_rw: true,
+                        base: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        38,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 669,
+                            end: 674,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: FieldPtr {
+                        base: Value(
+                            ValueId(
+                                2,
+                            ),
+                        ),
+                        field_idx: 0,
+                    },
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 648,
+                            end: 651,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                4,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                3,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 648,
+                            end: 651,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: FieldPtr {
+                        base: Value(
+                            ValueId(
+                                2,
+                            ),
+                        ),
+                        field_idx: 1,
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 648,
+                            end: 651,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                6,
+                            ),
+                        ),
+                        value: Number(
+                            "0",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 648,
+                            end: 651,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: FieldPtr {
+                        base: Value(
+                            ValueId(
+                                2,
+                            ),
+                        ),
+                        field_idx: 2,
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 648,
+                            end: 651,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                8,
+                            ),
+                        ),
+                        value: Number(
+                            "0",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        0,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 648,
+                            end: 651,
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                2,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        29,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 648,
+                            end: 651,
+                        },
+                    ),
+                },
+            ],
+        },
+    ],
+}

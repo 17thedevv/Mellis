@@ -1,15 +1,37 @@
-use crate::{SemanticContext, ScopeId, SymbolKind};
-use mellis_ast::{AstArena, Item, Stmt, Expr, Decl, Pattern};
-
-pub struct Resolver<'a> {
-    ctx: &'a mut SemanticContext,
-    arena: &'a AstArena,
-    source: &'a str,
-    current_scope: ScopeId,
+pub trait ModuleNamespaceProvider<'a> {
+    fn get_module_scope(&self, name: &str) -> Option<crate::symbol::ScopeId>;
 }
 
-impl<'a> Resolver<'a> {
-    pub fn new(ctx: &'a mut SemanticContext, arena: &'a AstArena, source: &'a str) -> Self {
+pub struct ModuleNamespaceMap {
+    pub scopes: std::collections::HashMap<String, crate::symbol::ScopeId>,
+}
+
+impl ModuleNamespaceMap {
+    pub fn new() -> Self {
+        Self { scopes: std::collections::HashMap::new() }
+    }
+}
+impl<'a> ModuleNamespaceProvider<'a> for ModuleNamespaceMap {
+    fn get_module_scope(&self, name: &str) -> Option<crate::symbol::ScopeId> {
+        self.scopes.get(name).copied()
+    }
+}
+
+use crate::{SemanticContext, ScopeId, SymbolKind};
+use mellis_ast::{AstArena, Item, Stmt, Expr, Decl, Pattern, Visibility};
+use mellis_common::ids::Span;
+
+pub struct Resolver<'a, 'b, 'c> {
+    pub ctx: &'a mut SemanticContext,
+    pub arena: &'b AstArena,
+    pub source: &'c str,
+    pub current_scope: ScopeId,
+    pub module_provider: Option<&'a dyn ModuleNamespaceProvider<'a>>,
+    pub active_lambdas: Vec<(mellis_ast::ExprId, ScopeId)>,
+}
+
+impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
+    pub fn new(ctx: &'a mut SemanticContext, arena: &'b AstArena, source: &'c str) -> Self {
         // Assume global scope is 0
         let global_scope = ScopeId(0);
         Self {
@@ -17,6 +39,8 @@ impl<'a> Resolver<'a> {
             arena,
             source,
             current_scope: global_scope,
+            module_provider: None,
+            active_lambdas: Vec::new(),
         }
     }
     
@@ -32,19 +56,137 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub fn resolve_items(&mut self, items: &[Item]) {
+    pub fn register_macros(&mut self, items: &[Item]) {
         for item in items {
-            self.resolve_item(item);
+            self.declare_macro_item(item);
         }
     }
 
-    fn resolve_item(&mut self, item: &Item) {
+    fn declare_macro_item(&mut self, item: &Item) {
+        if let Item::Decl(decl_id) = item {
+            let decl = &self.arena.decls[decl_id.0 as usize];
+            match decl {
+                Decl::Macro { name, visibility, .. } => {
+                    let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                    let sym_id = self.ctx.symbol_table.declare_symbol(
+                        name_str,
+                        SymbolKind::Macro,
+                        self.current_scope,
+                        *name,
+                        Some(*decl_id),
+                        *visibility,
+                        &mut self.ctx.diagnostics,
+                    );
+                    self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
+                    self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                    self.ctx.tables.decl_macros.insert(*decl_id, sym_id);
+                    self.ctx.tables.macro_decls.insert(sym_id, *decl_id);
+                }
+                Decl::Module { name, items, visibility, .. } => {
+                    let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                    let sym_id = if let Some(existing) = self.ctx.symbol_table.lookup_exact(&name_str, self.current_scope) {
+                        existing
+                    } else {
+                        self.ctx.symbol_table.declare_symbol(
+                            name_str,
+                            SymbolKind::Module,
+                            self.current_scope,
+                            *name,
+                            Some(*decl_id),
+                            *visibility,
+                            &mut self.ctx.diagnostics,
+                        )
+                    };
+                    self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
+                    self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                    let mod_scope = if let Some(inner) = self.ctx.symbol_table.symbols[sym_id.0 as usize].inner_scope {
+                        inner
+                    } else {
+                        let s = self.enter_scope(crate::symbol::ScopeKind::Module);
+                        self.ctx.symbol_table.set_inner_scope(sym_id, s);
+                        s
+                    };
+                    let prev_scope = self.current_scope;
+                    self.current_scope = mod_scope;
+                    for item_id in items {
+                        let inner_item = Item::Decl(*item_id);
+                        self.declare_macro_item(&inner_item);
+                    }
+                    self.current_scope = prev_scope;
+                }
+                Decl::Using { path, alias, .. } => {
+                    let alias_str = self.source[alias.start as usize..alias.end as usize].to_string();
+                    let path_str: Vec<&str> = path.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect();
+                    let target_scope_opt = if path_str.len() == 1 {
+                        self.ctx.symbol_table.lookup(path_str[0], self.current_scope)
+                            .and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope)
+                    } else {
+                        let mut curr = self.ctx.symbol_table.lookup(path_str[0], self.current_scope)
+                            .and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope);
+                        for &seg in &path_str[1..] {
+                            if let Some(scope) = curr {
+                                curr = self.ctx.symbol_table.lookup_exact(seg, scope)
+                                    .and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope);
+                            } else {
+                                break;
+                            }
+                        }
+                        curr
+                    };
+
+                    let sym_id = self.ctx.symbol_table.declare_symbol(
+                        alias_str,
+                        SymbolKind::Module,
+                        self.current_scope,
+                        *alias,
+                        Some(*decl_id),
+                        Visibility::Private,
+                        &mut self.ctx.diagnostics,
+                    );
+                    if let Some(target_scope) = target_scope_opt {
+                        self.ctx.symbol_table.set_inner_scope(sym_id, target_scope);
+                    }
+                }
+                Decl::Import { name, .. } => {
+                    let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                    let target_scope = if let Some(provider) = self.module_provider {
+                        provider.get_module_scope(&name_str)
+                    } else {
+                        None
+                    };
+                    let sym_id = self.ctx.symbol_table.declare_symbol(
+                        name_str,
+                        SymbolKind::Module,
+                        self.current_scope,
+                        *name,
+                        Some(*decl_id),
+                        Visibility::Private,
+                        &mut self.ctx.diagnostics,
+                    );
+                    if let Some(scope) = target_scope {
+                        self.ctx.symbol_table.set_inner_scope(sym_id, scope);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    pub fn resolve_items(&mut self, items: &[Item]) {
+        for item in items {
+            self.declare_item(item);
+        }
+        for item in items {
+            self.resolve_item_body(item);
+        }
+    }
+
+    fn declare_item(&mut self, item: &Item) {
         match item {
             Item::Decl(decl_id) => {
                 let decl = &self.arena.decls[decl_id.0 as usize];
                 match decl {
-                    Decl::Function { name, params, body, visibility, .. } => {
-                        let func_scope = self.enter_scope(crate::symbol::ScopeKind::Function);
+                    Decl::Function { name, params, visibility, .. } => {
                         let name_str = self.source[name.start as usize..name.end as usize].to_string();
                         
                         let sym_id = self.ctx.symbol_table.declare_symbol(
@@ -54,11 +196,13 @@ impl<'a> Resolver<'a> {
                             *name,
                             Some(*decl_id),
                             *visibility,
+                        &mut self.ctx.diagnostics
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
                         
-                        self.enter_scope(crate::symbol::ScopeKind::Function);
+                        let func_scope = self.enter_scope(crate::symbol::ScopeKind::Function);
+                        self.ctx.symbol_table.set_inner_scope(sym_id, func_scope);
                         
                         let mut noescapes = Vec::new();
                         for param_id in params {
@@ -81,25 +225,16 @@ impl<'a> Resolver<'a> {
                                     *p_name,
                                     Some(*param_id),
                                     *p_vis,
+                        &mut self.ctx.diagnostics
                                 );
                                 self.ctx.tables.decl_symbols.insert(*param_id, p_sym_id);
                                 self.ctx.tables.symbol_decls.insert(p_sym_id, *param_id);
                             }
                         }
                         self.ctx.tables.ffi_sync_noescape.insert(sym_id, noescapes);
-                        
-                        if let Some(body_stmt) = body {
-                            self.resolve_stmt(body_stmt);
-                        }
-                        
                         self.exit_scope();
                     }
-                    Decl::Var { name, initializer, visibility, is_mutable, pattern, .. } => {
-                        if let Some(init) = initializer {
-                            self.resolve_expr(init);
-                        }
-                        
-                        // We need to resolve the pattern or use the fallback name.
+                    Decl::Var { name, visibility, is_mutable, pattern, .. } => {
                         let name_str = self.source[name.start as usize..name.end as usize].to_string();
                         let sym_id = self.ctx.symbol_table.declare_symbol(
                             name_str,
@@ -108,6 +243,7 @@ impl<'a> Resolver<'a> {
                             *name,
                             Some(*decl_id),
                             *visibility,
+                        &mut self.ctx.diagnostics
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
@@ -124,13 +260,14 @@ impl<'a> Resolver<'a> {
                             *name,
                             Some(*decl_id),
                             *visibility,
+                        &mut self.ctx.diagnostics
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
                     }
-                    Decl::Extern { func, visibility, .. } => {
+                    Decl::Extern { func, .. } => {
                         let item = Item::Decl(*func);
-                        self.resolve_item(&item);
+                        self.declare_item(&item);
                     }
                     Decl::Enum { name, variants, visibility, .. } => {
                         let name_str = self.source[name.start as usize..name.end as usize].to_string();
@@ -141,6 +278,7 @@ impl<'a> Resolver<'a> {
                             *name,
                             Some(*decl_id),
                             *visibility,
+                        &mut self.ctx.diagnostics
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
@@ -156,6 +294,7 @@ impl<'a> Resolver<'a> {
                                 variant.name,
                                 Some(*decl_id), // Point to the Enum decl
                                 *visibility,
+                        &mut self.ctx.diagnostics
                             );
                         }
                     }
@@ -163,24 +302,227 @@ impl<'a> Resolver<'a> {
                         let name_str = self.source[name.start as usize..name.end as usize].to_string();
                         let sym_id = self.ctx.symbol_table.declare_symbol(
                             name_str,
-                            SymbolKind::Struct, // Traits use Struct kind for now
+                            SymbolKind::Trait,
                             self.current_scope,
                             *name,
                             Some(*decl_id),
                             *visibility,
+                        &mut self.ctx.diagnostics
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
                         
+                        self.enter_scope(crate::symbol::ScopeKind::Struct);
+                        let mut trait_method_syms = Vec::new();
                         for method_id in methods {
                             let item = Item::Decl(*method_id);
-                            self.resolve_item(&item);
+                            self.declare_item(&item);
+                            if let Some(&meth_sym) = self.ctx.tables.decl_symbols.get(method_id) {
+                                trait_method_syms.push(meth_sym);
+                            }
+                        }
+                        self.exit_scope();
+                        self.ctx.tables.trait_methods.insert(sym_id, trait_method_syms);
+                    }
+                    Decl::Impl { trait_type, self_type, methods, .. } => {
+                        self.enter_scope(crate::symbol::ScopeKind::Struct);
+                        for method_id in methods {
+                            let item = Item::Decl(*method_id);
+                            self.declare_item(&item);
+                        }
+                        self.exit_scope();
+
+                        let self_ast_ty = &self.arena.types[self_type.0 as usize];
+                        let self_sym_opt = if let mellis_ast::Type::Named { segments, .. } = self_ast_ty {
+                            segments.last().and_then(|s| {
+                                let name = &self.source[s.start as usize..s.end as usize];
+                                eprintln!("DEBUG: Resolving impl self_type: looking up '{}'", name);
+                                let result = self.ctx.symbol_table.lookup(name, crate::ScopeId(0));
+                                eprintln!("DEBUG: Symbol lookup result: {:?}", result);
+                                result
+                            })
+                        } else { None };
+
+                        let trait_sym_opt = if let Some(trait_ty_id) = trait_type {
+                            let trait_ast_ty = &self.arena.types[trait_ty_id.0 as usize];
+                            if let mellis_ast::Type::Named { segments, .. } = trait_ast_ty {
+                                segments.last().and_then(|s| {
+                                    let name = &self.source[s.start as usize..s.end as usize];
+                                    eprintln!("DEBUG: Resolving impl trait_type: looking up '{}'", name);
+                                    self.ctx.symbol_table.lookup(name, crate::ScopeId(0))
+                                })
+                            } else { None }
+                        } else { None };
+
+                        if let Some(self_sym) = self_sym_opt {
+                            eprintln!("DEBUG: Registering impl in trait_impls: self_sym={:?}, trait_sym={:?}", self_sym, trait_sym_opt);
+                            self.ctx.tables.trait_impls.insert(
+                                crate::semantic_tables::ImplKey {
+                                    trait_id: trait_sym_opt,
+                                    self_type_def: self_sym,
+                                },
+                                *decl_id,
+                            );
+                        } else {
+                            eprintln!("DEBUG: Could not resolve self_sym for impl");
+                        }
+                    }
+                    Decl::Macro { name, visibility, .. } => {
+                        if !self.ctx.tables.decl_macros.contains_key(decl_id) {
+                            let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                            let sym_id = self.ctx.symbol_table.declare_symbol(
+                                name_str,
+                                SymbolKind::Macro,
+                                self.current_scope,
+                                *name,
+                                Some(*decl_id),
+                                *visibility,
+                                &mut self.ctx.diagnostics,
+                            );
+                            self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
+                            self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                            self.ctx.tables.decl_macros.insert(*decl_id, sym_id);
+                            self.ctx.tables.macro_decls.insert(sym_id, *decl_id);
+                        }
+                    }
+                    Decl::Module { name, items, visibility, .. } => {
+                        let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                        let sym_id = if let Some(existing) = self.ctx.symbol_table.lookup_exact(&name_str, self.current_scope) {
+                            existing
+                        } else {
+                            self.ctx.symbol_table.declare_symbol(
+                                name_str,
+                                SymbolKind::Module,
+                                self.current_scope,
+                                *name,
+                                Some(*decl_id),
+                                *visibility,
+                                &mut self.ctx.diagnostics,
+                            )
+                        };
+                        self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
+                        self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                        let mod_scope = if let Some(inner) = self.ctx.symbol_table.symbols[sym_id.0 as usize].inner_scope {
+                            inner
+                        } else {
+                            let s = self.enter_scope(crate::symbol::ScopeKind::Module);
+                            self.ctx.symbol_table.set_inner_scope(sym_id, s);
+                            s
+                        };
+                        let prev_scope = self.current_scope;
+                        self.current_scope = mod_scope;
+                        for item_id in items {
+                            let item = Item::Decl(*item_id);
+                            self.declare_item(&item);
+                        }
+                        self.current_scope = prev_scope;
+                    }
+                    Decl::Using { path, alias, .. } => {
+                        let alias_str = self.source[alias.start as usize..alias.end as usize].to_string();
+                        let path_str: Vec<&str> = path.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect();
+                        let target_scope_opt = if path_str.len() == 1 {
+                            self.ctx.symbol_table.lookup(path_str[0], self.current_scope)
+                                .and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope)
+                        } else {
+                            let mut curr = self.ctx.symbol_table.lookup(path_str[0], self.current_scope)
+                                .and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope);
+                            for &seg in &path_str[1..] {
+                                if let Some(scope) = curr {
+                                    curr = self.ctx.symbol_table.lookup_exact(seg, scope)
+                                        .and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope);
+                                } else {
+                                    break;
+                                }
+                            }
+                            curr
+                        };
+
+                        let sym_id = self.ctx.symbol_table.declare_symbol(
+                            alias_str,
+                            SymbolKind::Module,
+                            self.current_scope,
+                            *alias,
+                            Some(*decl_id),
+                            Visibility::Private,
+                            &mut self.ctx.diagnostics,
+                        );
+                        if let Some(target_scope) = target_scope_opt {
+                            self.ctx.symbol_table.set_inner_scope(sym_id, target_scope);
+                        }
+                    }
+                    Decl::Import { name, .. } => {
+                        let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                        let target_scope = if let Some(provider) = self.module_provider {
+                            provider.get_module_scope(&name_str)
+                        } else {
+                            None
+                        };
+                        let sym_id = self.ctx.symbol_table.declare_symbol(
+                            name_str,
+                            SymbolKind::Module,
+                            self.current_scope,
+                            *name,
+                            Some(*decl_id),
+                            Visibility::Private,
+                            &mut self.ctx.diagnostics,
+                        );
+                        if let Some(scope) = target_scope {
+                            self.ctx.symbol_table.set_inner_scope(sym_id, scope);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            Item::Stmt(_) => {}
+        }
+    }
+
+    fn resolve_item_body(&mut self, item: &Item) {
+        match item {
+            Item::Decl(decl_id) => {
+                let decl = &self.arena.decls[decl_id.0 as usize];
+                match decl {
+                    Decl::Function { body, .. } => {
+                        if let Some(body_stmt) = body {
+                            if let Some(&sym_id) = self.ctx.tables.decl_symbols.get(decl_id) {
+                                if let Some(scope) = self.ctx.symbol_table.get_symbol(sym_id).inner_scope {
+                                    let prev_scope = self.current_scope;
+                                    self.current_scope = scope;
+                                    self.resolve_stmt(body_stmt);
+                                    self.current_scope = prev_scope;
+                                }
+                            }
+                        }
+                    }
+                    Decl::Var { initializer, .. } => {
+                        if let Some(init) = initializer {
+                            self.resolve_expr(init);
                         }
                     }
                     Decl::Impl { methods, .. } => {
                         for method_id in methods {
-                            let item = Item::Decl(*method_id);
-                            self.resolve_item(&item);
+                            self.resolve_item_body(&Item::Decl(*method_id));
+                        }
+                    }
+                    Decl::Trait { methods, .. } => {
+                        for method_id in methods {
+                            self.resolve_item_body(&Item::Decl(*method_id));
+                        }
+                    }
+                    Decl::Extern { func, .. } => {
+                        self.resolve_item_body(&Item::Decl(*func));
+                    }
+                    Decl::Module { items, .. } => {
+                        if let Some(&sym_id) = self.ctx.tables.decl_symbols.get(decl_id) {
+                            if let Some(inner) = self.ctx.symbol_table.symbols[sym_id.0 as usize].inner_scope {
+                                let prev_scope = self.current_scope;
+                                self.current_scope = inner;
+                                for item_id in items {
+                                    let item = Item::Decl(*item_id);
+                                    self.resolve_item_body(&item);
+                                }
+                                self.current_scope = prev_scope;
+                            }
                         }
                     }
                     _ => {}
@@ -217,11 +559,32 @@ impl<'a> Resolver<'a> {
                 self.resolve_expr(condition);
                 self.resolve_stmt(body);
             }
-            Stmt::For { init, cond, step, body, iterable, .. } => {
+            Stmt::For { init, cond, step, body, iterable, pattern, binding_name, .. } => {
                 self.enter_scope(crate::symbol::ScopeKind::Block);
                 if let Some(item) = init {
-                    self.resolve_item(item);
+                    self.declare_item(item);
+                    self.resolve_item_body(item);
                 }
+                
+                // Declare loop variable bindings
+                if let Some(name) = binding_name {
+                    let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                    let sym_id = self.ctx.symbol_table.declare_symbol(
+                        name_str,
+                        crate::symbol::SymbolKind::Variable,
+                        self.current_scope,
+                        *name,
+                        None,
+                        mellis_ast::Visibility::Private,
+                        &mut self.ctx.diagnostics,
+                    );
+                    // We don't have a PatId or DeclId to map this to in the AST, 
+                    // but the name is successfully bound in the scope!
+                }
+                if let Some(pat) = pattern {
+                    self.resolve_pattern(pat, mellis_ast::Visibility::Private, false);
+                }
+
                 if let Some(iter) = iterable {
                     self.resolve_expr(iter);
                 }
@@ -238,6 +601,9 @@ impl<'a> Resolver<'a> {
                 if let Some(val) = value {
                     self.resolve_expr(val);
                 }
+            }
+            Stmt::Unsafe { body } => {
+                self.resolve_stmt(body);
             }
             _ => {}
         }
@@ -281,12 +647,29 @@ impl<'a> Resolver<'a> {
                         *name,
                         None,
                         visibility,
+                        &mut self.ctx.diagnostics,
                     );
                     self.ctx.tables.pat_symbols.insert(*pat_id, sym_id);
                 }
             }
-            Pattern::Tuple { elements, .. } | Pattern::Enum { fields: elements, .. } => {
+            Pattern::Tuple { elements, .. } => {
                 for element in elements {
+                    self.resolve_pattern(element, visibility, is_mutable);
+                }
+            }
+            Pattern::Enum { path, fields } => {
+                let mut full_name = String::new();
+                for (i, seg) in path.iter().enumerate() {
+                    if i > 0 { full_name.push_str("::"); }
+                    full_name.push_str(&self.source[seg.start as usize..seg.end as usize]);
+                }
+                if let Some(existing_sym_id) = self.ctx.symbol_table.lookup(&full_name, self.current_scope) {
+                    let sym = self.ctx.symbol_table.get_symbol(existing_sym_id);
+                    if matches!(sym.kind, SymbolKind::EnumVariant(_)) {
+                        self.ctx.tables.pat_symbols.insert(*pat_id, existing_sym_id);
+                    }
+                }
+                for element in fields {
                     self.resolve_pattern(element, visibility, is_mutable);
                 }
             }
@@ -306,14 +689,76 @@ impl<'a> Resolver<'a> {
         match expr {
             Expr::Identifier { segments, .. } => {
                 if !segments.is_empty() {
-                    let mut name_str = String::new();
-                    for (i, seg) in segments.iter().enumerate() {
-                        if i > 0 { name_str.push_str("::"); }
-                        name_str.push_str(&self.source[seg.start as usize..seg.end as usize]);
+                    let name_str = segments.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect::<Vec<_>>().join("::");
+                    
+                    let mut resolved_sym = self.ctx.symbol_table.lookup_with_ctxt(&name_str, segments[0].ctxt, self.current_scope);
+                    
+                    if resolved_sym.is_none() {
+                        let mut current_scope = self.current_scope;
+                        
+                        for (i, seg) in segments.iter().enumerate() {
+                            let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                            
+                            let sym_id = if i == 0 {
+                                self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, current_scope)
+                            } else {
+                                self.ctx.symbol_table.lookup_exact_with_ctxt(seg_name, seg.ctxt, current_scope)
+                            };
+                            
+                            if let Some(id) = sym_id {
+                                resolved_sym = Some(id);
+                                if let Some(inner) = self.ctx.symbol_table.symbols[id.0 as usize].inner_scope {
+                                    current_scope = inner;
+                                } else if i < segments.len() - 1 {
+                                    resolved_sym = None;
+                                    break;
+                                }
+                            } else {
+                                resolved_sym = None;
+                                break;
+                            }
+                        }
                     }
-                    if let Some(sym_id) = self.ctx.symbol_table.lookup(&name_str, self.current_scope) {
+                    
+                    if let Some(sym_id) = resolved_sym {
+                        let sym = self.ctx.symbol_table.get_symbol(sym_id);
+                        if matches!(sym.kind, crate::symbol::SymbolKind::Macro) {
+                            let name_str = segments.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect::<Vec<_>>().join("::");
+                            let span = Span {
+                                file_id: segments[0].file_id,
+                                start: segments[0].start,
+                                end: segments.last().unwrap().end,
+                                ctxt: segments[0].ctxt,
+                            };
+                            self.ctx.diagnostics.push(
+                                mellis_common::Diagnostic::error(format!(
+                                    "macro '{}' cannot be used as a value",
+                                    name_str
+                                ))
+                                .with_span(span),
+                            );
+                            return;
+                        }
                         self.ctx.tables.expr_symbols.insert(*expr_id, sym_id);
+                        
+                        if !self.active_lambdas.is_empty() {
+                            let sym = self.ctx.symbol_table.get_symbol(sym_id);
+                            if matches!(sym.kind, crate::symbol::SymbolKind::Variable | crate::symbol::SymbolKind::Constant) {
+                                for (lambda_id, lambda_scope) in &self.active_lambdas {
+                                    if self.ctx.symbol_table.is_ancestor(sym.scope, *lambda_scope) && sym.scope != *lambda_scope {
+                                        let captures = self.ctx.tables.expr_captures.entry(*lambda_id).or_default();
+                                        if !captures.contains(&sym_id) {
+                                            captures.push(sym_id);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     } else {
+                        let name_str = segments.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect::<Vec<_>>().join("::");
+                        let diag = mellis_common::Diagnostic::error(format!("Symbol '{}' not found", name_str))
+                            .with_span(*segments.first().unwrap());
+                        self.ctx.diagnostics.push(diag);
                     }
                 }
             }
@@ -358,7 +803,7 @@ impl<'a> Resolver<'a> {
             Expr::Cast { expr: e, .. } => {
                 self.resolve_expr(e);
             }
-            Expr::Match { subject, arms } => {
+            Expr::Match { subject, arms, .. } => {
                 self.resolve_expr(subject);
                 for arm in arms {
                     self.enter_scope(crate::symbol::ScopeKind::Block);
@@ -367,10 +812,23 @@ impl<'a> Resolver<'a> {
                     self.exit_scope();
                 }
             }
-            Expr::Lambda { params, body, .. } => {
+            Expr::Lambda { params, body, return_type, .. } => {
+                let name = format!("__closure_{}", expr_id.0);
+                let closure_sym_id = self.ctx.symbol_table.declare_symbol(
+                    name,
+                    SymbolKind::Function,
+                    self.current_scope,
+                    mellis_common::ids::Span::new(mellis_common::ids::FileId(0), 0, 0),
+                    None,
+                    mellis_ast::Visibility::Private,
+                    &mut self.ctx.diagnostics
+                );
+                self.ctx.tables.expr_symbols.insert(*expr_id, closure_sym_id);
+
                 self.enter_scope(crate::symbol::ScopeKind::Function);
+                self.active_lambdas.push((*expr_id, self.current_scope));
                 for param_id in params {
-                    if let Decl::Param { name: p_name, visibility: p_vis, .. } = &self.arena.decls[param_id.0 as usize] {
+                    if let Decl::Param { name: p_name, visibility: p_vis, ty, .. } = &self.arena.decls[param_id.0 as usize] {
                         let p_name_str = self.source[p_name.start as usize..p_name.end as usize].to_string();
                         let p_sym_id = self.ctx.symbol_table.declare_symbol(
                             p_name_str,
@@ -379,15 +837,17 @@ impl<'a> Resolver<'a> {
                             *p_name,
                             Some(*param_id),
                             *p_vis,
+                        &mut self.ctx.diagnostics
                         );
                         self.ctx.tables.decl_symbols.insert(*param_id, p_sym_id);
                         self.ctx.tables.symbol_decls.insert(p_sym_id, *param_id);
                     }
                 }
                 self.resolve_stmt(body);
+                self.active_lambdas.pop();
                 self.exit_scope();
             }
-            Expr::Try { expr: e } | Expr::Await { expr: e } => {
+            Expr::Try { expr: e, .. } | Expr::Await { expr: e } => {
                 self.resolve_expr(e);
             }
             Expr::Unary { operand, .. } => {
@@ -397,6 +857,28 @@ impl<'a> Resolver<'a> {
                 for e in elements {
                     self.resolve_expr(e);
                 }
+            }
+            Expr::MacroCall { path, name, span, .. } => {
+                let path_strs: Vec<&str> = if !path.is_empty() {
+                    path.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect()
+                } else {
+                    vec![&self.source[name.start as usize..name.end as usize]]
+                };
+                if let Some(sym_id) = self.ctx.symbol_table.lookup_macro(&path_strs, self.current_scope) {
+                    self.ctx.tables.expr_symbols.insert(*expr_id, sym_id);
+                } else {
+                    let macro_name = path_strs.join("::");
+                    self.ctx.diagnostics.push(
+                        mellis_common::Diagnostic::error(format!(
+                            "no macro named '{}' in scope",
+                            macro_name
+                        ))
+                        .with_span(*span),
+                    );
+                }
+            }
+            Expr::Comptime { body } => {
+                self.resolve_stmt(body);
             }
             _ => {}
         }

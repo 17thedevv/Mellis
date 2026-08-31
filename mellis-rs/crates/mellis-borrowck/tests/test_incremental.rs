@@ -9,6 +9,7 @@ fn make_base_graph() -> Function {
         name: GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: 0,
         is_extern: false,
+            is_async: false,
         ret_ty: SemanticTypeId(0),
         blocks: vec![],
         values: vec![],
@@ -17,7 +18,7 @@ fn make_base_graph() -> Function {
     // A small CFG: entry -> block1 -> block2 -> block1 -> exit
     
     // Var 0
-    func.values.push(ValueData { inst: Instruction::Alloca, ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, inst: Instruction::Alloca, ty: SemanticTypeId(0) });
     
     func.blocks.push(BasicBlock {
         label: LabelId { name: "entry".to_string() },
@@ -55,21 +56,21 @@ fn test_incremental_move_analysis() {
     let mut func = make_base_graph();
     
     // Result A (Base run)
-    let mut analyzer = MoveAnalyzer::new();
+    let mut analyzer = MoveAnalyzer::new(&func, None, None);
     let (states_a, iterations_a) = DataflowEngine::run_forward_with_stats(&func, &mut analyzer);
 
     // Modify the CFG (add a read/move instruction in block2)
     // var 1
-    func.values.push(ValueData { inst: Instruction::Eq { left: Operand::Value(ValueId(0)), right: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, inst: Instruction::Eq { left: Operand::Value(ValueId(0)), right: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
     let block2_idx = func.blocks.iter().position(|b| b.label.name == "block2").unwrap();
     func.blocks[block2_idx].insts.push(ValueId(1));
 
     // Result B (Incremental)
-    let mut analyzer_inc = MoveAnalyzer::new();
+    let mut analyzer_inc = MoveAnalyzer::new(&func, None, None);
     let (states_b, iterations_b) = DataflowEngine::run_forward_incremental(&func, &mut analyzer_inc, states_a.clone());
 
     // Result C (Full from scratch)
-    let mut analyzer_full = MoveAnalyzer::new();
+    let mut analyzer_full = MoveAnalyzer::new(&func, None, None);
     let (states_c, iterations_c) = DataflowEngine::run_forward_with_stats(&func, &mut analyzer_full);
 
     // Assert incremental is correct
@@ -92,7 +93,7 @@ fn test_incremental_borrow_analysis() {
 
     // Modify the CFG (add a borrow in block2)
     // var 1
-    func.values.push(ValueData { inst: Instruction::Borrow { is_rw: true, base: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, inst: Instruction::Borrow { is_rw: true, base: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
     let block2_idx = func.blocks.iter().position(|b| b.label.name == "block2").unwrap();
     func.blocks[block2_idx].insts.push(ValueId(1));
 

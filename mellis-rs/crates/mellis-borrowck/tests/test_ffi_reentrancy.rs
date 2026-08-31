@@ -7,6 +7,7 @@ fn make_func(name: &str, num_args: u32, instructions: Vec<Instruction>) -> Funct
         name: GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: num_args as usize,
         is_extern: false,
+            is_async: false,
         blocks: vec![],
         values: vec![],
         ret_ty: SemanticTypeId(0),
@@ -20,13 +21,13 @@ fn make_func(name: &str, num_args: u32, instructions: Vec<Instruction>) -> Funct
 
     let mut val_id = 0;
     for _ in 0..num_args {
-        func.values.push(ValueData { inst: Instruction::Alloca, ty: SemanticTypeId(0) });
+        func.values.push(ValueData { span: None, inst: Instruction::Alloca, ty: SemanticTypeId(0) });
         block.insts.push(ValueId(val_id));
         val_id += 1;
     }
 
     for inst in instructions {
-        func.values.push(ValueData { inst, ty: SemanticTypeId(0) });
+        func.values.push(ValueData { span: None, inst, ty: SemanticTypeId(0) });
         block.insts.push(ValueId(val_id));
         val_id += 1;
     }
@@ -41,18 +42,18 @@ fn test_ffi_escape_then_reentrant_callback_conflict() {
         // v1 = &mut arg0
         Instruction::Borrow { is_rw: true, base: Operand::Value(ValueId(0)) },
         // ffi_register_callback(v1) -> this passes the mutable pointer to C, where it escapes (MayEscape).
-        Instruction::Call { 
-            callee: Operand::Global(GlobalId { name: "ffi_register_callback".to_string(), symbol_id: None }), 
-            args: vec![Operand::Value(ValueId(1))] 
+        Instruction::CallDirect {
+            callee: GlobalId { name: "ffi_register_callback".to_string(), symbol_id: None },
+            args: vec![Operand::Value(ValueId(1))]
         },
         
         // --- C-side holds the pointer (MayEscape) ---
         // ... sometime later, C-side calls back into Mellis or a thread is running ...
 
         // ffi_invoke_callback() -> simulate the event firing or some other function call
-        Instruction::Call { 
-            callee: Operand::Global(GlobalId { name: "ffi_invoke_callback".to_string(), symbol_id: None }), 
-            args: vec![] 
+        Instruction::CallDirect {
+            callee: GlobalId { name: "ffi_invoke_callback".to_string(), symbol_id: None },
+            args: vec![]
         },
 
         // --- Mellis-side tries to read `arg0` concurrently ---
@@ -78,9 +79,9 @@ fn test_ffi_escape_negative_control() {
         // v1 = &mut arg0
         Instruction::Borrow { is_rw: true, base: Operand::Value(ValueId(0)) },
         // ffi_register_callback(v1)
-        Instruction::Call { 
-            callee: Operand::Global(GlobalId { name: "ffi_register_callback".to_string(), symbol_id: None }), 
-            args: vec![Operand::Value(ValueId(1))] 
+        Instruction::CallDirect {
+            callee: GlobalId { name: "ffi_register_callback".to_string(), symbol_id: None },
+            args: vec![Operand::Value(ValueId(1))]
         },
         // NO ffi_invoke_callback() here! Direct Load.
         Instruction::Load { ptr: Operand::Value(ValueId(0)) }, 

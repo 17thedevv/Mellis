@@ -34,6 +34,7 @@ fn generate_linear_function(num_args: u32, ops: Vec<u8>) -> Function {
         name: GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: num_args as usize,
         is_extern: false,
+            is_async: false,
         blocks: vec![],
         values: vec![],
         ret_ty: SemanticTypeId(0),
@@ -49,7 +50,7 @@ fn generate_linear_function(num_args: u32, ops: Vec<u8>) -> Function {
 
     // Push arguments
     for i in 0..num_args {
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         });
@@ -78,7 +79,7 @@ fn generate_linear_function(num_args: u32, ops: Vec<u8>) -> Function {
             _ => unreachable!(),
         };
 
-        func.values.push(ValueData {
+        func.values.push(ValueData { span: None,
             inst,
             ty: SemanticTypeId(0),
         });

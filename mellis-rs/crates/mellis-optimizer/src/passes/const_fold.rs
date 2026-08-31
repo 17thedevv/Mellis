@@ -29,9 +29,28 @@ impl Pass for ConstantFolding {
                         Some(Instruction::Assign(Operand::Number((l * r).to_string())))
                     } else { None }
                 }
+                Instruction::Div { left, right } => {
+                    if let (Some(l), Some(r)) = (Self::resolve_const(func, left), Self::resolve_const(func, right)) {
+                        if r != 0 {
+                            Some(Instruction::Assign(Operand::Number((l / r).to_string())))
+                        } else { None }
+                    } else { None }
+                }
+                Instruction::Rem { left, right } => {
+                    if let (Some(l), Some(r)) = (Self::resolve_const(func, left), Self::resolve_const(func, right)) {
+                        if r != 0 {
+                            Some(Instruction::Assign(Operand::Number((l % r).to_string())))
+                        } else { None }
+                    } else { None }
+                }
                 Instruction::Eq { left, right } => {
                     if let (Some(l), Some(r)) = (Self::resolve_const(func, left), Self::resolve_const(func, right)) {
                         Some(Instruction::Assign(Operand::Boolean(l == r)))
+                    } else { None }
+                }
+                Instruction::NotEq { left, right } => {
+                    if let (Some(l), Some(r)) = (Self::resolve_const(func, left), Self::resolve_const(func, right)) {
+                        Some(Instruction::Assign(Operand::Boolean(l != r)))
                     } else { None }
                 }
                 _ => None,

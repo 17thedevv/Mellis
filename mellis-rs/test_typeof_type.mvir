@@ -1,0 +1,64 @@
+Module {
+    functions: [
+        Function {
+            name: GlobalId {
+                name: "main",
+                symbol_id: Some(
+                    SymbolId(
+                        1,
+                    ),
+                ),
+            },
+            is_extern: false,
+            arg_count: 0,
+            ret_ty: SemanticTypeId(
+                0,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                        ValueId(
+                            1,
+                        ),
+                    ],
+                    terminator: Some(
+                        Ret {
+                            value: None,
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: None,
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                        value: Number(
+                            "100",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: None,
+                },
+            ],
+        },
+    ],
+}

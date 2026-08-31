@@ -2,13 +2,13 @@ use crate::PatId;
 use mellis_common::Span;
 use mellis_lexer::Token;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct StructPatternField {
     pub name: Span,
     pub pattern: Option<PatId>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum Pattern {
     Wildcard,
     Literal(Token),

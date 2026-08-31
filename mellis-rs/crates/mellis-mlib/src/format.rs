@@ -5,6 +5,74 @@ pub const MLIB_FORMAT_VERSION: u16 = 1;
 pub const MLIB_COMPILER_VERSION: u16 = 1; // v1.0
 pub const MLIB_MVIR_VERSION: u16 = 1;
 
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Manifest {
+    pub identity: ArtifactIdentity,
+    pub target: TargetContract,
+    pub dependencies: DependencyTable,
+    pub object_metadata: Option<ObjectMetadata>,
+    pub provenance: Provenance,
+    #[serde(default)]
+    pub export_table: Option<ExportTable>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExportTable {
+    pub root_namespace: NamespaceNode,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct NamespaceNode {
+    pub children: std::collections::HashMap<String, NamespaceNode>,
+    pub symbols: std::collections::HashMap<String, SymbolInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SymbolInfo {
+    pub kind: String, // "Function", "Struct", "Enum", "Trait", etc.
+    pub id: u32,      // Type ID or Function ID
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArtifactIdentity {
+    pub package_id: String,
+    pub version: String,
+    pub module_id: String,
+    pub artifact_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TargetContract {
+    pub target_triple: String,
+    pub object_format: String,
+    pub abi: String,
+    pub pointer_width: u8,
+    pub endianness: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DependencyTable {
+    pub mlib_deps: Vec<String>,
+    pub native_deps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObjectMetadata {
+    pub format: String,
+    pub hash: [u8; 32],
+    pub size: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Provenance {
+    pub source_fingerprint: [u8; 32],
+    pub compiler_version: String,
+    pub codegen_options: String,
+    pub interface_hash: [u8; 32],
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SectionType {
     ExportTable = 1,
@@ -22,6 +90,7 @@ pub enum SectionType {
     GenericMetadata = 13,
     TypeRefTable = 14,
     Custom = 0xFFFFFFFF,
+    AstInterface = 15,
 }
 
 impl SectionType {
@@ -41,6 +110,7 @@ impl SectionType {
             12 => Some(SectionType::MacroMetadata),
             13 => Some(SectionType::GenericMetadata),
             14 => Some(SectionType::TypeRefTable),
+            15 => Some(SectionType::AstInterface),
             0xFFFFFFFF => Some(SectionType::Custom),
             _ => None,
         }

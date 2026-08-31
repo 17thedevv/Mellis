@@ -1,0 +1,36 @@
+struct Error { code: i32 }
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+fn fallible(fail: bool) -> Result<i32, Error> {
+    if fail {
+        dec e = Error { code: 99 };
+        return Result::Err(e);
+    }
+    return Result::Ok(10);
+}
+
+fn test_loop(max: i32) -> Result<i32, Error> {
+    dec rw sum = 0;
+    dec rw i = 0;
+    while i < max {
+        dec rw fail = false;
+        if i == 3 {
+            fail = true;
+        }
+        sum = sum + fallible(fail)?;
+        i = i + 1;
+    }
+    return Result::Ok(sum);
+}
+
+fn main() -> i32 {
+    dec res = test_loop(5);
+    dec code = match res {
+        Result::Ok(v) -> v,
+        Result::Err(e) -> e.code,
+    };
+    return code;
+}

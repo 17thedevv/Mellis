@@ -4,6 +4,6 @@ fn consume(s: S) {}
 fn main() {
     dec rw x = S { a: 10 };
     while true {
-        consume(x); //~ ERROR Use of moved value
+        consume(x); //~ ERROR Use of conditionally moved value
     }
 }

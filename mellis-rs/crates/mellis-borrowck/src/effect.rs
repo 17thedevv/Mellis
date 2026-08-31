@@ -76,6 +76,7 @@ impl EscapeKind {
 pub enum ReturnEffect {
     Independent,
     BorrowsFrom(Vec<usize>), // Arg indices
+    BorrowsCarried(Vec<usize>),
     Unknown,
 }
 
@@ -89,7 +90,10 @@ impl PartialOrd for ReturnEffect {
             (_, ReturnEffect::Independent) => Some(std::cmp::Ordering::Greater),
             (ReturnEffect::Unknown, _) => Some(std::cmp::Ordering::Greater),
             (_, ReturnEffect::Unknown) => Some(std::cmp::Ordering::Less),
-            (ReturnEffect::BorrowsFrom(a), ReturnEffect::BorrowsFrom(b)) => {
+            // Partial ordering between BorrowsFrom and BorrowsCarried is complex,
+            // we will treat them as incomparable if they mix, but we can compare same types
+            (ReturnEffect::BorrowsFrom(a), ReturnEffect::BorrowsFrom(b)) |
+            (ReturnEffect::BorrowsCarried(a), ReturnEffect::BorrowsCarried(b)) => {
                 let a_is_subset = a.iter().all(|x| b.contains(x));
                 let b_is_subset = b.iter().all(|x| a.contains(x));
                 if a_is_subset && b_is_subset {
@@ -102,6 +106,7 @@ impl PartialOrd for ReturnEffect {
                     None
                 }
             }
+            _ => None,
         }
     }
 }
@@ -120,11 +125,39 @@ impl ReturnEffect {
                 merged.sort();
                 ReturnEffect::BorrowsFrom(merged)
             }
+            (ReturnEffect::BorrowsCarried(a), ReturnEffect::BorrowsCarried(b)) => {
+                let mut merged = a.clone();
+                for &idx in b {
+                    if !merged.contains(&idx) {
+                        merged.push(idx);
+                    }
+                }
+                merged.sort();
+                ReturnEffect::BorrowsCarried(merged)
+            }
+            // If they mix, we could upgrade to a combined effect, but for now we fallback to Unknown
+            // or just take BorrowsFrom which is more conservative (since it borrows the object itself)
+            (ReturnEffect::BorrowsFrom(_), ReturnEffect::BorrowsCarried(_)) |
+            (ReturnEffect::BorrowsCarried(_), ReturnEffect::BorrowsFrom(_)) => {
+                // If a function returns something that borrows BOTH from the argument and what it carries,
+                // borrowing from the argument is strictly more restrictive.
+                if let ReturnEffect::BorrowsFrom(_) = self {
+                    self.clone()
+                } else {
+                    other.clone()
+                }
+            }
             (ReturnEffect::BorrowsFrom(a), ReturnEffect::Independent) => {
                 ReturnEffect::BorrowsFrom(a.clone())
             }
             (ReturnEffect::Independent, ReturnEffect::BorrowsFrom(b)) => {
                 ReturnEffect::BorrowsFrom(b.clone())
+            }
+            (ReturnEffect::BorrowsCarried(a), ReturnEffect::Independent) => {
+                ReturnEffect::BorrowsCarried(a.clone())
+            }
+            (ReturnEffect::Independent, ReturnEffect::BorrowsCarried(b)) => {
+                ReturnEffect::BorrowsCarried(b.clone())
             }
             (ReturnEffect::Independent, ReturnEffect::Independent) => ReturnEffect::Independent,
         }

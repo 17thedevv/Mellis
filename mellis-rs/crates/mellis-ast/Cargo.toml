@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 mellis-common = { path = "../mellis-common" }
 mellis-lexer = { path = "../mellis-lexer" }
+serde = { version = "1.0.229", features = ["derive"] }

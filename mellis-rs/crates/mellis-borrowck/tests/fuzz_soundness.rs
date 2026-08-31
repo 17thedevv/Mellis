@@ -23,18 +23,19 @@ fn build_acyclic_func(
         name: GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: 0,
         is_extern: false,
+            is_async: false,
         ret_ty: SemanticTypeId(0),
         blocks: vec![],
         values: vec![],
     };
 
-    let prim_ty = ctx.types.intern(SemanticType::Primitive(mellis_semantic::ty::BuiltinType::Int));
+    let prim_ty = ctx.types.intern(SemanticType::Primitive(mellis_semantic::ty::BuiltinType::I32));
     let ref_mut_ty = ctx.types.intern(SemanticType::Reference(mellis_semantic::ty::LifetimeId(0), Mutability::Mutable, prim_ty));
     let ptr_mut_ty = ctx.types.intern(SemanticType::Pointer(Mutability::Mutable, prim_ty));
 
     // Param 0 and 1
-    func.values.push(ValueData { inst: Instruction::Alloca, ty: ref_mut_ty });
-    func.values.push(ValueData { inst: Instruction::Alloca, ty: ptr_mut_ty });
+    func.values.push(ValueData { span: None, inst: Instruction::Alloca, ty: ref_mut_ty });
+    func.values.push(ValueData { span: None, inst: Instruction::Alloca, ty: ptr_mut_ty });
 
     let mut val_id_counter = 2;
     let mut inst_id_to_val_id = vec![];
@@ -51,7 +52,7 @@ fn build_acyclic_func(
                 1 => Instruction::Load { ptr: Operand::Value(ValueId((kind % 2) as u32)) },
                 _ => Instruction::Store { ptr: Operand::Value(ValueId((kind % 2) as u32)), value: Operand::Value(ValueId(0)) },
             };
-            func.values.push(ValueData { inst, ty: prim_ty });
+            func.values.push(ValueData { span: None, inst, ty: prim_ty });
             block_val_ids.push(ValueId(val_id_counter));
             val_id_counter += 1;
         }

@@ -1,0 +1,16 @@
+struct Error { code: i32 }
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+fn fallible() -> Result<i32, Error> {
+    return Result::Ok(1);
+}
+
+fn not_result() -> i32 {
+    dec x = fallible()?; //~ ERROR The `?` operator can only be used in a function that returns `Result<T, E>`
+    return x;
+}
+
+fn main() {}

@@ -60,6 +60,13 @@ impl<'a> Parser<'a> {
                 has_semicolon: false,
             }));
         }
+        if let mellis_ast::Expr::MacroCall { delimiter: mellis_ast::MacroDelimiter::Brace, .. } = &self.arena.exprs[expr.0 as usize] {
+            let has_semi = self.match_token(TokenKind::Semi);
+            return Ok(self.arena.alloc_stmt(Stmt::Expr {
+                expr,
+                has_semicolon: has_semi,
+            }));
+        }
         self.consume(TokenKind::Semi, "Expected ';' after expression")?;
         Ok(self.arena.alloc_stmt(Stmt::Expr {
             expr,
@@ -110,46 +117,19 @@ impl<'a> Parser<'a> {
             return Err(());
         }
 
-        self.consume(TokenKind::LParen, "Expected '(' after 'for'")?;
+        let kind = ForKind::ForEach;
+        let init = None;
+        let cond = None;
+        let step = None;
+        
+        let pattern = Some(self.parse_pattern()?);
+        // Binding name fallback
+        let binding_name = Some(self.previous().span);
 
-        let kind;
-        let mut init = None;
-        let mut cond = None;
-        let mut step = None;
-        let mut pattern = None;
-        let mut iterable = None;
-        let mut binding_name = None;
+        self.consume(TokenKind::KwIn, "Expected 'in' after loop pattern")?;
+        let iterable = Some(self.parse_expression(true)?);
 
-        if self.check(TokenKind::KwDec)
-            || self.check(TokenKind::KwConst)
-            || self.check(TokenKind::Semi)
-        {
-            kind = ForKind::CStyle;
-            if !self.check(TokenKind::Semi) {
-                init = Some(self.parse_item()?);
-            } else {
-                self.advance();
-            }
-            if !self.check(TokenKind::Semi) {
-                cond = Some(self.parse_expression(false)?);
-            }
-            self.consume(TokenKind::Semi, "Expected ';' after for condition")?;
-
-            if !self.check(TokenKind::RParen) {
-                step = Some(self.parse_expression(false)?);
-            }
-            self.consume(TokenKind::RParen, "Expected ')' after for update")?;
-        } else {
-            kind = ForKind::ForEach;
-            pattern = Some(self.parse_pattern()?);
-            // Binding name fallback
-            // To properly fallback we would need to inspect pattern. Doing dummy for now.
-            binding_name = Some(self.previous().span);
-
-            self.consume(TokenKind::KwIn, "Expected 'in' after loop pattern")?;
-            iterable = Some(self.parse_expression(true)?);
-            self.consume(TokenKind::RParen, "Expected ')' after for condition")?;
-        }
+        // Removed RParen expectation
 
         let body = self.parse_block_stmt()?;
         Ok(self.arena.alloc_stmt(Stmt::For {

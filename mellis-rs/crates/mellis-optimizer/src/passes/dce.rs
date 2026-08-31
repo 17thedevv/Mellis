@@ -40,11 +40,16 @@ impl Pass for DeadCodeElimination {
                         Instruction::Load { ptr } => {
                             if let Operand::Value(v) = ptr { used_values.insert(v.0); }
                         }
-                        Instruction::Add { left, right } | Instruction::Sub { left, right } | Instruction::Mul { left, right } => {
+                        Instruction::Add { left, right } | Instruction::Sub { left, right } | Instruction::Mul { left, right } | Instruction::Eq { left, right } | Instruction::NotEq { left, right } | Instruction::LessThan { left, right } => {
                             if let Operand::Value(v) = left { used_values.insert(v.0); }
                             if let Operand::Value(v) = right { used_values.insert(v.0); }
                         }
-                        Instruction::Call { callee, args } => {
+                        Instruction::CallDirect { args, .. } => {
+                            for arg in args {
+                                if let Operand::Value(v) = arg { used_values.insert(v.0); }
+                            }
+                        }
+                        Instruction::CallIndirect { callee, args } | Instruction::CallClosure { closure: callee, args } => {
                             if let Operand::Value(v) = callee { used_values.insert(v.0); }
                             for arg in args {
                                 if let Operand::Value(v) = arg { used_values.insert(v.0); }
@@ -56,7 +61,7 @@ impl Pass for DeadCodeElimination {
                         Instruction::Assign(Operand::Value(v)) => {
                             used_values.insert(v.0);
                         }
-                        Instruction::Extract { value, .. } | Instruction::Tag { value } => {
+                        Instruction::Extract { value, .. } | Instruction::Tag { value } | Instruction::FieldPtr { base: value, .. } => {
                             if let Operand::Value(v) = value { used_values.insert(v.0); }
                         }
                         Instruction::Variant { args, .. } => {
@@ -68,10 +73,24 @@ impl Pass for DeadCodeElimination {
                             if let Operand::Value(v) = index { used_values.insert(v.0); }
                             if let Operand::Value(v) = len { used_values.insert(v.0); }
                         }
+                        Instruction::BoxNew { value } | Instruction::BoxFree { value } | Instruction::Drop { value, .. } => {
+                            if let Operand::Value(v) = value { used_values.insert(v.0); }
+                        }
+                        Instruction::PtrOffset { ptr, offset } => {
+                            if let Operand::Value(v) = ptr { used_values.insert(v.0); }
+                            if let Operand::Value(v) = offset { used_values.insert(v.0); }
+                        }
+                        Instruction::PtrCast { ptr, .. } => {
+                            if let Operand::Value(v) = ptr { used_values.insert(v.0); }
+                        }
+                        Instruction::MakeClosure { env_ptr, .. } => {
+                            if let Operand::Value(v) = env_ptr { used_values.insert(v.0); }
+                        }
                         _ => {}
                     }
                 }
             }
+            
             
             let mut pass_changed = false;
             
@@ -81,8 +100,9 @@ impl Pass for DeadCodeElimination {
                 block.insts.retain(|inst_id| {
                     let val = &func.values[inst_id.0 as usize];
                     // Keep instructions with side effects or used ones
-                    let has_side_effects = matches!(val.inst, Instruction::Store { .. } | Instruction::Call { .. });
-                    has_side_effects || used_values.contains(&inst_id.0)
+                    // INVARIANT: mọi Call, BoxNew, BoxFree, Drop đều effectful trừ khi purity analysis chứng minh ngược lại (TRIPWIRE CẢNH BÁO).
+                    let has_side_effects = matches!(val.inst, Instruction::Store { .. } | Instruction::CallDirect { .. } | Instruction::CallIndirect { .. } | Instruction::CallClosure { .. } | Instruction::MakeClosure { .. } | Instruction::HeapAlloc | Instruction::BoxNew { .. } | Instruction::BoxFree { .. } | Instruction::Drop { .. });
+                    has_side_effects || used_values.contains(&inst_id.0) || (inst_id.0 < func.arg_count as u32)
                 });
                 if block.insts.len() != initial_len {
                     pass_changed = true;

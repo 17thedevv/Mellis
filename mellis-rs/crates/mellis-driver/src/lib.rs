@@ -1,3 +1,7 @@
+pub mod importer;
+pub mod registry;
+pub mod async_lowering;
+
 use mellis_ast::AstArena;
 use mellis_common::{CompilerSession, Diagnostic};
 use mellis_lexer::Lexer;
@@ -12,52 +16,81 @@ pub struct CompilerOptions {
     pub emit_llvm: bool,
     pub emit_mvir: bool,
     pub emit_mlib: bool,
+    pub search_paths: Vec<String>,
     pub quiet: bool,
+    pub no_link: bool,
 }
 
-pub fn check(file_name: &str, input: &str, quiet: bool) -> Result<(), Vec<Diagnostic>> {
+pub fn check(file_name: &str, mut input: String, search_paths: &[String], quiet: bool) -> Result<(), Vec<Diagnostic>> {
     let mut session = CompilerSession::new();
-    let file_id = session.source_manager.add_file(file_name.to_string(), input.to_string());
-    let lexer = Lexer::new(input, file_id);
+    let file_id = session.source_manager.add_file(file_name.to_string(), input.clone());
+    let lexer = Lexer::new(&input, file_id);
     let mut arena = AstArena::new();
     let mut parser = Parser::new(lexer, &mut arena, file_id);
-    let items = parser.parse_file().map_err(|_| parser.diagnostics.clone())?;
+    let mut items = parser.parse_file().map_err(|_| parser.diagnostics.clone())?;
     if !parser.diagnostics.is_empty() { return Err(parser.diagnostics); }
     let mut semantic_ctx = SemanticContext::new();
-    Resolver::new(&mut semantic_ctx, &arena, input).resolve_items(&items);
-    TypeChecker::new(&mut semantic_ctx, &arena, input).typecheck_items(&items);
+    let mut registry = crate::registry::ModuleRegistry::new();
+    let mut input_mut = input.clone();
+    crate::importer::resolve_imports(&mut items, &mut arena, &mut input_mut, search_paths, &mut registry, &mut session).map_err(|e| e)?;
     
-    let mut monomorphizer = mellis_semantic::Monomorphizer::new(&semantic_ctx, &arena);
-    monomorphizer.run(&items);
-    semantic_ctx.mono_instances = monomorphizer.instances.into_iter().collect();
+    let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut input_mut, file_id);
+    eprintln!("DEBUG DRIVER: Items before attr_processor: {}", items.len());
+    let items = attr_processor.process_items(items).map_err(|e| e)?;
+    eprintln!("DEBUG DRIVER: Items after attr_processor: {}", items.len());
+
+    registry.inject_into_ctx(&mut semantic_ctx);
+
+    let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &input_mut);
+    resolver.register_macros(&items);
+    if !semantic_ctx.diagnostics.is_empty() {
+        return Err(semantic_ctx.diagnostics);
+    }
+
+    let mut macro_engine = mellis_semantic::MacroEngine::new(
+        &mut arena,
+        &input_mut,
+        file_id,
+        &semantic_ctx.symbol_table,
+        &semantic_ctx.tables,
+    );
+    let items = macro_engine.expand_items(items).map_err(|e| e)?;
+
+    Resolver::new(&mut semantic_ctx, &arena, &input_mut).resolve_items(&items);
+    TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &input_mut, &mellis_mvir::MvirComptimeEngine).typecheck_items(&items);
+    
+    let mut mono = mellis_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
+    mono.run(&items);
+    semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
     
     let mut diagnostics = semantic_ctx.diagnostics.clone();
-    let module = mellis_mvir::MvirGenerator::new(&arena, &semantic_ctx, input).generate(&items);
+    let module = mellis_mvir::MvirGenerator::new(&arena, &semantic_ctx, &input_mut).generate(&items);
     
     let mut interproc = mellis_borrowck::interprocedural::InterproceduralContext::new();
     interproc.compute_summaries(&module);
     
     for function in module.functions {
-        diagnostics.extend(mellis_borrowck::borrow_check_function(&function, &semantic_ctx, &interproc.summaries));
+        let (diags, _) = mellis_borrowck::borrow_check_function(&function, &semantic_ctx, &interproc.summaries);
+        diagnostics.extend(diags);
     }
     if diagnostics.is_empty() { if !quiet { println!("check passed"); } Ok(()) } else { Err(diagnostics) }
 }
 
-pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
+pub fn compile(file_name: &str, mut input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
     let mut session = CompilerSession::new();
     let file_id = session
         .source_manager
-        .add_file(file_name.to_string(), input.to_string());
+        .add_file(file_name.to_string(), input.clone());
 
     // Lexing phase
-    let lexer = Lexer::new(input, file_id);
+    let lexer = Lexer::new(&input, file_id);
 
     // Parsing phase
     let mut arena = AstArena::new();
     let mut parser = Parser::new(lexer, &mut arena, file_id);
 
     let file_result = parser.parse_file();
-    let mut all_diagnostics = session.diagnostics;
+    let mut all_diagnostics = session.diagnostics.clone();
     all_diagnostics.extend(parser.diagnostics);
 
     if !all_diagnostics.is_empty() {
@@ -76,15 +109,44 @@ pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Resul
             // Semantic phase
             let mut semantic_ctx = SemanticContext::new();
             
-            let mut resolver = Resolver::new(&mut semantic_ctx, &arena, input);
-            resolver.resolve_items(&items);
+            let mut registry = crate::registry::ModuleRegistry::new();
+            let mut input_mut = input.clone();
             
-            let mut typechecker = TypeChecker::new(&mut semantic_ctx, &arena, input);
-            typechecker.typecheck_items(&items);
+            let mut items_mut = items.clone();
             
-            let mut monomorphizer = mellis_semantic::Monomorphizer::new(&semantic_ctx, &arena);
-            monomorphizer.run(&items);
-            semantic_ctx.mono_instances = monomorphizer.instances.into_iter().collect();
+            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut input_mut, options.search_paths.as_slice(), &mut registry, &mut session) {
+                return Err(e);
+            }
+            
+            let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut input_mut, file_id);
+            let items_mut = attr_processor.process_items(items_mut).map_err(|e| e)?;
+
+            registry.inject_into_ctx(&mut semantic_ctx);
+
+            let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &input_mut);
+            resolver.register_macros(&items_mut);
+            if !semantic_ctx.diagnostics.is_empty() {
+                return Err(semantic_ctx.diagnostics);
+            }
+
+            let mut macro_engine = mellis_semantic::MacroEngine::new(
+                &mut arena,
+                &input_mut,
+                file_id,
+                &semantic_ctx.symbol_table,
+                &semantic_ctx.tables,
+            );
+            let items_mut = macro_engine.expand_items(items_mut).map_err(|e| e)?;
+
+            let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &input_mut);
+            resolver.resolve_items(&items_mut);
+            
+            let mut typechecker = TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &input_mut, &mellis_mvir::MvirComptimeEngine);
+            typechecker.typecheck_items(&items_mut);
+            
+            let mut mono = mellis_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
+            mono.run(&items_mut);
+            semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
             
             all_diagnostics.extend(semantic_ctx.diagnostics.clone());
             if !all_diagnostics.is_empty() {
@@ -93,7 +155,7 @@ pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Resul
             
             if !options.quiet {
                 println!("Resolved symbols: {}", semantic_ctx.tables.expr_symbols.len());
-                println!("Monomorphized instances: {}", semantic_ctx.mono_instances.len());
+                println!("Monomorphized instances: {}", semantic_ctx.instantiated_functions.len());
                 
                 // Print expression types
                 println!("--- Expression Types ---");
@@ -105,8 +167,8 @@ pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Resul
             }
             
             // MVIR phase
-            let generator = MvirGenerator::new(&arena, &semantic_ctx, input);
-            let mut module = generator.generate(&items);
+            let generator = MvirGenerator::new(&arena, &semantic_ctx, &input_mut);
+            let mut module = generator.generate(&items_mut);
             
             if !options.quiet {
                 println!("\n--- Generated MVIR ---");
@@ -133,22 +195,27 @@ pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Resul
             
             let mut borrowck_errors = 0;
             for func in &module.functions {
-                let mut diagnostics = mellis_borrowck::borrow_check_function(func, &semantic_ctx, &summaries);
-                for diag in &diagnostics {
-                    borrowck_errors += 1;
-                    if !options.quiet {
+                let (diagnostics, _) = mellis_borrowck::borrow_check_function(func, &semantic_ctx, &summaries);
+                borrowck_errors += diagnostics.len();
+                if !options.quiet {
+                    for diag in &diagnostics {
                         println!("BorrowCk Error: {}", diag.message);
                     }
                 }
+                all_diagnostics.extend(diagnostics);
             }
-            
+
+            if borrowck_errors != 0 {
+                return Err(all_diagnostics);
+            }
+
             if !options.quiet {
                 if borrowck_errors == 0 {
                     println!("Borrow check passed!");
                 }
                 println!("----------------------\n");
             }
-
+            
             // MVIR Verification (Pre-opt)
             if let Err(errs) = mellis_optimizer::verify_module(&module) {
                 if !options.quiet {
@@ -193,9 +260,41 @@ pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Resul
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("output");
-            let mlib_file = format!("{}.mlib", base_name);
+            let mlib_file = if options.emit_mlib && options.output_path.is_some() {
+                options.output_path.as_ref().unwrap().clone()
+            } else {
+                format!("{}.mlib", base_name)
+            };
             let mut mlib_buffer = std::fs::File::create(&mlib_file).expect("Failed to create .mlib file");
-            match mellis_mlib::MlibWriter::write_module(&module, &mut mlib_buffer) {
+            let manifest = mellis_mlib::Manifest {
+                identity: mellis_mlib::ArtifactIdentity {
+                    package_id: "".to_string(),
+                    version: "0.1.0".to_string(),
+                    module_id: "".to_string(),
+                    artifact_id: "".to_string(),
+                },
+                target: mellis_mlib::TargetContract {
+                    target_triple: "".to_string(),
+                    object_format: "ELF".to_string(),
+                    abi: "".to_string(),
+                    pointer_width: 64,
+                    endianness: "".to_string(),
+                },
+                dependencies: mellis_mlib::DependencyTable {
+                    mlib_deps: vec![],
+                    native_deps: vec![],
+                },
+                object_metadata: None,
+                provenance: mellis_mlib::Provenance {
+                    source_fingerprint: [0; 32],
+                    compiler_version: "0.1.0".to_string(),
+                    codegen_options: "".to_string(),
+                    interface_hash: [0; 32],
+                },
+                export_table: None,
+            };
+            
+            match mellis_mlib::MlibWriter::write_module(&module, &arena, &items, &input, manifest, None, &mut mlib_buffer) {
                 Ok(_) => {
                     if !options.quiet { println!("Successfully wrote {}", mlib_file); }
                 }
@@ -209,8 +308,16 @@ pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Resul
 
             // LLVM IR / Backend phase
             if !options.quiet {
-                println!("\n--- LLVM Backend (Inkwell) ---");
+                println!("\n--- Async Lowering & LLVM Backend ---");
             }
+            
+            // Async Lowering Phase (target specific, runs after MLib)
+            async_lowering::lower_async(&mut module, &mut semantic_ctx);
+            
+            // DEBUG: Print the lowered module
+            println!("--- Lowered MVIR ---");
+            println!("{}", mellis_mvir::printer::print_module(&module));
+            println!("--------------------");
             let llvm_context = inkwell::context::Context::create();
             let mut backend = LLVMBackend::new(&llvm_context, &module, &semantic_ctx, file_name);
             
@@ -246,14 +353,16 @@ pub fn compile(file_name: &str, input: &str, options: &CompilerOptions) -> Resul
                 if !options.quiet { println!("Successfully wrote {}", obj_file); }
             }
             
-            if !options.quiet { println!("Linking to {}...", exe_file); }
-            match link_obj_to_exe(&obj_file, &exe_file) {
-                Ok(_) => {
-                    if !options.quiet { println!("Build successful: {}", exe_file); }
-                }
-                Err(e) => {
-                    if !options.quiet { println!("Link failed: {}", e); }
-                    return Err(vec![Diagnostic::error(format!("Link Error: {}", e))]);
+            if !options.no_link {
+                if !options.quiet { println!("Linking to {}...", exe_file); }
+                match link_obj_to_exe(&obj_file, &exe_file) {
+                    Ok(_) => {
+                        if !options.quiet { println!("Build successful: {}", exe_file); }
+                    }
+                    Err(e) => {
+                        if !options.quiet { println!("Link failed: {}", e); }
+                        return Err(vec![Diagnostic::error(format!("Link Error: {}", e))]);
+                    }
                 }
             }
             

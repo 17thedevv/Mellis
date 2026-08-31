@@ -1,19 +1,19 @@
 use crate::{DeclId, ExprId, PatId};
 use mellis_common::Span;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum ForKind {
     ForEach,
     CStyle,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum Item {
     Decl(DeclId),
     Stmt(crate::StmtId),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum Stmt {
     Block {
         body: Vec<Item>,

@@ -40,7 +40,7 @@ fn main() {
         quiet,
         ..Default::default()
     };
-    match mellis_driver::compile(&file_path, &source, &options) {
+    match mellis_driver::compile(&file_path, source.clone(), &options) {
         Ok(_) => {
             if !quiet {
                 println!("Compiled successfully.");

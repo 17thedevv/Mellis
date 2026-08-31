@@ -11,6 +11,7 @@ pub mod ty;
 pub struct Parser<'a> {
     tokens: Vec<Token>,
     pos: usize,
+    pub source: &'a str,
     pub arena: &'a mut AstArena,
     pub diagnostics: Vec<Diagnostic>,
     pub file_id: mellis_common::ids::FileId,
@@ -18,10 +19,11 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(
-        lexer: Lexer<'_>,
+        lexer: Lexer<'a>,
         arena: &'a mut AstArena,
         file_id: mellis_common::ids::FileId,
     ) -> Self {
+        let source = lexer.source();
         let mut tokens = Vec::new();
         let mut diagnostics = Vec::new();
 
@@ -39,35 +41,99 @@ impl<'a> Parser<'a> {
             if last.kind != TokenKind::Eof {
                 tokens.push(Token::new(
                     TokenKind::Eof,
-                    Span {
-                        file_id,
-                        start: last.span.end,
-                        end: last.span.end,
-                    },
+                    Span::new(file_id, last.span.end, last.span.end),
                 ));
             }
         } else {
             tokens.push(Token::new(
                 TokenKind::Eof,
-                Span {
-                    file_id,
-                    start: 0,
-                    end: 0,
-                },
+                Span::new(file_id, 0, 0),
             ));
         }
 
         Self {
             tokens,
             pos: 0,
+            source,
             arena,
             diagnostics,
             file_id,
         }
     }
 
+    pub fn from_tokens(
+        mut tokens: Vec<Token>,
+        source: &'a str,
+        arena: &'a mut AstArena,
+        file_id: mellis_common::ids::FileId,
+    ) -> Self {
+        if let Some(last) = tokens.last() {
+            if last.kind != TokenKind::Eof {
+                tokens.push(Token::new(
+                    TokenKind::Eof,
+                    Span::new(file_id, last.span.end, last.span.end),
+                ));
+            }
+        } else {
+            tokens.push(Token::new(
+                TokenKind::Eof,
+                Span::new(file_id, 0, 0),
+            ));
+        }
+
+        Self {
+            tokens,
+            pos: 0,
+            source,
+            arena,
+            diagnostics: Vec::new(),
+            file_id,
+        }
+    }
+
+    pub fn capture_balanced_tokens(
+        &mut self,
+        open_kind: TokenKind,
+        close_kind: TokenKind,
+    ) -> Result<Vec<Token>, ()> {
+        let mut depth = 1;
+        let mut captured = Vec::new();
+        while self.pos < self.tokens.len() {
+            let tok = self.tokens[self.pos];
+            self.pos += 1;
+            if tok.kind == open_kind {
+                depth += 1;
+                captured.push(tok);
+            } else if tok.kind == close_kind {
+                depth -= 1;
+                if depth == 0 {
+                    return Ok(captured);
+                }
+                captured.push(tok);
+            } else if tok.kind == TokenKind::Eof {
+                let span = tok.span;
+                self.error_at_current(
+                    &format!("Unexpected EOF, expected closing '{:?}'", close_kind),
+                    span,
+                );
+                return Err(());
+            } else {
+                captured.push(tok);
+            }
+        }
+        Err(())
+    }
+
     pub fn is_at_end(&self) -> bool {
         self.peek().kind == TokenKind::Eof
+    }
+
+    pub fn pos(&self) -> usize {
+        self.pos
+    }
+
+    pub fn set_pos(&mut self, pos: usize) {
+        self.pos = pos;
     }
 
     pub fn peek(&self) -> Token {

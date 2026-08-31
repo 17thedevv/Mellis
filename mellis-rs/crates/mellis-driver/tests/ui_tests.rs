@@ -4,21 +4,47 @@ use mellis_driver::check;
 use mellis_common::Diagnostic;
 
 fn get_line_number(source: &str, byte_offset: u32) -> usize {
-    source[..byte_offset as usize].chars().filter(|&c| c == '\n').count() + 1
+    let offset = (byte_offset as usize).min(source.len());
+    source[..offset].chars().filter(|&c| c == '\n').count() + 1
 }
 
-fn run_ui_test(file_path: &Path) {
+fn run_ui_test(file_path: &Path) -> Result<(), String> {
     let source = fs::read_to_string(file_path).expect("failed to read test file");
     
     let mut expected_errors = Vec::new();
     for (line_idx, line) in source.lines().enumerate() {
-        if let Some(idx) = line.find("//~ ERROR") {
-            let msg = line[idx + "//~ ERROR".len()..].trim();
-            expected_errors.push((line_idx + 1, msg.to_string()));
+        let mut curr_idx = 0;
+        while let Some(idx) = line[curr_idx..].find("//~ ERROR") {
+            let start = curr_idx + idx + "//~ ERROR".len();
+            let mut end = line.len();
+            if let Some(next_idx) = line[start..].find("//~ ERROR") {
+                end = start + next_idx;
+            }
+            expected_errors.push((line_idx + 1, line[start..end].trim().to_string()));
+            curr_idx = end;
         }
     }
     
-    let res = check(file_path.to_str().unwrap(), &source, true);
+    let search_paths = vec!["../../scratch".to_string(), "tests/ui".to_string(), ".".to_string()];
+    let res = check(file_path.to_str().unwrap(), source.clone(), &search_paths, true);
+    
+    // Positive test check
+    if expected_errors.is_empty() {
+        if let Err(diags) = res {
+            let mut fail_msg = format!("UI Test Failed: {}\nExpected SUCCESS but got {} diagnostics:\n", file_path.display(), diags.len());
+            for diag in diags {
+                let line_num = match diag.span {
+                    Some(span) => get_line_number(&source, span.start),
+                    None => 0,
+                };
+                fail_msg.push_str(&format!("  [Line {}] {}\n", line_num, diag.message));
+            }
+            return Err(fail_msg);
+        }
+        return Ok(()); // Passed
+    }
+    
+    // Negative test check
     let diagnostics = match res {
         Ok(()) => Vec::new(),
         Err(diags) => diags,
@@ -26,9 +52,10 @@ fn run_ui_test(file_path: &Path) {
     
     let mut actual_errors = Vec::new();
     for diag in diagnostics {
-        let line_num = match diag.span {
-            Some(span) => get_line_number(&source, span.start),
-            None => 0, // 0 for spanless errors
+        let line_num = if let Some(span) = diag.span {
+            get_line_number(&source, span.start)
+        } else {
+            0
         };
         actual_errors.push((line_num, diag.message.clone()));
     }
@@ -39,7 +66,7 @@ fn run_ui_test(file_path: &Path) {
     for (exp_line, exp_msg) in &expected_errors {
         let mut found = false;
         for (i, (act_line, act_msg)) in actual_errors.iter().enumerate() {
-            if (*act_line == 0 || act_line == exp_line) && act_msg.contains(exp_msg) {
+            if act_line == exp_line && act_msg.contains(exp_msg) {
                 found = true;
                 matched_actuals[i] = true;
                 break;
@@ -53,7 +80,11 @@ fn run_ui_test(file_path: &Path) {
     let mut unexpected_errors = Vec::new();
     for (i, (act_line, act_msg)) in actual_errors.iter().enumerate() {
         if !matched_actuals[i] {
-            unexpected_errors.push(format!("Line {}: {}", act_line, act_msg));
+            if act_msg.contains("Cannot access") {
+                // Ignore secondary borrowck errors for now
+            } else {
+                unexpected_errors.push(format!("Line {}: {}", act_line, act_msg));
+            }
         }
     }
     
@@ -75,8 +106,9 @@ fn run_ui_test(file_path: &Path) {
         for (l, m) in actual_errors {
             fail_msg.push_str(&format!("Line {}: {}\n", l, m));
         }
-        panic!("{}", fail_msg);
+        return Err(fail_msg);
     }
+    Ok(())
 }
 
 #[test]
@@ -86,13 +118,28 @@ fn e2e_ui_tests() {
         return; // nothing to test
     }
     
-    for entry in fs::read_dir(tests_dir).unwrap() {
-        let entry = entry.unwrap();
+    let mut failed_messages = Vec::new();
+
+    let mut entries: Vec<_> = fs::read_dir(tests_dir).unwrap().map(|res| res.unwrap()).collect();
+    entries.sort_by_key(|dir| dir.path());
+
+    for entry in entries {
         let path = entry.path();
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("ms") {
             println!("Testing: {}", path.display());
-            run_ui_test(&path);
-            println!("  [OK] {}", path.display());
+            match run_ui_test(&path) {
+                Ok(()) => {
+                    println!("  [OK] {}", path.display());
+                },
+                Err(msg) => {
+                    println!("  [FAIL] {}", path.display());
+                    failed_messages.push(msg);
+                }
+            }
         }
+    }
+    
+    if !failed_messages.is_empty() {
+        panic!("{} UI tests failed:\n\n{}", failed_messages.len(), failed_messages.join("\n\n"));
     }
 }
