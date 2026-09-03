@@ -880,7 +880,10 @@ impl<'a> TypeChecker<'a> {
             Type::Never => {
                 self.ctx.types.intern(SemanticType::Never)
             }
-            _ => self.ctx.types.intern(SemanticType::Error),
+            other => {
+                self.ctx.diagnostics.push(Diagnostic::error(format!("Unsupported or unrecognized type construct in semantic phase: {:?}", other)));
+                self.ctx.types.intern(SemanticType::Error)
+            }
         };
         self.ctx.tables.ast_type_to_semantic.insert(ast_ty_id, sem_ty_id);
         sem_ty_id
@@ -1236,7 +1239,12 @@ impl<'a> TypeChecker<'a> {
                 self.typecheck_stmt(body);
                 self.is_unsafe_context = old;
             }
-            _ => {}
+            Stmt::Break { .. } | Stmt::Continue { .. } => {
+                // TODO(Batch 2): Add loop-context validation
+            }
+            other => {
+                self.ctx.diagnostics.push(Diagnostic::error(format!("Unsupported or unrecognized statement construct in semantic phase: {:?}", other)));
+            }
         }
     }
 
@@ -2024,7 +2032,14 @@ impl<'a> TypeChecker<'a> {
                 }
                 ty
             }
-            _ => self.ctx.types.intern(SemanticType::Error)
+            other => {
+                let mut diag = Diagnostic::error(format!("Unsupported or unrecognized expression construct in semantic phase: {:?}", other));
+                if let Some(span) = self.get_expr_span_for_diag(expr_id) {
+                    diag.span = Some(span);
+                }
+                self.ctx.diagnostics.push(diag);
+                self.ctx.types.intern(SemanticType::Error)
+            }
         };
         
         self.ctx.tables.expr_types.insert(*expr_id, ty_id);
