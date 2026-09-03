@@ -105,11 +105,31 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    fn is_cstyle_for(&self) -> bool {
+        if self.pos >= self.tokens.len() || self.tokens[self.pos].kind != TokenKind::LParen {
+            return false;
+        }
+        let mut p = self.pos;
+        let mut depth = 0;
+        while p < self.tokens.len() {
+            let k = self.tokens[p].kind;
+            if k == TokenKind::LParen { depth += 1; }
+            else if k == TokenKind::RParen {
+                depth -= 1;
+                if depth == 0 { break; }
+            }
+            else if k == TokenKind::Semi && depth == 1 {
+                return true;
+            }
+            p += 1;
+        }
+        false
+    }
+
     fn parse_for_stmt(&mut self) -> Result<StmtId, ()> {
         self.consume(TokenKind::KwFor, "Expected 'for'")?;
 
         if self.match_token(TokenKind::At) {
-            // Macro-expanded for loop handling (omitted or stubbed for basic parsing)
             self.error_at_current(
                 "Macro for loops are not fully implemented",
                 self.previous().span,
@@ -117,25 +137,39 @@ impl<'a> Parser<'a> {
             return Err(());
         }
 
-        let kind = ForKind::ForEach;
-        let init = None;
-        let cond = None;
-        let step = None;
-        
-        let pattern = Some(self.parse_pattern()?);
-        // Binding name fallback
-        let binding_name = Some(self.previous().span);
+        let mut kind = ForKind::ForEach;
+        let mut init = None;
+        let mut cond = None;
+        let mut step = None;
+        let mut pattern = None;
+        let mut iterable = None;
 
-        self.consume(TokenKind::KwIn, "Expected 'in' after loop pattern")?;
-        let iterable = Some(self.parse_expression(true)?);
-
-        // Removed RParen expectation
+        if self.is_cstyle_for() {
+            self.consume(TokenKind::LParen, "Expected '('")?;
+            kind = ForKind::CStyle;
+            if !self.check(TokenKind::Semi) {
+                init = Some(self.parse_item()?);
+            } else {
+                self.consume(TokenKind::Semi, "Expected ';' after empty init")?;
+            }
+            if !self.check(TokenKind::Semi) {
+                cond = Some(self.parse_expression(true)?);
+            }
+            self.consume(TokenKind::Semi, "Expected ';' after condition")?;
+            if !self.check(TokenKind::RParen) {
+                step = Some(self.parse_expression(true)?);
+            }
+            self.consume(TokenKind::RParen, "Expected ')' after step")?;
+        } else {
+            pattern = Some(self.parse_pattern()?);
+            self.consume(TokenKind::KwIn, "Expected 'in' after loop pattern")?;
+            iterable = Some(self.parse_expression(true)?);
+        }
 
         let body = self.parse_block_stmt()?;
         Ok(self.arena.alloc_stmt(Stmt::For {
             kind,
             label: None,
-            binding_name,
             pattern,
             iterable,
             init,

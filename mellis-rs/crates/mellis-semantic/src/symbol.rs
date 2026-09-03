@@ -65,6 +65,7 @@ pub enum ScopeKind {
     Block,
     Struct,
     TypeAlias,
+    GenericParam,
 }
 
 #[derive(Clone, Debug)]
@@ -180,6 +181,15 @@ impl SymbolTable {
             .entry(key)
             .or_insert_with(Vec::new)
             .push(symbol_id);
+    }
+
+    pub fn is_accessible(&self, sym_id: SymbolId, current_scope: ScopeId, current_provider: Option<ProviderId>) -> bool {
+        let sym = &self.symbols[sym_id.0 as usize];
+        match sym.visibility {
+            mellis_ast::Visibility::Public => true,
+            mellis_ast::Visibility::Internal => sym.provider_id == current_provider,
+            mellis_ast::Visibility::Private => self.is_ancestor(sym.scope, current_scope) || sym.scope == current_scope,
+        }
     }
 
     pub fn lookup(&self, name: &str, start_scope: ScopeId) -> Option<SymbolId> {

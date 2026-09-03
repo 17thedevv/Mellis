@@ -35,9 +35,7 @@ pub fn check(file_name: &str, mut input: String, search_paths: &[String], quiet:
     crate::importer::resolve_imports(&mut items, &mut arena, &mut input_mut, search_paths, &mut registry, &mut session).map_err(|e| e)?;
     
     let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut input_mut, file_id);
-    eprintln!("DEBUG DRIVER: Items before attr_processor: {}", items.len());
     let items = attr_processor.process_items(items).map_err(|e| e)?;
-    eprintln!("DEBUG DRIVER: Items after attr_processor: {}", items.len());
 
     registry.inject_into_ctx(&mut semantic_ctx);
 
@@ -64,7 +62,26 @@ pub fn check(file_name: &str, mut input: String, search_paths: &[String], quiet:
     semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
     
     let mut diagnostics = semantic_ctx.diagnostics.clone();
-    let module = mellis_mvir::MvirGenerator::new(&arena, &semantic_ctx, &input_mut).generate(&items);
+    for item in &items {
+        if let mellis_ast::Item::Decl(decl_id) = item {
+            let decl = &arena.decls[decl_id.0 as usize];
+            if let Err(e) = mellis_semantic::lifetime::verify_before_codegen(decl, &semantic_ctx, &input_mut, &arena) {
+                diagnostics.push(e.into_diagnostic());
+            }
+        }
+    }
+    let mut diagnostics: Vec<_> = diagnostics.into_iter().fold(Vec::new(), |mut acc, d| {
+        if !acc.contains(&d) { acc.push(d); }
+        acc
+    });
+    if !diagnostics.is_empty() {
+        return Err(diagnostics);
+    }
+    
+    let (module, mvir_diags) = mellis_mvir::MvirGenerator::new(&arena, &semantic_ctx, &input_mut).generate(&items);
+    if !mvir_diags.is_empty() {
+        return Err(mvir_diags);
+    }
     
     let mut interproc = mellis_borrowck::interprocedural::InterproceduralContext::new();
     interproc.compute_summaries(&module);
@@ -76,8 +93,20 @@ pub fn check(file_name: &str, mut input: String, search_paths: &[String], quiet:
     if diagnostics.is_empty() { if !quiet { println!("check passed"); } Ok(()) } else { Err(diagnostics) }
 }
 
-pub fn compile(file_name: &str, mut input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
+pub fn compile(file_name: &str, input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
     let mut session = CompilerSession::new();
+    compile_with_session(&mut session, file_name, input, options)
+}
+
+pub fn compile_and_render(file_name: &str, input: String, options: &CompilerOptions) -> Result<(), String> {
+    let mut session = CompilerSession::new();
+    match compile_with_session(&mut session, file_name, input, options) {
+        Ok(()) => Ok(()),
+        Err(diags) => Err(diags.iter().map(|d| d.render(&session.source_manager)).collect::<Vec<_>>().join("\n")),
+    }
+}
+
+pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
     let file_id = session
         .source_manager
         .add_file(file_name.to_string(), input.clone());
@@ -114,7 +143,7 @@ pub fn compile(file_name: &str, mut input: String, options: &CompilerOptions) ->
             
             let mut items_mut = items.clone();
             
-            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut input_mut, options.search_paths.as_slice(), &mut registry, &mut session) {
+            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut input_mut, options.search_paths.as_slice(), &mut registry, session) {
                 return Err(e);
             }
             
@@ -148,13 +177,18 @@ pub fn compile(file_name: &str, mut input: String, options: &CompilerOptions) ->
             mono.run(&items_mut);
             semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
             
-            all_diagnostics.extend(semantic_ctx.diagnostics.clone());
+            for diag in semantic_ctx.diagnostics.clone() {
+                if !all_diagnostics.contains(&diag) {
+                    all_diagnostics.push(diag);
+                }
+            }
             if !all_diagnostics.is_empty() {
                 return Err(all_diagnostics);
             }
             
             if !options.quiet {
-                println!("Resolved symbols: {}", semantic_ctx.tables.expr_symbols.len());
+                println!("Resolved expr symbols: {}", semantic_ctx.tables.expr_symbols.len());
+                println!("Resolved total symbols: {}", semantic_ctx.symbol_table.symbols.len());
                 println!("Monomorphized instances: {}", semantic_ctx.instantiated_functions.len());
                 
                 // Print expression types
@@ -167,8 +201,22 @@ pub fn compile(file_name: &str, mut input: String, options: &CompilerOptions) ->
             }
             
             // MVIR phase
+            for item in &items_mut {
+                if let mellis_ast::Item::Decl(decl_id) = item {
+                    let decl = &arena.decls[decl_id.0 as usize];
+                    if let Err(e) = mellis_semantic::lifetime::verify_before_codegen(decl, &semantic_ctx, &input_mut, &arena) {
+                        all_diagnostics.push(e.into_diagnostic());
+                    }
+                }
+            }
+            if !all_diagnostics.is_empty() {
+                return Err(all_diagnostics);
+            }
             let generator = MvirGenerator::new(&arena, &semantic_ctx, &input_mut);
-            let mut module = generator.generate(&items_mut);
+            let (mut module, mvir_diags) = generator.generate(&items_mut);
+            if !mvir_diags.is_empty() {
+                return Err(mvir_diags);
+            }
             
             if !options.quiet {
                 println!("\n--- Generated MVIR ---");
@@ -379,15 +427,4 @@ pub fn compile(file_name: &str, mut input: String, options: &CompilerOptions) ->
     }
 }
 
-pub fn render_diagnostics(input: &str, diagnostics: &[Diagnostic]) -> String {
-    let mut session = CompilerSession::new();
-    session
-        .source_manager
-        .add_file("dummy.ms".to_string(), input.to_string());
 
-    diagnostics
-        .iter()
-        .map(|d| d.render(&session.source_manager))
-        .collect::<Vec<_>>()
-        .join("\n")
-}

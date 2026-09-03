@@ -1,4 +1,4 @@
-// Test: Option::None with explicit @<T> generic arg on enum variant value path
+﻿// Test: Option::None with explicit <T> generic arg on enum variant value path
 intrinsic fn unreachable() -> void;
 
 enum Option<T> {
@@ -35,7 +35,7 @@ impl<T> Option<T> {
 }
 
 fn main() -> int_32 {
-    // Test 1: Some().or(None) → Some
+    // Test 1: Some().or(None) â†’ Some
     dec a: Option<int_32> = Option::Some(5);
     dec b: Option<int_32> = Option::None;
     dec c: Option<int_32> = a.or(b);
@@ -43,7 +43,7 @@ fn main() -> int_32 {
     dec cv: int_32 = c.unwrap();
     if cv != 5 { return 2; }
 
-    // Test 2: None.or(Some(10)) → Some(10)
+    // Test 2: None.or(Some(10)) â†’ Some(10)
     dec d: Option<int_32> = Option::None;
     dec e: Option<int_32> = Option::Some(10);
     dec f: Option<int_32> = d.or(e);

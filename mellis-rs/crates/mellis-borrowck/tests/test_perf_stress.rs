@@ -8,6 +8,8 @@ fn build_massive_graph(num_blocks: usize, deep_scc: bool) -> Function {
     let mut func = Function {
         name: GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: 0,
+        link_name: None,
+        param_types: vec![],
         is_extern: false,
             is_async: false,
         ret_ty: SemanticTypeId(0),

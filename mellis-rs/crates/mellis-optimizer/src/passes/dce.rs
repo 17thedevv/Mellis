@@ -80,11 +80,14 @@ impl Pass for DeadCodeElimination {
                             if let Operand::Value(v) = ptr { used_values.insert(v.0); }
                             if let Operand::Value(v) = offset { used_values.insert(v.0); }
                         }
-                        Instruction::PtrCast { ptr, .. } => {
+                        Instruction::Cast { value: ptr, .. } => {
                             if let Operand::Value(v) = ptr { used_values.insert(v.0); }
                         }
                         Instruction::MakeClosure { env_ptr, .. } => {
                             if let Operand::Value(v) = env_ptr { used_values.insert(v.0); }
+                        }
+                        Instruction::MakeTraitObject { data_ptr, .. } => {
+                            if let Operand::Value(v) = data_ptr { used_values.insert(v.0); }
                         }
                         _ => {}
                     }

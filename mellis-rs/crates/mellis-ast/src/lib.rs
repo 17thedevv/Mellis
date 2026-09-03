@@ -1,5 +1,6 @@
 pub mod decl;
 pub mod expr;
+pub mod lifetime;
 pub mod pat;
 pub mod stmt;
 pub mod ty;
@@ -7,6 +8,7 @@ pub mod relocator;
 
 pub use decl::*;
 pub use expr::*;
+pub use lifetime::*;
 pub use pat::*;
 pub use stmt::*;
 pub use ty::*;

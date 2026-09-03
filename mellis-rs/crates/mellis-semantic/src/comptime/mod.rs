@@ -1,6 +1,6 @@
 pub mod value;
-pub mod interp;
 pub mod reflect;
+pub mod type_repr;
 
 pub use value::{ComptimeValue, IntWidth, FloatWidth, ComptimeError};
-pub use interp::{ComptimeEvaluator, ComptimeContext, ComptimeControlFlow};
+pub use type_repr::{TypeRepr, TypeInfoStruct, TypeKind, TypeInfoField, TypeInfoVariant};

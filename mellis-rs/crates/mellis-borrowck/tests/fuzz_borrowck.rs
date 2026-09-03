@@ -65,6 +65,8 @@ proptest! {
         let mut func = Function {
         name: mellis_mvir::GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: 0,
+        link_name: None,
+        param_types: vec![],
         is_extern: false,
             is_async: false,
         

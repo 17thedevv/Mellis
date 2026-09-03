@@ -15,6 +15,6 @@ fn identity<'a, T: Display>(x: &'a T) -> &'a T {
 fn main() -> int_32 {
     dec val: int_32 = 42;
     dec r: &'static int_32 = &val;
-    dec r2 = identity@<'static, int_32>(r);
+    dec r2 = identity<'static, int_32>(r);
     return 0;
 }

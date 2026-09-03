@@ -33,6 +33,8 @@ fn generate_linear_function(num_args: u32, ops: Vec<u8>) -> Function {
     let mut func = Function {
         name: GlobalId { name: "test".to_string(), symbol_id: None },
         arg_count: num_args as usize,
+        link_name: None,
+        param_types: vec![],
         is_extern: false,
             is_async: false,
         blocks: vec![],

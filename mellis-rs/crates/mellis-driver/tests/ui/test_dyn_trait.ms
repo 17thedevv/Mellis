@@ -1,5 +1,5 @@
 trait Foo {
-    fn bar(self: Foo) -> i32;
+    fn bar(self: Self) -> i32;
 }
 
 struct MyStruct { x: i32; }

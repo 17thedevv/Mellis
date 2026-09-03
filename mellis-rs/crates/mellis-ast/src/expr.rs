@@ -74,7 +74,7 @@ pub struct MatchArm {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum Expr {
-    Literal(Token), // Integer, Float, Char, Str, etc.
+    Literal(Token, String), // Integer, Float, Char, Str, etc.
     Identifier {
         segments: Vec<Span>,
         generic_args: Vec<TypeId>,

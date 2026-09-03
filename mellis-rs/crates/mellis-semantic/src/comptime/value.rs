@@ -1,5 +1,6 @@
 use mellis_common::ids::SymbolId;
 use crate::ty::SemanticTypeId;
+use super::type_repr::{TypeRepr, TypeKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IntWidth {
@@ -78,7 +79,13 @@ pub enum ComptimeValue {
         variant_index: u32,
         payload: Vec<ComptimeValue>,
     },
-    Type(SemanticTypeId),
+    Type(TypeRepr),
+    TypeInfo {
+        name: String,
+        kind: TypeKind,
+        size: u64,
+        alignment: u64,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -356,5 +363,74 @@ impl ComptimeValue {
             (ComptimeValue::Str(a), ComptimeValue::Str(b)) => Ok(a >= b),
             _ => Err(ComptimeError::TypeMismatch("cannot compare types with '>='".to_string())),
         }
+    }
+
+    // =========================================================================
+    // Type Operations (for Type as Value support)
+    // =========================================================================
+
+    /// Create a ComptimeValue::Type from a TypeRepr.
+    pub fn type_value(type_repr: TypeRepr) -> Self {
+        ComptimeValue::Type(type_repr)
+    }
+
+    /// Create a ComptimeValue::Type from a SemanticTypeId.
+    pub fn from_semantic_type(type_id: SemanticTypeId, ctx: &crate::SemanticContext) -> Self {
+        ComptimeValue::Type(TypeRepr::from_semantic_type(type_id, ctx))
+    }
+
+    /// Get the TypeRepr if this is a Type value.
+    pub fn as_type(&self) -> Option<&TypeRepr> {
+        match self {
+            ComptimeValue::Type(type_repr) => Some(type_repr),
+            _ => None,
+        }
+    }
+
+    /// Get the type name as a string.
+    ///
+    /// Returns the name for type values, or None for non-type values.
+    pub fn type_name(&self) -> Option<String> {
+        match self {
+            ComptimeValue::Type(type_repr) => Some(type_repr.type_name()),
+            _ => None,
+        }
+    }
+
+    /// Check if this type has a field with the given name.
+    pub fn has_field(&self, field_name: &str) -> Option<bool> {
+        self.as_type().map(|t| t.has_field(field_name))
+    }
+
+    /// Get the type of the given field, if it exists.
+    pub fn field_type(&self, field_name: &str) -> Option<ComptimeValue> {
+        self.as_type()
+            .and_then(|t| t.get_field(field_name))
+            .map(|f| ComptimeValue::Type(*f.type_repr.clone()))
+    }
+
+    /// Get the number of fields in this type.
+    pub fn field_count(&self) -> Option<usize> {
+        self.as_type().map(|t| t.field_count())
+    }
+
+    /// Get full type info for this type.
+    pub fn type_info(&self, ctx: &crate::SemanticContext) -> Option<super::type_repr::TypeInfoStruct> {
+        self.as_type().map(|t| t.type_info(ctx))
+    }
+
+    /// Check if this value is a type value.
+    pub fn is_type(&self) -> bool {
+        matches!(self, ComptimeValue::Type(_))
+    }
+
+    /// Get sizeof for this type (if it's a type).
+    pub fn sizeof(&self, ctx: &crate::SemanticContext) -> Option<usize> {
+        self.as_type().map(|t| t.calculate_size(ctx))
+    }
+
+    /// Get alignof for this type (if it's a type).
+    pub fn alignof(&self, ctx: &crate::SemanticContext) -> Option<usize> {
+        self.as_type().map(|t| t.calculate_alignment(ctx))
     }
 }

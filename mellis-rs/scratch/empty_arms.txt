@@ -1,0 +1,216 @@
+crates\mellis-borrowck\src\borrow_analysis.rs:64
+   if let Operand::Value(v) = value { state.live.insert(*v); }
+   }
+-> Instruction::Alloca | _ => {}
+
+crates\mellis-borrowck\src\borrow_analysis.rs:76
+   state.live.insert(*v);
+   }
+-> _ => {}
+
+crates\mellis-borrowck\src\borrow_analysis.rs:432
+   }
+   }
+-> _ => {}
+
+crates\mellis-borrowck\src\borrow_analysis.rs:492
+   };
+   }
+-> _ => {}
+
+crates\mellis-borrowck\src\borrow_analysis.rs:588
+   };
+   }
+-> _ => {}
+
+crates\mellis-borrowck\src\borrow_analysis.rs:666
+   self.check_access(value, true, val_id, state);
+   }
+-> Instruction::Alloca | _ => {}
+
+crates\mellis-borrowck\src\effect.rs:190
+   Some(std::cmp::Ordering::Greater) => has_greater = true,
+   None => return None,
+-> _ => {}
+
+crates\mellis-borrowck\src\effect.rs:253
+   Some(std::cmp::Ordering::Greater) => has_greater = true,
+   None => return None,
+-> _ => {}
+
+crates\mellis-borrowck\src\effect.rs:261
+   Some(std::cmp::Ordering::Greater) => has_greater = true,
+   None => return None,
+-> _ => {}
+
+crates\mellis-borrowck\src\effect_inference.rs:250
+   }
+   }
+-> _ => {}
+
+crates\mellis-borrowck\src\effect_inference.rs:357
+   Instruction::Cast { .. } |
+   Instruction::PtrOffset { .. } => {}
+-> _ => {}
+
+crates\mellis-borrowck\src\move_analysis.rs:167
+   return; // Pointers and shared references are trivially copyable
+   }
+-> _ => {}
+
+crates\mellis-borrowck\src\move_analysis.rs:411
+   self.check_operand(condition, state, mellis_mvir::ValueId(0));
+   }
+-> _ => {}
+
+crates\mellis-borrowck\tests\fuzz_effect.rs:129
+   1 => expected_access = expected_access.merge(&AccessKind::Write),
+   2 => expected_ownership = expected_ownership.merge(&OwnershipKind::BorrowMut),
+-> _ => {}
+
+crates\mellis-borrowck\tests\fuzz_soundness.rs:121
+   if *e < AccessKind::Write { *e = AccessKind::Write; }
+   }
+-> _ => {}
+
+crates\mellis-borrowck\tests\fuzz_soundness.rs:140
+   trace_paths(func, false_idx, current_effect, all_path_effects);
+   }
+-> _ => {}
+
+crates\mellis-driver\src\async_lowering.rs:606
+   *value = Some(Operand::Value(ready_ret_val_final));
+   }
+-> _ => {}
+
+crates\mellis-mvir\src\generator.rs:1836
+   }
+   }
+-> _ => {}
+
+crates\mellis-optimizer\src\verifier.rs:36
+   }
+   }
+-> _ => {}
+
+crates\mellis-optimizer\src\passes\dce.rs:28
+   used_values.insert(val_id.0);
+   }
+-> _ => {}
+
+crates\mellis-optimizer\src\passes\dce.rs:92
+   if let Operand::Value(v) = data_ptr { used_values.insert(v.0); }
+   }
+-> _ => {}
+
+crates\mellis-parser\src\lib.rs:227
+   return;
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\annotation.rs:246
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\macro_engine.rs:167
+   self.current_scope = prev_scope;
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\macro_engine.rs:1073
+   // Nested repetition - we don't look inside because its length is determined by its own loop
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\macro_engine.rs:1095
+   // Do not descend, inner will extract its own indices
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\mono.rs:274
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\resolver.rs:209
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\resolver.rs:737
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\resolver.rs:851
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\resolver.rs:916
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\resolver.rs:995
+   self.resolve_stmt(body);
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\resolver.rs:1400
+   self.resolve_stmt(body);
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:227
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:277
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:422
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:560
+   self.extract_generic_subst(*inner, inner_arg_ty, callee_scope, subst);
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:943
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:1024
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:1111
+   self.is_unsafe_context = old;
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:1635
+   }
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\typechecker.rs:1649
+   result_ty = self.typecheck_expr(expr);
+   }
+-> _ => {}
+
+crates\mellis-semantic\src\comptime\type_repr.rs:791
+   }
+   }
+-> _ => {}
+
+Total: 43

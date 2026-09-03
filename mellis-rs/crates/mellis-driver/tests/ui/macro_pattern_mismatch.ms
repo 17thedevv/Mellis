@@ -5,6 +5,6 @@ macro single_arg {
 }
 
 fn main() -> i32 {
-    dec x: i32 = single_arg!(1, 2, 3); //~ ERROR no rule in macro `single_arg` matched the invocation arguments
+    dec x: i32 = single_arg!(1, 2, 3); //~ ERROR expected end of macro invocation
     return x;
 }

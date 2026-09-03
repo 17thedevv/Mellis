@@ -11,7 +11,7 @@ fn main() -> i32 {
     dec result = apply(f, 10, 20);
     
     // Type mismatch error
-    dec bad_f: fn(i32) -> i32 = add; // ERROR
+    dec bad_f: fn(i32) -> i32 = add; //~ ERROR type mismatch
 
     return result;
 }

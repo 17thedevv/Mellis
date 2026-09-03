@@ -43,7 +43,11 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
     for (val_id_idx, val) in func.values.iter().enumerate() {
         if let Instruction::Alloca = val.inst {
             alloca_map.insert(ValueId(val_id_idx as u32), env_fields.len() as u32);
-            env_fields.push(val.ty);
+            let mut ty = val.ty;
+            if ty == SemanticTypeId(0) {
+                ty = SemanticTypeId(3); // Replace Void with i32 to prevent LLVM struct generation panic
+            }
+            env_fields.push(ty);
         }
     }
 
@@ -56,6 +60,8 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         is_async: false,
         ret_ty: void_ptr_ty,
         arg_count: func.arg_count,
+        link_name: None,
+        param_types: func.param_types.clone(),
         blocks: Vec::new(),
         values: Vec::new(),
     };
@@ -193,6 +199,8 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         is_async: false,
         ret_ty: func.ret_ty,
         arg_count: 1, // takes only the Env Struct pointer
+        link_name: None,
+        param_types: vec![void_ptr_ty],
         blocks: Vec::new(),
         values: Vec::new(),
     };
@@ -463,7 +471,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                 }
                 Instruction::Tag { value } | Instruction::Extract { value, .. } | Instruction::FieldPtr { base: value, .. } |
                 Instruction::Drop { value, .. } | Instruction::BoxNew { value } | Instruction::BoxFree { value } |
-                Instruction::MarkInit { value } | Instruction::PtrCast { ptr: value, .. } | Instruction::Await { future: value } => {
+                Instruction::MarkInit { value } | Instruction::Cast { value, .. } | Instruction::Await { future: value } => {
                     *value = map_op(value, &val_map);
                 }
                 Instruction::PtrOffset { ptr, offset } => {
@@ -476,6 +484,11 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                 }
                 Instruction::Alloca | Instruction::HeapAlloc | Instruction::Null { .. } |
                 Instruction::SizeOf { .. } | Instruction::AlignOf { .. } => {}
+                Instruction::CallIntrinsic { args, .. } => {
+                    for arg in args {
+                        *arg = map_op(arg, &val_map);
+                    }
+                }
             }
             
             let new_id = ValueId(resume.values.len() as u32);
@@ -737,6 +750,8 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         is_async: false,
         ret_ty: SemanticTypeId(0), // void
         arg_count: 1, // takes only the Env Struct pointer
+        link_name: None,
+        param_types: vec![void_ptr_ty],
         blocks: Vec::new(),
         values: Vec::new(),
     };
@@ -916,7 +931,7 @@ fn resolve_place_type(
         match proj {
             mellis_borrowck::place::Projection::Field(idx) => {
                 match ctx.types.get(current_ty) {
-                    SemanticType::Struct(_, fields) | SemanticType::Tuple(fields) => {
+                    SemanticType::Struct(_, _, fields) | SemanticType::Tuple(fields) => {
                         current_ty = *fields.get(*idx)?;
                     }
                     _ => return None,
@@ -976,7 +991,7 @@ fn emit_drop_for_place(
             match proj {
                 mellis_borrowck::place::Projection::Field(idx) => {
                     let next_field_ty = match ctx.types.get(curr_ty) {
-                        SemanticType::Struct(_, fields) | SemanticType::Tuple(fields) => {
+                        SemanticType::Struct(_, _, fields) | SemanticType::Tuple(fields) => {
                             if let Some(&f_ty) = fields.get(*idx) {
                                 f_ty
                             } else {
@@ -1060,7 +1075,9 @@ mod tests {
             is_extern: false,
             is_async: true,
             arg_count: 0,
-            ret_ty: SemanticTypeId(3),
+        link_name: None,
+        param_types: vec![],
+        ret_ty: SemanticTypeId(3),
             blocks: vec![
                 BasicBlock {
                     label: LabelId { name: "entry".to_string() },
@@ -1108,7 +1125,9 @@ mod tests {
             is_extern: false,
             is_async: true,
             arg_count: 0,
-            ret_ty: SemanticTypeId(3),
+        link_name: None,
+        param_types: vec![],
+        ret_ty: SemanticTypeId(3),
             blocks: vec![
                 BasicBlock {
                     label: LabelId { name: "entry".to_string() },
@@ -1163,7 +1182,9 @@ mod tests {
             is_extern: false,
             is_async: true,
             arg_count: 0,
-            ret_ty: SemanticTypeId(3),
+        link_name: None,
+        param_types: vec![],
+        ret_ty: SemanticTypeId(3),
             blocks: vec![
                 BasicBlock {
                     label: LabelId { name: "entry".to_string() },

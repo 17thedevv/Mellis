@@ -142,6 +142,12 @@ pub enum TokenKind {
     KwPrint,
     KwSelfVal,
     KwSelfTyp,
+    KwLifeFrom,
+    KwWhere,
+    KwOutlives,
+    KwPub,
+    KwCrate,
+    KwSuper,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]

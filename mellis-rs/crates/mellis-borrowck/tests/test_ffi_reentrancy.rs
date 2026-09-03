@@ -4,13 +4,15 @@ use mellis_semantic::{SemanticContext, SemanticTypeId, ty::{SemanticType, Mutabi
 
 fn make_func(name: &str, num_args: u32, instructions: Vec<Instruction>) -> Function {
     let mut func = Function {
-        name: GlobalId { name: "test".to_string(), symbol_id: None },
-        arg_count: num_args as usize,
+        name: GlobalId { name: "test_ffi".to_string(), symbol_id: None },
         is_extern: false,
-            is_async: false,
-        blocks: vec![],
-        values: vec![],
+        is_async: false,
         ret_ty: SemanticTypeId(0),
+        arg_count: num_args as usize,
+        link_name: None,
+        param_types: vec![SemanticTypeId(1); num_args as usize],
+        values: vec![],
+        blocks: vec![],
     };
 
     let mut block = BasicBlock {

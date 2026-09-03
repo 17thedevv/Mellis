@@ -1,5 +1,5 @@
 use crate::Parser;
-use mellis_ast::{Annotation, AnnotationArg, Decl, DeclId, Item, Visibility, GenericParam, GenericParamKind};
+use mellis_ast::{Annotation, AnnotationArg, Decl, DeclId, Item, Visibility, GenericParam, GenericParamKind, FnLifetimeSignature, LifetimeExpr, LifetimeConstraint};
 use mellis_lexer::{Token, TokenKind};
 use mellis_common::ids::Span;
 
@@ -263,6 +263,9 @@ impl<'a> Parser<'a> {
             None
         };
 
+        // Parse lifetime signature: life_from(...) and where outlives(...)
+        let lifetime_signature = self.parse_lifetime_signature()?;
+
         let body = if self.check(TokenKind::LBrace) {
             Some(self.parse_block_stmt()?)
         } else {
@@ -283,6 +286,7 @@ impl<'a> Parser<'a> {
             is_variadic,
             is_unsafe,
             is_intrinsic,
+            lifetime_signature,
         }))
     }
 
@@ -647,7 +651,7 @@ impl<'a> Parser<'a> {
     fn parse_macro_fragment(&mut self) -> Result<mellis_ast::FragmentKind, ()> {
         if !self.check(TokenKind::Identifier) {
             let span = self.peek().span;
-            self.error_at_current("Expected fragment specifier (`expr`, `ident`, `ty`, `stmt`, `block`, `item`)", span);
+            self.error_at_current("Expected fragment specifier (`expr`, `ident`, `ty`, `stmt`, `block`, `item`, `tt`, `pat`, `path`, `lifetime`, `meta`, `literal`, `vis`)", span);
             return Err(());
         }
         let tok = self.advance();
@@ -659,6 +663,13 @@ impl<'a> Parser<'a> {
             "stmt" => Ok(mellis_ast::FragmentKind::Stmt),
             "block" => Ok(mellis_ast::FragmentKind::Block),
             "item" => Ok(mellis_ast::FragmentKind::Item),
+            "tt" => Ok(mellis_ast::FragmentKind::Tt),
+            "pat" => Ok(mellis_ast::FragmentKind::Pat),
+            "path" => Ok(mellis_ast::FragmentKind::Path),
+            "lifetime" => Ok(mellis_ast::FragmentKind::Lifetime),
+            "meta" => Ok(mellis_ast::FragmentKind::Meta),
+            "literal" => Ok(mellis_ast::FragmentKind::Literal),
+            "vis" => Ok(mellis_ast::FragmentKind::Vis),
             _ => {
                 self.error_at_current(&format!("Unknown macro fragment specifier '{}'", text), tok.span);
                 Err(())
@@ -669,7 +680,49 @@ impl<'a> Parser<'a> {
     fn parse_matcher_element(&mut self) -> Result<mellis_ast::MatcherElement, ()> {
         if self.match_token(TokenKind::At) || self.match_token(TokenKind::Dollar) {
             let at_span = self.previous().span;
-            let name_tok = self.consume(TokenKind::Identifier, "Expected identifier after '@' in macro metavariable")?;
+            
+            // Check for Repetition: $( ... )
+            if self.check(TokenKind::LParen) {
+                let start_span = self.advance().span;
+                let mut elements = Vec::new();
+                while !self.check(TokenKind::RParen) && !self.is_at_end() {
+                    elements.push(self.parse_matcher_element()?);
+                }
+                let rparen_tok = self.consume(TokenKind::RParen, "Expected closing ')' after macro repetition")?;
+                
+                // Optional separator (only comma or semicolon allowed)
+                let mut separator = None;
+                if matches!(self.peek().kind, TokenKind::Comma | TokenKind::Semi) {
+                    separator = Some(self.advance().kind);
+                }
+                
+                // Repetition operator
+                let (kind, op_end) = if self.match_token(TokenKind::Multiply) {
+                    (mellis_ast::RepetitionKind::ZeroOrMore, self.previous().span.end)
+                } else if self.match_token(TokenKind::Plus) {
+                    (mellis_ast::RepetitionKind::OneOrMore, self.previous().span.end)
+                } else if self.match_token(TokenKind::Question) {
+                    (mellis_ast::RepetitionKind::Optional, self.previous().span.end)
+                } else {
+                    self.error_at_current("Expected '*', '+', or '?' for macro repetition", self.peek().span);
+                    return Err(());
+                };
+                
+                let span = Span::new(
+                    at_span.file_id,
+                    at_span.start,
+                    op_end,
+                ).with_ctxt(at_span.ctxt);
+                
+                return Ok(mellis_ast::MatcherElement::Repetition {
+                    elements,
+                    separator,
+                    kind,
+                    span,
+                });
+            }
+            
+            let name_tok = self.consume(TokenKind::Identifier, "Expected identifier after '@' or '$' in macro metavariable")?;
             self.consume(TokenKind::Colon, "Expected ':' after metavariable name")?;
             let fragment = self.parse_macro_fragment()?;
             let span = Span::new(
@@ -745,7 +798,50 @@ impl<'a> Parser<'a> {
     fn parse_transcriber_element(&mut self) -> Result<mellis_ast::TranscriberElement, ()> {
         if self.match_token(TokenKind::At) || self.match_token(TokenKind::Dollar) {
             let at_span = self.previous().span;
-            let name_tok = self.consume(TokenKind::Identifier, "Expected identifier after '@' in macro transcriber")?;
+            
+            // Check for Repetition: $( ... )
+            if self.check(TokenKind::LParen) {
+                let start_span = self.advance().span;
+                let mut elements = Vec::new();
+                while !self.check(TokenKind::RParen) && !self.is_at_end() {
+                    elements.push(self.parse_transcriber_element()?);
+                }
+                let rparen_tok = self.consume(TokenKind::RParen, "Expected closing ')' after macro repetition")?;
+                
+                // Optional separator (only comma or semicolon allowed)
+                let mut separator = None;
+                if matches!(self.peek().kind, TokenKind::Comma | TokenKind::Semi) {
+                    separator = Some(self.advance().kind);
+                }
+                
+                // Repetition operator
+                let (kind, op_end) = if self.match_token(TokenKind::Multiply) {
+                    (mellis_ast::RepetitionKind::ZeroOrMore, self.previous().span.end)
+                } else if self.match_token(TokenKind::Plus) {
+                    (mellis_ast::RepetitionKind::OneOrMore, self.previous().span.end)
+                } else if self.match_token(TokenKind::Question) {
+                    (mellis_ast::RepetitionKind::Optional, self.previous().span.end)
+                } else {
+                    self.error_at_current("Expected '*', '+', or '?' for macro repetition", self.peek().span);
+                    return Err(());
+                };
+                
+                let span = Span {
+                    file_id: at_span.file_id,
+                    start: at_span.start,
+                    end: op_end,
+                    ctxt: at_span.ctxt,
+                };
+                
+                return Ok(mellis_ast::TranscriberElement::Repetition {
+                    elements,
+                    separator,
+                    kind,
+                    span,
+                });
+            }
+            
+            let name_tok = self.consume(TokenKind::Identifier, "Expected identifier after '@' or '$' in macro transcriber")?;
             let span = Span {
                 file_id: at_span.file_id,
                 start: at_span.start,
@@ -959,5 +1055,57 @@ impl<'a> Parser<'a> {
             name,
             rules,
         }))
+    }
+
+    /// Parse lifetime signature: `life_from(...)` and `where outlives(...)` clauses.
+    ///
+    /// Grammar:
+    /// ```ebnf
+    /// lifetime_signature := (life_from '(' ident ('|' ident)* ')' )?
+    ///                       (where outlives '(' IDENT ',' IDENT ')' )*
+    /// ```
+    fn parse_lifetime_signature(&mut self) -> Result<FnLifetimeSignature, ()> {
+        let mut signature = FnLifetimeSignature::new();
+
+        // Parse optional `life_from(...)`
+        if self.match_token(TokenKind::KwLifeFrom) {
+            self.consume(TokenKind::LParen, "Expected '(' after 'life_from'")?;
+
+            let first_ident = self.consume(TokenKind::Identifier, "Expected identifier in 'life_from'")?;
+            let mut idents = vec![first_ident.span];
+
+            // Parse additional alternatives with `|`
+            while self.match_token(TokenKind::BitOr) {
+                let ident = self.consume(TokenKind::Identifier, "Expected identifier after '|'")?;
+                idents.push(ident.span);
+            }
+
+            self.consume(TokenKind::RParen, "Expected ')' after 'life_from' arguments")?;
+
+            // Create provenance expression
+            let provenance = if idents.len() == 1 {
+                LifetimeExpr::Provenance(idents.remove(0))
+            } else {
+                LifetimeExpr::ProvenanceSet(idents)
+            };
+            signature.provenance = Some(provenance);
+        }
+
+        // Parse zero or more `where outlives(...)` constraints
+        while self.match_token(TokenKind::KwWhere) {
+            // Expect `outlives(IDENT, IDENT)`
+            let _ = self.match_token(TokenKind::KwOutlives);
+            self.consume(TokenKind::LParen, "Expected '(' after 'outlives'")?;
+
+            let first = self.consume(TokenKind::Identifier, "Expected first identifier in outlives constraint")?;
+            self.consume(TokenKind::Comma, "Expected ',' between identifiers in outlives constraint")?;
+            let second = self.consume(TokenKind::Identifier, "Expected second identifier in outlives constraint")?;
+
+            self.consume(TokenKind::RParen, "Expected ')' after outlives constraint")?;
+
+            signature.constraints.push(LifetimeConstraint::outlives(first.span, second.span));
+        }
+
+        Ok(signature)
     }
 }

@@ -374,7 +374,7 @@ impl<'a> AttributeProcessor<'a> {
                     String::new()
                 }
             }
-            Expr::Literal(tok) => {
+            Expr::Literal(tok, _) => {
                 self.get_span_text(tok.span).to_string()
             }
             _ => String::new(),
@@ -385,7 +385,7 @@ impl<'a> AttributeProcessor<'a> {
     fn get_expr_span(&self, expr_id: mellis_ast::ExprId) -> Option<Span> {
         match &self.arena.exprs[expr_id.0 as usize] {
             Expr::Identifier { segments, .. } => segments.first().copied(),
-            Expr::Literal(tok) => Some(tok.span),
+            Expr::Literal(tok, _) => Some(tok.span),
             _ => None,
         }
     }

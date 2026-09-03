@@ -3,7 +3,7 @@ struct Box<T> {
 }
 
 macro create_box(@val: expr) {
-    Box@<int_32> { value: @val }
+    Box<int_32> { value: @val }
 }
 
 fn main() -> int_32 {

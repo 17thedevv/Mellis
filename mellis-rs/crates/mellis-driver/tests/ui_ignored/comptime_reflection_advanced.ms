@@ -6,14 +6,14 @@ struct ComplexStruct<T> {
     field3: bool,
 }
 
-const SIZE_I32: usize = comptime {
+const SIZE_I32 = comptime {
     sizeof(i32)
 };
 
-const SIZE_COMPLEX: usize = comptime {
+const SIZE_COMPLEX = comptime {
     sizeof(ComplexStruct<i32>)
 };
 
-fn main() -> usize {
+fn main() -> i32 {
     SIZE_I32 + SIZE_COMPLEX
 }

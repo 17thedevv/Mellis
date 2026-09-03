@@ -161,6 +161,12 @@ impl<'a> Lexer<'a> {
             "dyn" => TokenKind::KwDyn,
             "self" => TokenKind::KwSelfVal,
             "Self" => TokenKind::KwSelfTyp,
+            "life_from" => TokenKind::KwLifeFrom,
+            "where" => TokenKind::KwWhere,
+            "outlives" => TokenKind::KwOutlives,
+            "pub" => TokenKind::KwPub,
+            "crate" => TokenKind::KwCrate,
+            "super" => TokenKind::KwSuper,
 
             "i8" => TokenKind::BuiltinType(BuiltinKind::I8),
             "i16" => TokenKind::BuiltinType(BuiltinKind::I16),
@@ -482,6 +488,7 @@ impl<'a> Iterator for Lexer<'a> {
                 }
             }
             b'~' => TokenKind::BitNot,
+            b'$' => TokenKind::Dollar,
             b'?' => TokenKind::Question,
             b':' => {
                 if self.match_char(b':') {

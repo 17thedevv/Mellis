@@ -60,6 +60,11 @@ fn print_instruction(inst: &Instruction) -> String {
             for arg in args { arg_strs.push(print_operand(arg)); }
             format!("call_closure {}({})", print_operand(closure), arg_strs.join(", "))
         }
+        Instruction::CallIntrinsic { kind, args } => {
+            let mut arg_strs = Vec::new();
+            for arg in args { arg_strs.push(print_operand(arg)); }
+            format!("call_intrinsic {:?}({})", kind, arg_strs.join(", "))
+        }
         Instruction::MakeClosure { func, env_ptr, captures } => {
             let capture_text = captures.iter()
                 .map(|capture| format!("sym{}:{}:{:?}", capture.symbol.0, capture.env_field, capture.mode))
@@ -105,7 +110,7 @@ fn print_instruction(inst: &Instruction) -> String {
             }
         },
         Instruction::PtrOffset { ptr, offset } => format!("ptr_offset {}, {}", print_operand(ptr), print_operand(offset)),
-        Instruction::PtrCast { ptr, target_ty } => format!("ptr_cast {}, {:?}", print_operand(ptr), target_ty),
+        Instruction::Cast { value, target_ty } => format!("cast {}, {:?}", print_operand(value), target_ty),
         Instruction::Null { ty } => format!("null {:?}", ty),
         Instruction::SizeOf { ty } => format!("size_of {:?}", ty),
         Instruction::AlignOf { ty } => format!("align_of {:?}", ty),

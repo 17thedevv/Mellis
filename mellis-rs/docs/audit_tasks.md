@@ -1,0 +1,31 @@
+- `[x]` **Phase 1: Family B (Error Swallowing Eradication)**
+  - `[x]` **LLVM Backend Strictness**
+    - `[x]` Remove `_ => Ok(i32)` fallback in `mellis-backend/src/llvm_codegen.rs:205`
+    - `[x]` Map `SemanticType::InferenceVar`, `GenericParam`, and `Error` to hard compiler crash/unsupported error
+  - `[x]` **Semantic Fallback Sweep**
+    - `[x]` Scan `unwrap_or`, `unwrap_or_else`, `unwrap_or_default`, `map_or` across semantic pipeline
+    - `[x]` Scan `if let ... else {}` and `match ... { _ => ... }` fallback arms
+    - `[x]` Categorize and patch unsound `typechecker.rs` fallbacks to push diagnostics
+  - `[x]` **Macro Engine Error Handling**
+    - `[x]` Fix transcription failures in `macro_engine.rs` to push diagnostics instead of returning `Vec::new()`
+- `[x]` **Phase 2: Family A (Generic Instantiation & Substitution)**
+  - `[x]` **Generic Registration**: Verify `Struct`, `Enum`, `Trait` register `GenericParam` in symbol table
+  - `[x]` **Type::Named Resolution**: Fix `lower_type` to parse and retain generic arguments
+  - `[x]` **Strict Bounds Checking**: Enforce trait bounds on `Expr::StructInit`
+  - `[x]` **Substitution Integrity**: Enforce `unify` constraints and mono generic mappings
+  - `[x]` **Abstraction for `needs_drop` / `is_copy_type`**: Handle `GenericParam` correctly (avoid false defaults)
+- `[x]` **Phase 3: Family C (Control-Flow Semantics)**
+  - `[x]` **Return Unification**: Fix `Stmt::Return` in `typechecker.rs` to assert `unify` results and push diagnostics (completed in Phase 1).
+  - `[x]` **Match Arm Unification**: Fix `Expr::Match` to unify all match arms against the first arm's type.
+  - `[x]` **Divergence & Control Flow**: Reject `break` and `continue` outside of loops.
+- `[x]` **Phase 4: Family E (Pattern Semantics)**
+  - `[x]` **Struct Destructuring**: Reject non-existent fields and enforce completeness (unless `..` is present).
+  - `[x]` **Enum Arity**: Enforce exact payload arity matching for enum variant patterns.
+- `[x]` **Phase 5: Family D (Type Definition & Layout)**
+  - `[x]` **Symbol Identity Enforcement**: Prevent duplicate fields, variants, impl methods, and prevent trait implementations from overwriting each other in `trait_impls`.
+  - `[x]` **Trait/Impl Completeness**: Verify that all required methods are implemented and match the trait's signature.
+  - `[x]` **Recursive Layout Analysis**: Detect and reject infinite-sized/self-recursive types (e.g., `struct A { x: A }`).
+- `[x]` **Phase 6: Visibility & Access Control Enforcement**
+- `[ ]` **Phase 7: Semantic Soundness Testing**
+- `[ ]` **Phase 8: Mellis Standard Library Integration**
+- `[ ]` **Phase 9: Self-Hosted Compiler Bootstrapping Audit**

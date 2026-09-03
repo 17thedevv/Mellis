@@ -1,212 +1,575 @@
-# Ngôn ngữ Mellis (FDLang) - Tài liệu tham khảo (Language Reference)
+# Ngôn ngữ Mellis - Tài liệu tham khảo
 
-Mellis (hay còn gọi là FDLang) là một ngôn ngữ lập trình hệ thống được thiết kế hướng tới sự an toàn, hiệu năng cao và cú pháp hiện đại. Ngôn ngữ có mượn nhiều ý tưởng từ Rust và C++ nhưng được tinh chỉnh để có một trình biên dịch nhanh hơn, nhẹ hơn và dễ dự đoán hơn.
-
-Dưới đây là tài liệu chi tiết về tất cả các tính năng (features) hiện tại của ngôn ngữ Mellis.
+Mellis (FDLang) là ngôn ngữ lập trình hệ thống với borrow checker, generics, và LLVM backend.
 
 ---
 
-## 1. Kiểu dữ liệu cơ bản (Primitive Types)
-Mellis hỗ trợ các kiểu dữ liệu cơ bản sau:
-- **Số nguyên:** `int_8`, `int_16`, `int_32`, `int_64`
-- **Số nguyên không dấu:** `uint_8`, `uint_16`, `uint_32`, `uint_64`
-- **Số thực:** `float_32`, `float_64`
-- **Boolean:** `bool` (nhận giá trị `true` hoặc `false`)
-- **Void:** `void` (dành cho hàm không trả về giá trị)
-- **Chuỗi:** `string` (chuỗi ký tự UTF-8)
+## Mục lục
 
-## 2. Biến và Tính Đột Biến (Variables & Mutability)
-Mặc định, tất cả các biến trong Mellis đều là **immutable** (không thể thay đổi giá trị sau khi khởi tạo). Để cho phép thay đổi, bạn phải sử dụng từ khóa `mut`. Khai báo biến bắt đầu bằng từ khóa `dec`.
+1. [Kiểu dữ liệu cơ bản](#1-kiểu-dữ-liệu-cơ-bản)
+2. [Khai báo biến](#2-khai-báo-biến)
+3. [Hàm](#3-hàm)
+4. [Struct](#4-struct)
+5. [Enum](#5-enum)
+6. [Traits](#6-traits)
+7. [Generics](#7-generics)
+8. [Điều khiển luồng](#8-điều-khiển-luồng)
+9. [Pattern Matching](#9-pattern-matching)
+10. [Borrowing & Tham chiếu](#10-borrowing--tham-chiếu)
+11. [Modules](#11-modules)
+12. [Comptime](#12-comptime)
+13. [Macros](#13-macros)
+14. [Attributes & Derive](#14-attributes--derive)
+15. [Async/Await](#15-asyncawait)
+16. [Unsafe & Pointers](#16-unsafe--pointers)
+17. [Closures](#17-closures)
+18. [Literals](#18-literals)
 
-```rust
-dec x: int_32 = 10; // Immutable
-// x = 20; // Lỗi biên dịch!
+---
 
-dec mut y: int_32 = 10; // Mutable
-y = 20; // Hợp lệ
+## 1. Kiểu dữ liệu cơ bản
+
+```mellis
+// Số nguyên có dấu
+i8, i16, i32, i64, i128, isize
+
+// Số nguyên không dấu
+u8, u16, u32, u64, u128, usize
+
+// Số thực
+f32, f64
+
+// Boolean, ký tự, chuỗi
+bool, char, str
+
+// Void (hàm không trả về)
+void
+
+// Pointer
+*T        // immutable pointer
+*rw T     // mutable pointer
+
+// Reference
+&T        // immutable reference
+&rw T     // mutable reference
 ```
 
-Mellis hỗ trợ **Type Inference** (tự động suy luận kiểu). Nếu có giá trị khởi tạo, bạn có thể bỏ qua khai báo kiểu dữ liệu:
-```rust
-dec a = 42;       // Tự động suy luận là int_32
-dec mut b = true; // Tự động suy luận là bool
+---
+
+## 2. Khai báo biến
+
+```mellis
+// Immutable (mặc định)
+dec x: i32 = 10;
+dec y = 20;           // type inference
+
+// Mutable
+dec mut z: i32 = 30;
+z = 40;               // OK
+
+// Const (compile-time constant)
+const PI: f64 = 3.14159;
+
+// rw (alias cho mutable)
+rw counter: i32 = 0;
+counter = counter + 1;
 ```
 
-## 3. Điều khiển luồng (Control Flow)
-### Cấu trúc rẽ nhánh `if / else`
-Mellis hỗ trợ `if / else if / else` với cú pháp biểu thức khối.
-```rust
-if x > 10 {
-    print!("Lớn hơn 10");
-} else if x == 10 {
-    print!("Bằng 10");
-} else {
-    print!("Nhỏ hơn 10");
+**Quy tắc:**
+- `dec` - biến immutable
+- `dec mut` hoặc `rw` - biến mutable
+- `const` - hằng số compile-time
+
+---
+
+## 3. Hàm
+
+```mellis
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+fn greet(name: str) {
+    // no return needed for void
+}
+
+fn main() -> i32 {
+    dec result = add(1, 2);
+    return result;
 }
 ```
 
-### Vòng lặp `while`
-Vòng lặp `while` cho phép lặp khi điều kiện vẫn là `true`.
-```rust
+**Method syntax:**
+```mellis
+struct Point {
+    x: i32;
+    y: i32;
+}
+
+impl Point {
+    // Receiver as explicit first parameter
+    fn add(self: Point, other: Point) -> Point {
+        return Point {
+            x: self.x + other.x,
+            y: self.y + other.y
+        };
+    }
+}
+
+// Gọi method
+dec p1 = Point { x: 1, y: 2 };
+dec p2 = Point { x: 3, y: 4 };
+dec p3 = p1.add(p2);
+```
+
+---
+
+## 4. Struct
+
+```mellis
+// Named Struct
+struct Point {
+    x: i32;
+    y: i32;
+}
+dec p = Point { x: 10, y: 20 };
+
+// Tuple Struct
+struct Color(i32, i32, i32);
+dec c = Color(255, 0, 0);
+
+// Unit Struct
+struct Empty;
+dec e = Empty;
+
+// Generic Struct
+struct Box<T> {
+    value: T;
+}
+dec b = Box<i32> { value: 42 };
+
+// Default initialization
+dec v: Vector3;
+v.x = 10;
+v.y = 20;
+v.z = 30;
+```
+
+---
+
+## 5. Enum
+
+```mellis
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
+// Enum với data (tuple variants)
+enum Shape {
+    Circle(f32),
+    Rectangle(f32, f32),
+    Point { x: f32, y: f32 },
+}
+
+dec shape = Shape::Circle(1.0);
+
+// Enum với repr
+#[repr(u8)]
+enum EntityState {
+    Idle,
+    Moving(f32, f32),
+    Dead,
+}
+```
+
+---
+
+## 6. Traits
+
+```mellis
+trait Display {
+    fn fmt(self: &Self);
+}
+
+struct Point {
+    x: i32;
+    y: i32;
+}
+
+impl Display for Point {
+    fn fmt(self: &Point) {
+        // ...
+    }
+}
+
+// Trait bound
+fn print_it<T: Display>(item: &T) {
+    item.fmt();
+}
+
+// Trait với generic
+trait Process {
+    fn process(self) -> i32;
+}
+
+struct Data { val: i32 }
+
+impl Process for Data {
+    fn process(self) -> i32 {
+        self.val
+    }
+}
+
+fn run_process<T: Process>(item: T) -> i32 {
+    item.process()
+}
+```
+
+---
+
+## 7. Generics
+
+```mellis
+struct Vec<T> {
+    data: T;
+}
+
+struct Map<K, V> {
+    key: K;
+    value: V;
+}
+
+fn identity<T>(x: T) -> T {
+    return x;
+}
+
+fn main() {
+    dec v: Vec<i32> = Vec<i32> { data: 42 };
+    dec val = identity(42);
+    dec b = identity(true);
+}
+```
+
+**Generic với trait bounds:**
+```mellis
+struct Container<T: Clone> {
+    item: T,
+}
+```
+
+---
+
+## 8. Điều khiển luồng
+
+### if/else
+```mellis
+if x > 10 {
+    print("Greater\n");
+} else if x == 10 {
+    print("Equal\n");
+} else {
+    print("Less\n");
+}
+```
+
+### while
+```mellis
 dec mut count = 0;
 while count < 5 {
     count = count + 1;
 }
 ```
 
-## 4. Hàm (Functions)
-Hàm được định nghĩa bằng từ khóa `fn`. Bạn có thể trả về giá trị bằng từ khóa `return` hoặc sử dụng **Tail Expression** (biểu thức cuối không có dấu chấm phẩy) để trả về tự động.
-
-```rust
-fn add(a: int_32, b: int_32) -> int_32 {
-    a + b // Tail expression, ngầm định trả về a + b
-}
-
-fn do_something() -> void {
-    print!("Hello!");
-    // Ngầm định trả về void
-}
-```
-
-## 5. Structs (Cấu trúc dữ liệu)
-Mellis hỗ trợ ba loại Struct: Named Struct, Tuple Struct và Unit Struct.
-
-```rust
-// 1. Named Struct
-struct Point {
-    x: int_32,
-    y: int_32,
-}
-dec p = Point { x: 10, y: 20 };
-
-// 2. Tuple Struct
-struct Color(int_32, int_32, int_32);
-dec c = Color(255, 0, 0);
-
-// 3. Unit Struct (Không chứa dữ liệu)
-struct Empty;
-dec e = Empty;
-```
-
-## 6. Enums và Pattern Matching (Đại số dữ liệu)
-Enum trong Mellis mạnh mẽ, có thể lưu trữ dữ liệu (Algebraic Data Types). Kết hợp với từ khóa `match`, Mellis cung cấp Pattern Matching siêu việt, đảm bảo **tính toàn vẹn (exhaustiveness)**.
-
-```rust
-enum Result<T, E> {
-    Ok(T),
-    Err(E)
-}
-
-fn handle(res: Result<int_32, int_32>) -> int_32 {
-    match res {
-        Result::Ok(val) => { val * 2 },
-        Result::Err(err) => { err * -1 }
+### break/continue
+```mellis
+dec mut i = 0;
+while i < 10 {
+    i = i + 1;
+    if i == 5 {
+        continue;
     }
-}
-```
-Pattern matching hỗ trợ nhiều loại pattern:
-- **Identifier Pattern:** `val`, `err`
-- **Literal Pattern:** `1`, `"hello"`
-- **Wildcard Pattern:** `_` (khớp mọi giá trị)
-- **Nested Pattern:** `Result::Ok(Some(x))`
-
-## 7. Generics (Lập trình tổng quát) & Monomorphization
-Mellis cho phép định nghĩa các hàm, Struct và Enum có tính tổng quát bằng cú pháp `<T>`.
-Mellis sử dụng cơ chế **Monomorphization** để sinh ra mã tối ưu (Zero-cost abstractions) riêng cho từng kiểu dữ liệu được sử dụng.
-
-```rust
-struct Container<T> {
-    item: T
-}
-
-fn get_item<T>(c: Container<T>) -> T {
-    c.item
-}
-```
-
-## 8. Traits & Interface
-Traits định nghĩa các hành vi chung (interface) mà nhiều kiểu dữ liệu có thể thực thi (`impl`). Mellis cũng hỗ trợ **Generic Trait Bounds** (`T: Trait`).
-
-```rust
-trait Process {
-    fn process(self) -> int_32;
-}
-
-struct Data { val: int_32 }
-
-// Cài đặt Trait cho Struct
-impl Process for Data {
-    fn process(self) -> int_32 {
-        self.val
+    if i > 8 {
+        break;
     }
-}
-
-// Yêu cầu kiểu T phải tuân thủ Trait Process
-fn run_process<T: Process>(item: T) -> int_32 {
-    item.process()
+    print("i = {}\n", i);
 }
 ```
 
-## 9. Tham chiếu và Mượn bộ nhớ (Borrowing & Memory Safety)
-Mellis tích hợp cơ chế **Borrow Checker** đảm bảo bộ nhớ được truy cập an toàn mà không cần Garbage Collector.
-- Tham chiếu mượn chỉ đọc: `&T`
-- Tham chiếu mượn ghi: `&mut T`
+---
 
-```rust
-fn modify(val: &mut int_32) {
-    // thao tác trực tiếp trên biến gốc
+## 9. Pattern Matching
+
+```mellis
+fn calc_match(x: i32) -> i32 {
+    dec res: i32 = 0;
+    match x {
+        1 -> { res = 10; }
+        2 -> { res = 20; }
+        _ -> { res = 100; }
+    };
+    return res;
+}
+```
+
+**Destructuring:**
+```mellis
+match shape {
+    Shape::Circle(r) -> r * r * 3.14,
+    Shape::Rectangle(w, h) -> w * h,
+    Shape::Point { x, y } -> x + y,
+}
+```
+
+---
+
+## 10. Borrowing & Tham chiếu
+
+```mellis
+fn modify(val: &rw i32) {
+    *val = *val + 1;
+}
+
+fn read(val: &i32) -> i32 {
+    *val
 }
 
 dec mut x = 10;
-modify(&mut x);
-```
-Trình biên dịch sẽ ngăn chặn các truy cập lỗi (ví dụ: mượn `&mut` khi đã có một tham chiếu `&` khác tồn tại cùng thời điểm, hoặc hàm generic không vượt qua ràng buộc borrow checking).
-
-## 10. Type Aliasing
-Cho phép đặt tên khác (bí danh) cho các kiểu dữ liệu phức tạp. Có thể hỗ trợ cả Generic Alias.
-
-```rust
-type UserId = uint_64;
-type Pair<T> = (T, T); // Tuple alias
-
-dec id: UserId = 100;
+modify(&rw x);
+dec y = read(&x);
 ```
 
-## 11. Closures (Hàm nặc danh / Lambda)
-Closure (`|| { }`) trong Mellis hỗ trợ thu thập (capture) các biến môi trường từ scope bên ngoài. Mellis tự động cấp phát Heap cho closure và sử dụng semantics của `Drop` để tự động giải phóng môi trường khi Closure kết thúc vòng đời.
+**Struct field borrowing:**
+```mellis
+struct Vector3 {
+    x: i32;
+    y: i32;
+    z: i32;
+}
 
-```rust
-dec factor = 2;
-dec closure = |x: int_32| -> int_32 {
-    x * factor
-};
-```
+dec v: Vector3;
+v.z = 30;
 
-## 12. Macros (Siêu lập trình)
-FDLang / Mellis sở hữu các builtin macros được gọi thông qua dấu chấm than `!`. Các macros này được xử lý ngay trong quá trình dịch (AST Expansion).
-- `print!("Hello {}!", name)`: In ra màn hình.
-- `println!("...")`: In ra màn hình và xuống dòng.
-- `assert!(condition)`: Báo lỗi và dừng chương trình (panic) nếu condition `false`.
-- `vec![1, 2, 3]`: Cú pháp tiện ích cho cấp phát mảng.
-
-## 13. Hệ thống Module (`.mlib`)
-Mellis thiết kế một hệ thống nạp và chia sẻ thư viện tiên tiến có đuôi file là `.mlib`.
-Bạn có thể biên dịch một tệp `.ms` thành tệp thư viện `.mlib` để tái sử dụng nhanh chóng.
-
-```rust
-// Cú pháp xuất (export) tính năng ra khỏi Module
-export fn util() {}
-```
-
-Bên file consumer sử dụng cú pháp `use` để nhập từ thư viện:
-```rust
-use my_library::{util, MyStruct};
-
-fn main() -> void {
-    util();
+{
+    dec ref_z: &rw i32 = &rw v.z;
+    *ref_z = 100;  // v.z = 100
 }
 ```
-*Ghi chú:* Generic functions và Traits từ thư viện `.mlib` hoàn toàn có thể được nạp và chuyên biệt hóa (Monomorphize) tại file Consumer.
+
+---
+
+## 11. Modules
+
+**Library file (mylib.ms):**
+```mellis
+export fn my_add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+```
+
+**Import:**
+```mellis
+extern fn printf(format: str, ...) -> i32;
+
+mod mylib;
+use mylib::my_add;
+
+fn main() -> i32 {
+    dec result = my_add(10, 20);
+    printf("Result is %d\n", result);
+    return result;
+}
+```
+
+---
+
+## 12. Comptime
+
+```mellis
+// Hàm chạy lúc compile-time
+comptime fn calc_max_entities() -> u32 {
+    return 1024 * 16;
+}
+
+// Const với comptime
+const MAX_ENTITIES: u32 = calc_max_entities();
+
+// sizeof/alignof
+const SZ = sizeof(i32);
+const AL = alignof(i32);
+
+// Block comptime
+comptime {
+    dec check = sizeof(i32) == 4;
+}
+```
+
+---
+
+## 13. Macros
+
+```mellis
+// print/println
+print("Hello, {}!\n", name);
+println!("Line with newline");
+
+// assert
+assert!(condition);
+assert_eq!(a, b);
+
+// vec! literal
+dec nums = vec![1, 2, 3, 4, 5];
+
+// format!
+dec msg = format!("Value: {}", x);
+```
+
+---
+
+## 14. Attributes & Derive
+
+```mellis
+// Derive common traits
+#[derive(Clone, PartialEq, Default, Debug)]
+struct Config {
+    name: str,
+    value: i32,
+}
+
+// C-compatible struct layout
+#[repr(C)]
+struct NativeData {
+    id: u32,
+    data: *u8,
+}
+
+// Packed struct
+#[packed]
+struct PackedData {
+    a: u8,
+    b: u32,
+}
+
+// Test function
+#[test]
+fn test_example() {
+    assert!(true);
+}
+
+// Inline hint
+#[inline]
+fn fast_path() { }
+```
+
+---
+
+## 15. Async/Await
+
+```mellis
+async fn fetch_data() -> Result<str, i32> {
+    dec response = http_get("https://api.example.com").await?;
+    return Result::Ok(response);
+}
+
+async fn main() {
+    dec data = fetch_data().await;
+    match data {
+        Ok(content) -> print("Got: {}\n", content),
+        Err(e) -> print("Error: {}\n", e),
+    }
+}
+```
+
+---
+
+## 16. Unsafe & Pointers
+
+```mellis
+extern fn malloc(size: u64) -> *u8;
+
+unsafe {
+    dec ptr: *rw u8 = malloc(1024);
+    *ptr = 42;  // dereference
+    dec val = *ptr;
+}
+```
+
+**Pointer cast:**
+```mellis
+dec raw: *u8 = ...;
+dec typed: *i32 = raw as *i32;
+```
+
+---
+
+## 17. Closures
+
+```mellis
+dec factor = 2;
+dec multiply = |x: i32| -> i32 {
+    x * factor
+};
+
+dec result = multiply(5);  // 10
+```
+
+---
+
+## 18. Literals
+
+```mellis
+// Integer
+42, 0xFF, 0o755, 0b1010
+42i32, 100u64
+
+// Float
+3.14, 3.14f32, 6.02e23f64
+
+// Character
+'a', '\n', '\xFF'
+
+// String
+"hello", "line\n"
+
+// Byte
+b'X', b"hello"
+
+// Boolean
+true, false
+
+// Array
+[1, 2, 3, 4, 5]
+
+// Tuple
+(1, "two", 3.0)
+()  // unit
+
+// Range (trong for loop)
+for i in 0..10 {
+    // i từ 0 đến 9
+}
+```
+
+---
+
+## Tính năng chưa triển khai đầy đủ
+
+| Tính năng | Trạng thái | Ghi chú |
+|------------|------------|---------|
+| Async I/O | Partial | Framework async có, stdlib chưa |
+| Closures capture modes | Partial | Cú pháp có, capture logic chưa đầy đủ |
+| Comptime type_of, type_info | Partial | MVIR infrastructure có, stdlib chưa |
+| For loop (foreach) | Partial | C-syntax có, foreach-style chưa |
+
+---
 
 ## Tổng kết
-Mellis là sự kết hợp hoàn hảo giữa cú pháp mềm dẻo, pattern matching siêu việt, hệ thống type-safe nghiêm ngặt thông qua Borrow Checker / Generic Monomorphization và hiệu năng tối đa của LLVM Backend. Ngôn ngữ đảm nhận trách nhiệm ngăn lỗi Runtime từ giai đoạn biên dịch một cách chủ động (Compile-time Verification).
+
+Mellis là ngôn ngữ hệ thống với:
+- **Type safety** - borrow checker, generics, trait bounds
+- **Zero-cost abstractions** - monomorphization
+- **Compile-time execution** - comptime functions, sizeof/alignof
+- **Metaprogramming** - macros
+- **Async support** - async/await syntax
+- **Unsafe blocks** - raw pointers khi cần

@@ -87,6 +87,9 @@ pub enum Decl {
         is_variadic: bool,
         is_unsafe: bool,
         is_intrinsic: bool,
+        /// Explicit lifetime signature via `life_from` and `where outlives` clauses.
+        /// This is parsed after the return type.
+        lifetime_signature: crate::FnLifetimeSignature,
     },
     Struct {
         annotations: Vec<Annotation>,
@@ -172,6 +175,13 @@ pub enum FragmentKind {
     Stmt,
     Block,
     Item,
+    Tt,
+    Pat,
+    Path,
+    Lifetime,
+    Meta,
+    Literal,
+    Vis,
 }
 
 pub type MacroFragment = FragmentKind;

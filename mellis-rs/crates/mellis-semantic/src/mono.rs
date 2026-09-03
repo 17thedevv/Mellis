@@ -151,7 +151,7 @@ impl<'a> MonoCollector<'a> {
             }
 
             let closure_bindings = instance.closure_id
-                .and_then(|id| self.ctx.tables.closure_capture_bindings.get(&id).cloned())
+                .map(|id| self.ctx.tables.expect_closure_capture_bindings(id))
                 .unwrap_or_default();
             let closure_env_type = instance.closure_id
                 .and_then(|id| self.ctx.tables.closure_env_types.get(&id).copied());
@@ -355,10 +355,8 @@ impl<'a> MonoCollector<'a> {
                                     closure_id: None,
                                 };
                                 self.current_mono_calls.insert(*expr_id, instance.clone());
-                                if symbol.provider_id.is_none() {
-                                    if !self.instantiated.contains_key(&instance) {
-                                        self.worklist.push(instance);
-                                    }
+                                if !self.instantiated.contains_key(&instance) {
+                                    self.worklist.push(instance);
                                 }
                             }
                         }
@@ -404,10 +402,23 @@ impl<'a> MonoCollector<'a> {
             Expr::Member { object, .. } => {
                 self.visit_expr(object);
             }
-            Expr::MethodCall { object, args, .. } => {
-                self.visit_expr(object);
-                for arg in args {
-                    self.visit_expr(&arg.value);
+            Expr::Lambda { body, .. } => {
+                self.visit_stmt(body);
+                
+                let mut instance_subst = Vec::new();
+                for (&sym, &ty) in &self.current_subst.map {
+                    instance_subst.push((sym, ty));
+                }
+                instance_subst.sort_by_key(|k| k.0);
+                
+                let decl_id = self.current_instance.as_ref().map(|i| i.decl_id).unwrap_or(mellis_ast::DeclId(0));
+                let instance = MonoInstance {
+                    decl_id,
+                    subst: instance_subst,
+                    closure_id: Some(*expr_id),
+                };
+                if !self.instantiated.contains_key(&instance) {
+                    self.worklist.push(instance);
                 }
             }
             Expr::StructInit { fields, .. } => {
@@ -445,16 +456,6 @@ impl<'a> MonoCollector<'a> {
                     self.visit_stmt(&arm.body);
                 }
             }
-            Expr::Lambda { body, .. } => {
-                let enclosing = self.current_instance.as_ref().unwrap();
-                let closure_instance = MonoInstance {
-                    decl_id: enclosing.decl_id,
-                    subst: enclosing.subst.clone(),
-                    closure_id: Some(*expr_id),
-                };
-                self.worklist.push(closure_instance);
-                self.visit_stmt(body);
-            }
             Expr::Try { expr: inner, .. } | Expr::Await { expr: inner } => {
                 self.visit_expr(inner);
             }
@@ -462,7 +463,7 @@ impl<'a> MonoCollector<'a> {
                 self.visit_stmt(body);
             }
             // Leaf variants with no children to traverse
-            Expr::Literal(_) | Expr::Identifier { .. } | Expr::Sizeof { .. } | Expr::Alignof { .. } | Expr::MacroCall { .. } => {}
+            Expr::Literal(_, _) | Expr::Identifier { .. } | Expr::Sizeof { .. } | Expr::Alignof { .. } | Expr::MacroCall { .. } => {}
         }
     }
 }

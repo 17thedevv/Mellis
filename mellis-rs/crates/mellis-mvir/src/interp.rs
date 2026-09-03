@@ -169,6 +169,16 @@ impl<'a> MvirInterpreter<'a> {
             SemanticType::Pointer(..) => true,
             SemanticType::Tuple(elems) => elems.iter().all(|&e| self.is_copy_type(e)),
             SemanticType::Array(elem, _) => self.is_copy_type(*elem),
+            SemanticType::GenericParam(sym_id) => {
+                if let Some(bounds) = self.ctx.tables.trait_bounds.get(sym_id) {
+                    bounds.iter().any(|b| {
+                        let trait_sym = self.ctx.symbol_table.get_symbol(b.trait_id);
+                        trait_sym.name == "Copy"
+                    })
+                } else {
+                    false
+                }
+            }
             _ => false,
         }
     }
@@ -250,7 +260,7 @@ impl<'a> MvirInterpreter<'a> {
                     return Ok(());
                 }
             }
-            _ => {}
+            _ => unreachable!("ICE: Unhandled variant in interpreter")
         }
         slot.value = value;
         slot.state = PlaceState::Initialized;
@@ -765,7 +775,7 @@ impl<'a> MvirInterpreter<'a> {
             SemanticType::Pointer(..) | SemanticType::Reference(..) => 8,
             SemanticType::Array(elem, len) => self.calculate_size_of(*elem) * (*len as usize),
             SemanticType::Tuple(elems) => elems.iter().map(|&e| self.calculate_size_of(e)).sum(),
-            SemanticType::Struct(sym_id, _) => {
+            SemanticType::Struct(sym_id, _, _) => {
                 if let Some(fields) = self.ctx.tables.struct_fields.get(sym_id) {
                     fields.iter().map(|f_sym| {
                         let f_ty = self.ctx.tables.symbol_types.get(f_sym).copied().unwrap_or(SemanticTypeId(0));
@@ -797,7 +807,7 @@ impl<'a> MvirInterpreter<'a> {
             SemanticType::Pointer(..) | SemanticType::Reference(..) => 8,
             SemanticType::Array(elem, _) => self.calculate_align_of(*elem),
             SemanticType::Tuple(elems) => elems.iter().map(|&e| self.calculate_align_of(e)).max().unwrap_or(1),
-            SemanticType::Struct(sym_id, _) => {
+            SemanticType::Struct(sym_id, _, _) => {
                 if let Some(fields) = self.ctx.tables.struct_fields.get(sym_id) {
                     fields.iter().map(|f_sym| {
                         let f_ty = self.ctx.tables.symbol_types.get(f_sym).copied().unwrap_or(SemanticTypeId(0));

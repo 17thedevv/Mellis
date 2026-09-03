@@ -211,7 +211,10 @@ impl ModuleRegistry {
                 }
                 
                 if let Some(ty_id) = ctx.tables.symbol_types.get(&sym_id) {
+                    println!("extract_scope: extracted type for {}: {:?}", sym.name, ty_id);
                     symbol_types.insert(sym_id, *ty_id);
+                } else {
+                    println!("extract_scope: NO type found for {}", sym.name);
                 }
                 
                 target.insert(sym.name.clone(), ext_sym);

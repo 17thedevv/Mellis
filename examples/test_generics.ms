@@ -1,10 +1,10 @@
 struct Vec<T> {
-    data: *T;
+    data: T;
 }
 
 struct Map<K, V> {
-    keys: *K;
-    values: *V;
+    key: K;
+    value: V;
 }
 
 fn identity<T>(x: T) -> T {
@@ -12,7 +12,8 @@ fn identity<T>(x: T) -> T {
 }
 
 fn main() {
-    dec my_vec: Vec@<int_32> = Vec@<int_32> { data: null };
-    dec nested: Vec@<Vec@<int_32>> = Vec@<Vec@<int_32>> { data: null };
-    dec val = identity@<int_32>(42);
+    dec my_vec: Vec<int_32> = Vec { data: 42 };
+    dec nested: Vec<Vec<int_32> > = Vec { data: my_vec };
+    dec val = identity(42);
+    dec b_val = identity(true);
 }

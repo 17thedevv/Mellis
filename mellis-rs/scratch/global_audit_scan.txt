@@ -1,0 +1,140 @@
+--- unwrap_or_default (11 matches) ---
+crates\mellis-borrowck\src\borrow_analysis.rs:102 let mut current_state = block_out.get(&block.label.name).cloned().unwrap_or_default();
+crates\mellis-borrowck\src\borrow_analysis.rs:165 let mut current_state = block_states.get(&block.label.name).cloned().unwrap_or_default();
+crates\mellis-borrowck\src\lib.rs:30 let mut current_state = move_states.get(&block.label.name).cloned().unwrap_or_default();
+crates\mellis-borrowck\src\suspension.rs:70 let mut current_state = block_states.get(&entry_block.label.name).cloned().unwrap_or_default();
+crates\mellis-borrowck\src\suspension.rs:90 let mut current_state = block_states.get(&block.label.name).cloned().unwrap_or_default();
+crates\mellis-diff\src\main.rs:164 .env("PATH", format!("{};{}", std::env::var("PATH").unwrap_or_default(), "D:\\Programs\\LLVM-DEV\\bin"))
+crates\mellis-diff\src\main.rs:173 .env("PATH", format!("{};{}", std::env::var("PATH").unwrap_or_default(), "D:\\Programs\\LLVM-DEV\\bin"))
+crates\mellis-driver\src\importer.rs:67 let input = std::fs::read_to_string(&path).unwrap_or_default();
+crates\mellis-mvir\src\generator.rs:92 }).unwrap_or_default();
+crates\mellis-mvir\src\generator.rs:416 self.ctx.tables.closure_capture_bindings.get(&expr_id).cloned().unwrap_or_default()
+crates\mellis-semantic\src\mono.rs:155 .unwrap_or_default();
+
+--- unify_ignore (13 matches) ---
+crates\mellis-semantic\src\typechecker.rs:1431 let _ = self.unify(l_ty, r_ty);
+crates\mellis-semantic\src\typechecker.rs:1472 let _ = self.unify(expected_p, arg_ty);
+crates\mellis-semantic\src\typechecker.rs:1482 let _ = self.unify(expected_p, arg_ty);
+crates\mellis-semantic\src\typechecker.rs:1540 let _ = self.unify(l_ty, r_ty);
+crates\mellis-semantic\src\typechecker.rs:1777 let _ = self.unify(expected_p, arg_ty);
+crates\mellis-semantic\src\typechecker.rs:1816 let _ = self.unify(expected_p, arg_ty);
+crates\mellis-semantic\src\typechecker_patched.rs:882 let _ = self.unify(expected_ty, init_ty);
+crates\mellis-semantic\src\typechecker_patched.rs:1278 let _ = self.unify(l_ty, r_ty);
+crates\mellis-semantic\src\typechecker_patched.rs:1319 let _ = self.unify(expected_p, arg_ty);
+crates\mellis-semantic\src\typechecker_patched.rs:1329 let _ = self.unify(expected_p, arg_ty);
+crates\mellis-semantic\src\typechecker_patched.rs:1387 let _ = self.unify(l_ty, r_ty);
+crates\mellis-semantic\src\typechecker_patched.rs:1598 let _ = self.unify(expected_p, arg_ty);
+crates\mellis-semantic\src\typechecker_patched.rs:1637 let _ = self.unify(expected_p, arg_ty);
+
+--- empty_match_arm (59 matches) ---
+crates\mellis-borrowck\src\borrow_analysis.rs:64 Instruction::Alloca | _ => {}
+crates\mellis-borrowck\src\borrow_analysis.rs:76 _ => {}
+crates\mellis-borrowck\src\borrow_analysis.rs:432 _ => {}
+crates\mellis-borrowck\src\borrow_analysis.rs:492 _ => {}
+crates\mellis-borrowck\src\borrow_analysis.rs:588 _ => {}
+crates\mellis-borrowck\src\borrow_analysis.rs:666 Instruction::Alloca | _ => {}
+crates\mellis-borrowck\src\effect.rs:190 _ => {}
+crates\mellis-borrowck\src\effect.rs:253 _ => {}
+crates\mellis-borrowck\src\effect.rs:261 _ => {}
+crates\mellis-borrowck\src\effect_inference.rs:250 _ => {}
+crates\mellis-borrowck\src\effect_inference.rs:357 _ => {}
+crates\mellis-borrowck\src\move_analysis.rs:167 _ => {}
+crates\mellis-borrowck\src\move_analysis.rs:411 _ => {}
+crates\mellis-borrowck\tests\fuzz_effect.rs:129 _ => {}
+crates\mellis-borrowck\tests\fuzz_soundness.rs:121 _ => {}
+crates\mellis-borrowck\tests\fuzz_soundness.rs:140 _ => {}
+crates\mellis-driver\src\async_lowering.rs:606 _ => {}
+crates\mellis-mvir\src\generator.rs:203 _ => {} // Functions are handled by generate_mono_instance
+crates\mellis-mvir\src\generator.rs:285 _ => {}
+crates\mellis-mvir\src\generator.rs:905 _ => {}
+crates\mellis-mvir\src\generator.rs:998 _ => {}
+crates\mellis-mvir\src\generator.rs:1193 _ => {}
+crates\mellis-mvir\src\generator.rs:1836 _ => {}
+crates\mellis-mvir\src\interp.rs:253 _ => {}
+crates\mellis-optimizer\src\verifier.rs:36 _ => {}
+crates\mellis-optimizer\src\passes\dce.rs:28 _ => {}
+crates\mellis-optimizer\src\passes\dce.rs:92 _ => {}
+crates\mellis-parser\src\lib.rs:227 _ => {}
+crates\mellis-semantic\src\annotation.rs:246 _ => {}
+crates\mellis-semantic\src\macro_engine.rs:167 _ => {}
+crates\mellis-semantic\src\macro_engine.rs:1073 _ => {}
+crates\mellis-semantic\src\macro_engine.rs:1095 _ => {}
+crates\mellis-semantic\src\mono.rs:274 _ => {}
+crates\mellis-semantic\src\resolver.rs:209 _ => {}
+crates\mellis-semantic\src\resolver.rs:737 _ => {}
+crates\mellis-semantic\src\resolver.rs:851 _ => {}
+crates\mellis-semantic\src\resolver.rs:916 _ => {}
+crates\mellis-semantic\src\resolver.rs:995 _ => {}
+crates\mellis-semantic\src\resolver.rs:1400 _ => {}
+crates\mellis-semantic\src\typechecker.rs:240 _ => {}
+crates\mellis-semantic\src\typechecker.rs:339 _ => {}
+crates\mellis-semantic\src\typechecker.rs:411 _ => {}
+crates\mellis-semantic\src\typechecker.rs:563 _ => {}
+crates\mellis-semantic\src\typechecker.rs:698 _ => {}
+crates\mellis-semantic\src\typechecker.rs:1143 _ => {}
+crates\mellis-semantic\src\typechecker.rs:1224 _ => {}
+crates\mellis-semantic\src\typechecker.rs:1363 _ => {}
+crates\mellis-semantic\src\typechecker.rs:1923 _ => {}
+crates\mellis-semantic\src\typechecker.rs:1937 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:254 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:312 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:459 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:594 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:1001 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:1082 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:1210 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:1744 _ => {}
+crates\mellis-semantic\src\typechecker_patched.rs:1758 _ => {}
+crates\mellis-semantic\src\comptime\type_repr.rs:791 _ => {}
+
+--- error_fallback (40 matches) ---
+crates\mellis-backend\src\llvm_codegen.rs:652 _ => return Err(BackendError::InvariantViolation("FieldPtr base must be a typed value".into())),
+crates\mellis-mlib\src\reader.rs:239 _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid operand tag")),
+crates\mellis-mlib\src\reader.rs:549 _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Unknown instruction opcode {}", tag_buf[0]))),
+crates\mellis-mlib\src\reader.rs:584 _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid terminator tag")),
+crates\mellis-mvir\src\interp.rs:47 _ => Err(ComptimeError::TypeMismatch("expected boolean value".to_string())),
+crates\mellis-mvir\src\interp.rs:54 _ => Err(ComptimeError::TypeMismatch("expected integer value".to_string())),
+crates\mellis-mvir\src\interp.rs:320 _ => return Err(ComptimeError::UnsupportedOperation(format!("binary op {}", op))),
+crates\mellis-mvir\src\interp.rs:462 _ => return Err(ComptimeError::TypeMismatch("add operand mismatch".to_string())),
+crates\mellis-mvir\src\interp.rs:475 _ => return Err(ComptimeError::TypeMismatch("sub operand mismatch".to_string())),
+crates\mellis-mvir\src\interp.rs:488 _ => return Err(ComptimeError::TypeMismatch("mul operand mismatch".to_string())),
+crates\mellis-mvir\src\interp.rs:504 _ => return Err(ComptimeError::TypeMismatch("div operand mismatch".to_string())),
+crates\mellis-mvir\src\interp.rs:514 _ => return Err(ComptimeError::TypeMismatch("rem operand mismatch".to_string())),
+crates\mellis-mvir\src\interp.rs:549 _ => return Err(ComptimeError::TypeMismatch("comparison operand mismatch".to_string())),
+crates\mellis-mvir\src\interp.rs:562 _ => return Err(ComptimeError::TypeMismatch("comparison operand mismatch".to_string())),
+crates\mellis-mvir\src\interp.rs:575 _ => return Err(ComptimeError::TypeMismatch("comparison operand mismatch".to_string())),
+crates\mellis-mvir\src\interp.rs:588 _ => return Err(ComptimeError::TypeMismatch("comparison operand mismatch".to_string())),
+crates\mellis-semantic\src\ty.rs:195 _ => id, // Primitive, Void, Error, Never, InferenceVar
+crates\mellis-semantic\src\typechecker.rs:974 _ => self.ctx.types.intern(SemanticType::Error),
+crates\mellis-semantic\src\typechecker.rs:1382 _ => SemanticType::Error,
+crates\mellis-semantic\src\typechecker.rs:2134 _ => self.ctx.types.intern(SemanticType::Error)
+crates\mellis-semantic\src\typechecker_patched.rs:834 _ => self.ctx.types.intern(SemanticType::Error),
+crates\mellis-semantic\src\typechecker_patched.rs:1229 _ => SemanticType::Error,
+crates\mellis-semantic\src\typechecker_patched.rs:1949 _ => self.ctx.types.intern(SemanticType::Error)
+crates\mellis-semantic\src\comptime\type_repr.rs:382 _ => TypeRepr::Error,
+crates\mellis-semantic\src\comptime\value.rs:187 _ => Err(ComptimeError::TypeMismatch("cannot add non-numeric types".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:200 _ => Err(ComptimeError::TypeMismatch("cannot subtract non-numeric types".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:213 _ => Err(ComptimeError::TypeMismatch("cannot multiply non-numeric types".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:232 _ => Err(ComptimeError::TypeMismatch("cannot divide non-numeric types".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:245 _ => Err(ComptimeError::TypeMismatch("cannot modulo non-integer types".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:255 _ => Err(ComptimeError::TypeMismatch("invalid types for bitwise and".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:265 _ => Err(ComptimeError::TypeMismatch("invalid types for bitwise or".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:275 _ => Err(ComptimeError::TypeMismatch("invalid types for bitwise xor".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:288 _ => Err(ComptimeError::TypeMismatch("invalid types for shift left".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:301 _ => Err(ComptimeError::TypeMismatch("invalid types for shift right".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:312 _ => Err(ComptimeError::TypeMismatch("cannot negate non-numeric type".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:320 _ => Err(ComptimeError::TypeMismatch("cannot invert non-boolean/integer type".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:334 _ => Err(ComptimeError::TypeMismatch("cannot compare types with '<'".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:344 _ => Err(ComptimeError::TypeMismatch("cannot compare types with '<='".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:354 _ => Err(ComptimeError::TypeMismatch("cannot compare types with '>'".to_string())),
+crates\mellis-semantic\src\comptime\value.rs:364 _ => Err(ComptimeError::TypeMismatch("cannot compare types with '>='".to_string())),
+
+--- zero_fallback (1 matches) ---
+crates\mellis-semantic\src\comptime\type_repr.rs:586 _ => 0,
+
+--- false_fallback (4 matches) ---
+crates\mellis-mvir\src\interp.rs:172 _ => false,
+crates\mellis-semantic\src\lib.rs:130 _ => false,
+crates\mellis-semantic\src\comptime\type_repr.rs:556 _ => false,
+crates\mellis-semantic\src\comptime\type_repr.rs:608 _ => false,
+

@@ -1,5 +1,5 @@
 use mellis_common::ids::SymbolId;
-use mellis_semantic::SemanticTypeId;
+use mellis_semantic::{SemanticTypeId, semantic_tables::IntrinsicKind};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocalId {
@@ -133,6 +133,10 @@ pub enum Instruction {
         closure: Operand,
         args: Vec<Operand>,
     },
+    CallIntrinsic {
+        kind: IntrinsicKind,
+        args: Vec<Operand>,
+    },
     MakeClosure {
         func: GlobalId,
         env_ptr: Operand,
@@ -191,8 +195,8 @@ pub enum Instruction {
         ptr: Operand,
         offset: Operand,
     },
-    PtrCast {
-        ptr: Operand,
+    Cast {
+        value: Operand,
         target_ty: SemanticTypeId,
     },
     SizeOf {
@@ -246,6 +250,8 @@ pub struct Function {
     pub is_extern: bool,
     pub is_async: bool,
     pub arg_count: usize,
+    pub link_name: Option<String>,
+    pub param_types: Vec<SemanticTypeId>,
     pub ret_ty: SemanticTypeId,
     pub blocks: Vec<BasicBlock>,
     pub values: Vec<ValueData>,

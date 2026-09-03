@@ -43,11 +43,13 @@ pub struct TraitResolution {
 pub enum IntrinsicKind {
     BoxNew,
     Null,
-    PtrCast,
+    Cast,
     PtrOffset,
     PtrWrite,
     SizeOf,
     AlignOf,
+    TypeOf,
+    TypeInfo,
 }
 
 pub struct SemanticTables {
@@ -60,6 +62,7 @@ pub struct SemanticTables {
     pub expr_member_indices: HashMap<ExprId, u32>,
     pub expr_struct_init_indices: HashMap<ExprId, Vec<u32>>,
     pub expr_sizeof_target: HashMap<ExprId, SemanticTypeId>,
+    pub expr_lifetimes: HashMap<ExprId, crate::ty::LifetimeId>,
     pub expr_captures: HashMap<ExprId, Vec<SymbolId>>,
     pub closure_capture_bindings: HashMap<ExprId, Vec<CaptureBinding>>,
     pub closure_mutated_captures: HashMap<ExprId, HashSet<SymbolId>>,
@@ -97,7 +100,7 @@ pub struct SemanticTables {
     pub drop_impls: HashMap<SymbolId, SymbolId>,
     
     // Canonical impl resolution: ImplKey -> Impl DeclId
-    pub trait_impls: HashMap<ImplKey, DeclId>,
+    pub trait_impls: HashMap<ImplKey, Vec<DeclId>>,
     
     // Maps a Trait's SymbolId to its required method SymbolIds
     pub trait_methods: HashMap<SymbolId, Vec<SymbolId>>,
@@ -120,6 +123,13 @@ pub struct SemanticTables {
 }
 
 impl SemanticTables {
+
+    pub fn expect_closure_capture_bindings(&self, id: ExprId) -> Vec<CaptureBinding> {
+        self.closure_capture_bindings.get(&id).cloned().unwrap_or_else(|| {
+            panic!("ICE: closure capture bindings missing for expr {:?}", id)
+        })
+    }
+
     pub fn new() -> Self {
         Self {
             expr_types: HashMap::new(),
@@ -131,6 +141,7 @@ impl SemanticTables {
             expr_member_indices: HashMap::new(),
             expr_struct_init_indices: HashMap::new(),
             expr_sizeof_target: HashMap::new(),
+            expr_lifetimes: HashMap::new(),
             expr_captures: HashMap::new(),
             closure_capture_bindings: HashMap::new(),
             closure_mutated_captures: HashMap::new(),

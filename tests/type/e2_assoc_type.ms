@@ -1,4 +1,4 @@
-trait Container {
+﻿trait Container {
     type Item;
     fn get(self: &Self) -> Self::Item;
 }
@@ -19,8 +19,8 @@ fn test_assoc<T: Container>(c: &T) -> T::Item {
 }
 
 fn main() -> int_32 {
-    dec b = Box@<int_32> { val: 42 };
-    dec x = test_assoc@<Box<int_32>>(&b);
+    dec b = Box<int_32> { val: 42 };
+    dec x = test_assoc<Box<int_32>>(&b);
     dec y = b.get();
     return x;
 }

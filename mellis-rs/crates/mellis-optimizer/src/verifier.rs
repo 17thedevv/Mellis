@@ -82,6 +82,11 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
             Instruction::MarkInit { value } | Instruction::BoxNew { value } | Instruction::BoxFree { value } | Instruction::Drop { value, .. } => {
                 check_operand(value, &mut errors, &ctx);
             }
+            Instruction::CallIntrinsic { args, .. } => {
+                for arg in args {
+                    check_operand(arg, &mut errors, &ctx);
+                }
+            }
             Instruction::Await { future } => {
                 check_operand(future, &mut errors, &ctx);
             }
@@ -147,7 +152,7 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
             Instruction::SizeOf { .. } |
             Instruction::AlignOf { .. } |
             Instruction::Null { .. } |
-            Instruction::PtrCast { .. } |
+            Instruction::Cast { .. } |
             Instruction::PtrOffset { .. } => {}
             Instruction::Drop { value, .. } => {
                 check_operand(value, &mut errors, &ctx);

@@ -86,6 +86,7 @@ STAR       ::= "*"
 SLASH      ::= "/"
 AMPERSAND  ::= "&"
 ARROW      ::= "->"
+FAT_ARROW  ::= "=>"
 QUESTION   ::= "?"
 PLUS_PLUS  ::= "++"
 MINUS_MINUS::= "--"
@@ -314,6 +315,7 @@ unary       ::= "-" unary
               | "!" unary
               | "~" unary
               | "&" KW_RW? unary
+              | KW_AWAIT unary
               | primary
 
 postfix_op  ::= "[" expression "]" 
@@ -391,35 +393,56 @@ argument    ::= (IDENTIFIER ":")? expression
 
 // Giữ lại arguments cho array_literal
 arguments   ::= expression ("," expression)*
-// --- MACRO DEFINITION ---
-macro_decl ::= annotation* "export"? KW_MACRO IDENTIFIER "(" macro_params? ")" block_stmt
+// --- MACRO DEFINITION (PHASE 14B) ---
+macro_decl        ::= annotation* "export"? KW_MACRO IDENTIFIER (macro_rules_block | macro_rule_shorthand)
+macro_rules_block ::= "{" (macro_rule (";" | ",")?)* "}"
+macro_rule        ::= macro_pattern (FAT_ARROW | ARROW) macro_transcriber
+macro_rule_shorthand ::= macro_pattern (FAT_ARROW | ARROW)? macro_transcriber
 
-macro_params ::= macro_param ("," macro_param)* ("," macro_variadic_param)?
-               | macro_variadic_param
+macro_pattern     ::= "(" matcher_element* ")"
+                    | "[" matcher_element* "]"
+                    | "{" matcher_element* "}"
 
-macro_param ::= AT IDENTIFIER ":" macro_frag_spec
+matcher_element   ::= metavariable
+                    | matcher_group
+                    | matcher_leaf
 
-macro_variadic_param ::= AT IDENTIFIER ":" macro_frag_spec "..."
+metavariable      ::= AT IDENTIFIER COLON fragment_kind
+fragment_kind     ::= "expr" | "ident" | "ty" | "stmt" | "block" | "item"
 
-macro_frag_spec ::= "expr" | "ident" | "ty" | "stmt" | "block" | "item"
+matcher_group     ::= "(" matcher_element* ")"
+                    | "[" matcher_element* "]"
+                    | "{" matcher_element* "}"
+
+matcher_leaf      ::= (* any token other than unmatched delimiter *)
+
+macro_transcriber ::= "{" transcriber_element* "}"
+                    | "(" transcriber_element* ")"
+                    | "[" transcriber_element* "]"
+
+transcriber_element ::= transcriber_metavar
+                      | transcriber_group
+                      | transcriber_leaf
+
+transcriber_metavar ::= AT IDENTIFIER
+transcriber_group   ::= "{" transcriber_element* "}"
+                      | "(" transcriber_element* ")"
+                      | "[" transcriber_element* "]"
+
+transcriber_leaf    ::= (* any token other than unmatched delimiter *)
 
 // --- MACRO INVOCATION ---
-macro_call_expr ::= IDENTIFIER "!" "(" macro_call_args? ")"
-                  | IDENTIFIER "!" "[" macro_call_args? "]"
+macro_call_expr ::= IDENTIFIER "!" "(" token_tree* ")"
+                  | IDENTIFIER "!" "[" token_tree* "]"
+                  | IDENTIFIER "!" "{" token_tree* "}"
 
-macro_call_stmt ::= IDENTIFIER "!" "(" macro_call_args? ")" ";"
-                  | IDENTIFIER "!" "[" macro_call_args? "]" ";"
-                  | IDENTIFIER "!" "{" macro_call_args? "}"
+macro_call_stmt ::= macro_call_expr ";"
+                  | IDENTIFIER "!" "{" token_tree* "}"
 
-macro_call_args ::= macro_call_arg ("," macro_call_arg)* ","?
-
-macro_call_arg  ::= expression 
-                  | type 
-                  | block_stmt
-                  | IDENTIFIER
-
-// --- MACRO EXPANSION LOOP ---
-macro_expand_for ::= AT KW_FOR AT IDENTIFIER KW_IN AT IDENTIFIER block_stmt
+token_tree      ::= "(" token_tree* ")"
+                  | "[" token_tree* "]"
+                  | "{" token_tree* "}"
+                  | (* any token other than unmatched delimiter *)
 
 // --- PLACEHOLDERS VÀO AST ---
 placeholder_expr ::= AT IDENTIFIER

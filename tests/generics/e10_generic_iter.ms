@@ -35,7 +35,7 @@ fn main() -> int_32 {
     dec _dummy1 = (iter.current = 1);
     dec _dummy2 = (iter.end = 3);
     
-    dec n1 = get_next@<Range>(&rw iter);
+    dec n1 = get_next<Range>(&rw iter);
     
     dec _res = match n1 {
         Option::Some(val) -> {

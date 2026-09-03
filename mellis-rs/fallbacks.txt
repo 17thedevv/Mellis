@@ -1,0 +1,71 @@
+d:/fdlang/mellis-rs/crates\mellis-borrowck\src\effect.rs:26:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-borrowck\src\effect.rs:109:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-borrowck\src\effect.rs:242:return None;
+d:/fdlang/mellis-rs/crates\mellis-borrowck\src\place.rs:34:if self.local != other.local { return false; }
+d:/fdlang/mellis-rs/crates\mellis-borrowck\src\place.rs:35:if self.projections.len() > other.projections.len() { return false; }
+d:/fdlang/mellis-rs/crates\mellis-borrowck\src\place.rs:37:if proj != &other.projections[i] { return false; }
+d:/fdlang/mellis-rs/crates\mellis-common\src\source.rs:41:return None;
+d:/fdlang/mellis-rs/crates\mellis-lexer\src\lexer.rs:47:return 0;
+d:/fdlang/mellis-rs/crates\mellis-lexer\src\lexer.rs:347:return None;
+d:/fdlang/mellis-rs/crates\mellis-mlib\src\format.rs:115:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-mvir\src\generator.rs:1368:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-mvir\src\interp.rs:172:_ => false,
+d:/fdlang/mellis-rs/crates\mellis-optimizer\src\passes\const_fold.rs:56:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-optimizer\src\passes\const_fold.rs:82:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-optimizer\src\passes\const_fold.rs:85:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-parser\src\expr.rs:9:return false;
+d:/fdlang/mellis-rs/crates\mellis-parser\src\expr.rs:24:return false;
+d:/fdlang/mellis-rs/crates\mellis-parser\src\expr.rs:54:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\annotation.rs:389:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\derive.rs:404:match_arms.push(format!("{}::{} -> {{ return match *other {{ {}::{} -> {{ return true; }} _ -> {{ return false; }} }}; }}",
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\derive.rs:413:match_arms.push(format!("{}::{}({}) -> {{ return match *other {{ {}::{}({}) -> {{ return {}; }} _ -> {{ return false; }} }}; }}",
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\derive.rs:420:"impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ return match *self {{ {} _ -> {{ return false; }} }}; }} }}",
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\derive.rs:581:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\derive.rs:636:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\lib.rs:124:_ => false,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:599:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:662:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:680:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:683:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:689:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:698:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:717:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:725:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:728:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:733:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:738:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:745:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:759:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:777:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:786:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:795:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:804:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:813:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:927:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:939:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\macro_engine.rs:961:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\symbol.rs:246:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\symbol.rs:254:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\symbol.rs:263:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\symbol.rs:272:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\symbol.rs:275:return None;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\symbol.rs:310:return false;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:538:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:621:return false;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:633:return false;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:645:return false;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:663:return false;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:686:return false;
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:1083:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:1166:_ => SemanticType::Error,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:1333:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:1508:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:1785:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\typechecker.rs:1887:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\comptime\value.rs:150:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\comptime\value.rs:157:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\src\comptime\value.rs:164:_ => None,
+d:/fdlang/mellis-rs/crates\mellis-semantic\tests\macro_hygiene_tests.rs:72:return 0;
+d:/fdlang/mellis-rs/crates\mellis-semantic\tests\macro_type_tests.rs:59:return 0;
+d:/fdlang/mellis-rs/crates\mellis-semantic\tests\macro_type_tests.rs:81:return 0;
+d:/fdlang/mellis-rs/crates\mellis-semantic\tests\macro_type_tests.rs:109:return 0;

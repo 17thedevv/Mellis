@@ -27,6 +27,10 @@ enum Commands {
         #[arg(short, long)]
         quiet: bool,
 
+        /// Build as a library (do not link into an executable)
+        #[arg(long)]
+        lib: bool,
+
         /// Add a directory to the module search path
         #[arg(short = 'I', long = "search-path", value_name = "DIR")]
         search_paths: Vec<PathBuf>,
@@ -113,7 +117,7 @@ fn main() {
                 }
             }
         }
-        Commands::Build { file, output, emit, quiet, search_paths } => {
+        Commands::Build { file, output, emit, quiet, lib, search_paths } => {
             let source = read_source(file);
             let (emit_mvir, emit_llvm, emit_mlib) = parse_emit(emit);
             
@@ -124,11 +128,11 @@ fn main() {
                 emit_mlib,
                 quiet: *quiet,
                 search_paths: search_paths.iter().map(|p| p.to_string_lossy().to_string()).collect(),
-                no_link: false,
+                no_link: *lib,
             };
 
-            if let Err(diagnostics) = mellis_driver::compile(file.to_string_lossy().as_ref(), source.clone(), &options) {
-                eprintln!("{}", mellis_driver::render_diagnostics(&source, &diagnostics));
+            if let Err(rendered_diagnostics) = mellis_driver::compile_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {
+                eprintln!("{}", rendered_diagnostics);
                 process::exit(1);
             }
             if !*quiet {
@@ -148,8 +152,8 @@ fn main() {
                 no_link: false,
             };
 
-            if let Err(diagnostics) = mellis_driver::compile(file.to_string_lossy().as_ref(), source.clone(), &options) {
-                eprintln!("{}", mellis_driver::render_diagnostics(&source, &diagnostics));
+            if let Err(rendered_diagnostics) = mellis_driver::compile_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {
+                eprintln!("{}", rendered_diagnostics);
                 process::exit(1);
             }
             if !*quiet {
@@ -169,8 +173,8 @@ fn main() {
                 no_link: false,
             };
 
-            if let Err(diagnostics) = mellis_driver::compile(file.to_string_lossy().as_ref(), source.clone(), &options) {
-                eprintln!("{}", mellis_driver::render_diagnostics(&source, &diagnostics));
+            if let Err(rendered_diagnostics) = mellis_driver::compile_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {
+                eprintln!("{}", rendered_diagnostics);
                 process::exit(1);
             }
         }

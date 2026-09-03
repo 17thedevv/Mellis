@@ -9,6 +9,7 @@ pub mod annotation;
 pub mod derive;
 pub mod comptime;
 pub mod effect;
+pub mod lifetime;
 
 pub use effect::{Effect, EffectSet};
 pub use resolver::Resolver;
@@ -18,12 +19,17 @@ pub use mono::{MonoCollector, MonoInstance, InstantiatedFunction};
 pub use macro_engine::MacroEngine;
 pub use annotation::AttributeProcessor;
 pub use derive::{DeriveRegistry, DeriveContext, DeriveInput, DeriveKind};
-pub use comptime::{ComptimeValue, ComptimeEvaluator, ComptimeContext, ComptimeError, IntWidth, FloatWidth};
+pub use comptime::{ComptimeValue, ComptimeError, IntWidth, FloatWidth, TypeRepr, TypeInfoStruct, TypeKind, TypeInfoField, TypeInfoVariant};
 pub use symbol::{SymbolTable, ScopeId, SymbolKind};
 pub use mellis_common::ids::SymbolId;
 
-pub use semantic_tables::{CaptureBinding, CaptureMode, SemanticTables};
+pub use semantic_tables::{CaptureBinding, CaptureMode, SemanticTables, IntrinsicKind};
 pub use ty::{TypeContext, SemanticTypeId, SemanticType, BuiltinType};
+pub use lifetime::{
+    LifetimeIdent, LifetimeVar, LifetimeConstraintExpr, Provenance,
+    LifetimeSolver, SolveResult, LifetimeAssignment,
+    LifetimeError, resolve_fn_lifetime_signature
+};
 
 pub trait ComptimeEngine: Send + Sync {
     fn eval_expr(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source: &str, expr_id: mellis_ast::ExprId) -> Result<ComptimeValue, ComptimeError>;
@@ -75,7 +81,7 @@ impl SemanticContext {
 
     pub fn needs_drop(&self, id: ty::SemanticTypeId) -> bool {
         let ty = self.types.get(id);
-        if let ty::SemanticType::Struct(sym_id, _) = ty {
+        if let ty::SemanticType::Struct(sym_id, _, _) = ty {
             let name = &self.symbol_table.get_symbol(*sym_id).name;
             if name == "File" {
                 println!("DEBUG: needs_drop checking File, drop_impls.contains_key: {}", self.tables.drop_impls.contains_key(sym_id));
@@ -93,14 +99,14 @@ impl SemanticContext {
         
         let ty = self.types.get(id);
         let result = match ty {
-            ty::SemanticType::Struct(sym_id, fields) => {
+            ty::SemanticType::Struct(sym_id, _, fields) => {
                 if self.tables.drop_impls.contains_key(sym_id) {
                     true
                 } else {
                     fields.iter().any(|&f| self.needs_drop(f))
                 }
             }
-            ty::SemanticType::Enum(sym_id, variants) => {
+            ty::SemanticType::Enum(sym_id, _, variants) => {
                 if self.tables.drop_impls.contains_key(&sym_id) {
                     true
                 } else {
@@ -121,6 +127,8 @@ impl SemanticContext {
             ty::SemanticType::Future(inner) => {
                 self.needs_drop(*inner)
             }
+            ty::SemanticType::DynTrait(_) => true,
+            ty::SemanticType::GenericParam(_) => false, // TODO(phase_1c): Fix generic substitution to avoid memory leaks
             _ => false,
         };
         

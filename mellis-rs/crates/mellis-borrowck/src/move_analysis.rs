@@ -288,6 +288,11 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
             Instruction::MakeTraitObject { data_ptr, .. } => {
                 self.check_operand(data_ptr, state, val_id);
             }
+            Instruction::CallIntrinsic { args, .. } => {
+                for arg in args {
+                    self.check_operand(arg, state, val_id);
+                }
+            }
             Instruction::CallVirt { obj, args, .. } => {
                 self.check_operand(obj, state, val_id);
                 for arg in args {
@@ -330,7 +335,7 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
             Instruction::SizeOf { .. } |
             Instruction::AlignOf { .. } |
             Instruction::Null { .. } |
-            Instruction::PtrCast { .. } |
+            Instruction::Cast { .. } |
             Instruction::PtrOffset { .. } => {}
             Instruction::FieldPtr { base, field_idx, .. } => {
                 if let Operand::Value(base_val) = base {
@@ -353,10 +358,18 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
                 self.check_operand(value, state, val_id);
             }
             Instruction::Extract { value, field_idx, .. } => {
-                self.check_operand(value, state, val_id); // we check the parent
                 if let Operand::Value(base_val) = value {
                     if let Some(base_place) = self.values_to_places.get(base_val).cloned() {
-                        self.values_to_places.insert(val_id, base_place.projected(crate::place::Projection::Field(*field_idx as usize)));
+                        let field_place = base_place.projected(crate::place::Projection::Field(*field_idx as usize));
+                        self.values_to_places.insert(val_id, field_place.clone());
+                        
+                        // Check the field place instead of the base place to allow partial moves
+                        if self.emit_diagnostics {
+                            let loc_state = self.get_place_state(&field_place, state);
+                            if matches!(loc_state, MoveState::Moved | MoveState::Dropped | MoveState::ConditionallyMoved | MoveState::Uninitialized) {
+                                self.check_operand(value, state, val_id); // Emits the appropriate diagnostic by falling back to check_operand
+                            }
+                        }
                     }
                 }
             }
@@ -443,7 +456,6 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
             // But that's safe.
             if dest_state.as_ref() != Some(&new_state) {
                 if new_state == MoveState::ConditionallyMoved && k.local.0 == 5 {
-                    println!("DEBUG: %v5 becomes ConditionallyMoved by joining {:?} and {:?}", effective_dest, effective_src);
                 }
                 dest.places.insert(k, new_state);
                 changed = true;

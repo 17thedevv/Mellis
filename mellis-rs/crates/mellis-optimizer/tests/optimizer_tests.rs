@@ -5,11 +5,13 @@ use mellis_optimizer::{PassManager, ConstantFolding, DeadCodeElimination, verify
 
 fn dummy_module() -> Module {
     let mut func = Function {
-        name: GlobalId { name: "test_func".to_string(), symbol_id: Some(SymbolId(0)) },
-        arg_count: 0,
+        name: GlobalId { name: "test_func".to_string(), symbol_id: None },
         is_extern: false,
-            is_async: false,
-        ret_ty: SemanticTypeId(0),
+        is_async: false,
+        ret_ty: SemanticTypeId(0), // void
+        arg_count: 0,
+        link_name: None,
+        param_types: vec![SemanticTypeId(1)],
         values: Vec::new(),
         blocks: Vec::new(),
     };

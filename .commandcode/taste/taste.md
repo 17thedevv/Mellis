@@ -1,0 +1,5 @@
+- Prefers communication in Vietnamese. Confidence: 0.98
+- Prefers implementation work to be grounded in the repository's referenced planning and audit documents before coding. Confidence: 0.95
+- Prefers explicit, truthful status updates that distinguish active work or background execution from a paused/incomplete TODO item, including what quota/time was actually spent and avoiding any implication that work is continuing when it has stopped. Confidence: 0.97
+- Prefers avoiding wasted quota: do not spend substantial effort on exploratory coding or tests without making concrete progress, and clearly account for work performed if stopping at a blocker. Confidence: 0.88
+- Prefers the agent to resume unfinished implementation directly when asked, working through concrete blockers and validating progress instead of only reporting status. Confidence: 0.93

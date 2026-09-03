@@ -81,7 +81,7 @@ impl AstRelocator {
 
     fn relocate_expr(&self, expr: &mut Expr) {
         match expr {
-            Expr::Literal(_) => {}
+            Expr::Literal(_, _) => {}
             Expr::Identifier { segments, generic_args } => {
                 for s in segments { self.shift_span(s); }
                 for ga in generic_args { *ga = self.shift_type_id(*ga); }
@@ -203,9 +203,8 @@ impl AstRelocator {
                 *condition = self.shift_expr_id(*condition);
                 *body = self.shift_stmt_id(*body);
             }
-            Stmt::For { label, binding_name, pattern, iterable, init, cond, step, body, .. } => {
+            Stmt::For { label, pattern, iterable, init, cond, step, body, .. } => {
                 if let Some(l) = label { self.shift_span(l); }
-                if let Some(b) = binding_name { self.shift_span(b); }
                 if let Some(p) = pattern { *p = self.shift_pat_id(*p); }
                 if let Some(it) = iterable { *it = self.shift_expr_id(*it); }
                 if let Some(i) = init {
@@ -217,8 +216,7 @@ impl AstRelocator {
                 if let Some(c) = cond { *c = self.shift_expr_id(*c); }
                 if let Some(s) = step { *s = self.shift_expr_id(*s); }
                 *body = self.shift_stmt_id(*body);
-            }
-            Stmt::Return { value } => {
+            }Stmt::Return { value } => {
                 if let Some(v) = value { *v = self.shift_expr_id(*v); }
             }
             Stmt::Break { label } => {

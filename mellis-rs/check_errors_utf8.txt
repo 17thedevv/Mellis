@@ -1,0 +1,506 @@
+﻿cargo.exe : warning: virtual workspace defaulting to `resolver = "1"` despite one or more workspace members being on 
+edition 2024 which implies `resolver = "3"`
+At line:1 char:1
++ & "$env:USERPROFILE\.cargo\bin\cargo" check > check_errors.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: virtua...resolver = "3"`:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  |
+  = note: to keep the current resolver, specify `workspace.resolver = "1"` in the workspace root's manifest
+  = note: to use the edition 2024 resolver, specify `workspace.resolver = "3"` in the workspace root's manifest
+  = note: for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+warning: unreachable pattern
+   --> crates\mellis-lexer\src\lexer.rs:527:13
+    |
+491 |             b'$' => TokenKind::Dollar,
+    |             ---- matches all the relevant values
+...
+527 |             b'$' => TokenKind::Dollar,
+    |             ^^^^ no value can reach this
+    |
+    = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `load`
+  --> crates\mellis-spike-llvm\src\llvmsys_spike.rs:95:13
+   |
+95 |         let load = LLVMBuildLoad2(builder, i32_type, alloca, c_str("load_val").as_ptr());
+   |             ^^^^ help: if this is intentional, prefix it with an underscore: `_load`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `mellis-lexer` (lib) generated 1 warning
+warning: `mellis-spike-llvm` (bin "llvmsys_spike") generated 1 warning (run `cargo fix --bin "llvmsys_spike" -p 
+mellis-spike-llvm` to apply 1 suggestion)
+warning: unused imports: `FileId` and `Span`
+  --> crates\mellis-ast\src\lib.rs:17:26
+   |
+17 | use mellis_common::ids::{FileId, Span};
+   |                          ^^^^^^  ^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `mellis-ast` (lib) generated 1 warning (run `cargo fix --lib -p mellis-ast` to apply 1 suggestion)
+warning: unused imports: `DeclId`, `ExprId`, `PatId`, `StmtId`, and `TypeId`
+ --> crates\mellis-parser\src\lib.rs:1:28
+  |
+1 | use mellis_ast::{AstArena, DeclId, ExprId, PatId, StmtId, TypeId};
+  |                            ^^^^^^  ^^^^^^  ^^^^^  ^^^^^^  ^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `AssociatedBinding`
+ --> crates\mellis-parser\src\ty.rs:2:18
+  |
+2 | use mellis_ast::{AssociatedBinding, Type, TypeId};
+  |                  ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `BuiltinKind`
+ --> crates\mellis-parser\src\ty.rs:3:20
+  |
+3 | use mellis_lexer::{BuiltinKind, TokenKind};
+  |                    ^^^^^^^^^^^
+
+warning: unused variable: `span_start`
+   --> crates\mellis-parser\src\decl.rs:123:13
+    |
+123 |         let span_start = self.previous().span.start;
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_span_start`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `span_end`
+   --> crates\mellis-parser\src\decl.rs:147:13
+    |
+147 |         let span_end = self.previous().span.end;
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_span_end`
+
+warning: value assigned to `kind` is never read
+   --> crates\mellis-parser\src\decl.rs:124:24
+    |
+124 |         let mut kind = mellis_ast::ImportKind::External;
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this value is reassigned later and never used
+...
+138 |             kind = mellis_ast::ImportKind::Local;
+    |             ------------------------------------ `kind` is overwritten here before the previous value is read
+    |
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `start_span`
+   --> crates\mellis-parser\src\decl.rs:686:21
+    |
+686 |                 let start_span = self.advance().span;
+    |                     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_start_span`
+
+warning: unused variable: `rparen_tok`
+   --> crates\mellis-parser\src\decl.rs:691:21
+    |
+691 |                 let rparen_tok = self.consume(TokenKind::RParen, "Expected closing ')' after macro repetition")?;
+    |                     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_rparen_tok`
+
+warning: unused variable: `start_span`
+   --> crates\mellis-parser\src\decl.rs:804:21
+    |
+804 |                 let start_span = self.advance().span;
+    |                     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_start_span`
+
+warning: unused variable: `rparen_tok`
+   --> crates\mellis-parser\src\decl.rs:809:21
+    |
+809 |                 let rparen_tok = self.consume(TokenKind::RParen, "Expected closing ')' after macro repetition")?;
+    |                     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_rparen_tok`
+
+warning: unused variable: `token`
+   --> crates\mellis-parser\src\expr.rs:433:25
+    |
+433 |                     let token = self.advance();
+    |                         ^^^^^ help: if this is intentional, prefix it with an underscore: `_token`
+
+warning: unused variable: `allow_struct_literal`
+   --> crates\mellis-parser\src\expr.rs:676:33
+    |
+676 |     fn parse_primary(&mut self, allow_struct_literal: bool) -> Result<ExprId, ()> {
+    |                                 ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: 
+`_allow_struct_literal`
+
+warning: variable does not need to be mutable
+   --> crates\mellis-parser\src\ty.rs:106:17
+    |
+106 |             let mut associated_bindings = Vec::new();
+    |                 ----^^^^^^^^^^^^^^^^^^^
+    |                 |
+    |                 help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `PathBuf`
+ --> crates\mellis-diff\src\main.rs:2:23
+  |
+2 | use std::path::{Path, PathBuf};
+  |                       ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Stdio`
+ --> crates\mellis-diff\src\main.rs:3:29
+  |
+3 | use std::process::{Command, Stdio};
+  |                             ^^^^^
+
+warning: unused variable: `timeout_secs`
+   --> crates\mellis-diff\src\main.rs:150:5
+    |
+150 |     timeout_secs: u64,
+    |     ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_timeout_secs`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `run_with_timeout` is never used
+   --> crates\mellis-diff\src\main.rs:102:4
+    |
+102 | fn run_with_timeout(mut child: std::process::Child, timeout_secs: u64) -> Result<std::process::ExitStatus, ()> {
+    |    ^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `mellis-parser` (lib) generated 13 warnings (run `cargo fix --lib -p mellis-parser` to apply 12 suggestions)
+warning: `mellis-diff` (bin "mellis-diff") generated 4 warnings (run `cargo fix --bin "mellis-diff" -p mellis-diff` to 
+apply 3 suggestions)
+    Checking mellis-semantic v0.1.0 (D:\fdlang\mellis-rs\crates\mellis-semantic)
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:599:24
+    |
+599 |             return Err(MatchFailure { pos, expected: "expected repetition".to_string(), span: 
+Span::new(self.file_id, 0, 0) });
+    |                        ^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `pos` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:599:39
+    |
+599 |             return Err(MatchFailure { pos, expected: "expected repetition".to_string(), span: 
+Span::new(self.file_id, 0, 0) });
+    |                                       ^^^ not found in this scope
+
+error[E0425]: cannot find type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:606:38
+    |
+606 |         let mut best_failure: Option<MatchFailure> = None;
+    |                                      ^^^^^^^^^^^^ not found in this scope
+    |
+help: you might be missing a type parameter
+    |
+ 32 | impl<'a, MatchFailure> MacroEngine<'a> {
+    |        ++++++++++++++
+
+error[E0425]: cannot find type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:684:52
+    |
+684 |     ) -> Result<HashMap<String, CapturedFragment>, MatchFailure> {
+    |                                                    ^^^^^^^^^^^^ not found in this scope
+    |
+help: you might be missing a type parameter
+    |
+ 32 | impl<'a, MatchFailure> MacroEngine<'a> {
+    |        ++++++++++++++
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:690:13
+    |
+690 |         Err(MatchFailure { pos: consumed, expected: "end of macro invocation".to_string(), span: rule.span })
+    |             ^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:699:24
+    |
+699 |     ) -> Result<usize, MatchFailure> {
+    |                        ^^^^^^^^^^^^ not found in this scope
+    |
+help: you might be missing a type parameter
+    |
+ 32 | impl<'a, MatchFailure> MacroEngine<'a> {
+    |        ++++++++++++++
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:704:36
+    |
+704 |                         return Err(MatchFailure { pos, expected: format!("{:?}", pat_tok.kind), span: 
+pat_tok.span });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:707:36
+    |
+707 |                         return Err(MatchFailure { pos, expected: format!("{:?}", pat_tok.kind), span: 
+tokens[pos].span });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:713:36
+    |
+713 |                         return Err(MatchFailure { pos, expected: "group".to_string(), span: *span });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:722:36
+    |
+722 |                         return Err(MatchFailure { pos, expected: format!("{:?}", open_kind), span: 
+tokens[pos].span });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:741:36
+    |
+741 |                         return Err(MatchFailure { pos, expected: format!("{:?}", close_kind), span: *span });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:749:36
+    |
+749 |                         return Err(MatchFailure { pos, expected: "end of group".to_string(), span: *span });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:754:36
+    |
+754 |                         return Err(MatchFailure { pos, expected: format!("{:?}", fragment), span: *name });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:757:101
+    |
+757 | ...   let consumed = self.capture_fragment_parser(tokens, pos, *fragment).map_err(|e| MatchFailure { pos, 
+expected: e, span: *name ...
+    |                                                                                       ^^^^^^^^^^^^ not found in 
+this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:759:36
+    |
+759 |                         return Err(MatchFailure { pos, expected: format!("{:?}", fragment), span: *name });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0422]: cannot find struct, variant or union type `MatchFailure` in this scope
+   --> crates\mellis-semantic\src\macro_engine.rs:800:36
+    |
+800 |                         return Err(MatchFailure { pos, expected: "at least one repetition".to_string(), span: 
+*span });
+    |                                    ^^^^^^^^^^^^ not found in this scope
+
+warning: unused import: `SemanticType`
+ --> crates\mellis-semantic\src\mono.rs:2:51
+  |
+2 | use crate::{SemanticContext, ty::{SemanticTypeId, SemanticType, Substitution}};
+  |                                                   ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `HashSet`
+ --> crates\mellis-semantic\src\mono.rs:4:24
+  |
+4 | use std::collections::{HashSet, HashMap};
+  |                        ^^^^^^^
+
+warning: unused imports: `MacroFragment`, `MacroMatcher`, and `RepetitionKind`
+ --> crates\mellis-semantic\src\macro_engine.rs:3:79
+  |
+3 |     AstArena, Decl, DeclId, Expr, ExprId, FragmentKind, Item, MacroDelimiter, MacroFragment,
+  |                                                                               ^^^^^^^^^^^^^
+4 |     MacroMatcher, MacroRule, MatcherElement, RepetitionKind, Stmt, StmtId, TranscriberElement,
+  |     ^^^^^^^^^^^^                             ^^^^^^^^^^^^^^
+
+warning: unused import: `std::sync::Arc`
+  --> crates\mellis-semantic\src\annotation.rs:14:5
+   |
+14 | use std::sync::Arc;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `DeriveInput`
+  --> crates\mellis-semantic\src\annotation.rs:19:21
+   |
+19 | use crate::derive::{DeriveInput, DeriveRegistry, DeriveContext, extract_struct_input, extract_enum_input};
+   |                     ^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> crates\mellis-semantic\src\comptime\type_repr.rs:16:5
+   |
+16 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::fmt`
+  --> crates\mellis-semantic\src\comptime\type_repr.rs:17:5
+   |
+17 | use std::fmt;
+   |     ^^^^^^^^
+
+warning: unused import: `mellis_common::ids::SymbolId`
+ --> crates\mellis-semantic\src\effect.rs:2:5
+  |
+2 | use mellis_common::ids::SymbolId;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::ty::LifetimeId`
+  --> crates\mellis-semantic\src\lifetime.rs:34:5
+   |
+34 | use crate::ty::LifetimeId;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::symbol::SymbolTable`
+  --> crates\mellis-semantic\src\lifetime.rs:36:5
+   |
+36 | use crate::symbol::SymbolTable;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `mellis_ast::AstArena`
+  --> crates\mellis-semantic\src\lib.rs:39:5
+   |
+39 | use mellis_ast::AstArena;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Hasher`
+  --> crates\mellis-semantic\src\comptime\type_repr.rs:18:23
+   |
+18 | use std::hash::{Hash, Hasher};
+   |                       ^^^^^^
+
+warning: unused variable: `sym_id`
+   --> crates\mellis-semantic\src\resolver.rs:804:25
+    |
+804 |                     let sym_id = self.ctx.symbol_table.declare_symbol(
+    |                         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_sym_id`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unreachable pattern
+    --> crates\mellis-semantic\src\resolver.rs:1157:13
+     |
+1073 |             Expr::Unary { operand, .. } => {
+     |             --------------------------- matches all the relevant values
+...
+1157 |             Expr::Unary { operand, .. } => {
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+     |
+     = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `return_type`
+    --> crates\mellis-semantic\src\resolver.rs:1119:42
+     |
+1119 |             Expr::Lambda { params, body, return_type, .. } => {
+     |                                          ^^^^^^^^^^^ help: try ignoring the field: `return_type: _`
+
+warning: unused variable: `ty`
+    --> crates\mellis-semantic\src\resolver.rs:1135:75
+     |
+1135 |                     if let Decl::Param { name: p_name, visibility: p_vis, ty, .. } = 
+&self.arena.decls[param_id.0 as usize] {
+     |                                                                           ^^ help: try ignoring the field: `ty: 
+_`
+
+warning: unused variable: `generic_params`
+   --> crates\mellis-semantic\src\typechecker.rs:438:34
+    |
+438 |                     Decl::Impl { generic_params, self_type, methods, .. } => {
+    |                                  ^^^^^^^^^^^^^^ help: try ignoring the field: `generic_params: _`
+
+warning: variable does not need to be mutable
+    --> crates\mellis-semantic\src\typechecker.rs:1638:65
+     |
+1638 | ...                   let mut m_sym_for_bounds = m_sym;
+     |                           ----^^^^^^^^^^^^^^^^
+     |                           |
+     |                           help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `r_sem_ty`
+    --> crates\mellis-semantic\src\typechecker.rs:1247:21
+     |
+1247 |                 let r_sem_ty = self.ctx.types.get(r_ty).clone();
+     |                     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_r_sem_ty`
+
+warning: unreachable pattern
+   --> crates\mellis-semantic\src\ty.rs:216:13
+    |
+211 |             SemanticType::Struct(sym, args, _) => {
+    |             ---------------------------------- matches all the relevant values
+...
+216 |             SemanticType::Struct(sym, args, fields) => {
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+
+warning: unreachable pattern
+   --> crates\mellis-semantic\src\mono.rs:407:13
+    |
+368 |             Expr::MethodCall { object, args, .. } => {
+    |             ------------------------------------- matches all the relevant values
+...
+407 |             Expr::MethodCall { object, args, .. } => {
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+
+warning: unreachable pattern
+   --> crates\mellis-semantic\src\macro_engine.rs:905:13
+    |
+837 | ...   FragmentKind::Expr | FragmentKind::Ty | FragmentKind::Stmt | FragmentKind::Block | FragmentKind::Item | 
+FragmentKind::Tt | FragmentKind::Pat | FragmentKind::Path | FragmentKind::Meta => {
+    |       -----------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------- matches all the relevant values
+...
+905 | ...   FragmentKind::Stmt => {
+    |       ^^^^^^^^^^^^^^^^^^ no value can reach this
+
+warning: unreachable pattern
+   --> crates\mellis-semantic\src\macro_engine.rs:914:13
+    |
+837 | ...   FragmentKind::Expr | FragmentKind::Ty | FragmentKind::Stmt | FragmentKind::Block | FragmentKind::Item | 
+FragmentKind::Tt | FragmentKind::Pat | FragmentKind::Path | FragmentKind::Meta => {
+    |       -----------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------- matches all the relevant values
+...
+914 | ...   FragmentKind::Block => {
+    |       ^^^^^^^^^^^^^^^^^^^ no value can reach this
+
+warning: unreachable pattern
+   --> crates\mellis-semantic\src\macro_engine.rs:923:13
+    |
+837 | ...   FragmentKind::Expr | FragmentKind::Ty | FragmentKind::Stmt | FragmentKind::Block | FragmentKind::Item | 
+FragmentKind::Tt | FragmentKind::Pat | FragmentKind::Path | FragmentKind::Meta => {
+    |       -----------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------- matches all the relevant values
+...
+923 | ...   FragmentKind::Item => {
+    |       ^^^^^^^^^^^^^^^^^^ no value can reach this
+
+warning: unused variable: `inner`
+    --> crates\mellis-semantic\src\macro_engine.rs:1038:60
+     |
+1038 |                 TranscriberElement::Repetition { elements: inner, .. } => {
+     |                                                            ^^^^^ help: if this is intentional, prefix it with 
+an underscore: `_inner`
+
+warning: unused variable: `inner`
+    --> crates\mellis-semantic\src\macro_engine.rs:1060:60
+     |
+1060 |                 TranscriberElement::Repetition { elements: inner, .. } => {
+     |                                                            ^^^^^ help: if this is intentional, prefix it with 
+an underscore: `_inner`
+
+warning: unused variable: `sym_id`
+  --> crates\mellis-semantic\src\comptime\reflect.rs:33:34
+   |
+33 |             SemanticType::Struct(sym_id, _, _) => {
+   |                                  ^^^^^^ help: if this is intentional, prefix it with an underscore: `_sym_id`
+
+warning: unused variable: `name`
+   --> crates\mellis-semantic\src\lifetime.rs:226:41
+    |
+226 |     pub fn register_lifetime(&mut self, name: &str, ident: LifetimeIdent) {
+    |                                         ^^^^ help: if this is intentional, prefix it with an underscore: `_name`
+
+warning: unused variable: `assignment`
+   --> crates\mellis-semantic\src\lifetime.rs:639:26
+    |
+639 |         SolveResult::Sat(assignment) => {
+    |                          ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_assignment`
+
+Some errors have detailed explanations: E0422, E0425.
+For more information about an error, try `rustc --explain E0422`.
+warning: `mellis-semantic` (lib) generated 29 warnings
+error: could not compile `mellis-semantic` (lib) due to 16 previous errors; 29 warnings emitted

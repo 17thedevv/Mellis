@@ -30,11 +30,11 @@ impl ComptimeReflection {
                 }
                 size
             }
-            SemanticType::Struct(sym_id, _) => {
+            SemanticType::Struct(sym_id, _, _) => {
                 // Approximate struct size based on symbol fields if present
                 8
             }
-            SemanticType::Enum(_, _) => 8,
+            SemanticType::Enum(_, _, _) => 8,
             SemanticType::Void | SemanticType::Never => 0,
             _ => 8,
         }
@@ -99,8 +99,8 @@ impl ComptimeReflection {
                 let names: Vec<String> = elems.iter().map(|e| Self::type_name(*e, ctx)).collect();
                 format!("({})", names.join(", "))
             }
-            SemanticType::Struct(sym_id, _) => ctx.symbol_table.get_symbol(*sym_id).name.clone(),
-            SemanticType::Enum(sym_id, _) => ctx.symbol_table.get_symbol(*sym_id).name.clone(),
+            SemanticType::Struct(sym_id, _, _) => ctx.symbol_table.get_symbol(*sym_id).name.clone(),
+            SemanticType::Enum(sym_id, _, _) => ctx.symbol_table.get_symbol(*sym_id).name.clone(),
             SemanticType::Void => "void".to_string(),
             SemanticType::Never => "never".to_string(),
             _ => "<type>".to_string(),

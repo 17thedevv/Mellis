@@ -36,7 +36,6 @@ pub enum Stmt {
     For {
         kind: ForKind,
         label: Option<Span>,
-        binding_name: Option<Span>,
         pattern: Option<PatId>,
         iterable: Option<ExprId>,
         init: Option<Item>,

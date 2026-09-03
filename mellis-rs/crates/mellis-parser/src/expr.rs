@@ -539,7 +539,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn parse_value_path(&mut self) -> Result<ExprId, ()> {
+    pub fn parse_value_path(&mut self) -> Result<ExprId, ()> {
         let mut segments = Vec::new();
         let mut generic_args = Vec::new();
 
@@ -683,7 +683,7 @@ impl<'a> Parser<'a> {
             || self.check(TokenKind::KwFalse)
         {
             let token = self.advance();
-            return Ok(self.arena.alloc_expr(Expr::Literal(token)));
+            return Ok(self.arena.alloc_expr(Expr::Literal(token, self.source[token.span.start as usize..token.span.end as usize].to_string())));
         }
 
         if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {

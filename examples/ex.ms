@@ -59,12 +59,12 @@ export struct Player <T: Damageable> {
 }
 
 // --- 9. IMPL KHỐI & METHODS ---
-impl <T: Damageable> Player@<T> { // Dùng @<T> cho generic_instantiation
+impl <T: Damageable> Player<T> { // Dùng <T> cho generic_instantiation
     
     @[inline]
     fn new(id: EntityID, data: T) -> Self {
         // Struct Literal & Array Literal
-        return Player@<T> {
+        return Player<T> {
             id: id,
             hp: 100.0f32,
             state: EntityState::Idle,
@@ -75,7 +75,7 @@ impl <T: Damageable> Player@<T> { // Dùng @<T> cho generic_instantiation
 }
 
 // --- 10. IMPL TRAIT FOR STRUCT ---
-impl <T: Damageable> Damageable for Player@<T> {
+impl <T: Damageable> Damageable for Player<T> {
     fn take_damage(self: &rw Self, amount: f32) -> bool {
         // Toán tử gán phức hợp (Compound Assignment)
         self.hp -= amount;
@@ -96,7 +96,7 @@ impl <T: Damageable> Damageable for Player@<T> {
 export mod System {
     
     // --- 12. HÀM BẤT ĐỒNG BỘ (async), KẾT QUẢ (Result), TOÁN TỬ (?) ---
-    export async fn fetch_remote_config() -> Result@<str, i32> {
+    export async fn fetch_remote_config() -> Result<str, i32> {
         // Gọi await và bắt lỗi ?
         dec response = http_get("https://api.game.com/config").await?;
         return Result::Ok(response);
@@ -129,7 +129,7 @@ async fn main() {
     
     // Khối lệnh Comptime (thực thi lúc biên dịch)
     comptime {
-        dec check_size = sizeof(Player@<u32>) == alignof(Player@<u32>) * 8;
+        dec check_size = sizeof(Player<u32>) == alignof(Player<u32>) * 8;
         if !check_size {
             // Báo lỗi lúc biên dịch
         }

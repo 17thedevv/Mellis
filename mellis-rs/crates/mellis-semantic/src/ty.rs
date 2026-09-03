@@ -55,8 +55,8 @@ impl Substitution {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SemanticType {
     Primitive(BuiltinType),
-    Struct(SymbolId, Vec<SemanticTypeId>),
-    Enum(SymbolId, Vec<SemanticTypeId>),
+    Struct(SymbolId, Vec<SemanticTypeId>, Vec<SemanticTypeId>),
+    Enum(SymbolId, Vec<SemanticTypeId>, Vec<SemanticTypeId>),
     Tuple(Vec<SemanticTypeId>),
     Array(SemanticTypeId, u64),
     Slice(SemanticTypeId),
@@ -112,6 +112,13 @@ impl TypeContext {
         id
     }
 
+    pub fn bool_id(&self) -> SemanticTypeId {
+        self.type_interner
+            .get(&SemanticType::Primitive(BuiltinType::Bool))
+            .copied()
+            .expect("Bool primitive must be pre-populated")
+    }
+
     pub fn get(&self, id: SemanticTypeId) -> &SemanticType {
         &self.types[id.0 as usize]
     }
@@ -145,13 +152,15 @@ impl TypeContext {
                     id
                 }
             }
-            SemanticType::Struct(sym, args) => {
+            SemanticType::Struct(sym, args, fields) => {
                 let new_args: Vec<_> = args.iter().map(|&a| self.subst(a, subst)).collect();
-                self.intern(SemanticType::Struct(sym, new_args))
+                let new_fields: Vec<_> = fields.iter().map(|&f| self.subst(f, subst)).collect();
+                self.intern(SemanticType::Struct(sym, new_args, new_fields))
             }
-            SemanticType::Enum(sym, args) => {
+            SemanticType::Enum(sym, args, variants) => {
                 let new_args: Vec<_> = args.iter().map(|&a| self.subst(a, subst)).collect();
-                self.intern(SemanticType::Enum(sym, new_args))
+                let new_variants: Vec<_> = variants.iter().map(|&v| self.subst(v, subst)).collect();
+                self.intern(SemanticType::Enum(sym, new_args, new_variants))
             }
             SemanticType::Tuple(args) => {
                 let new_args: Vec<_> = args.iter().map(|&a| self.subst(a, subst)).collect();
@@ -206,15 +215,22 @@ impl TypeContext {
         let ty = source_ctx.get(id).clone();
         match ty {
             SemanticType::Primitive(p) => self.intern(SemanticType::Primitive(p)),
-            SemanticType::Struct(sym, args) => {
+            SemanticType::Struct(sym, args, _) => {
                 let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
                 let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
-                self.intern(SemanticType::Struct(new_sym, new_args))
+                self.intern(SemanticType::Struct(new_sym, new_args, Vec::new()))
             }
-            SemanticType::Enum(sym, args) => {
+            SemanticType::Struct(sym, args, fields) => {
                 let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
-                let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
-                self.intern(SemanticType::Enum(new_sym, new_args))
+                let new_args = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
+                let new_fields = fields.iter().map(|&f| self.clone_type_from(f, source_ctx, symbol_map)).collect();
+                self.intern(SemanticType::Struct(new_sym, new_args, new_fields))
+            }
+            SemanticType::Enum(sym, args, variants) => {
+                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
+                let new_args = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
+                let new_variants = variants.iter().map(|&v| self.clone_type_from(v, source_ctx, symbol_map)).collect();
+                self.intern(SemanticType::Enum(new_sym, new_args, new_variants))
             }
             SemanticType::Tuple(args) => {
                 let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();

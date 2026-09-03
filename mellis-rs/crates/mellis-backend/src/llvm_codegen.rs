@@ -50,8 +50,12 @@ pub struct TargetConfig {
 impl Default for TargetConfig {
     fn default() -> Self {
         Target::initialize_all(&InitializationConfig::default());
+        let mut triple = TargetMachine::get_default_triple().as_str().to_str().unwrap_or("x86_64-pc-windows-gnu").to_string();
+        if triple.contains("-msvc") {
+            triple = triple.replace("-msvc", "-gnu");
+        }
         Self {
-            triple: TargetMachine::get_default_triple().as_str().to_str().unwrap_or("x86_64-pc-windows-msvc").to_string(),
+            triple,
             cpu: TargetMachine::get_host_cpu_name().to_string(),
             features: TargetMachine::get_host_cpu_features().to_string(),
             optimization: OptimizationLevel::Default,
@@ -68,6 +72,8 @@ pub struct LLVMBackend<'a, 'ctx> {
     
     value_map: HashMap<ValueId, BasicValueEnum<'ctx>>,
     block_map: HashMap<LabelId, InkwellBasicBlock<'ctx>>,
+    function_map: HashMap<String, inkwell::values::FunctionValue<'ctx>>,
+    link_name_map: HashMap<String, String>,
 }
 
 impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
@@ -80,6 +86,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             llvm_module: context.create_module(module_name),
             value_map: HashMap::new(),
             block_map: HashMap::new(),
+            function_map: HashMap::new(),
+            link_name_map: HashMap::new(),
         }
     }
     
@@ -109,6 +117,11 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             .map_err(|e| BackendError::ObjectEmissionFailed(e.to_string()))?;
             
         Ok(())
+    }
+
+    fn get_function(&self, name: &str) -> Option<inkwell::values::FunctionValue<'ctx>> {
+        let actual_name = self.link_name_map.get(name).map(|s| s.as_str()).unwrap_or(name);
+        self.llvm_module.get_function(actual_name)
     }
 
     fn layout_size(&self, ty_id: SemanticTypeId) -> u64 {
@@ -143,7 +156,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(self.context.struct_type(&[ptr_ty.into(), ptr_ty.into()], false).into())
             }
             SemanticType::Primitive(BuiltinType::String) => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()),
-            SemanticType::Struct(_, field_tys) => {
+            SemanticType::Struct(_, _, field_tys) => {
                 let mut field_types = Vec::new();
                 for &e in field_tys {
                     field_types.push(self.map_type(e)?);
@@ -152,7 +165,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             }
             SemanticType::Enum(..) => {
                 let i32_ty = self.context.i32_type();
-                // Simple { tag, max_payload } struct
+                // Simple { tag, _, max_payload } struct
                 Ok(self.context.struct_type(&[i32_ty.into(), i32_ty.array_type(4).into()], false).into())
             }
             SemanticType::Tuple(elem_tys) => {
@@ -166,13 +179,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
                 Ok(self.context.struct_type(&[ptr_ty.into(), ptr_ty.into()], false).into())
             }
-            SemanticType::Pointer(_, inner) => {
-                if let SemanticType::Void = self.semantic_ctx.types.get(*inner) {
-                    return Ok(self.context.i8_type().ptr_type(inkwell::AddressSpace::from(0)).into());
-                }
-                let inner_type = self.map_type(*inner)?;
-                Ok(inner_type.ptr_type(inkwell::AddressSpace::from(0)).into())
-            }
+
             SemanticType::Array(elem_ty, len) => {
                 let elem_type = self.map_type(*elem_ty)?;
                 Ok(elem_type.array_type(*len as u32).into())
@@ -184,35 +191,37 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             }
             SemanticType::Future(inner) => {
                 let i32_ty = self.context.i32_type();
-                let inner_ty = if let Ok(t) = self.map_type(*inner) {
-                    t
-                } else {
-                    self.context.i32_type().into()
-                };
+                let inner_ty = self.map_type(*inner)?;
                 Ok(self.context.struct_type(&[i32_ty.into(), inner_ty], false).into())
             }
             SemanticType::Void => {
-                static mut CRASH_COUNT: usize = 0;
-                unsafe {
-                    CRASH_COUNT += 1;
-                    if CRASH_COUNT == 3 {
-                        panic!("Unsupported type Void (SemanticTypeId(0)) reached backend for the 3rd time!");
-                    }
-                }
-                Err(BackendError::UnsupportedType(ty_id))
+                // Map Void (SemanticTypeId(0)) to an empty struct {} instead of panicking.
+                // This allows it to be safely embedded in structs, allocas, and futures.
+                Ok(self.context.struct_type(&[], false).into())
             }
             SemanticType::Error => Err(BackendError::InvariantViolation("Error type passed to backend".into())),
-            _ => Ok(self.context.i32_type().into()),
+            SemanticType::InferenceVar(var) => Err(BackendError::InvariantViolation(format!("Unresolved inference variable {} reached backend", var))),
+            SemanticType::GenericParam(sym) => Err(BackendError::InvariantViolation(format!("Unsubstituted generic parameter {:?} reached backend", sym))),
+            SemanticType::Never => {
+                // Map Never to an empty struct {} just like Void, to prevent Alloca panics
+                Ok(self.context.struct_type(&[], false).into())
+            }
+            SemanticType::Function { .. } => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()),
+            SemanticType::Box(_) => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()), // Box is just a pointer
+            SemanticType::Range(_) => Err(BackendError::UnsupportedType(ty_id)),
         }
     }
 
     pub fn compile(&mut self) -> Result<(), BackendError> {
         self.declare_functions()?;
         for func in &self.module.functions {
-            self.compile_function(func)?;
+            if !func.is_extern {
+                self.compile_function(func)?;
+            }
         }
         
         use inkwell::support::LLVMString;
+        self.llvm_module.print_to_stderr();
         if let Err(err) = self.llvm_module.verify() {
             return Err(BackendError::LLVMVerificationFailed(err.to_string()));
         }
@@ -244,7 +253,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
         for func in &self.module.functions {
             let mut param_types = Vec::new();
             for i in 0..func.arg_count {
-                let ty = self.map_type(func.values[i].ty)?;
+                let ty = self.map_type(func.param_types[i])?;
                 param_types.push(ty.into());
             }
             
@@ -254,13 +263,18 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 self.context.void_type().fn_type(&param_types, false)
             };
 
-            self.llvm_module.add_function(&func.name.name, fn_type, None);
+            if let Some(link_name) = &func.link_name {
+                self.link_name_map.insert(func.name.name.clone(), link_name.clone());
+            }
+
+            let name = func.link_name.as_deref().unwrap_or(&func.name.name);
+            self.llvm_module.add_function(name, fn_type, None);
         }
         Ok(())
     }
 
     fn compile_function(&mut self, func: &'a MvirFunction) -> Result<(), BackendError> {
-        let llvm_func = self.llvm_module.get_function(&func.name.name)
+        let llvm_func = self.get_function(&func.name.name)
             .ok_or_else(|| BackendError::InvariantViolation(format!("Function not found: {}", func.name.name)))?;
 
         self.block_map.clear();
@@ -288,10 +302,11 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 is_entry = false;
                 for i in 0..func.arg_count {
                     if let Some(param) = llvm_func.get_nth_param(i as u32) {
-                        let param_alloc = self.value_map.get(&mellis_mvir::ValueId(i as u32)).unwrap_or_else(|| {
-                            panic!("Missing ValueId({}) in value_map for function '{}'", i, func.name.name);
-                        });
-                        self.builder.build_store(param_alloc.into_pointer_value(), param).unwrap();
+                        if let Some(param_alloc) = self.value_map.get(&mellis_mvir::ValueId(i as u32)) {
+                            if param_alloc.is_pointer_value() {
+                                self.builder.build_store(param_alloc.into_pointer_value(), param).unwrap();
+                            }
+                        }
                     }
                 }
             }
@@ -313,7 +328,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             }
             Operand::Global(glb) => {
                 let name = if glb.name.starts_with("global_") { "puts" } else { &glb.name };
-                if let Some(func) = self.llvm_module.get_function(name) {
+                if let Some(func) = self.get_function(name) {
                     Ok(func.as_global_value().as_pointer_value().into())
                 } else {
                     // It's likely an extern function not in the module. Declare it.
@@ -356,7 +371,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(alloca.into())
             }
             Instruction::HeapAlloc => {
-                let malloc = self.llvm_module.get_function("malloc")
+                let malloc = self.get_function("malloc")
                     .ok_or_else(|| BackendError::InvariantViolation("malloc declaration missing".into()))?;
                 let size = self.context.i32_type().const_int(self.layout_size(data.ty), false);
                 let call = self.builder.build_call(malloc, &[size.into()], &format!("v{}", id.0)).unwrap();
@@ -476,7 +491,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     llvm_args.push(val.into());
                 }
                 
-                let func_val = match self.llvm_module.get_function(&func_name) {
+                let func_val = match self.get_function(&func_name) {
                     Some(f) => f,
                     None => {
                         let fn_type = if let Ok(basic_ty) = self.map_type(data.ty) {
@@ -516,7 +531,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 
                 // Generate fail block
                 self.builder.position_at_end(fail_block);
-                let fail_func = if let Some(f) = self.llvm_module.get_function("__mellis_bounds_fail") {
+                let fail_func = if let Some(f) = self.get_function("__mellis_bounds_fail") {
                     f
                 } else {
                     let fail_ty = self.context.void_type().fn_type(&[
@@ -636,14 +651,19 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     }
                     _ => return Err(BackendError::InvariantViolation("FieldPtr base must be a typed value".into())),
                 };
-                let field_ptr = self.builder.build_struct_gep(base_ty, base_ptr, *field_idx, &format!("v{}", id.0))
-                    .map_err(|_| BackendError::InvariantViolation("Invalid FieldPtr field index".into()))?;
+                let field_ptr = match self.builder.build_struct_gep(base_ty, base_ptr, *field_idx, &format!("v{}", id.0)) {
+                    Ok(ptr) => ptr,
+                    Err(e) => {
+                        println!("ERROR build_struct_gep: base_ty={:?} field_idx={}", base_ty, field_idx);
+                        return Err(BackendError::InvariantViolation("Invalid FieldPtr field index".into()));
+                    }
+                };
                 Ok(field_ptr.into())
             }
             Instruction::MakeClosure { func, env_ptr, .. } => {
                 let env = self.generate_operand(env_ptr)?.into_pointer_value();
                 let closure_ty = self.map_type(data.ty)?.into_struct_type();
-                let code = self.llvm_module.get_function(&func.name)
+                let code = self.get_function(&func.name)
                     .ok_or_else(|| BackendError::InvariantViolation(format!("Closure function not found: {}", func.name)))?
                     .as_global_value().as_pointer_value();
                 let value = closure_ty.get_undef();
@@ -691,11 +711,11 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     if let Some(methods) = self.semantic_ctx.tables.trait_methods.get(trait_sym) {
                         for m_sym in methods {
                             let m_name = &self.semantic_ctx.symbol_table.get_symbol(*m_sym).name;
-                            let func_val = self.llvm_module.get_function(m_name)
+                            let func_val = self.get_function(m_name)
                                 .or_else(|| {
                                     for func in &self.module.functions {
                                         if func.name.name.ends_with(m_name) || func.name.name == *m_name {
-                                            return self.llvm_module.get_function(&func.name.name);
+                                            return self.get_function(&func.name.name);
                                         }
                                     }
                                     None
@@ -772,7 +792,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 }
             }
             Instruction::BoxFree { value } => {
-                if let Some(free_fn) = self.llvm_module.get_function("free") {
+                if let Some(free_fn) = self.get_function("free") {
                     let ptr_val = self.generate_operand(value)?;
                     self.builder.build_call(free_fn, &[ptr_val.into()], "").unwrap();
                 }
@@ -784,6 +804,49 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             }
             Instruction::Await { future } => {
                 self.generate_operand(future)
+            }
+            Instruction::Cast { value, target_ty } => {
+                let llvm_val = self.generate_operand(value)?;
+                let llvm_ty = self.map_type(*target_ty)?;
+                
+                if llvm_val.is_pointer_value() && llvm_ty.is_pointer_type() {
+                    let casted = self.builder.build_pointer_cast(
+                        llvm_val.into_pointer_value(),
+                        llvm_ty.into_pointer_type(),
+                        &format!("cast_v{}", id.0)
+                    ).unwrap();
+                    Ok(casted.into())
+                } else if llvm_val.is_int_value() && llvm_ty.is_pointer_type() {
+                    let casted = self.builder.build_int_to_ptr(
+                        llvm_val.into_int_value(),
+                        llvm_ty.into_pointer_type(),
+                        &format!("cast_v{}", id.0)
+                    ).unwrap();
+                    Ok(casted.into())
+                } else if llvm_val.is_pointer_value() && llvm_ty.is_int_type() {
+                    let casted = self.builder.build_ptr_to_int(
+                        llvm_val.into_pointer_value(),
+                        llvm_ty.into_int_type(),
+                        &format!("cast_v{}", id.0)
+                    ).unwrap();
+                    Ok(casted.into())
+                } else if llvm_val.is_int_value() && llvm_ty.is_int_type() {
+                    let casted = self.builder.build_int_cast(
+                        llvm_val.into_int_value(),
+                        llvm_ty.into_int_type(),
+                        &format!("cast_v{}", id.0)
+                    ).unwrap();
+                    Ok(casted.into())
+                } else if llvm_val.is_float_value() && llvm_ty.is_float_type() {
+                    let casted = self.builder.build_float_cast(
+                        llvm_val.into_float_value(),
+                        llvm_ty.into_float_type(),
+                        &format!("cast_v{}", id.0)
+                    ).unwrap();
+                    Ok(casted.into())
+                } else {
+                    Ok(self.context.i32_type().const_zero().into())
+                }
             }
             _ => {
                 // Fallback for unimplemented instructions in backend drift
@@ -807,7 +870,12 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     }
                     self.builder.build_return(Some(&val)).unwrap();
                 } else {
-                    self.builder.build_return(None).unwrap();
+                    if _func.ret_ty == SemanticTypeId(0) {
+                        let empty_struct = self.context.struct_type(&[], false).const_zero();
+                        self.builder.build_return(Some(&empty_struct)).unwrap();
+                    } else {
+                        self.builder.build_return(None).unwrap();
+                    }
                 }
             }
             Terminator::Br { target } => {

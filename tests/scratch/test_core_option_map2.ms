@@ -1,4 +1,4 @@
-// Test Option map/and_then/unwrap_or with @<T> explicit generic syntax
+﻿// Test Option map/and_then/unwrap_or with <T> explicit generic syntax
 
 intrinsic fn unreachable() -> void;
 
@@ -60,16 +60,16 @@ fn main() -> int_32 {
     dec fallback: int_32 = none_val.unwrap_or(99);
     if fallback != 99 { return 4; }
 
-    // 3. map on Some — use @<int_32> explicit generic arg for map's U
-    //    explicit @<U> arg goes after method name, then fn arg
+    // 3. map on Some â€” use <int_32> explicit generic arg for map's U
+    //    explicit <U> arg goes after method name, then fn arg
     dec some_7: Option<int_32> = Option::Some(7);
-    dec mapped: Option<int_32> = some_7.map@<int_32>(add_one);
+    dec mapped: Option<int_32> = some_7.map<int_32>(add_one);
     dec v2: int_32 = mapped.unwrap_or(0);
     if v2 != 8 { return 5; }
 
-    // 4. map on None — stays None
+    // 4. map on None â€” stays None
     dec none_2: Option<int_32> = Option::None;
-    dec mapped_none: Option<int_32> = none_2.map@<int_32>(add_one);
+    dec mapped_none: Option<int_32> = none_2.map<int_32>(add_one);
     if !mapped_none.is_none() { return 6; }
 
     return 0;

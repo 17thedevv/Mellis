@@ -1,0 +1,215 @@
+﻿cargo.exe : warning: virtual workspace defaulting to `resolver = "1"` despite one or more workspace members being on 
+edition 2024 which implies `resolver = "3"`
+At line:1 char:1
++ & "$env:USERPROFILE\.cargo\bin\cargo" check 2>&1 | Out-File -Encoding ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: virtua...resolver = "3"`:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  |
+  = note: to keep the current resolver, specify `workspace.resolver = "1"` in the workspace root's manifest
+  = note: to use the edition 2024 resolver, specify `workspace.resolver = "3"` in the workspace root's manifest
+  = note: for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+warning: unused imports: `FileId` and `Span`
+  --> crates\mellis-ast\src\lib.rs:15:26
+   |
+15 | use mellis_common::ids::{FileId, Span};
+   |                          ^^^^^^  ^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `mellis-ast` (lib) generated 1 warning (run `cargo fix --lib -p mellis-ast` to apply 1 suggestion)
+warning: unused imports: `DeclId`, `ExprId`, `PatId`, `StmtId`, and `TypeId`
+ --> crates\mellis-parser\src\lib.rs:1:28
+  |
+1 | use mellis_ast::{AstArena, DeclId, ExprId, PatId, StmtId, TypeId};
+  |                            ^^^^^^  ^^^^^^  ^^^^^  ^^^^^^  ^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `AssociatedBinding`
+ --> crates\mellis-parser\src\ty.rs:2:18
+  |
+2 | use mellis_ast::{AssociatedBinding, Type, TypeId};
+  |                  ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `BuiltinKind`
+ --> crates\mellis-parser\src\ty.rs:3:20
+  |
+3 | use mellis_lexer::{BuiltinKind, TokenKind};
+  |                    ^^^^^^^^^^^
+
+warning: unused variable: `span_start`
+   --> crates\mellis-parser\src\decl.rs:123:13
+    |
+123 |         let span_start = self.previous().span.start;
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_span_start`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `span_end`
+   --> crates\mellis-parser\src\decl.rs:147:13
+    |
+147 |         let span_end = self.previous().span.end;
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_span_end`
+
+warning: value assigned to `kind` is never read
+   --> crates\mellis-parser\src\decl.rs:124:24
+    |
+124 |         let mut kind = mellis_ast::ImportKind::External;
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this value is reassigned later and never used
+...
+138 |             kind = mellis_ast::ImportKind::Local;
+    |             ------------------------------------ `kind` is overwritten here before the previous value is read
+    |
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `token`
+   --> crates\mellis-parser\src\expr.rs:433:25
+    |
+433 |                     let token = self.advance();
+    |                         ^^^^^ help: if this is intentional, prefix it with an underscore: `_token`
+
+warning: unused variable: `allow_struct_literal`
+   --> crates\mellis-parser\src\expr.rs:676:33
+    |
+676 |     fn parse_primary(&mut self, allow_struct_literal: bool) -> Result<ExprId, ()> {
+    |                                 ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: 
+`_allow_struct_literal`
+
+warning: variable does not need to be mutable
+   --> crates\mellis-parser\src\ty.rs:106:17
+    |
+106 |             let mut associated_bindings = Vec::new();
+    |                 ----^^^^^^^^^^^^^^^^^^^
+    |                 |
+    |                 help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: `mellis-parser` (lib) generated 9 warnings (run `cargo fix --lib -p mellis-parser` to apply 8 suggestions)
+    Checking mellis-semantic v0.1.0 (D:\fdlang\mellis-rs\crates\mellis-semantic)
+warning: unused import: `SemanticType`
+ --> crates\mellis-semantic\src\mono.rs:2:51
+  |
+2 | use crate::{SemanticContext, ty::{SemanticTypeId, SemanticType, Substitution}};
+  |                                                   ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `HashSet`
+ --> crates\mellis-semantic\src\mono.rs:4:24
+  |
+4 | use std::collections::{HashSet, HashMap};
+  |                        ^^^^^^^
+
+warning: unused import: `MacroFragment`
+ --> crates\mellis-semantic\src\macro_engine.rs:3:79
+  |
+3 |     AstArena, Decl, DeclId, Expr, ExprId, FragmentKind, Item, MacroDelimiter, MacroFragment,
+  |                                                                               ^^^^^^^^^^^^^
+
+warning: unused import: `std::sync::Arc`
+  --> crates\mellis-semantic\src\annotation.rs:14:5
+   |
+14 | use std::sync::Arc;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `DeriveInput`
+  --> crates\mellis-semantic\src\annotation.rs:19:21
+   |
+19 | use crate::derive::{DeriveInput, DeriveRegistry, DeriveContext, extract_struct_input, extract_enum_input};
+   |                     ^^^^^^^^^^^
+
+warning: unused import: `mellis_common::ids::SymbolId`
+ --> crates\mellis-semantic\src\effect.rs:2:5
+  |
+2 | use mellis_common::ids::SymbolId;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `mellis_ast::AstArena`
+  --> crates\mellis-semantic\src\lib.rs:33:5
+   |
+33 | use mellis_ast::AstArena;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `impl_scope`
+   --> crates\mellis-semantic\src\resolver.rs:366:29
+    |
+366 |                         let impl_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
+    |                             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_impl_scope`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `sym_id`
+   --> crates\mellis-semantic\src\resolver.rs:653:25
+    |
+653 |                     let sym_id = self.ctx.symbol_table.declare_symbol(
+    |                         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_sym_id`
+
+warning: unreachable pattern
+   --> crates\mellis-semantic\src\resolver.rs:983:13
+    |
+899 |             Expr::Unary { operand, .. } => {
+    |             --------------------------- matches all the relevant values
+...
+983 |             Expr::Unary { operand, .. } => {
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+    |
+    = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `return_type`
+   --> crates\mellis-semantic\src\resolver.rs:945:42
+    |
+945 |             Expr::Lambda { params, body, return_type, .. } => {
+    |                                          ^^^^^^^^^^^ help: try ignoring the field: `return_type: _`
+
+warning: unused variable: `ty`
+   --> crates\mellis-semantic\src\resolver.rs:961:75
+    |
+961 |                     if let Decl::Param { name: p_name, visibility: p_vis, ty, .. } = 
+&self.arena.decls[param_id.0 as usize] {
+    |                                                                           ^^ help: try ignoring the field: `ty: 
+_`
+
+warning: unused variable: `r_sem_ty`
+   --> crates\mellis-semantic\src\typechecker.rs:963:21
+    |
+963 |                 let r_sem_ty = self.ctx.types.get(r_ty).clone();
+    |                     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_r_sem_ty`
+
+warning: unreachable pattern
+   --> crates\mellis-semantic\src\mono.rs:458:13
+    |
+394 |             Expr::MethodCall { object, args, .. } => {
+    |             ------------------------------------- matches all the relevant values
+...
+458 |             Expr::MethodCall { object, args, .. } => {
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+
+warning: unused variable: `sym_id`
+  --> crates\mellis-semantic\src\comptime\reflect.rs:33:34
+   |
+33 |             SemanticType::Struct(sym_id, _) => {
+   |                                  ^^^^^^ help: if this is intentional, prefix it with an underscore: `_sym_id`
+
+warning: method `resolve_type` is never used
+   --> crates\mellis-semantic\src\typechecker.rs:911:8
+    |
+ 18 | impl<'a> TypeChecker<'a> {
+    | ------------------------ method in this implementation
+...
+911 |     fn resolve_type(&mut self, ty_id: mellis_ast::TypeId) -> SemanticTypeId {
+    |        ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `COMPILER_ATTRS` is never used
+  --> crates\mellis-semantic\src\annotation.rs:32:7
+   |
+32 | const COMPILER_ATTRS: &[&str] = &["repr", "test", "inline", "no_mangle", "link"];
+   |       ^^^^^^^^^^^^^^
+
+warning: `mellis-semantic` (lib) generated 17 warnings (run `cargo fix --lib -p mellis-semantic` to apply 13 
+suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.26s

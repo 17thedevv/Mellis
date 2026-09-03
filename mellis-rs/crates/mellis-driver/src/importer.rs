@@ -64,7 +64,14 @@ pub fn resolve_imports(
             if is_mlib {
                 diagnostics.push(Diagnostic::error(format!("Loading .mlib is not yet fully implemented for '{}'", name)).with_span(span));
             } else {
-                let input = std::fs::read_to_string(&path).unwrap_or_default();
+                let input = match std::fs::read_to_string(&path) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        diagnostics.push(Diagnostic::error(format!("failed to read module file `{}`: {}", path.display(), e)).with_span(span));
+                        registry.finish_loading();
+                        continue;
+                    }
+                };
                 let file_id = session.source_manager.add_file(path.to_string_lossy().to_string(), input.clone());
                 
                 let lexer = Lexer::new(&input, file_id);

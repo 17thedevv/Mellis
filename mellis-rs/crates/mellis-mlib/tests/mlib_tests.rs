@@ -8,6 +8,8 @@ fn dummy_module() -> Module {
     let mut func = Function {
         name: GlobalId { name: "test_func".to_string(), symbol_id: Some(SymbolId(0)) },
         arg_count: 0,
+        link_name: None,
+        param_types: vec![],
         is_extern: false,
         is_async: false,
         ret_ty: SemanticTypeId(0),

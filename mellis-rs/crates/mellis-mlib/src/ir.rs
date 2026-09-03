@@ -127,7 +127,7 @@ pub enum MlibInstruction {
     SizeOf { ty: u32 },
     AlignOf { ty: u32 },
     Null { ty: u32 },
-    PtrCast { value: MlibOperand, ty: u32 },
+    Cast { value: MlibOperand, ty: u32 },
     PtrOffset { base: MlibOperand, offset: MlibOperand },
     ListNew,
     ListPush { list: MlibOperand, value: MlibOperand },

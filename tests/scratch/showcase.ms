@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // Mellis Language Showcase
 // ==========================================
 
@@ -59,7 +59,7 @@ fn calculate(factor: int_32, t: &Task<str>) -> int_32 {
 export fn main() -> int_32 {
     // Variable declaration and Struct instantiation
     dec my_id: ID = 100u32;
-    dec task = Task@<str> {
+    dec task = Task<str> {
         id: my_id,
         data: "Mellis Showcase",
         is_done: false

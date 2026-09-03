@@ -229,7 +229,6 @@ impl<'a> BorrowAnalyzer<'a> {
         let place_name = print_operand_name(place);
         let active = self.active_loans(val_id, state);
         
-        println!("DEBUG: check_access place_name={} active_loans_len={} is_write={}", place_name, active.len(), is_write);
 
         
         for loan in &active {
@@ -377,7 +376,6 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     }
                 }
                 if callee.name == "register_callback" {
-                    println!("DEBUG: CallDirect callee={:?} map.contains_key={}", callee, self.callee_summaries.map_or(false, |m| m.contains_key(callee)));
                 }
                 
                 if let Some(sum) = applied_summary {
@@ -464,7 +462,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                         escape_kind = crate::effect::EscapeKind::NoEscape;
                                         access_kind = crate::effect::AccessKind::None;
                                     }
-                                    SemanticType::Struct(_, _) | SemanticType::Enum(_, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) => {
+                                    SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) => {
                                         // Passed by value (or opaque copy), no memory effect on the caller's aliasing
                                         escape_kind = crate::effect::EscapeKind::NoEscape;
                                         access_kind = crate::effect::AccessKind::None;
@@ -498,15 +496,12 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                             escape_kind = crate::effect::EscapeKind::NoEscape;
                             access_kind = crate::effect::AccessKind::None;
                         }
-                        println!("DEBUG: arg {:?} has escape_kind {:?} (has_sync_noescape: {})", arg, escape_kind, has_sync_noescape);
 
                         if escape_kind == crate::effect::EscapeKind::MayEscape || escape_kind == crate::effect::EscapeKind::Unknown {
                             if let Operand::Value(arg_v) = arg {
                                 if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
-                                    println!("DEBUG: extending escaped_loans with prov of {:?}: {:?}", arg_v, prov);
                                     state.escaped_loans.extend(prov);
                                 } else {
-                                    println!("DEBUG: direct_provenance for {:?} is None", arg_v);
                                 }
                                 if let Some(prov) = state.carried_provenance.get(arg_v).cloned() {
                                     state.escaped_loans.extend(prov);
@@ -570,7 +565,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                     escape_kind = crate::effect::EscapeKind::NoEscape;
                                     access_kind = crate::effect::AccessKind::None;
                                 }
-                                SemanticType::Struct(_, _) | SemanticType::Enum(_, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) => {
+                                SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) => {
                                     escape_kind = crate::effect::EscapeKind::NoEscape;
                                     access_kind = crate::effect::AccessKind::None;
                                 }

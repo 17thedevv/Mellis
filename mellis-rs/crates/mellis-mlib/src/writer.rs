@@ -239,6 +239,12 @@ impl MlibWriter {
                     args: vec![Self::convert_operand(index), Self::convert_operand(len)]
                 }
             }
+            Instruction::CallIntrinsic { kind, args } => {
+                MlibInstruction::CallDirect {
+                    callee: format!("__mellis_intrinsic_{:?}", kind),
+                    args: args.iter().map(Self::convert_operand).collect()
+                }
+            }
             Instruction::Sub { left, right, .. } => MlibInstruction::Sub {
                 left: Self::convert_operand(left),
                 right: Self::convert_operand(right),
@@ -320,7 +326,7 @@ impl MlibWriter {
             Instruction::AlignOf { ty } => MlibInstruction::AlignOf {
                 ty: ty.0,
             },
-            Instruction::PtrCast { ptr, target_ty } => MlibInstruction::PtrCast {
+            Instruction::Cast { value: ptr, target_ty } => MlibInstruction::Cast {
                 value: Self::convert_operand(ptr),
                 ty: target_ty.0,
             },
@@ -634,7 +640,7 @@ impl MlibWriter {
                 w.write_all(&[0x22u8])?;
                 w.write_all(&ty.to_le_bytes())?;
             }
-            MlibInstruction::PtrCast { value, ty } => {
+            MlibInstruction::Cast { value, ty } => {
                 w.write_all(&[25u8])?;
                 Self::serialize_operand(w, value)?;
                 w.write_all(&ty.to_le_bytes())?;

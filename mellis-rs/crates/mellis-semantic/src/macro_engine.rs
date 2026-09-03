@@ -14,7 +14,15 @@ use crate::semantic_tables::SemanticTables;
 #[derive(Debug, Clone)]
 pub enum CapturedFragment {
     Single(Vec<Token>),
-    Repeated(Vec<Vec<Token>>),
+    Repeated(Vec<CapturedFragment>),
+}
+
+
+#[derive(Debug, Clone)]
+pub struct MatchFailure {
+    pub pos: usize,
+    pub expected: String,
+    pub span: Span,
 }
 
 pub struct MacroEngine<'a> {
@@ -30,6 +38,7 @@ pub struct MacroEngine<'a> {
 }
 
 impl<'a> MacroEngine<'a> {
+
     pub fn new(
         arena: &'a mut AstArena,
         source: &'a str,
@@ -391,34 +400,53 @@ impl<'a> MacroEngine<'a> {
                 self.expansion_counter += 1;
                 let expansion_id = self.expansion_counter;
 
+                let mut best_failure: Option<MatchFailure> = None;
                 for rule in &rules {
-                    if let Some(captures) = self.match_rule(&raw_tokens, rule) {
-                        let transcribed = self.transcribe_rule(rule, &captures, span, expansion_id);
-                        let mut parser = Parser::from_tokens(transcribed, self.source, self.arena, self.file_id);
-                        match parser.parse_type() {
-                            Ok(parsed_ty_id) => {
-                                self.diagnostics.extend(parser.diagnostics);
-                                let final_ty = self.expand_type(parsed_ty_id);
-                                self.recursion_depth -= 1;
-                                let replacement = self.arena.types[final_ty.0 as usize].clone();
-                                self.arena.types[ty_id.0 as usize] = replacement;
-                                return ty_id;
+                    match self.match_rule(&raw_tokens, rule) {
+                        Ok(captures) => {
+                            let transcribed = self.transcribe_rule(rule, &captures, span, expansion_id);
+                            let mut parser = Parser::from_tokens(transcribed, self.source, self.arena, self.file_id);
+                            match parser.parse_type() {
+                                Ok(parsed_ty_id) => {
+                                    self.diagnostics.extend(parser.diagnostics.clone());
+                                    let final_ty = self.expand_type(parsed_ty_id);
+                                    self.recursion_depth -= 1;
+                                    let replacement = self.arena.types[final_ty.0 as usize].clone();
+                                    self.arena.types[ty_id.0 as usize] = replacement;
+                                    return ty_id;
+                                }
+                                Err(_) => {
+                                    self.diagnostics.extend(parser.diagnostics.clone());
+                                }
                             }
-                            Err(_) => {
-                                self.diagnostics.extend(parser.diagnostics);
+                        }
+                        Err(failure) => {
+                            if best_failure.as_ref().map_or(true, |b| failure.pos >= b.pos) {
+                                best_failure = Some(failure);
                             }
                         }
                     }
                 }
 
                 self.recursion_depth -= 1;
-                self.diagnostics.push(
-                    Diagnostic::error(format!(
-                        "no rule in macro `{}` matched the invocation arguments",
-                        macro_name
-                    ))
-                    .with_span(span),
-                );
+                if let Some(failure) = best_failure {
+                    let mut diag_span = span;
+                    if failure.pos < raw_tokens.len() {
+                        diag_span = raw_tokens[failure.pos].span;
+                    }
+                    self.diagnostics.push(
+                        Diagnostic::error(format!("macro `{}` expected {}", macro_name, failure.expected))
+                            .with_span(diag_span)
+                    );
+                } else {
+                    self.diagnostics.push(
+                        Diagnostic::error(format!(
+                            "no rule in macro `{}` matched the invocation arguments",
+                            macro_name
+                        ))
+                        .with_span(span),
+                    );
+                }
                 ty_id
             }
             Type::Reference { is_mutable, lifetime, inner } => {
@@ -483,10 +511,7 @@ impl<'a> MacroEngine<'a> {
                         name
                     }),
             );
-            return self.arena.alloc_expr(Expr::Literal(Token::new(
-                TokenKind::IntegerLiteral,
-                call_span,
-            )));
+            return self.arena.alloc_expr(Expr::Literal(Token::new(TokenKind::IntegerLiteral, call_span), "0".to_string()));
         };
 
         let Some(&decl_id) = self.tables.macro_decls.get(&macro_sym) else {
@@ -494,10 +519,7 @@ impl<'a> MacroEngine<'a> {
                 Diagnostic::error(format!("no macro declaration found for `{}`", macro_name))
                     .with_span(name),
             );
-            return self.arena.alloc_expr(Expr::Literal(Token::new(
-                TokenKind::IntegerLiteral,
-                call_span,
-            )));
+            return self.arena.alloc_expr(Expr::Literal(Token::new(TokenKind::IntegerLiteral, call_span), "0".to_string()));
         };
 
         let rules = if let Decl::Macro { rules, .. } = &self.arena.decls[decl_id.0 as usize] {
@@ -514,10 +536,7 @@ impl<'a> MacroEngine<'a> {
                 ))
                 .with_span(call_span),
             );
-            return self.arena.alloc_expr(Expr::Literal(Token::new(
-                TokenKind::IntegerLiteral,
-                call_span,
-            )));
+            return self.arena.alloc_expr(Expr::Literal(Token::new(TokenKind::IntegerLiteral, call_span), "0".to_string()));
         }
 
         self.recursion_depth += 1;
@@ -525,44 +544,57 @@ impl<'a> MacroEngine<'a> {
         let expansion_id = self.expansion_counter;
 
         // Try rules in order
+        let mut best_failure: Option<MatchFailure> = None;
         for rule in &rules {
-            if let Some(captures) = self.match_rule(raw_tokens, rule) {
-                let transcribed = self.transcribe_rule(rule, &captures, call_span, expansion_id);
-                
-                // Parse transcribed tokens as expression
-                let mut parser = Parser::from_tokens(transcribed, self.source, self.arena, self.file_id);
-                match parser.parse_expression(true) {
-                    Ok(parsed_expr) => {
-                        self.diagnostics.extend(parser.diagnostics);
-                        // Recursively expand if the parsed expression contains macro calls
-                        let final_expr = self.expand_expr(parsed_expr);
-                        self.recursion_depth -= 1;
-                        return final_expr;
+            match self.match_rule(raw_tokens, rule) {
+                Ok(captures) => {
+                    let transcribed = self.transcribe_rule(rule, &captures, call_span, expansion_id);
+                    
+                    // Parse transcribed tokens as expression
+                    let mut parser = Parser::from_tokens(transcribed, self.source, self.arena, self.file_id);
+                    match parser.parse_expression(true) {
+                        Ok(parsed_expr) => {
+                            self.diagnostics.extend(parser.diagnostics);
+                            // Recursively expand if the parsed expression contains macro calls
+                            let final_expr = self.expand_expr(parsed_expr);
+                            self.recursion_depth -= 1;
+                            return final_expr;
+                        }
+                        Err(()) => {
+                            self.diagnostics.extend(parser.diagnostics);
+                            self.recursion_depth -= 1;
+                            return self.arena.alloc_expr(Expr::Literal(Token::new(TokenKind::IntegerLiteral, call_span), "0".to_string()));
+                        }
                     }
-                    Err(()) => {
-                        self.diagnostics.extend(parser.diagnostics);
-                        self.recursion_depth -= 1;
-                        return self.arena.alloc_expr(Expr::Literal(Token::new(
-                            TokenKind::IntegerLiteral,
-                            call_span,
-                        )));
+                }
+                Err(failure) => {
+                    if best_failure.as_ref().map_or(true, |b| failure.pos >= b.pos) {
+                        best_failure = Some(failure);
                     }
                 }
             }
         }
 
         self.recursion_depth -= 1;
-        self.diagnostics.push(
-            Diagnostic::error(format!(
-                "no rule in macro `{}` matched the invocation arguments",
-                macro_name
-            ))
-            .with_span(call_span),
-        );
-        self.arena.alloc_expr(Expr::Literal(Token::new(
-            TokenKind::IntegerLiteral,
-            call_span,
-        )))
+        if let Some(failure) = best_failure {
+            let mut diag_span = call_span;
+            if failure.pos < raw_tokens.len() {
+                diag_span = raw_tokens[failure.pos].span;
+            }
+            self.diagnostics.push(
+                Diagnostic::error(format!("macro `{}` expected {}", macro_name, failure.expected))
+                    .with_span(diag_span)
+            );
+        } else {
+            self.diagnostics.push(
+                Diagnostic::error(format!(
+                    "no rule in macro `{}` matched the invocation arguments",
+                    macro_name
+                ))
+                .with_span(call_span),
+            );
+        }
+        self.arena.alloc_expr(Expr::Literal(Token::new(TokenKind::IntegerLiteral, call_span), "0".to_string()))
     }
 
     fn expand_macro_call_items(
@@ -603,8 +635,23 @@ impl<'a> MacroEngine<'a> {
         self.expansion_counter += 1;
         let expansion_id = self.expansion_counter;
 
+        let mut best_failure: Option<MatchFailure> = None;
+        let has_trace = self.tables.macro_decls.get(&macro_sym).and_then(|id| {
+            let decl = &self.arena.decls[id.0 as usize];
+            if let Decl::Macro { annotations, .. } = decl {
+                Some(annotations.iter().any(|a| &self.source[a.name.start as usize..a.name.end as usize] == "macro_trace"))
+            } else {
+                None
+            }
+        }).unwrap_or(false);
+
+        if has_trace {
+            eprintln!("--> expanding macro `{}!` at {:?}", macro_name, call_span);
+        }
+
         for rule in &rules {
-            if let Some(captures) = self.match_rule(raw_tokens, rule) {
+            match self.match_rule(raw_tokens, rule) {
+                Ok(captures) => {
                 let transcribed = self.transcribe_rule(rule, &captures, call_span, expansion_id);
 
                 // Try parsing items (declarations and statements)
@@ -639,31 +686,40 @@ impl<'a> MacroEngine<'a> {
                     self.recursion_depth -= 1;
                     return Some(vec![Item::Stmt(stmt_id)]);
                 }
+                }
+                Err(failure) => {
+                    if best_failure.as_ref().map_or(true, |b| failure.pos >= b.pos) {
+                        best_failure = Some(failure);
+                    }
+                }
             }
         }
 
         self.recursion_depth -= 1;
+        if let Some(failure) = best_failure {
+            let mut diag_span = call_span;
+            if failure.pos < raw_tokens.len() {
+                diag_span = raw_tokens[failure.pos].span;
+            }
+            self.diagnostics.push(
+                Diagnostic::error(format!("macro `{}` expected {}", macro_name, failure.expected))
+                    .with_span(diag_span)
+            );
+        }
         None
     }
 
     fn match_rule(
-        &self,
+        &mut self,
         tokens: &[Token],
         rule: &MacroRule,
-    ) -> Option<HashMap<String, CapturedFragment>> {
-        // If structured pattern elements exist, use tree matching
-        if !rule.pattern.elements.is_empty() {
-            let mut captures = HashMap::new();
-            if let Some(consumed) = self.match_pattern_elements(tokens, 0, &rule.pattern.elements, &mut captures) {
-                if consumed == tokens.len() {
-                    return Some(captures);
-                }
-            }
-            return None;
+    ) -> Result<HashMap<String, CapturedFragment>, MatchFailure> {
+        let mut captures = HashMap::new();
+        let consumed = self.match_pattern_elements(tokens, 0, &rule.pattern.elements, &mut captures)?;
+        if consumed == tokens.len() {
+            return Ok(captures);
         }
-
-        // Fallback for flat matchers
-        self.match_flat_rule(tokens, &rule.matchers)
+        Err(MatchFailure { pos: consumed, expected: "end of macro invocation".to_string(), span: rule.span })
     }
 
     fn match_pattern_elements(
@@ -672,21 +728,21 @@ impl<'a> MacroEngine<'a> {
         mut pos: usize,
         elements: &[MatcherElement],
         captures: &mut HashMap<String, CapturedFragment>,
-    ) -> Option<usize> {
+    ) -> Result<usize, MatchFailure> {
         for element in elements {
             match element {
                 MatcherElement::Leaf { token: pat_tok } => {
                     if pos >= tokens.len() {
-                        return None;
+                        return Err(MatchFailure { pos, expected: format!("{:?}", pat_tok.kind), span: pat_tok.span });
                     }
                     if tokens[pos].kind != pat_tok.kind {
-                        return None;
+                        return Err(MatchFailure { pos, expected: format!("{:?}", pat_tok.kind), span: tokens[pos].span });
                     }
                     pos += 1;
                 }
-                MatcherElement::Group { delimiter, elements: group_elements, .. } => {
+                MatcherElement::Group { delimiter, elements: group_elements, span } => {
                     if pos >= tokens.len() {
-                        return None;
+                        return Err(MatchFailure { pos, expected: "group".to_string(), span: *span });
                     }
                     let (open_kind, close_kind) = match delimiter {
                         MacroDelimiter::Paren => (TokenKind::LParen, TokenKind::RParen),
@@ -695,7 +751,7 @@ impl<'a> MacroEngine<'a> {
                     };
 
                     if tokens[pos].kind != open_kind {
-                        return None;
+                        return Err(MatchFailure { pos, expected: format!("{:?}", open_kind), span: tokens[pos].span });
                     }
                     pos += 1;
 
@@ -714,39 +770,81 @@ impl<'a> MacroEngine<'a> {
                     }
 
                     if depth != 0 || pos >= tokens.len() {
-                        return None;
+                        return Err(MatchFailure { pos, expected: format!("{:?}", close_kind), span: *span });
                     }
 
                     let inner_tokens = &tokens[group_start..pos];
                     pos += 1; // consume close_kind
 
-                    if let Some(inner_consumed) = self.match_pattern_elements(inner_tokens, 0, group_elements, captures) {
-                        if inner_consumed != inner_tokens.len() {
-                            return None;
-                        }
-                    } else {
-                        return None;
+                    let inner_consumed = self.match_pattern_elements(inner_tokens, 0, group_elements, captures)?;
+                    if inner_consumed != inner_tokens.len() {
+                        return Err(MatchFailure { pos, expected: "end of group".to_string(), span: *span });
                     }
                 }
                 MatcherElement::MetaVar { name, fragment, .. } => {
                     if pos >= tokens.len() {
-                        return None;
+                        return Err(MatchFailure { pos, expected: format!("{:?}", fragment), span: *name });
                     }
                     let var_name = self.source[name.start as usize..name.end as usize].to_string();
-                    let consumed = self.capture_fragment_parser(tokens, pos, *fragment)?;
+                    let consumed = self.capture_fragment_parser(tokens, pos, *fragment).map_err(|e| MatchFailure { pos, expected: e, span: *name })?;
                     if consumed == 0 {
-                        return None;
+                        return Err(MatchFailure { pos, expected: format!("{:?}", fragment), span: *name });
                     }
                     let captured_tokens = tokens[pos..pos + consumed].to_vec();
                     captures.insert(var_name, CapturedFragment::Single(captured_tokens));
                     pos += consumed;
                 }
-                MatcherElement::Repetition { .. } => {
-                    return None;
+                MatcherElement::Repetition { elements: rep_elements, separator, kind, span } => {
+                    let mut repeated_captures: HashMap<String, Vec<CapturedFragment>> = HashMap::new();
+                    let mut repetition_count = 0;
+                    
+                    while pos < tokens.len() {
+                        let mut temp_captures = HashMap::new();
+                        let start_pos = pos;
+                        let res = self.match_pattern_elements(tokens, pos, rep_elements, &mut temp_captures);
+                        match res {
+                            Ok(new_pos) => {
+                                if new_pos == start_pos {
+                                    break;
+                                }
+                                pos = new_pos;
+                                repetition_count += 1;
+                                
+                                for (k, v) in temp_captures {
+                                    repeated_captures.entry(k).or_insert_with(Vec::new).push(v);
+                                }
+                                
+                                if let Some(sep) = separator {
+                                    if pos < tokens.len() && tokens[pos].kind == *sep {
+                                        pos += 1;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if *kind == mellis_ast::RepetitionKind::OneOrMore && repetition_count == 0 {
+                        return Err(MatchFailure { pos, expected: "at least one repetition".to_string(), span: *span });
+                    }
+                    
+                    // We must ensure that any variable declared inside the repetition has a list, 
+                    // even if it was not captured in some iterations. 
+                    // For simplicity, we just insert the collected captures as CapturedFragment::Repeated.
+                    // A proper implementation would pad missing variables, but this handles standard cases.
+                    for (k, v) in repeated_captures {
+                        // If it already exists in captures, it means we have a collision.
+                        // But since it's nested, we just insert it.
+                        captures.insert(k, CapturedFragment::Repeated(v));
+                    }
                 }
             }
         }
-        Some(pos)
+        Ok(pos)
     }
 
     fn capture_fragment_parser(
@@ -754,36 +852,86 @@ impl<'a> MacroEngine<'a> {
         tokens: &[Token],
         pos: usize,
         fragment: FragmentKind,
-    ) -> Option<usize> {
+    ) -> Result<usize, String> {
         if pos >= tokens.len() {
-            return None;
+            return Err("unexpected end of input".to_string());
         }
 
         match fragment {
             FragmentKind::Ident => {
                 let tok = tokens[pos];
                 if tok.kind == TokenKind::Identifier || tok.kind == TokenKind::KwSelfVal {
-                    Some(1)
+                    Ok(1)
                 } else {
-                    None
+                    Err(format!("expected {}", match fragment { FragmentKind::Lifetime => "lifetime", _ => "identifier" }))
                 }
             }
-            FragmentKind::Expr => {
+            FragmentKind::Expr | FragmentKind::Ty | FragmentKind::Tt | FragmentKind::Pat | FragmentKind::Path | FragmentKind::Meta => {
                 let remaining = tokens[pos..].to_vec();
                 let mut scratch_arena = AstArena::new();
                 let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
-                match parser.parse_expression(true) {
-                    Ok(_) if parser.pos() > 0 => Some(parser.pos()),
-                    _ => None,
+                
+                let success = match fragment {
+                    FragmentKind::Expr => parser.parse_expression(true).is_ok(),
+                    FragmentKind::Ty => parser.parse_type().is_ok(),
+                    FragmentKind::Stmt => parser.parse_stmt().is_ok(),
+                    FragmentKind::Block => parser.parse_block_stmt().is_ok(),
+                    FragmentKind::Item => parser.parse_item().is_ok(),
+                    FragmentKind::Tt => parser.parse_token_tree().is_ok(),
+                    FragmentKind::Pat => parser.parse_pattern().is_ok(),
+                    FragmentKind::Path => parser.parse_value_path().is_ok(),
+                    FragmentKind::Meta => parser.parse_annotations().is_ok(),
+                    _ => unreachable!(),
+                };
+
+                if success && parser.pos() > 0 {
+                    Ok(parser.pos())
+                } else {
+                    Err(format!("expected {:?}", fragment))
                 }
             }
-            FragmentKind::Ty => {
-                let remaining = tokens[pos..].to_vec();
-                let mut scratch_arena = AstArena::new();
-                let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
-                match parser.parse_type() {
-                    Ok(_) if parser.pos() > 0 => Some(parser.pos()),
-                    _ => None,
+            FragmentKind::Literal => {
+                let tok = tokens[pos];
+                if matches!(
+                    tok.kind,
+                    TokenKind::IntegerLiteral
+                        | TokenKind::FloatLiteral
+                        | TokenKind::StringLiteral
+                        | TokenKind::CharLiteral
+                        | TokenKind::ByteLiteral
+                        | TokenKind::ByteStringLiteral
+                        | TokenKind::RawStringLiteral
+                        | TokenKind::KwTrue
+                        | TokenKind::KwFalse
+                ) {
+                    Ok(1)
+                } else {
+                    Err(format!("expected {:?}", fragment))
+                }
+            }
+            FragmentKind::Vis => {
+                let tok = tokens[pos];
+                if tok.kind == TokenKind::KwPub {
+                    // Check for `pub(crate)` or `pub(super)`
+                    if pos + 3 < tokens.len() 
+                        && tokens[pos + 1].kind == TokenKind::LParen 
+                        && matches!(tokens[pos + 2].kind, TokenKind::KwCrate | TokenKind::KwSuper)
+                        && tokens[pos + 3].kind == TokenKind::RParen 
+                    {
+                        Ok(4)
+                    } else {
+                        Ok(1)
+                    }
+                } else {
+                    Ok(0) // Empty visibility (private) is valid
+                }
+            }
+            FragmentKind::Lifetime => {
+                let tok = tokens[pos];
+                if tok.kind == TokenKind::Lifetime {
+                    Ok(1)
+                } else {
+                    Err("expected lifetime".to_string())
                 }
             }
             FragmentKind::Stmt => {
@@ -791,8 +939,8 @@ impl<'a> MacroEngine<'a> {
                 let mut scratch_arena = AstArena::new();
                 let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
                 match parser.parse_stmt() {
-                    Ok(_) if parser.pos() > 0 => Some(parser.pos()),
-                    _ => None,
+                    Ok(_) if parser.pos() > 0 => Ok(parser.pos()),
+                    _ => Err(format!("expected {:?}", fragment)),
                 }
             }
             FragmentKind::Block => {
@@ -800,8 +948,8 @@ impl<'a> MacroEngine<'a> {
                 let mut scratch_arena = AstArena::new();
                 let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
                 match parser.parse_block_stmt() {
-                    Ok(_) if parser.pos() > 0 => Some(parser.pos()),
-                    _ => None,
+                    Ok(_) if parser.pos() > 0 => Ok(parser.pos()),
+                    _ => Err(format!("expected {:?}", fragment)),
                 }
             }
             FragmentKind::Item => {
@@ -809,32 +957,27 @@ impl<'a> MacroEngine<'a> {
                 let mut scratch_arena = AstArena::new();
                 let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
                 match parser.parse_item() {
-                    Ok(_) if parser.pos() > 0 => Some(parser.pos()),
-                    _ => None,
+                    Ok(_) if parser.pos() > 0 => Ok(parser.pos()),
+                    _ => Err(format!("expected {:?}", fragment)),
                 }
             }
         }
     }
 
     fn transcribe_rule(
-        &self,
+        &mut self,
         rule: &MacroRule,
         captures: &HashMap<String, CapturedFragment>,
         call_span: Span,
         expansion_id: u32,
     ) -> Vec<Token> {
-        if !rule.transcriber.elements.is_empty() {
-            let mut output = Vec::new();
-            self.transcribe_elements(&rule.transcriber.elements, captures, call_span, expansion_id, &mut output);
-            return output;
-        }
-
-        // Fallback for flat template tokens
-        self.transcribe_flat_template(&rule.template_tokens, captures, call_span, expansion_id)
+        let mut output = Vec::new();
+        self.transcribe_elements(&rule.transcriber.elements, captures, call_span, expansion_id, &mut output);
+        output
     }
 
     fn transcribe_elements(
-        &self,
+        &mut self,
         elements: &[TranscriberElement],
         captures: &HashMap<String, CapturedFragment>,
         call_span: Span,
@@ -866,263 +1009,92 @@ impl<'a> MacroEngine<'a> {
                 TranscriberElement::MetaVar { name, .. } => {
                     let var_name = &self.source[name.start as usize..name.end as usize];
                     if let Some(captured) = captures.get(var_name) {
-                        match captured {
-                            CapturedFragment::Single(tokens) => {
-                                output.extend(tokens.clone());
-                            }
-                            CapturedFragment::Repeated(list) => {
-                                for (idx, item) in list.iter().enumerate() {
-                                    if idx > 0 {
-                                        output.push(Token::new(TokenKind::Comma, call_span));
-                                    }
-                                    output.extend(item.clone());
-                                }
-                            }
-                        }
-                    }
-                }
-                TranscriberElement::Repetition { .. } => {}
-            }
-        }
-    }
-
-    fn match_flat_rule(
-        &self,
-        tokens: &[Token],
-        matchers: &[MacroMatcher],
-    ) -> Option<HashMap<String, CapturedFragment>> {
-        let mut captures = HashMap::new();
-        let mut pos = 0;
-
-        for (idx, matcher) in matchers.iter().enumerate() {
-            let var_name = self.source[matcher.name.start as usize..matcher.name.end as usize].to_string();
-            let is_last = idx == matchers.len() - 1;
-
-            if let Some(rep_kind) = matcher.repetition {
-                let mut repeated_tokens = Vec::new();
-                let sep = matcher.separator;
-
-                while pos < tokens.len() {
-                    let frag_tokens = self.capture_one_fragment(tokens, &mut pos, matcher.fragment, sep, is_last)?;
-                    repeated_tokens.push(frag_tokens);
-
-                    if pos < tokens.len() {
-                        if let Some(s) = sep {
-                            if tokens[pos].kind == s {
-                                pos += 1;
-                                continue;
-                            } else {
-                                break;
-                            }
-                        } else if tokens[pos].kind == TokenKind::Comma {
-                            pos += 1;
-                            continue;
-                        } else {
-                            break;
-                        }
-                    }
-                }
-
-                if rep_kind == RepetitionKind::OneOrMore && repeated_tokens.is_empty() {
-                    return None;
-                }
-
-                captures.insert(var_name, CapturedFragment::Repeated(repeated_tokens));
-            } else {
-                let frag_tokens = self.capture_one_fragment(tokens, &mut pos, matcher.fragment, Some(TokenKind::Comma), is_last)?;
-                captures.insert(var_name, CapturedFragment::Single(frag_tokens));
-
-                if !is_last {
-                    if pos < tokens.len() && tokens[pos].kind == TokenKind::Comma {
-                        pos += 1;
+                        self.push_capture(captured, output, call_span);
                     } else {
-                        return None;
+                        self.diagnostics.push(
+                            Diagnostic::error(format!("variable `@{}` is not bound in pattern", var_name))
+                                .with_span(*name)
+                        );
                     }
                 }
-            }
-        }
+                TranscriberElement::Repetition { elements: rep_elements, separator, kind: _, span: _ } => {
+                    // Find the repetition length by inspecting the bound variables in the inner elements
+                    let mut max_len = 0;
+                    self.find_repetition_length(rep_elements, captures, &mut max_len);
 
-        if pos == tokens.len() {
-            Some(captures)
-        } else {
-            None
-        }
-    }
-
-    fn capture_one_fragment(
-        &self,
-        tokens: &[Token],
-        pos: &mut usize,
-        fragment: FragmentKind,
-        stop_sep: Option<TokenKind>,
-        _is_last: bool,
-    ) -> Option<Vec<Token>> {
-        if *pos >= tokens.len() {
-            return None;
-        }
-
-        match fragment {
-            FragmentKind::Ident => {
-                if tokens[*pos].kind == TokenKind::Identifier || tokens[*pos].kind == TokenKind::KwSelfVal {
-                    let tok = tokens[*pos];
-                    *pos += 1;
-                    Some(vec![tok])
-                } else {
-                    None
-                }
-            }
-            FragmentKind::Expr | FragmentKind::Ty | FragmentKind::Stmt | FragmentKind::Block | FragmentKind::Item => {
-                let mut depth_paren = 0;
-                let mut depth_bracket = 0;
-                let mut depth_brace = 0;
-                let start = *pos;
-
-                while *pos < tokens.len() {
-                    let tok = tokens[*pos];
-                    match tok.kind {
-                        TokenKind::LParen => depth_paren += 1,
-                        TokenKind::RParen => {
-                            if depth_paren == 0 { break; }
-                            depth_paren -= 1;
-                        }
-                        TokenKind::LBracket => depth_bracket += 1,
-                        TokenKind::RBracket => {
-                            if depth_bracket == 0 { break; }
-                            depth_bracket -= 1;
-                        }
-                        TokenKind::LBrace => depth_brace += 1,
-                        TokenKind::RBrace => {
-                            if depth_brace == 0 { break; }
-                            depth_brace -= 1;
-                        }
-                        k => {
-                            if depth_paren == 0 && depth_bracket == 0 && depth_brace == 0 {
-                                if Some(k) == stop_sep || k == TokenKind::Comma {
-                                    break;
-                                }
+                    for idx in 0..max_len {
+                        if idx > 0 {
+                            if let Some(sep) = separator {
+                                output.push(Token::new(*sep, call_span));
                             }
                         }
+                        
+                        let mut sub_captures = captures.clone();
+                        self.extract_repetition_idx(rep_elements, captures, idx, &mut sub_captures);
+                        
+                        self.transcribe_elements(rep_elements, &sub_captures, call_span, expansion_id, output);
                     }
-                    *pos += 1;
-                }
-
-                if *pos > start {
-                    Some(tokens[start..*pos].to_vec())
-                } else {
-                    None
                 }
             }
         }
     }
 
-    fn transcribe_flat_template(
-        &self,
-        template: &[Token],
-        captures: &HashMap<String, CapturedFragment>,
-        call_span: Span,
-        expansion_id: u32,
-    ) -> Vec<Token> {
-        let mut output = Vec::new();
-        let mut i = 0;
-
-        while i < template.len() {
-            let tok = template[i];
-            
-            // Check for `$(` or `@(` repetition block in template
-            if (tok.kind == TokenKind::Dollar || tok.kind == TokenKind::At)
-                && i + 1 < template.len()
-                && template[i + 1].kind == TokenKind::LParen
-            {
-                i += 2; // skip `$` and `(`
-                let start = i;
-                let mut depth = 1;
-                while i < template.len() {
-                    if template[i].kind == TokenKind::LParen {
-                        depth += 1;
-                    } else if template[i].kind == TokenKind::RParen {
-                        depth -= 1;
-                        if depth == 0 {
-                            break;
-                        }
-                    }
-                    i += 1;
-                }
-                let rep_template = &template[start..i];
-                if i < template.len() {
-                    i += 1; // consume `)`
-                }
-
-                let mut rep_sep = None;
-                if i < template.len() {
-                    if template[i].kind == TokenKind::Multiply || template[i].kind == TokenKind::Plus {
-                        i += 1;
-                    } else if i + 1 < template.len() && (template[i + 1].kind == TokenKind::Multiply || template[i + 1].kind == TokenKind::Plus) {
-                        rep_sep = Some(template[i]);
-                        i += 2;
-                    }
-                }
-
-                let mut max_len = 0;
-                for t in rep_template {
-                    if t.kind == TokenKind::Identifier {
-                        let name = &self.source[t.span.start as usize..t.span.end as usize];
-                        if let Some(CapturedFragment::Repeated(list)) = captures.get(name) {
-                            max_len = max_len.max(list.len());
-                        }
-                    }
-                }
-
-                for idx in 0..max_len {
+    fn push_capture(&self, captured: &CapturedFragment, output: &mut Vec<Token>, call_span: Span) {
+        match captured {
+            CapturedFragment::Single(tokens) => {
+                output.extend(tokens.clone());
+            }
+            CapturedFragment::Repeated(list) => {
+                for (idx, item) in list.iter().enumerate() {
                     if idx > 0 {
-                        if let Some(sep_tok) = rep_sep {
-                            output.push(sep_tok);
-                        }
+                        output.push(Token::new(TokenKind::Comma, call_span));
                     }
-                    let mut sub_captures = captures.clone();
-                    for (k, v) in captures {
-                        if let CapturedFragment::Repeated(list) = v {
-                            if idx < list.len() {
-                                sub_captures.insert(k.clone(), CapturedFragment::Single(list[idx].clone()));
-                            }
-                        }
-                    }
-                    output.extend(self.transcribe_flat_template(rep_template, &sub_captures, call_span, expansion_id));
-                }
-                continue;
-            }
-
-            // Check for `$var` or `@var` metavariable substitution
-            if (tok.kind == TokenKind::Dollar || tok.kind == TokenKind::At)
-                && i + 1 < template.len()
-                && template[i + 1].kind == TokenKind::Identifier
-            {
-                let var_tok = template[i + 1];
-                let var_name = &self.source[var_tok.span.start as usize..var_tok.span.end as usize];
-                if let Some(captured) = captures.get(var_name) {
-                    match captured {
-                        CapturedFragment::Single(sub_tokens) => {
-                            output.extend(sub_tokens.clone());
-                        }
-                        CapturedFragment::Repeated(list) => {
-                            for (idx, elem) in list.iter().enumerate() {
-                                if idx > 0 {
-                                    output.push(Token::new(TokenKind::Comma, call_span));
-                                }
-                                output.extend(elem.clone());
-                            }
-                        }
-                    }
-                    i += 2;
-                    continue;
+                    self.push_capture(item, output, call_span);
                 }
             }
-
-            let mut t = tok;
-            t.span.ctxt = SyntaxContext(expansion_id);
-            output.push(t);
-            i += 1;
         }
-
-        output
     }
+
+    fn find_repetition_length(&self, elements: &[TranscriberElement], captures: &HashMap<String, CapturedFragment>, max_len: &mut usize) {
+        for element in elements {
+            match element {
+                TranscriberElement::MetaVar { name, .. } => {
+                    let var_name = &self.source[name.start as usize..name.end as usize];
+                    if let Some(CapturedFragment::Repeated(list)) = captures.get(var_name) {
+                        *max_len = (*max_len).max(list.len());
+                    }
+                }
+                TranscriberElement::Group { elements: inner, .. } => {
+                    self.find_repetition_length(inner, captures, max_len);
+                }
+                TranscriberElement::Repetition { elements: inner, .. } => {
+                    // Nested repetition - we don't look inside because its length is determined by its own loop
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn extract_repetition_idx(&self, elements: &[TranscriberElement], captures: &HashMap<String, CapturedFragment>, idx: usize, sub_captures: &mut HashMap<String, CapturedFragment>) {
+        for element in elements {
+            match element {
+                TranscriberElement::MetaVar { name, .. } => {
+                    let var_name = &self.source[name.start as usize..name.end as usize];
+                    if let Some(CapturedFragment::Repeated(list)) = captures.get(var_name) {
+                        if idx < list.len() {
+                            sub_captures.insert(var_name.to_string(), list[idx].clone());
+                        }
+                    }
+                }
+                TranscriberElement::Group { elements: inner, .. } => {
+                    self.extract_repetition_idx(inner, captures, idx, sub_captures);
+                }
+                TranscriberElement::Repetition { elements: inner, .. } => {
+                    // Do not descend, inner will extract its own indices
+                }
+                _ => {}
+            }
+        }
+    }
+
 }

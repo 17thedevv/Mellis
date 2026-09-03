@@ -1,0 +1,219 @@
+﻿
+>             Expr::Call { callee, generic_args, args } => {
+  
+                  let callee_expr = &self.arena.exprs[callee.0 as usize];
+  
+                  if let Expr::Identifier { segments, .. } = callee_expr {
+  
+                      let name_str = segments.iter().map(|seg| &self.source[seg.start as usize..seg.end as 
+usize]).collect::<Vec<_>>().join("::");
+  
+                      if name_str == "drop" {
+  
+                          let diag = Diagnostic::error("Explicit calls to drop() are forbidden. Values are dropped 
+automatically at end of scope.".to_string());
+  
+                          let diag = if let Some(span) = segments.last() { diag.with_span(*span) } else { diag };
+  
+                          self.ctx.diagnostics.push(diag);
+  
+                      }
+  
+                  }
+  
+                  
+  
+                  let mut is_inferred_generic = false;
+  
+                  let mut generic_param_symbols = Vec::new();
+  
+                  
+  
+                  // If there are explicit generic args, check trait bounds before resolving callee
+  
+                  if !generic_args.is_empty() {
+  
+                      if let Some(&callee_sym) = self.ctx.tables.expr_symbols.get(callee) {
+  
+                          if let Some(&callee_decl_id) = self.ctx.tables.symbol_decls.get(&callee_sym) {
+  
+                              let decl = &self.arena.decls[callee_decl_id.0 as usize];
+  
+                              if let mellis_ast::Decl::Function { generic_params, .. } = decl {
+  
+                                  let generic_params = generic_params.clone();
+  
+                                  // Build substitution and check bounds for each generic param
+  
+                                  let mut subst = crate::ty::Substitution::new();
+  
+                                  for (gp_idx, gp) in generic_params.iter().enumerate() {
+  
+                                      if let Some(&concrete_type_id) = generic_args.get(gp_idx) {
+  
+                                          // Resolve the concrete type provided at call site
+  
+                                          let concrete_ty = self.lower_type(concrete_type_id);
+  
+                                          // Record the substitution for this generic param
+  
+                                          if let Some(&gp_sym) = 
+self.ctx.tables.generic_param_symbols.get(&(callee_decl_id, gp_idx)) {
+  
+                                              subst.insert(gp_sym, concrete_ty);
+  
+                                              // Check trait bounds for this generic param
+  
+                                              let bounds = 
+self.ctx.tables.trait_bounds.get(&gp_sym).cloned().unwrap_or_default();
+  
+                                              for bound in &bounds {
+  
+                                                  // Get the self_type_def SymbolId from the concrete type
+  
+                                                  let resolved_ty = self.ctx.types.resolve(concrete_ty);
+  
+                                                  let mut peeled_ty = resolved_ty;
+  
+                                                  while let SemanticType::Pointer(_, inner) | 
+SemanticType::Reference(_, _, inner) = self.ctx.types.get(peeled_ty) {
+  
+                                                      peeled_ty = *inner;
+  
+                                                  }
+  
+                                                  let maybe_struct_sym = match self.ctx.types.get(peeled_ty) {
+  
+                                                      SemanticType::Struct(sym, _) => Some(*sym),
+  
+                                                      SemanticType::Enum(sym, _) => Some(*sym),
+  
+                                                      _ => None,
+  
+                                                  };
+  
+                                                  let gp_name = &self.source[gp.name.start as usize..gp.name.end as 
+usize];
+  
+                                                  if let Some(struct_sym) = maybe_struct_sym {
+  
+                                                      let impl_key = crate::semantic_tables::ImplKey {
+  
+                                                          trait_id: Some(bound.trait_id),
+  
+                                                          self_type_def: struct_sym,
+  
+                                                      };
+  
+                                                      if !self.ctx.tables.trait_impls.contains_key(&impl_key) {
+  
+                                                          let trait_name = 
+self.ctx.symbol_table.get_symbol(bound.trait_id).name.clone();
+  
+                                                          let type_name = 
+self.ctx.symbol_table.get_symbol(struct_sym).name.clone();
+  
+                                                          let mut diag = Diagnostic::error(format!(
+  
+                                                              "The type `{}` does not implement trait `{}` (required 
+by generic parameter `{}`)",
+  
+                                                              type_name, trait_name, gp_name
+  
+                                                          ));
+  
+                                                          if let Some(sp) = self.get_expr_span_for_diag(expr_id) { 
+diag = diag.with_span(sp); }
+  
+                                                          self.ctx.diagnostics.push(diag);
+  
+                                                      }
+  
+                                                  } else if matches!(self.ctx.types.get(resolved_ty), 
+SemanticType::InferenceVar(_)) {
+  
+                              }
+  
+                          }
+  
+                      }
+  
+                      
+  
+                      if is_inferred_generic {
+  
+                          // Read back the resolved types of the InferenceVars and verify trait bounds
+  
+                          if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id) {
+  
+                              let mut subst_clone = subst.clone();
+  
+                              for (gp_sym, gp) in generic_param_symbols {
+  
+                                  if let Some(&infer_var) = subst_clone.map.get(&gp_sym) {
+  
+                                      let resolved_ty = self.ctx.types.resolve(infer_var);
+  
+                                      subst_clone.map.insert(gp_sym, resolved_ty);
+  
+                                      
+  
+                                      let bounds = 
+self.ctx.tables.trait_bounds.get(&gp_sym).cloned().unwrap_or_default();
+  
+                                      for bound in &bounds {
+  
+                                          let maybe_struct_sym = match self.ctx.types.get(resolved_ty) {
+  
+                                              SemanticType::Struct(sym, _) => Some(*sym),
+  
+                                              SemanticType::Enum(sym, _) => Some(*sym),
+  
+                                              _ => None,
+  
+                                          };
+  
+                                          let gp_name = &self.source[gp.name.start as usize..gp.name.end as usize];
+  
+                                          if let Some(struct_sym) = maybe_struct_sym {
+  
+                                              let impl_key = crate::semantic_tables::ImplKey {
+  
+                                                  trait_id: Some(bound.trait_id),
+  
+                                                  self_type_def: struct_sym,
+  
+                                              };
+  
+                                              if !self.ctx.tables.trait_impls.contains_key(&impl_key) {
+  
+                                                  let trait_name = 
+self.ctx.symbol_table.get_symbol(bound.trait_id).name.clone();
+  
+                                                  let type_name = 
+self.ctx.symbol_table.get_symbol(struct_sym).name.clone();
+  
+                                                          if !self.try_coerce_dyn(arg.value, arg_ty, expected_p) {
+  
+                                                              if self.unify(expected_p, arg_ty).is_err() {
+  
+                                                                  self.emit_type_mismatch("Type mismatch in method 
+argument", &arg.value);
+  
+                                                              }
+  
+                                                          }
+  
+                                                      }
+  
+                                                  }
+  
+                                                  return return_type;
+  
+                                              }
+  
+                                          }
+  
+                                      }
+
+

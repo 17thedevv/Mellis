@@ -1,0 +1,400 @@
+﻿
+>             Expr::MethodCall { object, method_name, args, generic_args } => {
+  
+                  let obj_ty_id = self.typecheck_expr(object);
+  
+                  let obj_ty = self.ctx.types.get(obj_ty_id).clone();
+  
+                  let member_name = &self.source[method_name.start as usize..method_name.end as usize];
+  
+                  
+  
+                  // 1. Check if obj_ty is DynTrait or pointer/ref to DynTrait
+  
+                  let dyn_trait_sym = match &obj_ty {
+  
+                      SemanticType::DynTrait(sym) => Some(*sym),
+  
+                      SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => {
+  
+                          if let SemanticType::DynTrait(sym) = self.ctx.types.get(*inner) {
+  
+                              Some(*sym)
+  
+                          } else {
+  
+                              None
+  
+                          }
+  
+                      }
+  
+                      _ => None,
+  
+                  };
+  
+                  if let Some(trait_sym) = dyn_trait_sym {
+  
+                      if let Some(method_syms) = self.ctx.tables.trait_methods.get(&trait_sym) {
+  
+                          for (idx, &m_sym) in method_syms.iter().enumerate() {
+  
+                              let sym = self.ctx.symbol_table.get_symbol(m_sym);
+  
+                              if sym.name == member_name {
+  
+                                  self.ctx.tables.dyn_method_indices.insert(*expr_id, idx as u32);
+  
+                                  if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
+  
+                                      if let SemanticType::Function { params, return_type } = 
+self.ctx.types.get(m_ty).clone() {
+  
+                                          let expected_params = if params.len() == args.len() + 1 { &params[1..] } 
+else { &params[..] };
+  
+                                          for (i, arg) in args.iter().enumerate() {
+  
+                                              let arg_ty = self.typecheck_expr(&arg.value);
+  
+                                              if let Some(&expected_p) = expected_params.get(i) {
+  
+                                                  if !self.try_coerce_dyn(arg.value, arg_ty, expected_p) {
+  
+                                                      if self.unify(expected_p, arg_ty).is_err() {
+  
+                                                          self.emit_type_mismatch("Type mismatch in method argument", 
+&arg.value);
+  
+                                                      }
+  
+                                                  }
+  
+                                              }
+  
+                                          }
+  
+                                          return return_type;
+  
+                                      }
+  
+                                  }
+  
+                              }
+  
+                          }
+  
+                      }
+  
+                  }
+  
+  
+  
+                  // 2. Struct method lookup
+  
+                  let peeled_ty = match &obj_ty {
+  
+                      SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => {
+  
+                          self.ctx.types.get(*inner).clone()
+  
+                      }
+  
+                      _ => obj_ty.clone(),
+  
+                  };
+  
+  
+  
+                  if let SemanticType::Struct(sym_id, struct_generic_args) = peeled_ty {
+  
+                      println!("DEBUG: peeled_ty is Struct({:?})", sym_id);
+  
+                      let mut matching_impls = Vec::new();
+  
+                      for (impl_key, &impl_decl_id) in &self.ctx.tables.trait_impls {
+  
+                          println!("DEBUG: checking impl_key {:?} == {:?}", impl_key.self_type_def, sym_id);
+  
+                          if impl_key.self_type_def == sym_id {
+  
+                              matching_impls.push(impl_decl_id);
+  
+                          }
+  
+                      }
+  
+                      println!("DEBUG: matching_impls = {:?}", matching_impls);
+  
+                      for impl_decl_id in matching_impls {
+  
+                          if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
+  
+                                  for &m_id in methods {
+  
+                                      if let Decl::Function { name, .. } = &self.arena.decls[m_id.0 as usize] {
+  
+                                          let m_name = &self.source[name.start as usize..name.end as usize];
+  
+                                          println!("DEBUG: m_name = {}, member_name = {}", m_name, member_name);
+  
+                                          if m_name == member_name {
+  
+                                              println!("DEBUG: match! has symbol? {:?}", 
+self.ctx.tables.decl_symbols.get(&m_id));
+  
+                                              if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(&m_id) {
+  
+                                                  self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
+  
+                                                  if let Some(&m_ty_id) = self.ctx.tables.symbol_types.get(&m_sym) {
+  
+                                                      let mut subst = crate::ty::Substitution::new();
+  
+                                                      
+  
+                                                      if let Decl::Impl { generic_params: impl_gps, .. } = 
+&self.arena.decls[impl_decl_id.0 as usize] {
+  
+                                                          for (i, _) in impl_gps.iter().enumerate() {
+  
+                                                              if let Some(&gp_sym) = 
+self.ctx.tables.generic_param_symbols.get(&(impl_decl_id, i)) {
+  
+                                                                  if let Some(&arg_ty) = struct_generic_args.get(i) {
+  
+                                                                      subst.insert(gp_sym, arg_ty);
+  
+                                                                  }
+  
+                                                              }
+  
+                                                          }
+  
+                                                      }
+  
+                                                      
+  
+                                                      let mut is_inferred_generic = false;
+  
+                                                      let mut generic_param_symbols = Vec::new();
+  
+                                                      println!("DEBUG AST DECL for m_name {} (m_id={:?}) = {:?}", 
+m_name, m_id, &self.arena.decls[m_id.0 as usize]);
+  
+                                                      if let Decl::Function { generic_params: method_gps, .. } = 
+&self.arena.decls[m_id.0 as usize] {
+  
+                                                          println!("DEBUG METHOD_GPS for m_name {} = {:?}", m_name, 
+method_gps);
+  
+                                                          for (i, gp) in method_gps.iter().enumerate() {
+  
+                                                              if let Some(&gp_sym) = 
+self.ctx.tables.generic_param_symbols.get(&(m_id, i)) {
+  
+                                                                  if let Some(&arg_ty_id) = generic_args.get(i) {
+  
+                                                                      let arg_ty = self.lower_type(arg_ty_id);
+  
+                                                                      subst.insert(gp_sym, arg_ty);
+  
+                                                                      let bounds = 
+self.ctx.tables.trait_bounds.get(&gp_sym).cloned().unwrap_or_default();
+  
+                                                                      for bound in &bounds {
+  
+                                                                          let resolved_ty = 
+self.ctx.types.resolve(arg_ty);
+  
+                                                                          let mut peeled_ty = resolved_ty;
+  
+                                                                          while let SemanticType::Pointer(_, inner) | 
+SemanticType::Reference(_, _, inner) = self.ctx.types.get(peeled_ty) {
+  
+                                                                              peeled_ty = *inner;
+>             Expr::MethodCall { method_name, .. } => Some(*method_name),
+  
+              Expr::Await { expr } => self.get_expr_span_for_diag(expr),
+  
+              Expr::Cast { expr, .. } => self.get_expr_span_for_diag(expr),
+  
+              Expr::Binary { left, .. } => self.get_expr_span_for_diag(left),
+  
+              Expr::Unary { operand, .. } => self.get_expr_span_for_diag(operand),
+  
+              Expr::Assign { lvalue, .. } => self.get_expr_span_for_diag(lvalue),
+  
+              Expr::Member { member, .. } => Some(*member),
+  
+              _ => None
+  
+          }
+  
+      }
+  
+  
+  
+      fn substitute_type(&mut self, ty_id: SemanticTypeId, subst: &crate::ty::Substitution) -> SemanticTypeId {
+  
+          let ty = self.ctx.types.get(ty_id).clone();
+  
+          match ty {
+  
+              SemanticType::GenericParam(sym) => {
+  
+                  if let Some(&new_ty) = subst.map.get(&sym) {
+  
+                      new_ty
+  
+                  } else {
+  
+                      ty_id
+  
+                  }
+  
+              }
+  
+              SemanticType::Pointer(mutability, inner) => {
+  
+                  let new_inner = self.substitute_type(inner, subst);
+  
+                  if new_inner == inner { ty_id } else { self.ctx.types.intern(SemanticType::Pointer(mutability, 
+new_inner)) }
+  
+              }
+  
+              SemanticType::Reference(lifetime, mutability, inner) => {
+  
+                  let new_inner = self.substitute_type(inner, subst);
+  
+                  if new_inner == inner { ty_id } else { self.ctx.types.intern(SemanticType::Reference(lifetime, 
+mutability, new_inner)) }
+  
+              }
+  
+              SemanticType::Array(inner, size) => {
+  
+                  let new_inner = self.substitute_type(inner, subst);
+  
+                  if new_inner == inner { ty_id } else { self.ctx.types.intern(SemanticType::Array(new_inner, size)) }
+  
+              }
+  
+              SemanticType::Slice(inner) => {
+  
+                  let new_inner = self.substitute_type(inner, subst);
+  
+                  if new_inner == inner { ty_id } else { self.ctx.types.intern(SemanticType::Slice(new_inner)) }
+  
+              }
+  
+              SemanticType::Tuple(els) => {
+  
+                  let mut new_els = Vec::new();
+  
+                  let mut changed = false;
+  
+                  for el in els.iter() {
+  
+                      let new_el = self.substitute_type(*el, subst);
+  
+                      if new_el != *el { changed = true; }
+  
+                      new_els.push(new_el);
+  
+                  }
+  
+                  if changed { self.ctx.types.intern(SemanticType::Tuple(new_els)) } else { ty_id }
+  
+              }
+  
+              SemanticType::Function { params, return_type } => {
+  
+                  let mut new_params = Vec::new();
+  
+                  let mut changed = false;
+  
+                  for p in params.iter() {
+  
+                      let new_p = self.substitute_type(*p, subst);
+  
+                      if new_p != *p { changed = true; }
+  
+                      new_params.push(new_p);
+  
+                  }
+  
+                  let new_ret = self.substitute_type(return_type, subst);
+  
+                  if new_ret != return_type { changed = true; }
+  
+                  if changed { self.ctx.types.intern(SemanticType::Function { params: new_params, return_type: new_ret 
+}) } else { ty_id }
+  
+              }
+  
+              SemanticType::Closure(env, params, return_type) => {
+  
+                  let mut new_params = Vec::new();
+  
+                  let mut changed = false;
+  
+                  for p in params.iter() {
+  
+                      let new_p = self.substitute_type(*p, subst);
+  
+                      if new_p != *p { changed = true; }
+  
+                      new_params.push(new_p);
+  
+                  }
+  
+                  let new_ret = self.substitute_type(return_type, subst);
+  
+                  if new_ret != return_type { changed = true; }
+  
+                  if changed { self.ctx.types.intern(SemanticType::Closure(env, new_params, new_ret)) } else { ty_id }
+  
+              }
+  
+              SemanticType::Future(inner) => {
+  
+                  let new_inner = self.substitute_type(inner, subst);
+  
+                  if new_inner == inner { ty_id } else { self.ctx.types.intern(SemanticType::Future(new_inner)) }
+  
+              }
+  
+              _ => ty_id,
+  
+          }
+  
+      }
+  
+  
+  
+      fn emit_type_mismatch(&mut self, msg: &str, expr_id: &mellis_ast::ExprId) {
+  
+          let mut diag = Diagnostic::error(msg.to_string());
+  
+          if let Some(sp) = self.get_expr_span_for_diag(expr_id) {
+  
+              diag = diag.with_span(sp);
+  
+          }
+  
+          self.ctx.diagnostics.push(diag);
+  
+      }
+  
+  
+  
+      fn enforce_mutability(&mut self, expr_id: &mellis_ast::ExprId) {
+  
+          let expr = &self.arena.exprs[expr_id.0 as usize];
+  
+          if let mellis_ast::Expr::Identifier { segments, .. } = expr {
+  
+
+

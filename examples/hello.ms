@@ -23,7 +23,7 @@ impl Printable for Point {
 }
 
 // 5. Hàm Generic bị ràng buộc
-fn display_item@<T: Printable>(item: T) {
+fn display_item<T: Printable>(item: T) {
     // Compiler phải link được hàm display() của Point vào đây!
     item.display(); 
 }
@@ -38,7 +38,7 @@ fn main() -> int_32 {
         dec pt: Point;
         pt.x = x;
         pt.y = 20;
-        display_item@<Point>(pt);
+        display_item<Point>(pt);
         return x;
     }
     return r1;

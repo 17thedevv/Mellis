@@ -1,4 +1,4 @@
-// Test advanced patterns: fn type params + @<T> generic intrinsics
+﻿// Test advanced patterns: fn type params + <T> generic intrinsics
 
 intrinsic fn unreachable() -> void;
 
@@ -30,7 +30,7 @@ fn add_one(x: int_32) -> int_32 {
 
 fn main() -> int_32 {
     dec some_41: Option<int_32> = Option::Some(41);
-    dec mapped: Option<int_32> = some_41.map@<int_32>(add_one);
+    dec mapped: Option<int_32> = some_41.map<int_32>(add_one);
     dec result: int_32 = mapped.unwrap_or(0);
     if result != 42 { return 1; }
 

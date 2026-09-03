@@ -346,18 +346,18 @@ impl DeriveRegistry {
                     let mut match_arms = Vec::new();
                     for variant in &input.variants {
                         if variant.fields.is_empty() {
-                            match_arms.push(format!("{}::{} -> {{ return {}::{}; }}", type_name, variant.name, type_name, variant.name));
+                            match_arms.push(format!("{}::{} -> {{ {}::{} }}", type_name, variant.name, type_name, variant.name));
                         } else {
                             let binders: Vec<String> = variant.fields.iter().enumerate().map(|(i, _)| format!("v{}", i)).collect();
                             let cloners: Vec<String> = binders.iter().map(|b| format!("{}.clone()", b)).collect();
                             // In Mellis, enum variants with payload are written like Variant(v0, v1)
-                            match_arms.push(format!("{}::{}({}) -> {{ return {}::{}({}); }}", 
+                            match_arms.push(format!("{}::{}({}) -> {{ {}::{}({}) }}", 
                                 type_name, variant.name, binders.join(", "),
                                 type_name, variant.name, cloners.join(", ")));
                         }
                     }
                     format!(
-                        "impl Clone for {} {{ fn clone(self: &{}) -> {} {{ return match *self {{ {} }}; }} }}",
+                        "impl Clone for {} {{ fn clone(self: &{}) -> {} {{ match *self {{ {} }} }} }}",
                         type_name, type_name, type_name, match_arms.join(" ")
                     )
                 }
@@ -383,7 +383,7 @@ impl DeriveRegistry {
                 DeriveKind::Struct => {
                     if input.fields.is_empty() {
                         format!(
-                            "impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ return true; }} }}",
+                            "impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ true }} }}",
                             type_name, type_name, type_name
                         )
                     } else {
@@ -392,7 +392,7 @@ impl DeriveRegistry {
                             .collect();
                         let cond = comparisons.join(" && ");
                         format!(
-                            "impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ return {}; }} }}",
+                            "impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ {} }} }}",
                             type_name, type_name, type_name, cond
                         )
                     }
@@ -401,7 +401,7 @@ impl DeriveRegistry {
                     let mut match_arms = Vec::new();
                     for variant in &input.variants {
                         if variant.fields.is_empty() {
-                            match_arms.push(format!("{}::{} -> {{ return match *other {{ {}::{} -> {{ return true; }} _ -> {{ return false; }} }}; }}", 
+                            match_arms.push(format!("{}::{} -> {{ match *other {{ {}::{} -> {{ true }} _ -> {{ false }} }}; }}", 
                                 type_name, variant.name, type_name, variant.name));
                         } else {
                             let self_binders: Vec<String> = variant.fields.iter().enumerate().map(|(i, _)| format!("s{}", i)).collect();
@@ -410,14 +410,14 @@ impl DeriveRegistry {
                                 .map(|(s, o)| format!("{}.eq(&{})", s, o))
                                 .collect();
                             let cond = comparisons.join(" && ");
-                            match_arms.push(format!("{}::{}({}) -> {{ return match *other {{ {}::{}({}) -> {{ return {}; }} _ -> {{ return false; }} }}; }}", 
+                            match_arms.push(format!("{}::{}({}) -> {{ match *other {{ {}::{}({}) -> {{ {} }} _ -> {{ false }} }} }}", 
                                 type_name, variant.name, self_binders.join(", "),
                                 type_name, variant.name, other_binders.join(", "),
                                 cond));
                         }
                     }
                     format!(
-                        "impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ return match *self {{ {} _ -> {{ return false; }} }}; }} }}",
+                        "impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ match *self {{ {} _ -> {{ false }} }}; }} }}",
                         type_name, type_name, type_name, match_arms.join(" ")
                     )
                 }

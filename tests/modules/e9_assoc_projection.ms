@@ -20,7 +20,7 @@ fn extract<T: HasAssoc>(item: &T) -> T::Value {
 
 fn main() -> int_32 {
     dec b = Box { val: 42 };
-    dec res = extract@<Box>(&b);
+    dec res = extract<Box>(&b);
     if res == 42 {
         return 0;
     }

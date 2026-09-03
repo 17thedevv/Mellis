@@ -1,0 +1,342 @@
+Module {
+    functions: [
+        Function {
+            name: GlobalId {
+                name: "main",
+                symbol_id: Some(
+                    SymbolId(
+                        4,
+                    ),
+                ),
+            },
+            is_extern: false,
+            is_async: false,
+            arg_count: 0,
+            link_name: None,
+            param_types: [],
+            ret_ty: SemanticTypeId(
+                0,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                        ValueId(
+                            1,
+                        ),
+                        ValueId(
+                            2,
+                        ),
+                        ValueId(
+                            3,
+                        ),
+                        ValueId(
+                            4,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_arm2",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_arm2",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        CondBr {
+                            condition: Boolean(
+                                true,
+                            ),
+                            true_target: LabelId {
+                                name: "match_body4",
+                            },
+                            false_target: LabelId {
+                                name: "match_arm3",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_body4",
+                    },
+                    insts: [
+                        ValueId(
+                            5,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_end1",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_arm3",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        CondBr {
+                            condition: Boolean(
+                                true,
+                            ),
+                            true_target: LabelId {
+                                name: "match_body6",
+                            },
+                            false_target: LabelId {
+                                name: "match_unreachable5",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_body6",
+                    },
+                    insts: [
+                        ValueId(
+                            6,
+                        ),
+                    ],
+                    terminator: Some(
+                        Br {
+                            target: LabelId {
+                                name: "match_end1",
+                            },
+                        },
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_unreachable5",
+                    },
+                    insts: [],
+                    terminator: Some(
+                        Unreachable,
+                    ),
+                },
+                BasicBlock {
+                    label: LabelId {
+                        name: "match_end1",
+                    },
+                    insts: [
+                        ValueId(
+                            7,
+                        ),
+                    ],
+                    terminator: Some(
+                        Ret {
+                            value: None,
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: Variant {
+                        enum_ty: SemanticTypeId(
+                            7,
+                        ),
+                        variant_idx: 0,
+                        args: [],
+                    },
+                    ty: SemanticTypeId(
+                        7,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 77,
+                            end: 82,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        7,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 73,
+                            end: 74,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                1,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        7,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 73,
+                            end: 74,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                1,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        7,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 100,
+                            end: 101,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        10,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 94,
+                            end: 99,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                4,
+                            ),
+                        ),
+                        value: Number(
+                            "0",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        10,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 94,
+                            end: 99,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                4,
+                            ),
+                        ),
+                        value: Number(
+                            "0",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        10,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 94,
+                            end: 99,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                4,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        10,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 94,
+                            end: 99,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                },
+            ],
+        },
+    ],
+}
