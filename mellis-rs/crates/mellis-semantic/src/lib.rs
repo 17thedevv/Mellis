@@ -128,7 +128,7 @@ impl SemanticContext {
                 self.needs_drop(*inner)
             }
             ty::SemanticType::DynTrait(_) => true,
-            ty::SemanticType::GenericParam(_) => false, // TODO(phase_1c): Fix generic substitution to avoid memory leaks
+            ty::SemanticType::GenericParam(_) => false, // TODO(phase_1c): Fix generic substitution. Cannot return true yet because it breaks borrow checker for generic enums (e.g., match Option<T> causes conditional move drop errors).
             _ => false,
         };
         

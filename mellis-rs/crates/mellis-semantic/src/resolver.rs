@@ -204,6 +204,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             );
                             self.ctx.symbol_table.set_inner_scope(sym_id, scope);
                         }
+                    } else {
+                        self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(format!("unresolved import module `{}`", name_str)).with_span(*name));
                     }
                 }
                 _ => {}
@@ -487,7 +489,31 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
 
-                        self.enter_scope(crate::symbol::ScopeKind::Struct);
+                        let trait_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
+                        self.ctx.symbol_table.set_inner_scope(sym_id, trait_scope);
+                        
+                        if !generic_params.is_empty() {
+                            for (idx, gp) in generic_params.iter().enumerate() {
+                                let gp_name_str = self.source
+                                    [gp.name.start as usize..gp.name.end as usize]
+                                    .to_string();
+                                let gp_sym_id = self.ctx.symbol_table.declare_symbol(
+                                    gp_name_str,
+                                    crate::symbol::SymbolKind::TypeParam,
+                                    self.current_scope,
+                                    gp.name,
+                                    Some(*decl_id),
+                                    mellis_ast::Visibility::Private,
+                                    &mut self.ctx.diagnostics,
+                                );
+                                self.ctx
+                                    .tables
+                                    .generic_param_symbols
+                                    .insert((*decl_id, idx), gp_sym_id);
+                                self.ctx.tables.symbol_decls.insert(gp_sym_id, *decl_id);
+                            }
+                        }
+
                         let mut trait_method_syms = Vec::new();
                         for method_id in methods {
                             let item = Item::Decl(*method_id);
@@ -732,6 +758,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 );
                                 self.ctx.symbol_table.set_inner_scope(sym_id, scope);
                             }
+                        } else {
+                            self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(format!("unresolved import module `{}`", name_str)).with_span(*name));
                         }
                     }
                     _ => {}
