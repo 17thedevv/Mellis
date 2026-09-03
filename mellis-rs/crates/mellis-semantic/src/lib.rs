@@ -81,12 +81,6 @@ impl SemanticContext {
 
     pub fn needs_drop(&self, id: ty::SemanticTypeId) -> bool {
         let ty = self.types.get(id);
-        if let ty::SemanticType::Struct(sym_id, _, _) = ty {
-            let name = &self.symbol_table.get_symbol(*sym_id).name;
-            if name == "File" {
-                println!("DEBUG: needs_drop checking File, drop_impls.contains_key: {}", self.tables.drop_impls.contains_key(sym_id));
-            }
-        }
         if let Some(&state) = self.needs_drop_cache.borrow().get(&id) {
             match state {
                 NeedsDropState::Yes => return true,

@@ -155,9 +155,94 @@ impl<'a> TypeChecker<'a> {
 
     pub fn typecheck_items(&mut self, items: &[Item]) {
         self.populate_signatures(items);
+        self.check_recursive_types(items);
         self.populate_trait_bounds(items);
         for item in items {
             self.typecheck_item(item);
+        }
+    }
+
+    fn check_recursive_types(&mut self, items: &[Item]) {
+        let mut visiting = std::collections::HashSet::new();
+        let mut visited = std::collections::HashSet::new();
+
+        for item in items {
+            if let Item::Decl(decl_id) = item {
+                if let Some(&sym_id) = self.ctx.tables.decl_symbols.get(decl_id) {
+                    if let Some(ty_id) = self.ctx.tables.symbol_types.get(&sym_id).copied() {
+                        self.check_recursive_type(ty_id, *decl_id, &mut visiting, &mut visited);
+                    }
+                }
+            }
+        }
+    }
+
+    fn check_recursive_type(
+        &mut self,
+        ty_id: SemanticTypeId,
+        original_decl: mellis_ast::DeclId,
+        visiting: &mut std::collections::HashSet<crate::SymbolId>,
+        visited: &mut std::collections::HashSet<crate::SymbolId>,
+    ) {
+        let ty = self.ctx.types.get(ty_id).clone();
+        
+        let sym_id_opt = match ty {
+            SemanticType::Struct(sym_id, _, _) => Some(sym_id),
+            SemanticType::Enum(sym_id, _, _) => Some(sym_id),
+            _ => None,
+        };
+
+        if let Some(sym_id) = sym_id_opt {
+            if visited.contains(&sym_id) {
+                return;
+            }
+            if !visiting.insert(sym_id) {
+                let span = match &self.arena.decls[original_decl.0 as usize] {
+                    mellis_ast::Decl::Struct { name, .. } => *name,
+                    mellis_ast::Decl::Enum { name, .. } => *name,
+                    mellis_ast::Decl::TypeAlias { name, .. } => *name,
+                    _ => mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0),
+                };
+                self.ctx.diagnostics.push(Diagnostic::error("Recursive type has infinite size".to_string()).with_span(span));
+                return;
+            }
+        }
+
+        match ty {
+            SemanticType::Struct(sym_id, _, _) => {
+                if let Some(&full_ty_id) = self.ctx.tables.symbol_types.get(&sym_id) {
+                    if let SemanticType::Struct(_, _, full_fields) = self.ctx.types.get(full_ty_id).clone() {
+                        for f in full_fields {
+                            self.check_recursive_type(f, original_decl, visiting, visited);
+                        }
+                    }
+                }
+            }
+            SemanticType::Enum(sym_id, _, _) => {
+                if let Some(&full_ty_id) = self.ctx.tables.symbol_types.get(&sym_id) {
+                    if let SemanticType::Enum(_, _, full_variants) = self.ctx.types.get(full_ty_id).clone() {
+                        for v in full_variants {
+                            self.check_recursive_type(v, original_decl, visiting, visited);
+                        }
+                    }
+                }
+            }
+            SemanticType::Tuple(fields) => {
+                for f in fields {
+                    self.check_recursive_type(f, original_decl, visiting, visited);
+                }
+            }
+            SemanticType::Array(inner, _) => {
+                self.check_recursive_type(inner, original_decl, visiting, visited);
+            }
+            // Indirections do not contribute to infinite size
+            SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Box(..) | SemanticType::Function { .. } | SemanticType::Closure(..) => {}
+            _ => {}
+        }
+
+        if let Some(sym_id) = sym_id_opt {
+            visiting.remove(&sym_id);
+            visited.insert(sym_id);
         }
     }
 
@@ -262,6 +347,8 @@ impl<'a> TypeChecker<'a> {
                             if let Some(inner) = self.ctx.symbol_table.get_symbol(sym_id).inner_scope {
                                 self.current_scope = inner;
                             }
+                            let dummy_ty = self.ctx.types.intern(SemanticType::Struct(sym_id, vec![], vec![]));
+                            self.ctx.tables.symbol_types.insert(sym_id, dummy_ty);
                         }
                         let mut field_tys = Vec::new();
                         let mut seen_fields = std::collections::HashSet::new();
@@ -285,6 +372,8 @@ impl<'a> TypeChecker<'a> {
                             if let Some(inner) = self.ctx.symbol_table.get_symbol(sym_id).inner_scope {
                                 self.current_scope = inner;
                             }
+                            let dummy_ty = self.ctx.types.intern(SemanticType::Enum(sym_id, vec![], vec![]));
+                            self.ctx.tables.symbol_types.insert(sym_id, dummy_ty);
                         }
                         let mut variant_tys = Vec::new();
                         let mut seen_variants = std::collections::HashSet::new();
@@ -703,6 +792,7 @@ impl<'a> TypeChecker<'a> {
         let f_ty = self.ctx.types.get(from_inner).clone();
         let concrete_sym = match f_ty {
             SemanticType::Struct(s_sym, _, _) => s_sym,
+            SemanticType::Enum(e_sym, _, _) => e_sym,
             _ => return false,
         };
         
@@ -2032,7 +2122,7 @@ impl<'a> TypeChecker<'a> {
             }
             Expr::Unary { op, operand } => {
                 let inner_ty = self.typecheck_expr(operand);
-                println!("DEBUG Unary: op={:?}, inner_ty={:?}", op, self.ctx.types.get(inner_ty));
+
                 use mellis_ast::expr::UnaryOp;
                 match op {
                     UnaryOp::Ref => self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Immutable, inner_ty)),

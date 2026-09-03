@@ -138,7 +138,6 @@ impl<'arena> DeriveContext<'arena> {
         let offset = self.source.len() as u32;
         self.source.push('\n');
         self.source.push_str(code);
-        eprintln!("DEBUG DERIVE: parse_and_append_item called with code:\n{}", code);
 
         let mut temp_arena = AstArena::new();
         let lexer = Lexer::new(code, self.file_id);
@@ -146,7 +145,6 @@ impl<'arena> DeriveContext<'arena> {
 
         match parser.parse_file() {
             Ok(items) => {
-                eprintln!("DEBUG DERIVE: Parsed {} items", items.len());
                 let relocator = mellis_ast::relocator::AstRelocator::new(
                     self.arena.exprs.len() as u32,
                     self.arena.stmts.len() as u32,
@@ -172,12 +170,10 @@ impl<'arena> DeriveContext<'arena> {
                 self.arena.decls.extend(temp_arena.decls);
                 self.arena.types.extend(temp_arena.types);
                 self.arena.pats.extend(temp_arena.pats);
-                eprintln!("DEBUG DERIVE: Main arena now has {} decls, {} exprs", self.arena.decls.len(), self.arena.exprs.len());
 
                 Ok(result)
             }
             Err(()) => {
-                eprintln!("DEBUG DERIVE: parse failed with {} diagnostics", parser.diagnostics.len());
                 self.diagnostics.extend(parser.diagnostics);
                 Err(())
             }
@@ -187,7 +183,6 @@ impl<'arena> DeriveContext<'arena> {
     /// Parse and emit a single impl block.
     /// Returns the decl_id of the generated impl if successful.
     pub fn emit_impl(&mut self, impl_code: &str) -> Result<(), ()> {
-        eprintln!("DEBUG DERIVE: emit_impl called with code:\n{}", impl_code);
         self.parse_and_append_item(impl_code).map(|_| ())
     }
 }
@@ -313,7 +308,6 @@ impl DeriveRegistry {
         // Register Clone derive
         let clone = Arc::new(|ctx: &mut DeriveContext, input: &DeriveInput| -> Result<Vec<Item>, Diagnostic> {
             let type_name = &input.name;
-            eprintln!("DEBUG DERIVE: Clone derive called for type '{}'", type_name);
 
             // First, emit the trait definition if not already emitted
             ctx.ensure_trait_defined(
@@ -363,7 +357,7 @@ impl DeriveRegistry {
                 }
             };
 
-            eprintln!("DEBUG DERIVE: Generated Clone code:\n{}", code);
+
             ctx.parse_and_append_item(&code)
                 .map_err(|_| Diagnostic::error(format!("failed to parse generated Clone for `{}`", type_name)).with_span(ctx.derive_span))
         });

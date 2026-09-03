@@ -215,11 +215,7 @@ impl TypeContext {
         let ty = source_ctx.get(id).clone();
         match ty {
             SemanticType::Primitive(p) => self.intern(SemanticType::Primitive(p)),
-            SemanticType::Struct(sym, args, _) => {
-                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
-                let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
-                self.intern(SemanticType::Struct(new_sym, new_args, Vec::new()))
-            }
+
             SemanticType::Struct(sym, args, fields) => {
                 let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
                 let new_args = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();

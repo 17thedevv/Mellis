@@ -204,8 +204,6 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             );
                             self.ctx.symbol_table.set_inner_scope(sym_id, scope);
                         }
-                    } else {
-                        self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(format!("unresolved import module `{}`", name_str)).with_span(*name));
                     }
                 }
                 _ => {}
@@ -758,8 +756,6 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 );
                                 self.ctx.symbol_table.set_inner_scope(sym_id, scope);
                             }
-                        } else {
-                            self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(format!("unresolved import module `{}`", name_str)).with_span(*name));
                         }
                     }
                     _ => {}

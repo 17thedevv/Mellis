@@ -102,15 +102,12 @@ impl<'a> AttributeProcessor<'a> {
             out_items.push(item.clone());
             if let Item::Decl(decl_id) = item {
                 let decl = self.arena.decls[decl_id.0 as usize].clone();
-                eprintln!("DEBUG ANNOT: Processing decl id {:?}, kind: {:?}", decl_id, std::mem::discriminant(&decl));
                 let extra = self.process_decl(*decl_id, &decl);
-                eprintln!("DEBUG ANNOT: Generated {} items from decl", extra.len());
                 generated_items.extend(extra);
             }
         }
 
         out_items.extend(generated_items);
-        eprintln!("DEBUG ANNOT: Total out_items: {}", out_items.len());
 
         if self.diagnostics.is_empty() {
             Ok(out_items)

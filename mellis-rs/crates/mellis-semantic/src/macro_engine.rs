@@ -646,7 +646,7 @@ impl<'a> MacroEngine<'a> {
         }).unwrap_or(false);
 
         if has_trace {
-            eprintln!("--> expanding macro `{}!` at {:?}", macro_name, call_span);
+
         }
 
         for rule in &rules {
