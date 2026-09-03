@@ -8,6 +8,7 @@ pub struct TypeChecker<'a> {
     arena: &'a AstArena,
     source: &'a str,
     is_unsafe_context: bool,
+    loop_depth: u32,
     active_lambdas: Vec<mellis_ast::ExprId>,
     current_self_type: Option<SemanticTypeId>,
     current_async_fn: Option<mellis_ast::DeclId>,
@@ -18,11 +19,11 @@ pub struct TypeChecker<'a> {
 
 impl<'a> TypeChecker<'a> {
     pub fn new(ctx: &'a mut SemanticContext, arena: &'a AstArena, source: &'a str) -> Self {
-        Self { ctx, arena, source, is_unsafe_context: false, active_lambdas: Vec::new(), current_self_type: None, current_async_fn: None, comptime_engine: None, current_return_type: Vec::new(), current_scope: crate::ScopeId(0) }
+        Self { ctx, arena, source, is_unsafe_context: false, loop_depth: 0, active_lambdas: Vec::new(), current_self_type: None, current_async_fn: None, comptime_engine: None, current_return_type: Vec::new(), current_scope: crate::ScopeId(0) }
     }
 
     pub fn new_with_engine(ctx: &'a mut SemanticContext, arena: &'a AstArena, source: &'a str, comptime_engine: &'a dyn crate::ComptimeEngine) -> Self {
-        Self { ctx, arena, source, is_unsafe_context: false, active_lambdas: Vec::new(), current_self_type: None, current_async_fn: None, comptime_engine: Some(comptime_engine), current_return_type: Vec::new(), current_scope: crate::ScopeId(0) }
+        Self { ctx, arena, source, is_unsafe_context: false, loop_depth: 0, active_lambdas: Vec::new(), current_self_type: None, current_async_fn: None, comptime_engine: Some(comptime_engine), current_return_type: Vec::new(), current_scope: crate::ScopeId(0) }
     }
 
     pub fn eval_comptime_expr(&mut self, expr_id: mellis_ast::ExprId) -> Result<crate::comptime::ComptimeValue, crate::comptime::ComptimeError> {
@@ -263,7 +264,12 @@ impl<'a> TypeChecker<'a> {
                             }
                         }
                         let mut field_tys = Vec::new();
+                        let mut seen_fields = std::collections::HashSet::new();
                         for field in fields {
+                            let field_name = &self.source[field.name.start as usize..field.name.end as usize];
+                            if !seen_fields.insert(field_name) {
+                                self.ctx.diagnostics.push(Diagnostic::error(format!("Duplicate field `{}` in struct", field_name)).with_span(field.name));
+                            }
                             field_tys.push(self.lower_type(field.ty));
                         }
                         if let Some(sym_id) = sym_id_opt {
@@ -281,7 +287,12 @@ impl<'a> TypeChecker<'a> {
                             }
                         }
                         let mut variant_tys = Vec::new();
+                        let mut seen_variants = std::collections::HashSet::new();
                         for variant in variants {
+                            let variant_name = &self.source[variant.name.start as usize..variant.name.end as usize];
+                            if !seen_variants.insert(variant_name) {
+                                self.ctx.diagnostics.push(Diagnostic::error(format!("Duplicate variant `{}` in enum", variant_name)).with_span(variant.name));
+                            }
                             // Each variant's type is based on its fields
                             let mut field_tys = Vec::new();
                             for field_id in &variant.fields {
@@ -1049,6 +1060,9 @@ impl<'a> TypeChecker<'a> {
             mellis_ast::Pattern::Tuple { elements, .. } => {
                 let resolved_ty = self.ctx.types.get(ty).clone();
                 if let SemanticType::Tuple(elem_tys) = resolved_ty {
+                    if elements.len() != elem_tys.len() {
+                        self.ctx.diagnostics.push(Diagnostic::error(format!("Tuple pattern has {} elements, but tuple type has {}", elements.len(), elem_tys.len())));
+                    }
                     for (i, elem) in elements.iter().enumerate() {
                         if i < elem_tys.len() {
                             self.typecheck_pattern(elem, elem_tys[i]);
@@ -1202,7 +1216,9 @@ impl<'a> TypeChecker<'a> {
                 if self.unify(bool_ty, cond_ty).is_err() {
                     self.ctx.diagnostics.push(Diagnostic::error("while condition must be a boolean"));
                 }
+                self.loop_depth += 1;
                 self.typecheck_stmt(body);
+                self.loop_depth -= 1;
             }
             Stmt::For { init, cond, step, body, iterable, .. } => {
                 if let Some(item) = init { self.typecheck_item(item); }
@@ -1215,7 +1231,9 @@ impl<'a> TypeChecker<'a> {
                 }
                 if let Some(s) = step { self.typecheck_expr(s); }
                 if let Some(iter) = iterable { self.typecheck_expr(iter); }
+                self.loop_depth += 1;
                 self.typecheck_stmt(body);
+                self.loop_depth -= 1;
             }
             Stmt::Return { value } => {
                 let expected_ty = self.current_return_type.last().copied().unwrap_or_else(|| self.ctx.types.intern(SemanticType::Void));
@@ -1239,8 +1257,15 @@ impl<'a> TypeChecker<'a> {
                 self.typecheck_stmt(body);
                 self.is_unsafe_context = old;
             }
-            Stmt::Break { .. } | Stmt::Continue { .. } => {
-                // TODO(Batch 2): Add loop-context validation
+            Stmt::Break { .. } => {
+                if self.loop_depth == 0 {
+                    self.ctx.diagnostics.push(Diagnostic::error("`break` outside of a loop"));
+                }
+            }
+            Stmt::Continue { .. } => {
+                if self.loop_depth == 0 {
+                    self.ctx.diagnostics.push(Diagnostic::error("`continue` outside of a loop"));
+                }
             }
             other => {
                 self.ctx.diagnostics.push(Diagnostic::error(format!("Unsupported or unrecognized statement construct in semantic phase: {:?}", other)));
