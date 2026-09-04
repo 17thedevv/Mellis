@@ -79,6 +79,7 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
     for (i, value) in func.values.iter().enumerate() {
         let ctx = format!("Value {}", i);
         match &value.inst {
+            Instruction::Nop => {}
             Instruction::MarkInit { value } | Instruction::BoxNew { value } | Instruction::BoxFree { value } | Instruction::Drop { value, .. } => {
                 check_operand(value, &mut errors, &ctx);
             }

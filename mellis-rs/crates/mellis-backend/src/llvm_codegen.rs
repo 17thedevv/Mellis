@@ -200,8 +200,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(self.context.struct_type(&[], false).into())
             }
             SemanticType::Error => Err(BackendError::InvariantViolation("Error type passed to backend".into())),
-            SemanticType::InferenceVar(var) => Err(BackendError::InvariantViolation(format!("Unresolved inference variable {} reached backend", var))),
-            SemanticType::GenericParam(sym) => Err(BackendError::InvariantViolation(format!("Unsubstituted generic parameter {:?} reached backend", sym))),
+            SemanticType::InferenceVar(var) => Err(BackendError::InvariantViolation(format!("Unresolved inference variable {} reached backend inside ty_id {}", var, ty_id.0))),
+            SemanticType::GenericParam(sym) => Err(BackendError::InvariantViolation(format!("Unsubstituted generic parameter {:?} reached backend inside ty_id {}", sym, ty_id.0))),
             SemanticType::Never => {
                 // Map Never to an empty struct {} just like Void, to prevent Alloca panics
                 Ok(self.context.struct_type(&[], false).into())
@@ -296,20 +296,18 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let val_data = func.value(val_id);
                 let llvm_val = self.generate_inst(val_id, val_data, func)?;
                 self.value_map.insert(val_id, llvm_val);
-            }
-            
-            if is_entry {
-                is_entry = false;
-                for i in 0..func.arg_count {
-                    if let Some(param) = llvm_func.get_nth_param(i as u32) {
-                        if let Some(param_alloc) = self.value_map.get(&mellis_mvir::ValueId(i as u32)) {
-                            if param_alloc.is_pointer_value() {
-                                self.builder.build_store(param_alloc.into_pointer_value(), param).unwrap();
-                            }
+                
+                if is_entry && (val_id.0 as usize) < func.arg_count {
+                    if let Some(param) = llvm_func.get_nth_param(val_id.0) {
+                        if llvm_val.is_pointer_value() {
+                            self.builder.build_store(llvm_val.into_pointer_value(), param).unwrap();
                         }
                     }
                 }
             }
+            is_entry = false;
+            
+
             
             if let Some(term) = &block.terminator {
                 self.generate_term(term, func)?;

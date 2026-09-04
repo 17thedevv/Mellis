@@ -44,8 +44,8 @@ fn main() {
     dec b_opt = a_opt; 
     
     // Use `a_opt` here
-    match a_opt { //~ ERROR Use of moved value
-        Option::Some(a) -> use_val<i32>(a), //~ ERROR Use of moved value
+    match a_opt { //~ ERROR Use of moved value '%v9' //~ ERROR Use of moved value '%v9.0'
+        Option::Some(a) -> use_val<i32>(a),
         Option::None -> {},
     };
     

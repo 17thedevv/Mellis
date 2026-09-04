@@ -444,7 +444,7 @@ impl<'a> Parser<'a> {
         let generic_params = self.parse_generic_params();
         self.consume(TokenKind::LBrace, "Expected '{'")?;
         let mut methods = Vec::new();
-        let associated_types = Vec::new();
+        let mut associated_types = Vec::new();
         while !self.check(TokenKind::RBrace) && !self.is_at_end() {
             // Skip annotations/visibility for now
             let _ = self.match_token(TokenKind::KwExport);
@@ -452,15 +452,8 @@ impl<'a> Parser<'a> {
                 let m = self.parse_func_decl(Visibility::Public, Vec::new(), false)?;
                 methods.push(m);
             } else if self.match_token(TokenKind::KwType) {
-                // Skip associated type declarations for now
-                let _ = self.advance(); // type name
-                if self.match_token(TokenKind::Colon) {
-                    // Skip bounds
-                    while !self.check(TokenKind::Semi) && !self.check(TokenKind::RBrace) && !self.is_at_end() {
-                        self.advance();
-                    }
-                }
-                let _ = self.match_token(TokenKind::Semi);
+                let type_decl = self.parse_type_alias_decl(Visibility::Public, Vec::new())?;
+                associated_types.push(type_decl);
             } else {
                 self.advance(); // skip unexpected tokens
             }
@@ -491,18 +484,15 @@ impl<'a> Parser<'a> {
         };
         self.consume(TokenKind::LBrace, "Expected '{'")?;
         let mut methods = Vec::new();
-        let associated_types = Vec::new();
+        let mut associated_types = Vec::new();
         while !self.check(TokenKind::RBrace) && !self.is_at_end() {
             let _ = self.match_token(TokenKind::KwExport);
             if self.check(TokenKind::KwFn) || self.check(TokenKind::KwUnsafe) || self.check(TokenKind::KwIntrinsic) {
                 let m = self.parse_func_decl(Visibility::Public, Vec::new(), false)?;
                 methods.push(m);
             } else if self.match_token(TokenKind::KwType) {
-                // Skip associated type impl
-                while !self.check(TokenKind::Semi) && !self.check(TokenKind::RBrace) && !self.is_at_end() {
-                    self.advance();
-                }
-                let _ = self.match_token(TokenKind::Semi);
+                let type_decl = self.parse_type_alias_decl(Visibility::Public, Vec::new())?;
+                associated_types.push(type_decl);
             } else {
                 self.advance();
             }
@@ -566,9 +556,10 @@ impl<'a> Parser<'a> {
             Vec::new()
         };
         
-        self.consume(TokenKind::Equal, "Expected '=' in type alias")?;
-        
-        let aliased_type = Some(self.parse_type()?);
+        let mut aliased_type = None;
+        if self.match_token(TokenKind::Equal) {
+            aliased_type = Some(self.parse_type()?);
+        }
         
         self.consume(TokenKind::Semi, "Expected ';' after type alias")?;
         

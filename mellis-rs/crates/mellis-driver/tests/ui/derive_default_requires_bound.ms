@@ -9,4 +9,4 @@ struct Outer {
 
 fn main() -> i32 {
     return 0;
-} //~ ERROR Symbol 'NoDefaultType::default' not found
+} //~ ERROR Symbol 'NoDefaultType::default' not found //~ ERROR Type mismatch for field 'inner'

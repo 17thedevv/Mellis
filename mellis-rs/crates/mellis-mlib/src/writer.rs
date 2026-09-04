@@ -320,6 +320,7 @@ impl MlibWriter {
             Instruction::Null { ty } => MlibInstruction::Null {
                 ty: ty.0,
             },
+            Instruction::Nop => MlibInstruction::Nop,
             Instruction::SizeOf { ty } => MlibInstruction::SizeOf {
                 ty: ty.0,
             },
@@ -639,6 +640,9 @@ impl MlibWriter {
             MlibInstruction::Null { ty } => {
                 w.write_all(&[0x22u8])?;
                 w.write_all(&ty.to_le_bytes())?;
+            }
+            MlibInstruction::Nop => {
+                w.write_all(&[0x24u8])?; // Assuming 0x24 is unused (0x23 is Await probably?)
             }
             MlibInstruction::Cast { value, ty } => {
                 w.write_all(&[25u8])?;

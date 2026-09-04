@@ -476,7 +476,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         let name_str =
                             self.source[name.start as usize..name.end as usize].to_string();
                         let sym_id = self.ctx.symbol_table.declare_symbol(
-                            name_str,
+                            name_str.clone(),
                             SymbolKind::Trait,
                             self.current_scope,
                             *name,
@@ -486,6 +486,10 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+
+                        if name_str == "Try" {
+                            self.ctx.tables.lang_items.insert(crate::semantic_tables::LangItem::Try, sym_id);
+                        }
 
                         let trait_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
                         self.ctx.symbol_table.set_inner_scope(sym_id, trait_scope);
@@ -569,10 +573,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         {
                             segments.last().and_then(|s| {
                                 let name = &self.source[s.start as usize..s.end as usize];
-                                eprintln!("DEBUG: Resolving impl self_type: looking up '{}'", name);
-                                let result = self.ctx.symbol_table.lookup(name, crate::ScopeId(0));
-                                eprintln!("DEBUG: Symbol lookup result: {:?}", result);
-                                result
+                                self.ctx.symbol_table.lookup(name, crate::ScopeId(0))
                             })
                         } else {
                             None
@@ -583,10 +584,6 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             if let mellis_ast::Type::Named { segments, .. } = trait_ast_ty {
                                 segments.last().and_then(|s| {
                                     let name = &self.source[s.start as usize..s.end as usize];
-                                    eprintln!(
-                                        "DEBUG: Resolving impl trait_type: looking up '{}'",
-                                        name
-                                    );
                                     self.ctx.symbol_table.lookup(name, crate::ScopeId(0))
                                 })
                             } else {
@@ -597,21 +594,26 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         };
 
                         if let Some(self_sym) = self_sym_opt {
-                            eprintln!(
-                                "DEBUG: Registering impl in trait_impls: self_sym={:?}, trait_sym={:?}",
-                                self_sym, trait_sym_opt
-                            );
+                            let key = crate::semantic_tables::ImplKey {
+                                trait_id: trait_sym_opt,
+                                self_type_def: self_sym,
+                            };
+                            
+                            if self.ctx.tables.trait_impls.contains_key(&key) {
+                                let span = if let mellis_ast::Type::Named { segments, .. } = &self.arena.types[self_type.0 as usize] {
+                                    *segments.last().unwrap()
+                                } else {
+                                    mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0)
+                                };
+                                self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error("conflicting implementations for trait".to_string()).with_span(span));
+                            }
+                            
                             self.ctx
                                 .tables
                                 .trait_impls
-                                .entry(crate::semantic_tables::ImplKey {
-                                    trait_id: trait_sym_opt,
-                                    self_type_def: self_sym,
-                                })
+                                .entry(key)
                                 .or_default()
                                 .push(*decl_id);
-                        } else {
-                            eprintln!("DEBUG: Could not resolve self_sym for impl");
                         }
                     }
                     Decl::Macro {
@@ -634,6 +636,52 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             self.ctx.tables.decl_macros.insert(*decl_id, sym_id);
                             self.ctx.tables.macro_decls.insert(sym_id, *decl_id);
                         }
+                    }
+                    Decl::TypeAlias {
+                        name,
+                        visibility,
+                        generic_params,
+                        ..
+                    } => {
+                        let name_str =
+                            self.source[name.start as usize..name.end as usize].to_string();
+                        let sym_id = self.ctx.symbol_table.declare_symbol(
+                            name_str,
+                            SymbolKind::Alias,
+                            self.current_scope,
+                            *name,
+                            Some(*decl_id),
+                            *visibility,
+                            &mut self.ctx.diagnostics,
+                        );
+                        self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
+                        self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+
+                        let alias_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
+                        self.ctx.symbol_table.set_inner_scope(sym_id, alias_scope);
+                        
+                        if !generic_params.is_empty() {
+                            for (idx, gp) in generic_params.iter().enumerate() {
+                                let gp_name_str = self.source
+                                    [gp.name.start as usize..gp.name.end as usize]
+                                    .to_string();
+                                let gp_sym_id = self.ctx.symbol_table.declare_symbol(
+                                    gp_name_str,
+                                    crate::symbol::SymbolKind::TypeParam,
+                                    self.current_scope,
+                                    gp.name,
+                                    Some(*decl_id),
+                                    mellis_ast::Visibility::Private,
+                                    &mut self.ctx.diagnostics,
+                                );
+                                self.ctx
+                                    .tables
+                                    .generic_param_symbols
+                                    .insert((*decl_id, idx), gp_sym_id);
+                                self.ctx.tables.symbol_decls.insert(gp_sym_id, *decl_id);
+                            }
+                        }
+                        self.exit_scope();
                     }
                     Decl::Module {
                         name,

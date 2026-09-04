@@ -160,7 +160,11 @@ impl TypeContext {
             SemanticType::Enum(sym, args, variants) => {
                 let new_args: Vec<_> = args.iter().map(|&a| self.subst(a, subst)).collect();
                 let new_variants: Vec<_> = variants.iter().map(|&v| self.subst(v, subst)).collect();
-                self.intern(SemanticType::Enum(sym, new_args, new_variants))
+                let ret = self.intern(SemanticType::Enum(sym, new_args, new_variants));
+                if id.0 == 56 || ret.0 == 56 {
+                    println!("DEBUG: subst(56) -> Enum({:?}, {:?}, ...) -> ret {}", sym, args, ret.0);
+                }
+                ret
             }
             SemanticType::Tuple(args) => {
                 let new_args: Vec<_> = args.iter().map(|&a| self.subst(a, subst)).collect();
@@ -196,6 +200,30 @@ impl TypeContext {
         }
     }
     
+    
+    pub fn occurs_check(&self, var: u32, ty: SemanticTypeId) -> bool {
+        let ty = self.resolve(ty);
+        match self.get(ty).clone() {
+            SemanticType::InferenceVar(v) => v == var,
+            SemanticType::Struct(_, args, fields) => {
+                args.iter().any(|&a| self.occurs_check(var, a)) || fields.iter().any(|&f| self.occurs_check(var, f))
+            }
+            SemanticType::Enum(_, args, variants) => {
+                args.iter().any(|&a| self.occurs_check(var, a)) || variants.iter().any(|&v| self.occurs_check(var, v))
+            }
+            SemanticType::Tuple(args) => args.iter().any(|&a| self.occurs_check(var, a)),
+            SemanticType::Array(inner, _) | SemanticType::Slice(inner) | SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) | SemanticType::Box(inner) => {
+                self.occurs_check(var, inner)
+            }
+            SemanticType::Function { params, return_type } => {
+                params.iter().any(|&p| self.occurs_check(var, p)) || self.occurs_check(var, return_type)
+            }
+            SemanticType::Closure(_, captures, ret) => captures.iter().any(|&c| self.occurs_check(var, c)) || self.occurs_check(var, ret),
+            SemanticType::Future(inner) => self.occurs_check(var, inner),
+            _ => false,
+        }
+    }
+
     pub fn resolve(&self, id: SemanticTypeId) -> SemanticTypeId {
         let mut current = id;
         loop {
@@ -209,6 +237,89 @@ impl TypeContext {
             break;
         }
         current
+    }
+
+
+    pub fn contains_inference_var(&self, id: SemanticTypeId) -> bool {
+        self.type_flags(id).0
+    }
+    
+    pub fn contains_generic_param(&self, id: SemanticTypeId) -> bool {
+        self.type_flags(id).1
+    }
+    
+    pub fn is_monomorphic(&self, id: SemanticTypeId) -> bool {
+        let flags = self.type_flags(id);
+        !flags.0 && !flags.1 && !flags.2 // has_infer, has_generic, has_error
+    }
+    
+    fn type_flags(&self, id: SemanticTypeId) -> (bool, bool, bool) { // (has_infer, has_generic, has_error)
+        let resolved = self.resolve_inference(id);
+        let ty = self.get(resolved).clone();
+        match ty {
+            SemanticType::Error => (false, false, true),
+            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => (false, false, false),
+            SemanticType::InferenceVar(_) => (true, false, false),
+            SemanticType::GenericParam(_) => (false, true, false),
+            SemanticType::Struct(_, args, fields) | SemanticType::Enum(_, args, fields) => {
+                let mut has_infer = false;
+                let mut has_gen = false;
+                let mut has_err = false;
+                for &a in args.iter().chain(fields.iter()) {
+                    let (i, g, e) = self.type_flags(a);
+                    has_infer |= i; has_gen |= g; has_err |= e;
+                    if has_infer && has_gen && has_err { break; }
+                }
+                (has_infer, has_gen, has_err)
+            }
+            SemanticType::Tuple(args) => {
+                let mut has_infer = false;
+                let mut has_gen = false;
+                let mut has_err = false;
+                for &a in args.iter() {
+                    let (i, g, e) = self.type_flags(a);
+                    has_infer |= i; has_gen |= g; has_err |= e;
+                    if has_infer && has_gen && has_err { break; }
+                }
+                (has_infer, has_gen, has_err)
+            }
+            SemanticType::Array(inner, _) | SemanticType::Slice(inner) | SemanticType::Pointer(_, inner) | 
+            SemanticType::Reference(_, _, inner) | SemanticType::Box(inner) | SemanticType::Future(inner) | 
+            SemanticType::Range(inner) => {
+                self.type_flags(inner)
+            }
+            SemanticType::Function { params, return_type } => {
+                let mut has_infer = false;
+                let mut has_gen = false;
+                let mut has_err = false;
+                for &p in params.iter() {
+                    let (i, g, e) = self.type_flags(p);
+                    has_infer |= i; has_gen |= g; has_err |= e;
+                    if has_infer && has_gen && has_err { break; }
+                }
+                if !has_infer || !has_gen || !has_err {
+                    let (i, g, e) = self.type_flags(return_type);
+                    has_infer |= i; has_gen |= g; has_err |= e;
+                }
+                (has_infer, has_gen, has_err)
+            }
+            SemanticType::Closure(_, params, ret) => {
+                let mut has_infer = false;
+                let mut has_gen = false;
+                let mut has_err = false;
+                for &p in params.iter() {
+                    let (i, g, e) = self.type_flags(p);
+                    has_infer |= i; has_gen |= g; has_err |= e;
+                    if has_infer && has_gen && has_err { break; }
+                }
+                if !has_infer || !has_gen || !has_err {
+                    let (i, g, e) = self.type_flags(ret);
+                    has_infer |= i; has_gen |= g; has_err |= e;
+                }
+                (has_infer, has_gen, has_err)
+            }
+            SemanticType::DynTrait(_) => (false, false, false),
+        }
     }
 
     pub fn clone_type_from(&mut self, id: SemanticTypeId, source_ctx: &TypeContext, symbol_map: &std::collections::HashMap<SymbolId, SymbolId>) -> SemanticTypeId {

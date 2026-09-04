@@ -425,6 +425,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
             let mut new_inst = old_val.inst.clone();
             match &mut new_inst {
                 Instruction::Assign(op) => *op = map_op(op, &val_map),
+                Instruction::Nop => {}
                 Instruction::Store { ptr, value } => {
                     *ptr = map_op(ptr, &val_map);
                     *value = map_op(value, &val_map);

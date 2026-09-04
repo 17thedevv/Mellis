@@ -394,6 +394,7 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
                 }
                 self.mark_dropped(value, state);
             }
+            Instruction::Nop => {}
         }
     }
 

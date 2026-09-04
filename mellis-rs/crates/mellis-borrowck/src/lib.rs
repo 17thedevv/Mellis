@@ -1,4 +1,5 @@
 pub mod borrow_analysis;
+pub mod cleanup;
 pub mod dataflow;
 pub mod effect;
 pub mod effect_inference;

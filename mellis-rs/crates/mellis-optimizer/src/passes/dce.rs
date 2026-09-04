@@ -40,7 +40,10 @@ impl Pass for DeadCodeElimination {
                         Instruction::Load { ptr } => {
                             if let Operand::Value(v) = ptr { used_values.insert(v.0); }
                         }
-                        Instruction::Add { left, right } | Instruction::Sub { left, right } | Instruction::Mul { left, right } | Instruction::Eq { left, right } | Instruction::NotEq { left, right } | Instruction::LessThan { left, right } => {
+                        Instruction::Add { left, right } | Instruction::Sub { left, right } | Instruction::Mul { left, right } | Instruction::Div { left, right } | Instruction::Rem { left, right } |
+                        Instruction::Eq { left, right } | Instruction::NotEq { left, right } | Instruction::LessThan { left, right } |
+                        Instruction::BitAnd { left, right } | Instruction::BitOr { left, right } | Instruction::BitXor { left, right } |
+                        Instruction::Shl { left, right } | Instruction::Shr { left, right } => {
                             if let Operand::Value(v) = left { used_values.insert(v.0); }
                             if let Operand::Value(v) = right { used_values.insert(v.0); }
                         }

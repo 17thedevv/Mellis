@@ -140,12 +140,28 @@ impl<'a> MonoCollector<'a> {
             }
 
             if let Some(closure_id) = instance.closure_id {
-                if let Expr::Lambda { body, .. } = &self.arena.exprs[closure_id.0 as usize] {
+                if let Expr::Lambda { body, params, .. } = &self.arena.exprs[closure_id.0 as usize] {
+                    for param_id in params {
+                        if let Some(&param_sym) = self.ctx.tables.decl_symbols.get(param_id) {
+                            if let Some(&ty) = self.ctx.tables.symbol_types.get(&param_sym) {
+                                let sub_ty = self.substitute(ty);
+                                self.current_symbol_types.insert(param_sym, sub_ty);
+                            }
+                        }
+                    }
                     self.visit_stmt(body);
                 }
             } else {
                 let decl = &self.arena.decls[instance.decl_id.0 as usize];
-                if let Decl::Function { body: Some(body_stmt), .. } = decl {
+                if let Decl::Function { body: Some(body_stmt), params, .. } = decl {
+                    for param_id in params {
+                        if let Some(&param_sym) = self.ctx.tables.decl_symbols.get(param_id) {
+                            if let Some(&ty) = self.ctx.tables.symbol_types.get(&param_sym) {
+                                let sub_ty = self.substitute(ty);
+                                self.current_symbol_types.insert(param_sym, sub_ty);
+                            }
+                        }
+                    }
                     self.visit_stmt(body_stmt);
                 }
             }
@@ -162,11 +178,82 @@ impl<'a> MonoCollector<'a> {
                 binding.env_ty = self.substitute(binding.env_ty);
                 binding
             }).collect();
+            
+            // --- CONCRETIZATION BARRIER ---
+            let mut is_concrete = true;
+
+            let mut current_expr_types = std::mem::take(&mut self.current_expr_types);
+            for (expr_id, ty) in current_expr_types.iter_mut() {
+                let resolved = self.substitute(*ty);
+                *ty = resolved;
+                
+                // Exempt functions and enum variants from being monomorphic as expressions
+                // because they are instantiations of generics themselves (e.g., `Vec::new`).
+                if let mellis_ast::Expr::Identifier { .. } | mellis_ast::Expr::Member { .. } = &self.arena.exprs[expr_id.0 as usize] {
+                    if matches!(self.ctx.types.get(resolved), crate::ty::SemanticType::Function { .. } | crate::ty::SemanticType::Enum(_, _, _)) {
+                        continue;
+                    }
+                }
+
+                if !self.ctx.types.is_monomorphic(resolved) {
+                    if !matches!(self.ctx.types.get(resolved), crate::ty::SemanticType::Error) {
+                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
+                        let err_msg = if self.ctx.types.contains_inference_var(resolved) {
+                            "cannot infer type for expression"
+                        } else {
+                            "unresolved generic parameter in monomorphic context"
+                        };
+                        self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(err_msg).with_span(span));
+                    }
+                    is_concrete = false;
+                }
+            }
+            
+            let mut current_symbol_types = std::mem::take(&mut self.current_symbol_types);
+            for (sym_id, ty) in current_symbol_types.iter_mut() {
+                let resolved = self.substitute(*ty);
+                *ty = resolved;
+                
+                if matches!(self.ctx.types.get(resolved), crate::ty::SemanticType::Function { .. }) {
+                    continue;
+                }
+
+                if !self.ctx.types.is_monomorphic(resolved) {
+                    if !matches!(self.ctx.types.get(resolved), crate::ty::SemanticType::Error) {
+                        let span = mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0); // fallback span
+                        let err_msg = if let Some(decl) = self.ctx.tables.symbol_decls.get(sym_id) {
+                            if let mellis_ast::Decl::Var { .. } = &self.arena.decls[decl.0 as usize] {
+                                "unresolved generic parameter for variable"
+                            } else {
+                                "unresolved generic parameter in monomorphic context"
+                            }
+                        } else {
+                            "unresolved generic parameter in monomorphic context"
+                        };
+                        self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(err_msg).with_span(span));
+                    }
+                    is_concrete = false;
+                }
+            }
+
+            let mut current_pat_types = std::mem::take(&mut self.current_pat_types);
+            for (_pat_id, ty) in current_pat_types.iter_mut() {
+                let resolved = self.substitute(*ty);
+                *ty = resolved;
+                if !self.ctx.types.is_monomorphic(resolved) {
+                    is_concrete = false;
+                }
+            }
+
+            if !is_concrete {
+                continue; // Barrier: do not insert unresolved mono unit
+            }
+
             let instantiated_fn = InstantiatedFunction {
                 instance: instance.clone(),
-                expr_types: std::mem::take(&mut self.current_expr_types),
-                symbol_types: std::mem::take(&mut self.current_symbol_types),
-                pat_types: std::mem::take(&mut self.current_pat_types),
+                expr_types: current_expr_types,
+                symbol_types: current_symbol_types,
+                pat_types: current_pat_types,
                 mono_calls: std::mem::take(&mut self.current_mono_calls),
                 mono_for_loops: std::mem::take(&mut self.current_mono_for_loops),
                 closure_capture_bindings,
@@ -306,7 +393,30 @@ impl<'a> MonoCollector<'a> {
                 }
             }
             // Leaf variants with no children to traverse
-            mellis_ast::Pattern::Wildcard | mellis_ast::Pattern::Literal(_) | mellis_ast::Pattern::Identifier { .. } => {}
+            mellis_ast::Pattern::Wildcard | mellis_ast::Pattern::Literal(_) => {}
+            mellis_ast::Pattern::Identifier { .. } => {
+                if let Some(&sym_id) = self.ctx.tables.pat_symbols.get(pat_id) {
+                    if let Some(&ty) = self.ctx.tables.symbol_types.get(&sym_id) {
+                        let sub_ty = self.substitute(ty);
+                        self.current_symbol_types.insert(sym_id, sub_ty);
+                    }
+                }
+            }
+        }
+    }
+
+    fn get_expr_span_for_diag(&self, expr_id: &ExprId) -> Option<mellis_common::Span> {
+        let expr = self.arena.exprs.get(expr_id.0 as usize)?;
+        match expr {
+            Expr::Literal(tok, _) => Some(tok.span),
+            Expr::Identifier { segments, .. } => segments.first().copied(),
+            Expr::Call { callee, .. } => self.get_expr_span_for_diag(callee),
+            Expr::MethodCall { method_name, .. } => Some(*method_name),
+            Expr::Await { expr } => self.get_expr_span_for_diag(expr),
+            Expr::Try { expr, .. } => self.get_expr_span_for_diag(expr),
+            Expr::Binary { left, right, .. } => self.get_expr_span_for_diag(left).or_else(|| self.get_expr_span_for_diag(right)),
+            Expr::Assign { lvalue, value, .. } => self.get_expr_span_for_diag(lvalue).or_else(|| self.get_expr_span_for_diag(value)),
+            _ => None,
         }
     }
 
@@ -331,7 +441,7 @@ impl<'a> MonoCollector<'a> {
                     let symbol = self.ctx.symbol_table.get_symbol(sym_id);
                     if matches!(symbol.kind, crate::SymbolKind::Function | crate::SymbolKind::ExternFunction) {
                         if let Some(&decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
-                            if let Some(subst) = self.ctx.tables.expr_substs.get(callee).cloned() {
+                            if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id).cloned() {
                                 let mut instance_subst = Vec::new();
                                 for (sym, ty) in subst.map {
                                     let sub_ty = self.substitute(ty);

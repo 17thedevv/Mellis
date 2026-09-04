@@ -208,6 +208,7 @@ pub enum Instruction {
     Null {
         ty: SemanticTypeId,
     },
+    Nop,
     Await {
         future: Operand,
     },

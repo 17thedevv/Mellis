@@ -39,6 +39,12 @@ pub struct TraitResolution {
     pub method_sym: SymbolId,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LangItem {
+    Try,
+    Drop,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IntrinsicKind {
     BoxNew,
@@ -61,6 +67,8 @@ pub struct SemanticTables {
     pub expr_intrinsics: HashMap<ExprId, IntrinsicKind>,
     pub expr_member_indices: HashMap<ExprId, u32>,
     pub expr_struct_init_indices: HashMap<ExprId, Vec<u32>>,
+    
+    pub lang_items: HashMap<LangItem, SymbolId>,
     pub expr_sizeof_target: HashMap<ExprId, SemanticTypeId>,
     pub expr_lifetimes: HashMap<ExprId, crate::ty::LifetimeId>,
     pub expr_captures: HashMap<ExprId, Vec<SymbolId>>,
@@ -72,6 +80,9 @@ pub struct SemanticTables {
     // Dynamic dispatch tables
     pub dyn_method_indices: HashMap<ExprId, u32>,
     pub dyn_coercions: HashMap<ExprId, (SymbolId, SymbolId)>,
+    
+    // Try operator branches: (inner_success_idx, inner_failure_idx, func_failure_idx)
+    pub try_branches: HashMap<ExprId, (u32, u32, u32)>,
     
     // For loop desugaring tracking
     pub for_loop_next: HashMap<StmtId, SymbolId>,
@@ -140,6 +151,7 @@ impl SemanticTables {
             expr_intrinsics: HashMap::new(),
             expr_member_indices: HashMap::new(),
             expr_struct_init_indices: HashMap::new(),
+            lang_items: HashMap::new(),
             expr_sizeof_target: HashMap::new(),
             expr_lifetimes: HashMap::new(),
             expr_captures: HashMap::new(),
@@ -149,6 +161,7 @@ impl SemanticTables {
             closure_env_ptr_types: HashMap::new(),
             dyn_method_indices: HashMap::new(),
             dyn_coercions: HashMap::new(),
+            try_branches: HashMap::new(),
             for_loop_next: HashMap::new(),
             for_loop_subst: HashMap::new(),
             pat_symbols: HashMap::new(),

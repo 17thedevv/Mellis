@@ -115,6 +115,7 @@ fn print_instruction(inst: &Instruction) -> String {
         Instruction::SizeOf { ty } => format!("size_of {:?}", ty),
         Instruction::AlignOf { ty } => format!("align_of {:?}", ty),
         Instruction::Await { future } => format!("await {}", print_operand(future)),
+        Instruction::Nop => "nop".to_string(),
     }
 }
 

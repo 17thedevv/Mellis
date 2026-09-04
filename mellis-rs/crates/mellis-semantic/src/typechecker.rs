@@ -35,6 +35,9 @@ impl<'a> TypeChecker<'a> {
     }
     
     pub fn unify(&mut self, expected: SemanticTypeId, actual: SemanticTypeId) -> Result<(), String> {
+        let expected = self.ctx.types.resolve(expected);
+        let actual = self.ctx.types.resolve(actual);
+        
         let t1 = self.ctx.types.get(expected).clone();
         let t2 = self.ctx.types.get(actual).clone();
         
@@ -44,10 +47,16 @@ impl<'a> TypeChecker<'a> {
         
         match (t1, t2) {
             (SemanticType::InferenceVar(var), _) => {
+                if self.ctx.types.occurs_check(var, actual) {
+                    return Err(format!("cycle detected during type inference"));
+                }
                 self.ctx.types.inference_bindings.insert(var, actual);
                 Ok(())
             }
             (_, SemanticType::InferenceVar(var)) => {
+                if self.ctx.types.occurs_check(var, expected) {
+                    return Err(format!("cycle detected during type inference"));
+                }
                 self.ctx.types.inference_bindings.insert(var, expected);
                 Ok(())
             }
@@ -660,39 +669,6 @@ impl<'a> TypeChecker<'a> {
     }
 
     /// Walk an AST type to find GenericParam references and map them to concrete types from arguments.
-    fn extract_generic_subst(&mut self, param_ast_ty: mellis_ast::TypeId, arg_ty: Option<SemanticTypeId>, callee_scope: crate::ScopeId, subst: &mut crate::ty::Substitution) {
-        let ast_ty = &self.arena.types[param_ast_ty.0 as usize];
-        match ast_ty {
-            mellis_ast::Type::Named { segments, .. } => {
-                let name = segments.last().map(|span| &self.source[span.start as usize..span.end as usize]);
-                if let Some(name_str) = name {
-                    // Look up the symbol - if it's a TypeParam, record the mapping
-                    let sym = self.ctx.symbol_table.lookup(name_str, callee_scope)
-                        .or_else(|| self.ctx.symbol_table.lookup(name_str, crate::ScopeId(0)));
-                    if let Some(sym_id) = sym {
-                        let kind = self.ctx.symbol_table.get_symbol(sym_id).kind.clone();
-                        if let crate::SymbolKind::TypeParam = kind {
-                            if let Some(concrete_ty) = arg_ty {
-                                subst.insert(sym_id, concrete_ty);
-                            }
-                        }
-                    }
-                }
-            }
-            mellis_ast::Type::Reference { inner, .. } | mellis_ast::Type::Pointer { inner, .. } => {
-                // Peel reference/pointer and recurse
-                let inner_arg_ty = arg_ty.and_then(|ty| {
-                    let resolved = self.ctx.types.resolve(ty);
-                    match self.ctx.types.get(resolved).clone() {
-                        SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) => Some(inner),
-                        _ => Some(resolved), // Auto-deref: try the type directly
-                    }
-                });
-                self.extract_generic_subst(*inner, inner_arg_ty, callee_scope, subst);
-            }
-            _ => {}
-        }
-    }
 
     pub fn check_object_safety(&mut self, trait_sym: mellis_common::ids::SymbolId, span: Option<mellis_common::Span>) -> bool {
         let Some(&decl_id) = self.ctx.tables.symbol_decls.get(&trait_sym) else {
@@ -1463,8 +1439,27 @@ impl<'a> TypeChecker<'a> {
                 let is_dyn_call = self.ctx.tables.dyn_method_indices.contains_key(callee);
                 let is_struct_method = if let Expr::Member { .. } = callee_expr { self.ctx.tables.expr_symbols.contains_key(callee) } else { false };
                 let is_method_call = (is_dyn_call || is_struct_method) && if let SemanticType::Function { ref params, .. } = callee_ty { params.len() == args.len() + 1 } else { false };
+                let mut subst = crate::ty::Substitution::new();
+                let mut has_generics = false;
+                let mut func_sym_opt = None;
+                if let Expr::Identifier { .. } = callee_expr {
+                    if let Some(&callee_sym) = self.ctx.tables.expr_symbols.get(callee) {
+                        func_sym_opt = Some(callee_sym);
+                        if let Some(&callee_decl_id) = self.ctx.tables.symbol_decls.get(&callee_sym) {
+                            if let Decl::Function { generic_params: m_gps, .. } = &self.arena.decls[callee_decl_id.0 as usize] {
+                                has_generics = !m_gps.is_empty();
+                                for (gp_idx, _) in m_gps.iter().enumerate() {
+                                    if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(callee_decl_id, gp_idx)) {
+                                        subst.insert(*gp_sym, self.ctx.types.new_inference_var());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if let SemanticType::Function { params, return_type } = callee_ty {
-                    ret_ty_id = return_type;
+                    ret_ty_id = if has_generics { self.ctx.types.subst(return_type, &subst) } else { return_type };
                     let expected_params = if is_method_call {
                         &params[1..]
                     } else {
@@ -1473,6 +1468,7 @@ impl<'a> TypeChecker<'a> {
                     for (i, arg) in args.iter().enumerate() {
                         let arg_ty = self.typecheck_expr(&arg.value);
                         if let Some(&expected_p) = expected_params.get(i) {
+                            let expected_p = if has_generics { self.ctx.types.subst(expected_p, &subst) } else { expected_p };
                             if !self.try_coerce_dyn(arg.value, arg_ty, expected_p) {
                                 if let Err(e) = self.unify(expected_p, arg_ty) {
                                     let span = self.get_expr_span_for_diag(&arg.value).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
@@ -1481,43 +1477,97 @@ impl<'a> TypeChecker<'a> {
                             }
                         }
                     }
-                } else {
-                    for arg in args {
-                        self.typecheck_expr(&arg.value);
+                    if has_generics {
+                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
+                        self.check_bounds_for_call(func_sym_opt.unwrap(), &subst, span);
+                        
+                        let empty = crate::ty::Substitution::new();
+                        let mut resolved_subst = crate::ty::Substitution::new();
+                        for (sym, ty) in subst.map {
+                            resolved_subst.insert(sym, self.ctx.types.subst(ty, &empty));
+                        }
+                        if !resolved_subst.map.is_empty() {
+                            self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst);
+                        }
                     }
-                }
-
-                // Check generic parameter bounds for this call
-                if let Expr::Identifier { .. } = callee_expr {
-                    if let Some(&callee_sym) = self.ctx.tables.expr_symbols.get(callee) {
-                        if let Some(&callee_decl_id) = self.ctx.tables.symbol_decls.get(&callee_sym) {
-                            // Collect param type info without holding long borrows
-                            let mut param_arg_pairs: Vec<(mellis_ast::TypeId, Option<SemanticTypeId>)> = Vec::new();
-                            let mut has_generics = false;
-                            {
-                                let callee_decl = &self.arena.decls[callee_decl_id.0 as usize];
-                                if let Decl::Function { generic_params, params, .. } = callee_decl {
-                                    has_generics = !generic_params.is_empty();
-                                    if has_generics {
-                                        for (i, param_id) in params.iter().enumerate() {
-                                            if let Decl::Param { ty: Some(ty_id), .. } = &self.arena.decls[param_id.0 as usize] {
-                                                let arg_ty = args.get(i).and_then(|a| self.ctx.tables.expr_types.get(&a.value).copied());
-                                                param_arg_pairs.push((*ty_id, arg_ty));
-                                            }
+                } else if let SemanticType::Enum(enum_sym_id, _, variants) = callee_ty {
+                    if let Some(func_sym) = func_sym_opt {
+                        if let crate::SymbolKind::EnumVariant(variant_idx) = self.ctx.symbol_table.get_symbol(func_sym).kind {
+                            let mut enum_subst = crate::ty::Substitution::new();
+                            let mut has_enum_generics = false;
+                            let mut new_args = Vec::new();
+                            if let Some(&enum_decl_id) = self.ctx.tables.symbol_decls.get(&enum_sym_id) {
+                                if let Decl::Enum { generic_params: e_gps, .. } = &self.arena.decls[enum_decl_id.0 as usize] {
+                                    has_enum_generics = !e_gps.is_empty();
+                                    for (gp_idx, _) in e_gps.iter().enumerate() {
+                                        if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(enum_decl_id, gp_idx)) {
+                                            let ivar = self.ctx.types.new_inference_var();
+                                            enum_subst.insert(*gp_sym, ivar);
+                                            new_args.push(ivar);
                                         }
                                     }
                                 }
                             }
-                            if has_generics {
-                                let callee_scope = self.ctx.symbol_table.get_symbol(callee_sym).inner_scope.unwrap_or(crate::ScopeId(0));
-                                let mut subst = crate::ty::Substitution::new();
-                                for (ty_id, arg_ty) in param_arg_pairs {
-                                    self.extract_generic_subst(ty_id, arg_ty, callee_scope, &mut subst);
+                            
+                            // DEBUG
+                            if self.ctx.symbol_table.get_symbol(enum_sym_id).name == "MyResult" {
+                                println!("DEBUG: MyResult EnumVariant constructor. has_enum_generics={}, new_args.len()={}", has_enum_generics, new_args.len());
+                            }
+                            
+                            let mut variant_ty = variants[variant_idx as usize];
+                            if has_enum_generics {
+                                variant_ty = self.ctx.types.subst(variant_ty, &enum_subst);
+                            }
+                            
+                            if let SemanticType::Tuple(field_tys) = self.ctx.types.get(variant_ty).clone() {
+                                for (i, arg) in args.iter().enumerate() {
+                                    let arg_ty = self.typecheck_expr(&arg.value);
+                                    if let Some(&expected_p) = field_tys.get(i) {
+                                        if !self.try_coerce_dyn(arg.value, arg_ty, expected_p) {
+                                            if let Err(e) = self.unify(expected_p, arg_ty) {
+                                                let span = self.get_expr_span_for_diag(&arg.value).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
+                                                self.ctx.diagnostics.push(Diagnostic::error(e).with_span(span));
+                                            }
+                                        }
+                                    }
                                 }
+                            } else if variant_ty != self.ctx.types.intern(SemanticType::Void) {
+                                if let Some(arg) = args.first() {
+                                    let arg_ty = self.typecheck_expr(&arg.value);
+                                    if !self.try_coerce_dyn(arg.value, arg_ty, variant_ty) {
+                                        if let Err(e) = self.unify(variant_ty, arg_ty) {
+                                            let span = self.get_expr_span_for_diag(&arg.value).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
+                                            self.ctx.diagnostics.push(Diagnostic::error(e).with_span(span));
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            ret_ty_id = if has_enum_generics {
+                                let new_variants: Vec<_> = variants.iter().map(|&v| self.ctx.types.subst(v, &enum_subst)).collect();
+                                self.ctx.types.intern(SemanticType::Enum(enum_sym_id, new_args, new_variants))
+                            } else {
+                                callee_ty_id
+                            };
+                            
+                            if has_enum_generics {
                                 let span = self.get_expr_span_for_diag(expr_id).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
-                                self.check_bounds_for_call(callee_sym, &subst, span);
+                                self.check_bounds_for_call(enum_sym_id, &enum_subst, span);
+                                
+                                let empty = crate::ty::Substitution::new();
+                                let mut resolved_subst = crate::ty::Substitution::new();
+                                for (sym, ty) in enum_subst.map {
+                                    resolved_subst.insert(sym, self.ctx.types.subst(ty, &empty));
+                                }
+                                if !resolved_subst.map.is_empty() {
+                                    self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst);
+                                }
                             }
                         }
+                    }
+                } else {
+                    for arg in args {
+                        self.typecheck_expr(&arg.value);
                     }
                 }
 
@@ -1821,52 +1871,48 @@ impl<'a> TypeChecker<'a> {
                                             if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(&m_id) {
                                                 self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
                                                 if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
-                                                    let semantic_ty = self.ctx.types.get(m_ty).clone();
-                                                    if let SemanticType::Function { params, return_type } = semantic_ty {
+                                                    let semantic_ty = self.ctx.types.get(m_ty).clone();                                                    if let SemanticType::Function { params, return_type } = semantic_ty {
+                                                        let mut subst = crate::ty::Substitution::new();
+                                                        let mut m_has_generics = false;
+                                                        if let Some(&method_decl_id) = self.ctx.tables.symbol_decls.get(&m_sym) {
+                                                            if let Decl::Function { generic_params: m_gps, .. } = &self.arena.decls[method_decl_id.0 as usize] {
+                                                                m_has_generics = !m_gps.is_empty();
+                                                                for (gp_idx, _) in m_gps.iter().enumerate() {
+                                                                    if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(method_decl_id, gp_idx)) {
+                                                                        subst.insert(*gp_sym, self.ctx.types.new_inference_var());
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+
+                                                        let return_type = if m_has_generics { self.ctx.types.subst(return_type, &subst) } else { return_type };
                                                         let expected_params = if params.len() == args.len() + 1 { &params[1..] } else { &params[..] };
                                                         for (i, arg) in args.iter().enumerate() {
                                                             let arg_ty = self.typecheck_expr(&arg.value);
                                                             if let Some(&expected_p) = expected_params.get(i) {
+                                                                let expected_p = if m_has_generics { self.ctx.types.subst(expected_p, &subst) } else { expected_p };
                                                                 if !self.try_coerce_dyn(arg.value, arg_ty, expected_p) {
                                                                     if let Err(e) = self.unify(expected_p, arg_ty) {
-                                    let span = self.get_expr_span_for_diag(&arg.value).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
-                                    self.ctx.diagnostics.push(Diagnostic::error(e).with_span(span));
-                                }
-                                                                }
-                                                            }
-                                                        }
-                                                        // Check method generic bounds
-                                                        {
-                                                            let mut m_param_arg_pairs: Vec<(mellis_ast::TypeId, Option<SemanticTypeId>)> = Vec::new();
-                                                            let mut m_has_generics = false;
-                                                            let mut m_sym_for_bounds = m_sym;
-                                                            if let Some(&method_decl_id) = self.ctx.tables.symbol_decls.get(&m_sym) {
-                                                                let m_decl = &self.arena.decls[method_decl_id.0 as usize];
-                                                                if let Decl::Function { generic_params: m_gps, params: m_params, .. } = m_decl {
-                                                                    m_has_generics = !m_gps.is_empty();
-                                                                    if m_has_generics {
-                                                                        let param_offset = if m_params.len() == args.len() + 1 { 1 } else { 0 };
-                                                                        for (i, arg) in args.iter().enumerate() {
-                                                                            let param_idx = i + param_offset;
-                                                                            if let Some(param_id) = m_params.get(param_idx) {
-                                                                                if let Decl::Param { ty: Some(ty_id), .. } = &self.arena.decls[param_id.0 as usize] {
-                                                                                    let arg_ty = self.ctx.tables.expr_types.get(&arg.value).copied();
-                                                                                    m_param_arg_pairs.push((*ty_id, arg_ty));
-                                                                                }
-                                                                            }
-                                                                        }
+                                                                        let span = self.get_expr_span_for_diag(&arg.value).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
+                                                                        self.ctx.diagnostics.push(Diagnostic::error(e).with_span(span));
                                                                     }
                                                                 }
                                                             }
-                                                            if m_has_generics {
-                                                                let callee_scope = self.ctx.symbol_table.get_symbol(m_sym_for_bounds).inner_scope.unwrap_or(crate::ScopeId(0));
-                                                                let mut subst = crate::ty::Substitution::new();
-                                                                for (ty_id, arg_ty) in m_param_arg_pairs {
-                                                                    self.extract_generic_subst(ty_id, arg_ty, callee_scope, &mut subst);
-                                                                }
-                                                                self.check_bounds_for_call(m_sym_for_bounds, &subst, *method_name);
+                                                        }
+
+                                                        if m_has_generics {
+                                                            self.check_bounds_for_call(m_sym, &subst, *method_name);
+                                                            
+                                                            let empty = crate::ty::Substitution::new();
+                                                            let mut resolved_subst = crate::ty::Substitution::new();
+                                                            for (sym, ty) in subst.map {
+                                                                resolved_subst.insert(sym, self.ctx.types.subst(ty, &empty));
+                                                            }
+                                                            if !resolved_subst.map.is_empty() {
+                                                                self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst);
                                                             }
                                                         }
+
                                                         return return_type;
                                                     }
                                                 }

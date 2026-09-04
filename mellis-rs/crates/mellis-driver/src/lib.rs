@@ -242,14 +242,15 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut 
             let summaries = interproc.summaries;
             
             let mut borrowck_errors = 0;
-            for func in &module.functions {
-                let (diagnostics, _) = mellis_borrowck::borrow_check_function(func, &semantic_ctx, &summaries);
+            for func in &mut module.functions {
+                let (diagnostics, redundant_drops) = mellis_borrowck::borrow_check_function(func, &semantic_ctx, &summaries);
                 borrowck_errors += diagnostics.len();
                 if !options.quiet {
                     for diag in &diagnostics {
                         println!("BorrowCk Error: {}", diag.message);
                     }
                 }
+                mellis_borrowck::cleanup::eliminate_redundant_drops(func, &redundant_drops);
                 all_diagnostics.extend(diagnostics);
             }
 

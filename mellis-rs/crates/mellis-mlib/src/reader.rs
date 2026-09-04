@@ -519,6 +519,7 @@ impl MlibReader {
                 r.read_exact(&mut ty_buf)?;
                 Ok(MlibInstruction::Null { ty: u32::from_le_bytes(ty_buf) })
             }
+            0x24 => Ok(MlibInstruction::Nop),
             25 => {
                 let value = Self::deserialize_operand(r)?;
                 let mut ty_buf = [0u8; 4];
