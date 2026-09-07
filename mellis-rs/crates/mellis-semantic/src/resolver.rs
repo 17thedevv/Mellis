@@ -23,6 +23,13 @@ use crate::{ScopeId, SemanticContext, SymbolKind};
 use mellis_ast::{AstArena, Decl, Expr, Item, Pattern, Stmt, Visibility};
 use mellis_common::ids::Span;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeclarationContext {
+    Free,
+    TraitMethod,
+    ImplMethod,
+}
+
 pub struct Resolver<'a, 'b, 'c> {
     pub ctx: &'a mut SemanticContext,
     pub arena: &'b AstArena,
@@ -181,6 +188,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     let name_str = self.source[name.start as usize..name.end as usize].trim_matches('"').to_string();
                     let target_scope = if let Some(provider) = self.module_provider {
                         provider.get_module_scope(&name_str)
+                    } else if let Some(&scope) = self.ctx.external_module_scopes.get(&name_str) {
+                        Some(scope)
                     } else {
                         self.ctx.symbol_table.lookup(&name_str, crate::symbol::ScopeId(0)).and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope)
                     };
@@ -211,16 +220,118 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
         }
     }
 
+    fn check_lang_item(
+        &mut self,
+        annotations: &[mellis_ast::Annotation],
+        sym_id: mellis_common::ids::SymbolId,
+        target: crate::lang_item::LangItemTarget,
+    ) {
+        for annot in annotations {
+            let attr_name = &self.source[annot.name.start as usize..annot.name.end as usize];
+            if attr_name == "lang" {
+                if !self.ctx.allow_internal_lang_items {
+                    self.ctx.diagnostics.push(
+                        mellis_common::diagnostic::Diagnostic::error(
+                            "`#[lang]` attribute can only be used in trusted compiler/core contexts",
+                        )
+                        .with_span(annot.name),
+                    );
+                    continue;
+                }
+                if annot.args.len() != 1 {
+                    self.ctx.diagnostics.push(
+                        mellis_common::diagnostic::Diagnostic::error(
+                            "`#[lang]` attribute requires exactly one argument: `#[lang(\"name\")]`",
+                        )
+                        .with_span(annot.name),
+                    );
+                    continue;
+                }
+                let arg_expr_id = annot.args[0].value;
+                let (tok_span, arg_str) = match &self.arena.exprs[arg_expr_id.0 as usize] {
+                    mellis_ast::Expr::Literal(tok, s) => {
+                        if !s.starts_with('"') || !s.ends_with('"') {
+                            self.ctx.diagnostics.push(
+                                mellis_common::diagnostic::Diagnostic::error(
+                                    "`#[lang(...)]` argument must be a string literal",
+                                )
+                                .with_span(tok.span),
+                            );
+                            continue;
+                        }
+                        (tok.span, s[1..s.len() - 1].to_string())
+                    }
+                    _ => {
+                        self.ctx.diagnostics.push(
+                            mellis_common::diagnostic::Diagnostic::error(
+                                "`#[lang(...)]` argument must be a string literal",
+                            )
+                            .with_span(annot.name),
+                        );
+                        continue;
+                    }
+                };
+
+                let Some(item) = crate::lang_item::LangItem::from_name(&arg_str) else {
+                    self.ctx.diagnostics.push(
+                        mellis_common::diagnostic::Diagnostic::error(format!(
+                            "unknown language item `{}`",
+                            arg_str
+                        ))
+                        .with_span(tok_span),
+                    );
+                    continue;
+                };
+
+                self.ctx.lang_items.register(
+                    item,
+                    sym_id,
+                    target,
+                    annot.name,
+                    &mut self.ctx.diagnostics,
+                );
+            }
+        }
+    }
+
+    fn check_unsupported_lang_item(
+        &mut self,
+        annotations: &[mellis_ast::Annotation],
+        decl_kind: &'static str,
+    ) {
+        for annot in annotations {
+            let attr_name = &self.source[annot.name.start as usize..annot.name.end as usize];
+            if attr_name == "lang" {
+                if !self.ctx.allow_internal_lang_items {
+                    self.ctx.diagnostics.push(
+                        mellis_common::diagnostic::Diagnostic::error(
+                            "`#[lang]` attribute can only be used in trusted compiler/core contexts",
+                        )
+                        .with_span(annot.name),
+                    );
+                    continue;
+                }
+                self.ctx.diagnostics.push(
+                    mellis_common::diagnostic::Diagnostic::error(format!(
+                        "`#[lang]` cannot be applied to {} declarations",
+                        decl_kind
+                    ))
+                    .with_span(annot.name),
+                );
+            }
+        }
+    }
+
     pub fn resolve_items(&mut self, items: &[Item]) {
         for item in items {
-            self.declare_item(item);
+            self.declare_item(item, DeclarationContext::Free);
         }
         for item in items {
             self.resolve_item_body(item);
         }
     }
 
-    fn declare_item(&mut self, item: &Item) {
+    fn declare_item(&mut self, item: &Item, context: DeclarationContext) {
         match item {
             Item::Decl(decl_id) => {
                 let prev_scope = self.current_scope;
@@ -239,10 +350,17 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         params,
                         visibility,
                         generic_params,
+                        annotations,
                         ..
                     } => {
                         let name_str =
                             self.source[name.start as usize..name.end as usize].to_string();
+
+                        let effective_visibility = if context == DeclarationContext::TraitMethod {
+                            Visibility::Public
+                        } else {
+                            *visibility
+                        };
 
                         let sym_id = self.ctx.symbol_table.declare_symbol(
                             name_str,
@@ -250,14 +368,21 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             self.current_scope,
                             *name,
                             Some(*decl_id),
-                            *visibility,
+                            effective_visibility,
                             &mut self.ctx.diagnostics,
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                        
+                        let expected_lang_target = match context {
+                            DeclarationContext::TraitMethod | DeclarationContext::ImplMethod => crate::lang_item::LangItemTarget::Method,
+                            DeclarationContext::Free => crate::lang_item::LangItemTarget::Function,
+                        };
+                        self.check_lang_item(annotations, sym_id, expected_lang_target);
 
                         let func_scope = self.enter_scope(crate::symbol::ScopeKind::Function);
                         self.ctx.symbol_table.set_inner_scope(sym_id, func_scope);
+                        self.ctx.tables.decl_scopes.insert(*decl_id, func_scope);
 
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
@@ -325,6 +450,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         visibility,
                         is_mutable,
                         pattern,
+                        annotations,
                         ..
                     } => {
                         let name_str =
@@ -344,6 +470,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                        self.check_unsupported_lang_item(annotations, "variable");
                         if let Some(pattern) = pattern {
                             self.resolve_pattern(pattern, *visibility, *is_mutable);
                         }
@@ -353,6 +480,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         fields: _,
                         visibility,
                         generic_params,
+                        annotations,
                         ..
                     } => {
                         let name_str =
@@ -368,10 +496,12 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                        self.check_lang_item(annotations, sym_id, crate::lang_item::LangItemTarget::Struct);
                         
                         let prev_scope = self.current_scope;
                         let struct_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
                         self.ctx.symbol_table.set_inner_scope(sym_id, struct_scope);
+                        self.ctx.tables.decl_scopes.insert(*decl_id, struct_scope);
                         
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
@@ -399,13 +529,14 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     }
                     Decl::Extern { func, .. } => {
                         let item = Item::Decl(*func);
-                        self.declare_item(&item);
+                        self.declare_item(&item, DeclarationContext::Free);
                     }
                     Decl::Enum {
                         name,
                         variants,
                         visibility,
                         generic_params,
+                        annotations,
                         ..
                     } => {
                         let name_str =
@@ -421,10 +552,12 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                        self.check_lang_item(annotations, sym_id, crate::lang_item::LangItemTarget::Enum);
 
                         let prev_scope = self.current_scope;
                         let enum_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
                         self.ctx.symbol_table.set_inner_scope(sym_id, enum_scope);
+                        self.ctx.tables.decl_scopes.insert(*decl_id, enum_scope);
                         
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
@@ -453,7 +586,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             let v_name_str = self.source
                                 [variant.name.start as usize..variant.name.end as usize]
                                 .to_string();
-                            let _v_sym_id = self.ctx.symbol_table.declare_symbol(
+                            let v_sym_id = self.ctx.symbol_table.declare_symbol(
                                 v_name_str,
                                 SymbolKind::EnumVariant(idx as u32),
                                 self.current_scope,
@@ -462,6 +595,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 *visibility,
                                 &mut self.ctx.diagnostics,
                             );
+                            self.check_lang_item(&variant.annotations, v_sym_id, crate::lang_item::LangItemTarget::EnumVariant);
                         }
                         
                         self.current_scope = prev_scope;
@@ -471,6 +605,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         methods,
                         visibility,
                         generic_params,
+                        annotations,
                         ..
                     } => {
                         let name_str =
@@ -486,13 +621,12 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                        self.check_lang_item(annotations, sym_id, crate::lang_item::LangItemTarget::Trait);
 
-                        if name_str == "Try" {
-                            self.ctx.tables.lang_items.insert(crate::semantic_tables::LangItem::Try, sym_id);
-                        }
 
                         let trait_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
                         self.ctx.symbol_table.set_inner_scope(sym_id, trait_scope);
+                        self.ctx.tables.decl_scopes.insert(*decl_id, trait_scope);
                         
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
@@ -519,7 +653,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         let mut trait_method_syms = Vec::new();
                         for method_id in methods {
                             let item = Item::Decl(*method_id);
-                            self.declare_item(&item);
+                            self.declare_item(&item, DeclarationContext::TraitMethod);
                             if let Some(&meth_sym) = self.ctx.tables.decl_symbols.get(method_id) {
                                 trait_method_syms.push(meth_sym);
                             }
@@ -535,9 +669,12 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self_type,
                         methods,
                         generic_params,
+                        annotations,
                         ..
                     } => {
-                        self.enter_scope(crate::symbol::ScopeKind::Struct);
+                        self.check_unsupported_lang_item(annotations, "impl");
+                        let impl_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
+                        self.ctx.tables.decl_scopes.insert(*decl_id, impl_scope);
 
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
@@ -563,35 +700,89 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
 
                         for method_id in methods {
                             let item = Item::Decl(*method_id);
-                            self.declare_item(&item);
+                            self.declare_item(&item, DeclarationContext::ImplMethod);
                         }
                         self.exit_scope();
 
-                        let self_ast_ty = &self.arena.types[self_type.0 as usize];
-                        let self_sym_opt = if let mellis_ast::Type::Named { segments, .. } =
-                            self_ast_ty
-                        {
-                            segments.last().and_then(|s| {
-                                let name = &self.source[s.start as usize..s.end as usize];
-                                self.ctx.symbol_table.lookup(name, crate::ScopeId(0))
-                            })
-                        } else {
-                            None
-                        };
-
-                        let trait_sym_opt = if let Some(trait_ty_id) = trait_type {
-                            let trait_ast_ty = &self.arena.types[trait_ty_id.0 as usize];
-                            if let mellis_ast::Type::Named { segments, .. } = trait_ast_ty {
-                                segments.last().and_then(|s| {
+                        let self_sym_opt = self.ctx.tables.type_symbols.get(self_type).copied().or_else(|| {
+                            let self_ast_ty = &self.arena.types[self_type.0 as usize];
+                            if let mellis_ast::Type::Named { segments, .. } = self_ast_ty {
+                                if segments.len() == 1 {
+                                    let s = &segments[0];
                                     let name = &self.source[s.start as usize..s.end as usize];
-                                    self.ctx.symbol_table.lookup(name, crate::ScopeId(0))
-                                })
+                                    self.ctx.symbol_table.lookup_with_ctxt(name, s.ctxt, self.current_scope)
+                                        .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(name, s.ctxt, crate::ScopeId(0)))
+                                } else {
+                                    let mut scope = self.current_scope;
+                                    let mut res = None;
+                                    for (i, seg) in segments.iter().enumerate() {
+                                        let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                                        let sym_id = if i == 0 {
+                                            self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, scope)
+                                                .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, crate::ScopeId(0)))
+                                        } else {
+                                            self.ctx.symbol_table.lookup_exact_with_ctxt(seg_name, seg.ctxt, scope)
+                                        };
+                                        if let Some(id) = sym_id {
+                                            res = Some(id);
+                                            if let Some(inner) = self.ctx.symbol_table.symbols[id.0 as usize].inner_scope {
+                                                scope = inner;
+                                            } else if i < segments.len() - 1 {
+                                                res = None;
+                                                break;
+                                            }
+                                        } else {
+                                            res = None;
+                                            break;
+                                        }
+                                    }
+                                    res
+                                }
                             } else {
                                 None
                             }
-                        } else {
-                            None
-                        };
+                        });
+
+                        let trait_sym_opt = trait_type.and_then(|trait_ty_id| {
+                            self.ctx.tables.type_symbols.get(&trait_ty_id).copied().or_else(|| {
+                                let trait_ast_ty = &self.arena.types[trait_ty_id.0 as usize];
+                                if let mellis_ast::Type::Named { segments, .. } = trait_ast_ty {
+                                    if segments.len() == 1 {
+                                        let s = &segments[0];
+                                        let name = &self.source[s.start as usize..s.end as usize];
+                                        self.ctx.symbol_table.lookup_with_ctxt(name, s.ctxt, self.current_scope)
+                                            .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(name, s.ctxt, crate::ScopeId(0)))
+                                    } else {
+                                        let mut scope = self.current_scope;
+                                        let mut res = None;
+                                        for (i, seg) in segments.iter().enumerate() {
+                                            let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                                            let sym_id = if i == 0 {
+                                                self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, scope)
+                                                    .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, crate::ScopeId(0)))
+                                            } else {
+                                                self.ctx.symbol_table.lookup_exact_with_ctxt(seg_name, seg.ctxt, scope)
+                                            };
+                                            if let Some(id) = sym_id {
+                                                res = Some(id);
+                                                if let Some(inner) = self.ctx.symbol_table.symbols[id.0 as usize].inner_scope {
+                                                    scope = inner;
+                                                } else if i < segments.len() - 1 {
+                                                    res = None;
+                                                    break;
+                                                }
+                                            } else {
+                                                res = None;
+                                                break;
+                                            }
+                                        }
+                                        res
+                                    }
+                                } else {
+                                    None
+                                }
+                            })
+                        });
 
                         if let Some(self_sym) = self_sym_opt {
                             let key = crate::semantic_tables::ImplKey {
@@ -599,7 +790,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 self_type_def: self_sym,
                             };
                             
-                            if self.ctx.tables.trait_impls.contains_key(&key) {
+                            if trait_sym_opt.is_some() && self.ctx.tables.trait_impls.contains_key(&key) {
                                 let span = if let mellis_ast::Type::Named { segments, .. } = &self.arena.types[self_type.0 as usize] {
                                     *segments.last().unwrap()
                                 } else {
@@ -611,13 +802,27 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             self.ctx
                                 .tables
                                 .trait_impls
-                                .entry(key)
+                                .entry(key.clone())
                                 .or_default()
                                 .push(*decl_id);
+
+                            let mut method_syms = Vec::new();
+                            for method_id in methods {
+                                if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(method_id) {
+                                    method_syms.push(m_sym);
+                                    self.ctx.tables.method_impls.insert(m_sym, key.clone());
+                                }
+                            }
+                            self.ctx
+                                .tables
+                                .impl_methods
+                                .entry(key)
+                                .or_default()
+                                .extend(method_syms);
                         }
                     }
                     Decl::Macro {
-                        name, visibility, ..
+                        name, visibility, annotations, ..
                     } => {
                         if !self.ctx.tables.decl_macros.contains_key(decl_id) {
                             let name_str =
@@ -635,12 +840,14 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
                             self.ctx.tables.decl_macros.insert(*decl_id, sym_id);
                             self.ctx.tables.macro_decls.insert(sym_id, *decl_id);
+                            self.check_unsupported_lang_item(annotations, "macro");
                         }
                     }
                     Decl::TypeAlias {
                         name,
                         visibility,
                         generic_params,
+                        annotations,
                         ..
                     } => {
                         let name_str =
@@ -656,6 +863,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         );
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                        self.check_unsupported_lang_item(annotations, "type alias");
 
                         let alias_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
                         self.ctx.symbol_table.set_inner_scope(sym_id, alias_scope);
@@ -687,6 +895,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         name,
                         items,
                         visibility,
+                        annotations,
                         ..
                     } => {
                         let name_str =
@@ -710,6 +919,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         };
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                        self.check_unsupported_lang_item(annotations, "module");
                         let mod_scope = if let Some(inner) =
                             self.ctx.symbol_table.symbols[sym_id.0 as usize].inner_scope
                         {
@@ -723,7 +933,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self.current_scope = mod_scope;
                         for item_id in items {
                             let item = Item::Decl(*item_id);
-                            self.declare_item(&item);
+                            self.declare_item(&item, DeclarationContext::Free);
                         }
                         self.current_scope = prev_scope;
                     }
@@ -781,6 +991,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             self.source[name.start as usize..name.end as usize].trim_matches('"').to_string();
                         let target_scope = if let Some(provider) = self.module_provider {
                             provider.get_module_scope(&name_str)
+                        } else if let Some(&scope) = self.ctx.external_module_scopes.get(&name_str) {
+                            Some(scope)
                         } else {
                             self.ctx.symbol_table.lookup(&name_str, crate::symbol::ScopeId(0)).and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope)
                         };
@@ -824,13 +1036,42 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
             mellis_ast::Type::Builtin(_) | mellis_ast::Type::Never | mellis_ast::Type::Lifetime(_) => {}
 
             mellis_ast::Type::Named { segments, generic_args, associated_bindings } => {
-                let name = segments.last().map(|span| &self.source[span.start as usize..span.end as usize]);
-                if let Some(name) = name {
-                    if let Some(sym) = self.ctx.symbol_table.lookup(name, self.current_scope)
-                        .or_else(|| self.ctx.symbol_table.lookup(name, crate::ScopeId(0)))
-                    {
-                        self.ctx.tables.type_symbols.insert(*type_id, sym);
+                let last_span = segments.last().copied();
+                let ctxt = last_span.map(|s| s.ctxt).unwrap_or(mellis_common::ids::SyntaxContext::ROOT);
+                let symbol = if segments.len() == 1 {
+                    let name = segments.last().map(|span| &self.source[span.start as usize..span.end as usize]);
+                    name.and_then(|n| {
+                        self.ctx.symbol_table.lookup_with_ctxt(n, ctxt, self.current_scope)
+                            .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(n, ctxt, crate::ScopeId(0)))
+                    })
+                } else {
+                    let mut scope = self.current_scope;
+                    let mut res = None;
+                    for (i, seg) in segments.iter().enumerate() {
+                        let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                        let sym_id = if i == 0 {
+                            self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, scope)
+                                .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, crate::ScopeId(0)))
+                        } else {
+                            self.ctx.symbol_table.lookup_exact_with_ctxt(seg_name, seg.ctxt, scope)
+                        };
+                        if let Some(id) = sym_id {
+                            res = Some(id);
+                            if let Some(inner) = self.ctx.symbol_table.symbols[id.0 as usize].inner_scope {
+                                scope = inner;
+                            } else if i < segments.len() - 1 {
+                                res = None;
+                                break;
+                            }
+                        } else {
+                            res = None;
+                            break;
+                        }
                     }
+                    res
+                };
+                if let Some(sym) = symbol {
+                    self.ctx.tables.type_symbols.insert(*type_id, sym);
                 }
                 for arg in generic_args {
                     self.resolve_type(arg);
@@ -932,6 +1173,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     if let Some(scope) = self.ctx.symbol_table.get_symbol(sym_id).inner_scope {
                         self.current_scope = scope;
                     }
+                } else if let Some(&scope) = self.ctx.tables.decl_scopes.get(decl_id) {
+                    self.current_scope = scope;
                 }
                 self.resolve_decl_types(decl_id);
                 self.current_scope = prev_scope;
@@ -1036,7 +1279,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
             } => {
                 self.enter_scope(crate::symbol::ScopeKind::Block);
                 if let Some(item) = init {
-                    self.declare_item(item);
+                    self.declare_item(item, DeclarationContext::Free);
                     self.resolve_item_body(item);
                 }
 
