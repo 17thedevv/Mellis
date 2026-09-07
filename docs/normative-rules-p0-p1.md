@@ -1,7 +1,7 @@
 # Mellis Normative Language Rules: Foundations (P0 & P1)
 
-## Status: Frozen Draft  
-**Context**: Refined following *Mellis Language Semantic Audit (Specification-Level)*.  
+## Status: FROZEN (v1.0)
+**Context**: Finalized following *Mellis Language Semantic Audit (Specification-Level)*.  
 **Purpose**: Establish four foundational, mathematically sound normative rules to serve as the unshakeable source of truth for the Mellis type system, borrow checker, and compiler architecture.
 
 ---
@@ -14,7 +14,7 @@ $$\forall T \in \text{ConcreteTypes}, \quad \neg (\text{satisfies}(T, \text{Copy
 A concrete type cannot satisfy both `Copy` and `Drop`.
 
 ### A.2 Rationale
-`Copy` guarantees that bitwise duplication of a value's memory footprint produces a distinct, fully independent instance with zero unique resource ownership obligations. `Drop` guarantees that a value owns unique external resources requiring custom finalization logic executed upon scope exit. Permitting a concrete type to satisfy both creates an irreconcilable soundness paradox: bitwise copying duplicates the instance without invoking lifecycle hooks, leading to guaranteed double-free or resource corruption when the destructor executes on multiple bitwise copies.
+`Copy` guarantees that bitwise duplication of a value's memory footprint produces a distinct, fully independent instance without lifecycle hooks. `Drop` guarantees that a value owns resources requiring custom finalization logic executed upon scope exit. Permitting a concrete type to satisfy both creates an irreconcilable soundness paradox: bitwise copying duplicates the instance without invoking lifecycle hooks, leading to guaranteed double-free or resource corruption when the destructor executes on multiple bitwise copies.
 
 ### A.3 Enforcement Paths
 1. **Direct Implementation**:
@@ -66,17 +66,17 @@ During generic typechecking and constraint solving, associated types (such as `<
 Source Generic AST
        │
        ▼
-Generic Semantic Analysis ─────► Projections (<T as Trait>::Assoc) may remain symbolic
-       │                         Obligations & equality constraints (T::Assoc == U) recorded
+Generic Semantic & Borrow Analysis ──► Projections (<T as Trait>::Assoc) may remain symbolic
+       │                               Obligations & equality constraints (T::Assoc == U) recorded
        ▼
-Trait Solving & Normalization ──► Normalized eagerly where concrete impls are known
+Trait Solving & Normalization ──────► Normalized eagerly where concrete impls are known
        │
        ▼
 === MONOMORPHIZATION BARRIER ===
        │
        ▼
-Monomorphic MVIR & Borrowck ───► STRICT INVARIANT: Zero unresolved projections,
-                                 zero GenericParam, and zero InferenceVar allowed.
+Monomorphic MVIR & Backend Lowering ─► STRICT INVARIANT: Zero unresolved projections,
+                                       zero GenericParam, and zero InferenceVar allowed.
 ```
 
 ### C.4 Soundness of the `Try` Protocol
@@ -97,23 +97,29 @@ $$\forall (\text{Trait}, \text{Type}) \text{ in program}, \quad \text{applicable
 
 For every canonical $(\text{Trait}, \text{Type})$ pair in a program, there is at most one applicable implementation.
 
+**Overlap Invariant**: Two `impl` declarations are illegal if their canonical trait and self-type patterns can unify (i.e., coherence is checked over unifiable pattern overlap, not merely syntactic equality).
+
 ### D.2 The Nominal Head Orphan Rule
 An implementation `impl<...> Trait for TargetType` is legal within provider $P$ if and only if at least one of the following conditions is satisfied:
+
+$$\text{is\_declared\_in}(Trait, P) \lor \text{is\_declared\_in}(\text{nominal\_head}(TargetType), P)$$
 
 1. **Local Trait**: The `Trait` is declared within provider $P$.
 2. **Local Nominal Head Type**: The root constructor (nominal head) of `TargetType` is declared within provider $P$.
 
-### D.3 Precise Rules for Generic Wrappers
-Local ownership of an implementation is governed exclusively by the **nominal head** of the self type, never by its generic type parameters:
+*Note: The compiler strictly checks the nominal head constructor of the Self type. It does NOT inspect generic arguments to discover nested local types.*
 
-| Implementation Declaration | Provider of `Wrapper` | Provider of `T` | Legal in Provider $P$? | Reason |
+### D.3 Precise Matrix for Generic Wrappers
+
+| Implementation Declaration | Provider of Nominal Head | Provider of Inner Type / Generic Param | Legal in Provider $P$? | Reason |
 | :--- | :--- | :--- | :--- | :--- |
-| `impl<T> ExternalTrait for LocalWrapper<T>` | Local ($P$) | External | **YES** | `LocalWrapper` is the local nominal head. |
-| `impl<T> ExternalTrait for ExternalWrapper<LocalType>` | External | Local ($P$) | **YES** | Covered if target type contains a local nominal type within the first non-fundamental level. |
-| `impl<T> ExternalTrait for ExternalWrapper<T>` | External | Generic Param | **NO (REJECT)** | No local nominal identity. Adding this would create potential collisions. |
+| `impl<T> ExternalTrait for LocalWrapper<T>` | Local ($P$) | External / Generic | **YES** | `LocalWrapper` is the local nominal head. |
+| `impl<T> ExternalTrait for ExternalWrapper<LocalType>` | External | Local ($P$) | **NO (REJECT)** | Nominal head `ExternalWrapper` is external. |
+| `impl<T> ExternalTrait for ExternalWrapper<T>` | External | Generic Param | **NO (REJECT)** | Nominal head `ExternalWrapper` is external. |
 | `impl ExternalTrait for ExternalType` | External | External | **NO (REJECT)** | Pure orphan implementation. Strictly forbidden. |
 
 ### D.4 Consequence for Language Extensibility
-* A user cannot write `impl Try for i32` or `impl Drop for String` because neither the trait nor the type head is local.
+* A user cannot write `impl Try for i32` or `impl Drop for String` because neither the trait nor the nominal type head is local.
 * A user can write `impl Try for MyResult<T, E>` because `MyResult` is a local nominal type.
+* Fundamental types (such as `&T`, `*T`, `rw T`) will be governed by a separate *Fundamental Type Semantics* specification and do not alter this base rule.
 * This guarantees that independent packages can be compiled and linked together without silent implementation collisions or coherence breakdowns.
