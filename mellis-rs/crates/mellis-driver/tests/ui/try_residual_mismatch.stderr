@@ -1,0 +1,6 @@
+error: The `?` operator cannot be used in a function that returns this type, as it does not implement `FromResidual` for the residual type
+  --> $DIR/try_residual_mismatch.ms:9:24
+   |
+ 9 |     dec val = do_work()?; // Error: cannot convert residual
+   |                        ^
+   |

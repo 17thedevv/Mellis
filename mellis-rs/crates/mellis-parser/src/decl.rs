@@ -6,8 +6,7 @@ use mellis_common::ids::Span;
 impl<'a> Parser<'a> {
     pub fn parse_annotations(&mut self) -> Result<Vec<Annotation>, ()> {
         let mut annotations = Vec::new();
-        while self.match_token(TokenKind::At) || self.match_token(TokenKind::AtBracket) {
-            let is_bracket = self.previous().kind == TokenKind::AtBracket;
+        while self.match_token(TokenKind::HashBracket) {
             
             if !self.match_token(TokenKind::Identifier) {
                 let span = self.peek().span;
@@ -36,10 +35,7 @@ impl<'a> Parser<'a> {
                 }
                 self.consume(TokenKind::RParen, "Expected ')' after annotation arguments")?;
             }
-            
-            if is_bracket {
-                self.consume(TokenKind::RBracket, "Expected ']' after annotation")?;
-            }
+            self.consume(TokenKind::RBracket, "Expected ']' after annotation")?;
             
             annotations.push(Annotation { name, args });
         }
@@ -382,6 +378,7 @@ impl<'a> Parser<'a> {
         self.consume(TokenKind::LBrace, "Expected '{' for enum body")?;
         let mut variants = Vec::new();
         while !self.check(TokenKind::RBrace) && !self.is_at_end() {
+            let v_annotations = self.parse_annotations()?;
             let v_name = self
                 .consume(TokenKind::Identifier, "Expected variant name")?
                 .span;
@@ -416,6 +413,7 @@ impl<'a> Parser<'a> {
                 self.consume(TokenKind::RParen, "Expected ')' after variant fields")?;
             }
             variants.push(mellis_ast::EnumVariant {
+                annotations: v_annotations,
                 name: v_name,
                 fields,
             });
@@ -446,13 +444,16 @@ impl<'a> Parser<'a> {
         let mut methods = Vec::new();
         let mut associated_types = Vec::new();
         while !self.check(TokenKind::RBrace) && !self.is_at_end() {
-            // Skip annotations/visibility for now
-            let _ = self.match_token(TokenKind::KwExport);
-            if self.check(TokenKind::KwFn) || self.check(TokenKind::KwUnsafe) {
-                let m = self.parse_func_decl(Visibility::Public, Vec::new(), false)?;
+            let m_annotations = self.parse_annotations()?;
+            let mut m_visibility = Visibility::Internal;
+            if self.match_token(TokenKind::KwExport) {
+                m_visibility = Visibility::Public;
+            }
+            if self.check(TokenKind::KwFn) || self.check(TokenKind::KwUnsafe) || self.check(TokenKind::KwIntrinsic) {
+                let m = self.parse_func_decl(m_visibility, m_annotations, false)?;
                 methods.push(m);
             } else if self.match_token(TokenKind::KwType) {
-                let type_decl = self.parse_type_alias_decl(Visibility::Public, Vec::new())?;
+                let type_decl = self.parse_type_alias_decl(m_visibility, m_annotations)?;
                 associated_types.push(type_decl);
             } else {
                 self.advance(); // skip unexpected tokens
@@ -486,12 +487,16 @@ impl<'a> Parser<'a> {
         let mut methods = Vec::new();
         let mut associated_types = Vec::new();
         while !self.check(TokenKind::RBrace) && !self.is_at_end() {
-            let _ = self.match_token(TokenKind::KwExport);
+            let m_annotations = self.parse_annotations()?;
+            let mut m_visibility = Visibility::Internal;
+            if self.match_token(TokenKind::KwExport) {
+                m_visibility = Visibility::Public;
+            }
             if self.check(TokenKind::KwFn) || self.check(TokenKind::KwUnsafe) || self.check(TokenKind::KwIntrinsic) {
-                let m = self.parse_func_decl(Visibility::Public, Vec::new(), false)?;
+                let m = self.parse_func_decl(m_visibility, m_annotations, false)?;
                 methods.push(m);
             } else if self.match_token(TokenKind::KwType) {
-                let type_decl = self.parse_type_alias_decl(Visibility::Public, Vec::new())?;
+                let type_decl = self.parse_type_alias_decl(m_visibility, m_annotations)?;
                 associated_types.push(type_decl);
             } else {
                 self.advance();

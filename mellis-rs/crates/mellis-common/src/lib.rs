@@ -12,6 +12,7 @@ pub struct CompilerSession {
     pub source_manager: SourceManager,
     pub interner: StringInterner,
     pub diagnostics: Vec<Diagnostic>,
+    pub allow_internal_lang_items: bool,
 }
 
 impl CompilerSession {
@@ -20,6 +21,7 @@ impl CompilerSession {
             source_manager: SourceManager::new(),
             interner: StringInterner::new(),
             diagnostics: Vec::new(),
+            allow_internal_lang_items: false,
         }
     }
 }

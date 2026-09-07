@@ -69,7 +69,7 @@ pub enum TokenKind {
     DotDot,
     DotDotEq,
     DotDotDot,
-    AtBracket,
+    HashBracket,
     At,
     Dollar,
     Question,

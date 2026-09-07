@@ -1,3 +1,4 @@
+
 trait Try {
     type Output;
     type Residual;

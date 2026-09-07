@@ -1,53 +1,62 @@
-use std::path::PathBuf;
-use crate::module::ModuleName;
-use mellis_ast::ImportKind;
+use std::path::{Path, PathBuf};
+use crate::error::ExternalComponentError;
 
-#[derive(Default, Clone)]
-pub struct SearchPaths {
-    paths: Vec<PathBuf>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComponentFormat {
+    Mlib,
+    Source,
+    Package,
 }
 
-impl SearchPaths {
-    pub fn new() -> Self { Self { paths: Vec::new() } }
-    pub fn push(&mut self, path: PathBuf) { self.paths.push(path); }
-    pub fn paths(&self) -> &[PathBuf] { &self.paths }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExternalComponentDescriptor {
+    pub name: String,
+    pub root_dir: PathBuf,
+    pub entry_file: PathBuf,
+    pub format: ComponentFormat,
 }
 
-#[derive(Debug)]
-pub enum DiscoveryResult {
-    Mlib(PathBuf),
-    Source(PathBuf),
-    NotFound,
-}
+pub struct ExternalComponentDiscovery;
 
-pub struct ModuleDiscovery {
-    source_dir: PathBuf,
-    search_paths: SearchPaths,
-}
-
-impl ModuleDiscovery {
-    pub fn new(source_dir: PathBuf, search_paths: SearchPaths) -> Self {
-        Self { source_dir, search_paths }
-    }
-
-    pub fn resolve(&self, module_name: &ModuleName, _kind: ImportKind) -> DiscoveryResult {
-        let mlib_name = format!("{}.mlib", module_name.as_str());
-        let ms_name = format!("{}.ms", module_name.as_str());
-
-        let mut paths_to_search = vec![self.source_dir.clone()];
-        paths_to_search.extend(self.search_paths.paths().iter().cloned());
-
-        for search_dir in paths_to_search {
-            let mlib_path = search_dir.join(&mlib_name);
-            if mlib_path.exists() {
-                return DiscoveryResult::Mlib(mlib_path);
-            }
-
-            let ms_path = search_dir.join(&ms_name);
-            if ms_path.exists() {
-                return DiscoveryResult::Source(ms_path);
-            }
+impl ExternalComponentDiscovery {
+    pub fn discover(external_dir: &Path, name: &str) -> Result<ExternalComponentDescriptor, ExternalComponentError> {
+        // 1. Check for precompiled library: <external_dir>/<name>.mlib (per Rule 6)
+        let mlib_path = external_dir.join(format!("{}.mlib", name));
+        if mlib_path.exists() {
+            return Ok(ExternalComponentDescriptor {
+                name: name.to_string(),
+                root_dir: external_dir.to_path_buf(),
+                entry_file: mlib_path,
+                format: ComponentFormat::Mlib,
+            });
         }
-        DiscoveryResult::NotFound
+
+        // 2. Check for single source file: <external_dir>/<name>.ms
+        let ms_path = external_dir.join(format!("{}.ms", name));
+        if ms_path.exists() {
+            return Ok(ExternalComponentDescriptor {
+                name: name.to_string(),
+                root_dir: external_dir.to_path_buf(),
+                entry_file: ms_path,
+                format: ComponentFormat::Source,
+            });
+        }
+
+        // 3. Check for package directory: <external_dir>/<name>/package.ms
+        let pkg_root = external_dir.join(name);
+        let pkg_entry = pkg_root.join("package.ms");
+        if pkg_entry.exists() {
+            return Ok(ExternalComponentDescriptor {
+                name: name.to_string(),
+                root_dir: pkg_root,
+                entry_file: pkg_entry,
+                format: ComponentFormat::Package,
+            });
+        }
+
+        Err(ExternalComponentError::NotFound {
+            name: name.to_string(),
+            searched_dir: external_dir.to_path_buf(),
+        })
     }
 }

@@ -511,15 +511,11 @@ impl<'a> Iterator for Lexer<'a> {
                 }
             }
             b'@' => {
-                if self.match_char(b'[') {
-                    TokenKind::AtBracket
-                } else {
-                    TokenKind::At
-                }
+                TokenKind::At
             }
             b'#' => {
                 if self.match_char(b'[') {
-                    TokenKind::AtBracket
+                    TokenKind::HashBracket
                 } else {
                     TokenKind::Error
                 }

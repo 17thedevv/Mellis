@@ -1,6 +1,13 @@
 pub mod importer;
 pub mod registry;
 pub mod async_lowering;
+pub mod sysroot;
+pub mod external;
+pub mod error;
+pub mod session;
+pub mod discovery;
+
+pub use session::DriverSession;
 
 use mellis_ast::AstArena;
 use mellis_common::{CompilerSession, Diagnostic};
@@ -21,7 +28,7 @@ pub struct CompilerOptions {
     pub no_link: bool,
 }
 
-pub fn check(file_name: &str, mut input: String, search_paths: &[String], quiet: bool) -> Result<(), Vec<Diagnostic>> {
+pub fn check(file_name: &str, mut input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
     let mut session = CompilerSession::new();
     let file_id = session.source_manager.add_file(file_name.to_string(), input.clone());
     let lexer = Lexer::new(&input, file_id);
@@ -32,7 +39,16 @@ pub fn check(file_name: &str, mut input: String, search_paths: &[String], quiet:
     let mut semantic_ctx = SemanticContext::new();
     let mut registry = crate::registry::ModuleRegistry::new();
     let mut input_mut = input.clone();
-    crate::importer::resolve_imports(&mut items, &mut arena, &mut input_mut, search_paths, &mut registry, &mut session).map_err(|e| e)?;
+    let search_paths_buf: Vec<std::path::PathBuf> = options.search_paths.iter().map(std::path::PathBuf::from).collect();
+    let sysroot = crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from(".")));
+    let mut driver_session = crate::session::DriverSession::new(sysroot, &mut session, options.search_paths.as_slice());
+    
+    if let Err(e) = driver_session.bootstrap_core(&mut arena, &mut input_mut) {
+        return Err(e.into_diagnostics());
+    }
+    
+    crate::importer::resolve_imports(&mut items, &mut arena, &mut input_mut, &mut driver_session).map_err(|e| e)?;
+    let mut registry = driver_session.registry;
     
     let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut input_mut, file_id);
     let items = attr_processor.process_items(items).map_err(|e| e)?;
@@ -90,7 +106,7 @@ pub fn check(file_name: &str, mut input: String, search_paths: &[String], quiet:
         let (diags, _) = mellis_borrowck::borrow_check_function(&function, &semantic_ctx, &interproc.summaries);
         diagnostics.extend(diags);
     }
-    if diagnostics.is_empty() { if !quiet { println!("check passed"); } Ok(()) } else { Err(diagnostics) }
+    if diagnostics.is_empty() { if !options.quiet { println!("check passed"); } Ok(()) } else { Err(diagnostics) }
 }
 
 pub fn compile(file_name: &str, input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
@@ -143,11 +159,20 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut 
             
             let mut items_mut = items.clone();
             
-            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut input_mut, options.search_paths.as_slice(), &mut registry, session) {
+            let search_paths_buf: Vec<std::path::PathBuf> = options.search_paths.iter().map(std::path::PathBuf::from).collect();
+            let sysroot = crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from(".")));
+            let mut driver_session = crate::session::DriverSession::new(sysroot, session, options.search_paths.as_slice());
+            
+            if let Err(e) = driver_session.bootstrap_core(&mut arena, &mut input_mut) {
+                return Err(e.into_diagnostics());
+            }
+            
+            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut input_mut, &mut driver_session) {
                 return Err(e);
             }
             
             let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut input_mut, file_id);
+            let mut registry = driver_session.registry;
             let items_mut = attr_processor.process_items(items_mut).map_err(|e| e)?;
 
             registry.inject_into_ctx(&mut semantic_ctx);

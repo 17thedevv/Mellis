@@ -26,10 +26,12 @@ pub enum CompilerAttr {
     Inline,
     NoMangle,
     Link,
+    Lang,
+    SyncNoescape,
 }
 
 /// The set of known compiler-defined attribute names.
-const COMPILER_ATTRS: &[&str] = &["repr", "test", "inline", "no_mangle", "link"];
+const COMPILER_ATTRS: &[&str] = &["repr", "test", "inline", "no_mangle", "link", "lang", "sync_noescape"];
 
 /// Attribute processor that handles both compiler-defined attributes and derive expansion.
 ///
@@ -159,7 +161,7 @@ impl<'a> AttributeProcessor<'a> {
                 "test" => {
                     self.handle_test(decl, annot);
                 }
-                "inline" | "no_mangle" | "link" => {
+                "inline" | "no_mangle" | "link" | "lang" | "sync_noescape" => {
                     // Valid compiler directives - validated but not processed
                     self.validate_compiler_attr(decl, annot);
                 }
@@ -172,6 +174,78 @@ impl<'a> AttributeProcessor<'a> {
                         Diagnostic::error(format!("unknown attribute `{}`", attr_name))
                             .with_span(annot.name),
                     );
+                }
+            }
+        }
+
+        // If Enum, also validate variant annotations
+        if let Decl::Enum { variants, .. } = decl {
+            for variant in variants {
+                for annot in &variant.annotations {
+                    let attr_name = self.get_span_text(annot.name);
+                    if attr_name == "lang" {
+                        // valid on variant in compiler/core contexts
+                    } else if !COMPILER_ATTRS.contains(&attr_name) && attr_name != "derive" {
+                        self.diagnostics.push(
+                            Diagnostic::error(format!("unknown attribute `{}`", attr_name))
+                                .with_span(annot.name),
+                        );
+                    } else {
+                        self.diagnostics.push(
+                            Diagnostic::error(format!("`#[{}]` cannot be applied to enum variants", attr_name))
+                                .with_span(annot.name),
+                        );
+                    }
+                }
+            }
+        }
+
+        // If Function, also validate parameter annotations
+        if let Decl::Function { params, .. } = decl {
+            for param_id in params {
+                if let Decl::Param { annotations, .. } = &self.arena.decls[param_id.0 as usize] {
+                    for annot in annotations {
+                        let attr_name = self.get_span_text(annot.name);
+                        if attr_name == "sync_noescape" {
+                            // valid on parameter
+                        } else if !COMPILER_ATTRS.contains(&attr_name) && attr_name != "derive" {
+                            self.diagnostics.push(
+                                Diagnostic::error(format!("unknown attribute `{}`", attr_name))
+                                    .with_span(annot.name),
+                            );
+                        } else {
+                            self.diagnostics.push(
+                                Diagnostic::error(format!("`#[{}]` cannot be applied to parameters", attr_name))
+                                    .with_span(annot.name),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // If Extern, also validate parameter annotations of extern func
+        if let Decl::Extern { func, .. } = decl {
+            if let Decl::Function { params, .. } = &self.arena.decls[func.0 as usize] {
+                for param_id in params {
+                    if let Decl::Param { annotations, .. } = &self.arena.decls[param_id.0 as usize] {
+                        for annot in annotations {
+                            let attr_name = self.get_span_text(annot.name);
+                            if attr_name == "sync_noescape" {
+                                // valid on parameter
+                            } else if !COMPILER_ATTRS.contains(&attr_name) && attr_name != "derive" {
+                                self.diagnostics.push(
+                                    Diagnostic::error(format!("unknown attribute `{}`", attr_name))
+                                        .with_span(annot.name),
+                                );
+                            } else {
+                                self.diagnostics.push(
+                                    Diagnostic::error(format!("`#[{}]` cannot be applied to parameters", attr_name))
+                                        .with_span(annot.name),
+                                );
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -239,6 +313,16 @@ impl<'a> AttributeProcessor<'a> {
                         );
                     }
                 }
+            }
+            "lang" => {
+                // lang can be applied to various items (traits, functions, structs, etc)
+                // in trusted compiler/core contexts. Handled in Resolver.
+            }
+            "sync_noescape" => {
+                self.diagnostics.push(
+                    Diagnostic::error("`#[sync_noescape]` can only be applied to parameters")
+                        .with_span(annot.name),
+                );
             }
             _ => {}
         }

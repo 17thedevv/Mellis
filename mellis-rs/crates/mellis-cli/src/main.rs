@@ -34,6 +34,7 @@ enum Commands {
         /// Add a directory to the module search path
         #[arg(short = 'I', long = "search-path", value_name = "DIR")]
         search_paths: Vec<PathBuf>,
+
     },
     /// Check a source file for errors without emitting output
     Check {
@@ -47,6 +48,7 @@ enum Commands {
         /// Add a directory to the module search path
         #[arg(short = 'I', long = "search-path", value_name = "DIR")]
         search_paths: Vec<PathBuf>,
+
     },
     /// Compile and run an application
     Run {
@@ -60,6 +62,7 @@ enum Commands {
         /// Add a directory to the module search path
         #[arg(short = 'I', long = "search-path", value_name = "DIR")]
         search_paths: Vec<PathBuf>,
+
     },
     /// Inspect the manifest of a given .mlib file
     Manifest {

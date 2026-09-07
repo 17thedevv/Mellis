@@ -29,8 +29,14 @@ impl<'a> Parser<'a> {
 
         for token in lexer {
             if token.kind == TokenKind::Error {
-                diagnostics
-                    .push(Diagnostic::error("Invalid token encountered").with_span(token.span));
+                let text = &source[token.span.start as usize..token.span.end as usize];
+                if text == "#" {
+                    diagnostics
+                        .push(Diagnostic::error("unexpected '#'; expected '#[' for an annotation").with_span(token.span));
+                } else {
+                    diagnostics
+                        .push(Diagnostic::error("Invalid token encountered").with_span(token.span));
+                }
             } else {
                 tokens.push(token);
             }

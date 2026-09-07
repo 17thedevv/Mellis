@@ -1522,23 +1522,49 @@ impl<'a> MvirGenerator<'a> {
             Expr::Try { expr: inner, .. } => {
                 let inner_op = self.generate_expr(inner);
                 let inner_ty_id = self.ctx.tables.expr_types.get(inner).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
-                let output_ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
                 
-                let (success_idx, failure_idx, func_failure_idx) = self.ctx.tables.try_branches.get(expr_id).copied().unwrap_or((0, 1, 1));
+                // 1. Get the branch method
+                let branch_decl = self.ctx.tables.try_branch_methods.get(expr_id).copied().unwrap();
+                let branch_ret_ty = if let Some(mellis_semantic::SemanticType::Function { return_type, .. }) = self.ctx.tables.symbol_types.get(&self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap()).map(|&t| self.ctx.types.get(t).clone()) {
+                    return_type
+                } else {
+                    mellis_semantic::SemanticTypeId(0)
+                };
+                
+                // Call `branch`
+                let flow_val = self.push_inst(Instruction::CallDirect {
+                    callee: GlobalId {
+                        name: self.ctx.symbol_table.get_symbol(self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap()).name.clone(),
+                        symbol_id: Some(self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap()),
+                    },
+                    args: vec![inner_op.clone()],
+                    
+                }, branch_ret_ty);
+                
+                // Get ControlFlow's Break and Continue variants from LangItem!
+                let break_sym = self.ctx.lang_items.get(mellis_semantic::lang_item::LangItem::ControlFlowBreak).unwrap();
+                let continue_sym = self.ctx.lang_items.get(mellis_semantic::lang_item::LangItem::ControlFlowContinue).unwrap();
+                
+                let break_idx = match self.ctx.symbol_table.get_symbol(break_sym).kind {
+                    mellis_semantic::symbol::SymbolKind::EnumVariant(idx) => idx,
+                    _ => panic!("Expected EnumVariant for ControlFlowBreak"),
+                };
+                let continue_idx = match self.ctx.symbol_table.get_symbol(continue_sym).kind {
+                    mellis_semantic::symbol::SymbolKind::EnumVariant(idx) => idx,
+                    _ => panic!("Expected EnumVariant for ControlFlowContinue"),
+                };
                 
                 let success_label = self.new_label("try_success");
                 let failure_label = self.new_label("try_failure");
-                let end_label = self.new_label("try_end");
                 
+                // Tag of the flow_val
                 let tag_val = self.push_inst(Instruction::Tag {
-                    value: inner_op.clone(),
+                    value: Operand::Value(flow_val),
                 }, self.ctx.types.bool_id());
-                
-                let failure_tag = Operand::Number(failure_idx.to_string());
                 
                 let is_failure = self.push_inst(Instruction::Eq {
                     left: Operand::Value(tag_val),
-                    right: failure_tag,
+                    right: Operand::Number(break_idx.to_string()),
                 }, self.ctx.types.bool_id());
                 
                 self.terminate_block(Terminator::CondBr {
@@ -1547,44 +1573,52 @@ impl<'a> MvirGenerator<'a> {
                     false_target: success_label.clone(),
                 });
                 
-                // Failure path
+                // -- Failure Path --
                 self.start_block(failure_label);
                 
-                let sem_inner_ty = self.ctx.types.get(inner_ty_id).clone();
-                let residual_ty = if let mellis_semantic::SemanticType::Enum(_, _, variant_tys) = &sem_inner_ty {
-                    variant_tys[failure_idx as usize]
+                let flow_sem_ty = self.ctx.types.get(branch_ret_ty).clone();
+                let residual_ty = if let mellis_semantic::SemanticType::Enum(_, _, variant_tys) = &flow_sem_ty {
+                    variant_tys[break_idx as usize]
                 } else {
                     mellis_semantic::SemanticTypeId(0)
                 };
                 
                 let residual_val = self.push_inst(Instruction::Extract {
-                    value: inner_op.clone(),
-                    variant_idx: failure_idx,
+                    value: Operand::Value(flow_val),
+                    variant_idx: break_idx,
                     field_idx: 0,
                 }, residual_ty);
                 
-                // Perform drop cleanup up to depth 0 (the entire function scope)
-                self.emit_drops_up_to(0, None);
-                
-                // The current function returns `Result` (or whatever the function's return type is)
+                // Call `FromResidual::from_residual`
+                let from_residual_decl = self.ctx.tables.try_from_residual_methods.get(expr_id).copied().unwrap();
                 let expected_ret_ty = self.current_function.as_ref().unwrap().ret_ty;
                 
-                let ret_val = self.push_inst(Instruction::Variant {
-                    enum_ty: expected_ret_ty,
-                    variant_idx: func_failure_idx,
+                let ret_val = self.push_inst(Instruction::CallDirect {
+                    callee: GlobalId {
+                        name: self.ctx.symbol_table.get_symbol(self.ctx.tables.decl_symbols.get(&from_residual_decl).copied().unwrap()).name.clone(),
+                        symbol_id: Some(self.ctx.tables.decl_symbols.get(&from_residual_decl).copied().unwrap()),
+                    },
                     args: vec![Operand::Value(residual_val)],
+                    
                 }, expected_ret_ty);
                 
+                self.emit_drops_up_to(0, None);
                 self.terminate_block(Terminator::Ret { value: Some(Operand::Value(ret_val)) });
                 
-                // Success path
+                // -- Success Path --
                 self.start_block(success_label);
                 
+                let output_ty = if let mellis_semantic::SemanticType::Enum(_, _, variant_tys) = &flow_sem_ty {
+                    variant_tys[continue_idx as usize]
+                } else {
+                    mellis_semantic::SemanticTypeId(0)
+                };
+                
                 let output_val = self.push_inst(Instruction::Extract {
-                    value: inner_op.clone(),
-                    variant_idx: success_idx,
+                    value: Operand::Value(flow_val),
+                    variant_idx: continue_idx,
                     field_idx: 0,
-                }, output_ty_id);
+                }, output_ty);
                 
                 Operand::Value(output_val)
             }

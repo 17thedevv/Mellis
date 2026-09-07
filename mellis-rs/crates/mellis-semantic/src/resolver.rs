@@ -26,7 +26,7 @@ use mellis_common::ids::Span;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeclarationContext {
     Free,
-    TraitMethod,
+    TraitMethod(Visibility),
     ImplMethod,
 }
 
@@ -356,8 +356,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         let name_str =
                             self.source[name.start as usize..name.end as usize].to_string();
 
-                        let effective_visibility = if context == DeclarationContext::TraitMethod {
-                            Visibility::Public
+                        let effective_visibility = if let DeclarationContext::TraitMethod(v) = context {
+                            v
                         } else {
                             *visibility
                         };
@@ -375,7 +375,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
                         
                         let expected_lang_target = match context {
-                            DeclarationContext::TraitMethod | DeclarationContext::ImplMethod => crate::lang_item::LangItemTarget::Method,
+                            DeclarationContext::TraitMethod(_) | DeclarationContext::ImplMethod => crate::lang_item::LangItemTarget::Method,
                             DeclarationContext::Free => crate::lang_item::LangItemTarget::Function,
                         };
                         self.check_lang_item(annotations, sym_id, expected_lang_target);
@@ -653,7 +653,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         let mut trait_method_syms = Vec::new();
                         for method_id in methods {
                             let item = Item::Decl(*method_id);
-                            self.declare_item(&item, DeclarationContext::TraitMethod);
+                            self.declare_item(&item, DeclarationContext::TraitMethod(*visibility));
                             if let Some(&meth_sym) = self.ctx.tables.decl_symbols.get(method_id) {
                                 trait_method_syms.push(meth_sym);
                             }

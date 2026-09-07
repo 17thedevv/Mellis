@@ -10,7 +10,7 @@ export enum Option {
     None,
 }
 
-@[no_mangle]
+#[no_mangle]
 export fn main() -> int {
     // Case 1: Partial move and use of remaining field
     dec p = Point { x: 10, y: 20 };

@@ -395,7 +395,7 @@ impl DeriveRegistry {
                     let mut match_arms = Vec::new();
                     for variant in &input.variants {
                         if variant.fields.is_empty() {
-                            match_arms.push(format!("{}::{} -> {{ match *other {{ {}::{} -> {{ true }} _ -> {{ false }} }}; }}", 
+                            match_arms.push(format!("{}::{} -> {{ match *other {{ {}::{} -> {{ true }} _ -> {{ false }} }} }}", 
                                 type_name, variant.name, type_name, variant.name));
                         } else {
                             let self_binders: Vec<String> = variant.fields.iter().enumerate().map(|(i, _)| format!("s{}", i)).collect();
@@ -411,7 +411,7 @@ impl DeriveRegistry {
                         }
                     }
                     format!(
-                        "impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ match *self {{ {} _ -> {{ false }} }}; }} }}",
+                        "impl PartialEq for {} {{ fn eq(self: &{}, other: &{}) -> bool {{ match *self {{ {} _ -> {{ false }} }} }} }}",
                         type_name, type_name, type_name, match_arms.join(" ")
                     )
                 }

@@ -6,6 +6,12 @@ fn setup_test_dir(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join("mellis_tests").join(name);
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
+    
+    // Mock core component since it's required for typechecking/bootstrapping
+    let core_dir = dir.join("libs").join("external");
+    fs::create_dir_all(&core_dir).unwrap();
+    fs::write(core_dir.join("core.ms"), "module core {}").unwrap();
+    
     dir
 }
 

@@ -17,6 +17,10 @@ fn test_macro_repetition_star() {
         }
     "#;
 
-    let res = check("test_repetition.ms", code.to_string(), &[], true);
-    assert!(res.is_ok(), "Macro repetition check failed: {:?}", res.err());
+    let res = check("test_repetition.ms", code.to_string(), &mellis_driver::CompilerOptions { search_paths: vec!["../../libs/external".to_string()], ..Default::default() });
+    assert!(
+        res.is_ok(),
+        "Macro repetition check failed: {:?}",
+        res.err()
+    );
 }

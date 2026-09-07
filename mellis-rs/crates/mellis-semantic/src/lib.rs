@@ -10,6 +10,7 @@ pub mod derive;
 pub mod comptime;
 pub mod effect;
 pub mod lifetime;
+pub mod lang_item;
 
 pub use effect::{Effect, EffectSet};
 pub use resolver::Resolver;
@@ -55,9 +56,12 @@ pub struct SemanticContext {
     pub types: TypeContext,
     pub instantiated_functions: Vec<InstantiatedFunction>,
     pub diagnostics: Vec<Diagnostic>,
+    pub lang_items: lang_item::LangItemRegistry,
     pub needs_drop_cache: RefCell<HashMap<ty::SemanticTypeId, NeedsDropState>>,
     pub comptime_values: HashMap<mellis_ast::ExprId, comptime::ComptimeValue>,
     pub const_values: HashMap<SymbolId, comptime::ComptimeValue>,
+    pub allow_internal_lang_items: bool,
+    pub external_module_scopes: HashMap<String, ScopeId>,
 }
 
 impl SemanticContext {
@@ -66,11 +70,14 @@ impl SemanticContext {
             symbol_table: SymbolTable::new(),
             tables: SemanticTables::new(),
             types: TypeContext::new(),
+            lang_items: lang_item::LangItemRegistry::new(),
             instantiated_functions: Vec::new(),
             diagnostics: Vec::new(),
             needs_drop_cache: RefCell::new(HashMap::new()),
             comptime_values: HashMap::new(),
             const_values: HashMap::new(),
+            allow_internal_lang_items: false,
+            external_module_scopes: HashMap::new(),
         }
     }
 

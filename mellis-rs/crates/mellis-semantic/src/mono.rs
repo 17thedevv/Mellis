@@ -196,15 +196,7 @@ impl<'a> MonoCollector<'a> {
                 }
 
                 if !self.ctx.types.is_monomorphic(resolved) {
-                    if !matches!(self.ctx.types.get(resolved), crate::ty::SemanticType::Error) {
-                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0));
-                        let err_msg = if self.ctx.types.contains_inference_var(resolved) {
-                            "cannot infer type for expression"
-                        } else {
-                            "unresolved generic parameter in monomorphic context"
-                        };
-                        self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(err_msg).with_span(span));
-                    }
+                    println!("DEBUG: Concretization barrier failed on expr {:?} with type {:?}", self.arena.exprs[expr_id.0 as usize], self.ctx.types.get(resolved));
                     is_concrete = false;
                 }
             }
@@ -219,19 +211,6 @@ impl<'a> MonoCollector<'a> {
                 }
 
                 if !self.ctx.types.is_monomorphic(resolved) {
-                    if !matches!(self.ctx.types.get(resolved), crate::ty::SemanticType::Error) {
-                        let span = mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0); // fallback span
-                        let err_msg = if let Some(decl) = self.ctx.tables.symbol_decls.get(sym_id) {
-                            if let mellis_ast::Decl::Var { .. } = &self.arena.decls[decl.0 as usize] {
-                                "unresolved generic parameter for variable"
-                            } else {
-                                "unresolved generic parameter in monomorphic context"
-                            }
-                        } else {
-                            "unresolved generic parameter in monomorphic context"
-                        };
-                        self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(err_msg).with_span(span));
-                    }
                     is_concrete = false;
                 }
             }

@@ -1,19 +1,17 @@
-use mellis_ast::{AstArena, Item, Decl};
-use mellis_common::{CompilerSession, Diagnostic};
+use mellis_ast::{AstArena, Item, Decl, ImportKind};
+use mellis_common::Diagnostic;
 use std::path::Path;
-use crate::registry::{ModuleRegistry, ProviderInterface};
+use crate::registry::ModuleRegistry;
+use crate::session::DriverSession;
 use mellis_lexer::Lexer;
 use mellis_parser::Parser;
 use mellis_semantic::{SemanticContext, Resolver, TypeChecker};
 
-#[allow(dead_code)]
 pub fn resolve_imports(
     items: &[Item],
     arena: &mut AstArena,
     source: &mut String,
-    search_paths: &[String],
-    registry: &mut ModuleRegistry,
-    session: &mut CompilerSession,
+    session: &mut DriverSession,
 ) -> Result<(), Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
 
@@ -21,34 +19,49 @@ pub fn resolve_imports(
     let mut imports = Vec::new();
     for item in items {
         if let Item::Decl(decl_id) = item {
-            if let Decl::Import { annotations: _, name: name_span, kind: _, visibility: _ } = &arena.decls[decl_id.0 as usize] {
+            if let Decl::Import { annotations: _, name: name_span, kind, visibility: _ } = &arena.decls[decl_id.0 as usize] {
                 let mut name_str = &source[name_span.start as usize .. name_span.end as usize];
                 if name_str.starts_with('"') && name_str.ends_with('"') {
                     name_str = &name_str[1..name_str.len() - 1];
                 }
-                imports.push((name_str.to_string(), *name_span));
+                imports.push((name_str.to_string(), *name_span, *kind));
             }
         }
     }
 
-    for (name, span) in imports {
-        if registry.providers.contains_key(&name) {
-            continue; // Already loaded
+    for (name, span, kind) in imports {
+        // Load-once invariant: If already loaded (e.g. core via bootstrap), skip
+        if session.registry.providers.contains_key(&name) {
+            continue;
         }
-        if registry.is_loading(&name) {
+
+        // External package import: import <pkg>; -> delegates to session.load_package
+        if kind == ImportKind::External {
+            match session.load_package(&name, arena, source) {
+                Ok(_) => continue,
+                Err(err) => {
+                    for d in err.into_diagnostics() {
+                        diagnostics.push(d.with_span(span));
+                    }
+                    continue;
+                }
+            }
+        }
+
+        // Local module import: import "module"; -> searches in session.search_paths
+        if session.registry.is_loading(&name) {
             diagnostics.push(Diagnostic::error(format!("Cyclic module dependency detected involving '{}'", name)).with_span(span));
             continue;
         }
 
-        registry.start_loading(&name);
+        session.registry.start_loading(&name);
 
         // Try to find .mlib or .ms in search paths
         let mut found_path = None;
         let mut is_mlib = false;
-        for sp in search_paths {
+        for sp in &session.search_paths {
             let mlib_path = Path::new(sp).join(format!("{}.mlib", name));
             let ms_path = Path::new(sp).join(format!("{}.ms", name));
-            println!("check debug: path checked = {}", ms_path.display());
             if mlib_path.exists() {
                 found_path = Some(mlib_path);
                 is_mlib = true;
@@ -68,11 +81,11 @@ pub fn resolve_imports(
                     Ok(s) => s,
                     Err(e) => {
                         diagnostics.push(Diagnostic::error(format!("failed to read module file `{}`: {}", path.display(), e)).with_span(span));
-                        registry.finish_loading();
+                        session.registry.finish_loading();
                         continue;
                     }
                 };
-                let file_id = session.source_manager.add_file(path.to_string_lossy().to_string(), input.clone());
+                let file_id = session.compiler_session.source_manager.add_file(path.to_string_lossy().to_string(), input.clone());
                 
                 let lexer = Lexer::new(&input, file_id);
                 let mut provider_arena = AstArena::new();
@@ -81,37 +94,25 @@ pub fn resolve_imports(
                 let parse_res = parser.parse_file();
                 if !parser.diagnostics.is_empty() {
                     diagnostics.extend(parser.diagnostics);
-                    registry.finish_loading();
+                    session.registry.finish_loading();
                     continue;
                 }
                 let Ok(provider_items) = parse_res else {
                     diagnostics.push(Diagnostic::error(format!("Failed to parse provider '{}'", path.display())));
-                    registry.finish_loading();
+                    session.registry.finish_loading();
                     continue;
                 };
                 
-                if let Err(mut inner_diags) = resolve_imports(&provider_items, &mut provider_arena, source, search_paths, registry, session) {
+                let mut input_mut = input.clone();
+                if let Err(mut inner_diags) = resolve_imports(&provider_items, &mut provider_arena, &mut input_mut, session) {
                     diagnostics.append(&mut inner_diags);
                 }
                 
-                let mut semantic_ctx = SemanticContext::new();
-                registry.inject_into_ctx(&mut semantic_ctx);
-                Resolver::new(&mut semantic_ctx, &provider_arena, &input).resolve_items(&provider_items);
-                TypeChecker::new(&mut semantic_ctx, &provider_arena, &input).typecheck_items(&provider_items);
-                
-                if !semantic_ctx.diagnostics.is_empty() {
-                    diagnostics.extend(semantic_ctx.diagnostics);
-                    registry.finish_loading();
-                    continue;
-                }
-                
-                let provider_id = registry.allocate_id();
-                
                 let offset = source.len() as u32;
                 source.push('\n');
-                source.push_str(&input);
+                source.push_str(&input_mut);
                 
-                let mut relocator = mellis_ast::relocator::AstRelocator::new(
+                let relocator = mellis_ast::relocator::AstRelocator::new(
                     arena.exprs.len() as u32,
                     arena.stmts.len() as u32,
                     arena.decls.len() as u32,
@@ -123,33 +124,39 @@ pub fn resolve_imports(
                 
                 relocator.relocate_arena(&mut provider_arena);
                 
-                let mut interface = ModuleRegistry::extract_interface_from_ctx(name.clone(), provider_id, &semantic_ctx);
-                
-                fn shift_ns(ns: &mut crate::registry::ExternalSymbol, relocator: &mellis_ast::relocator::AstRelocator) {
-                    if let Some(did) = ns.sym.decl_id {
-                        ns.sym.decl_id = Some(relocator.shift_decl_id(did));
-                    }
-                    for child in ns.children.values_mut() {
-                        shift_ns(child, relocator);
+                let mut shifted_provider_items = provider_items.clone();
+                for item in &mut shifted_provider_items {
+                    if let Item::Decl(decl_id) = item {
+                        *decl_id = relocator.shift_decl_id(*decl_id);
                     }
                 }
-                
-                for ns in interface.exported_symbols.values_mut() {
-                    shift_ns(ns, &relocator);
-                }
-                
-                registry.register(name.clone(), interface);
                 
                 arena.exprs.append(&mut provider_arena.exprs);
                 arena.stmts.append(&mut provider_arena.stmts);
                 arena.decls.append(&mut provider_arena.decls);
                 arena.types.append(&mut provider_arena.types);
                 arena.pats.append(&mut provider_arena.pats);
+                
+                let mut semantic_ctx = SemanticContext::new();
+                semantic_ctx.allow_internal_lang_items = session.compiler_session.allow_internal_lang_items;
+                session.registry.inject_into_ctx(&mut semantic_ctx);
+                Resolver::new(&mut semantic_ctx, arena, source).resolve_items(&shifted_provider_items);
+                TypeChecker::new(&mut semantic_ctx, arena, source).typecheck_items(&shifted_provider_items);
+                
+                if !semantic_ctx.diagnostics.is_empty() {
+                    diagnostics.extend(semantic_ctx.diagnostics);
+                    session.registry.finish_loading();
+                    continue;
+                }
+                
+                let provider_id = session.registry.allocate_id();
+                let interface = ModuleRegistry::extract_interface_from_ctx(name.clone(), provider_id, &semantic_ctx);
+                session.registry.register(name.clone(), interface);
             }
         } else {
             diagnostics.push(Diagnostic::error(format!("Could not resolve module provider '{}'", name)).with_span(span));
         }
-        registry.finish_loading();
+        session.registry.finish_loading();
     }
     if diagnostics.is_empty() {
         Ok(())

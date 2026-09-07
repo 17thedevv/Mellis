@@ -39,11 +39,6 @@ pub struct TraitResolution {
     pub method_sym: SymbolId,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum LangItem {
-    Try,
-    Drop,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IntrinsicKind {
@@ -63,12 +58,14 @@ pub struct SemanticTables {
     pub expr_symbols: HashMap<ExprId, SymbolId>,
     pub expr_substs: HashMap<ExprId, crate::ty::Substitution>,
     pub expr_trait_resolutions: HashMap<ExprId, TraitResolution>,
+    pub try_branch_methods: HashMap<ExprId, mellis_ast::DeclId>,
+    pub try_from_residual_methods: HashMap<ExprId, mellis_ast::DeclId>,
     pub intrinsic_types: HashMap<ExprId, SemanticTypeId>,
     pub expr_intrinsics: HashMap<ExprId, IntrinsicKind>,
     pub expr_member_indices: HashMap<ExprId, u32>,
     pub expr_struct_init_indices: HashMap<ExprId, Vec<u32>>,
     
-    pub lang_items: HashMap<LangItem, SymbolId>,
+
     pub expr_sizeof_target: HashMap<ExprId, SemanticTypeId>,
     pub expr_lifetimes: HashMap<ExprId, crate::ty::LifetimeId>,
     pub expr_captures: HashMap<ExprId, Vec<SymbolId>>,
@@ -147,11 +144,12 @@ impl SemanticTables {
             expr_symbols: HashMap::new(),
             expr_substs: HashMap::new(),
             expr_trait_resolutions: HashMap::new(),
+            try_branch_methods: HashMap::new(),
+            try_from_residual_methods: HashMap::new(),
             intrinsic_types: HashMap::new(),
             expr_intrinsics: HashMap::new(),
             expr_member_indices: HashMap::new(),
             expr_struct_init_indices: HashMap::new(),
-            lang_items: HashMap::new(),
             expr_sizeof_target: HashMap::new(),
             expr_lifetimes: HashMap::new(),
             expr_captures: HashMap::new(),

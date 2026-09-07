@@ -266,6 +266,7 @@ impl AstRelocator {
                 self.shift_span(name);
                 self.relocate_generic_params(generic_params);
                 for variant in variants {
+                    self.relocate_annotations(&mut variant.annotations);
                     self.shift_span(&mut variant.name);
                     for f in &mut variant.fields { *f = self.shift_decl_id(*f); }
                 }

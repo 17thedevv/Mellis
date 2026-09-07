@@ -250,6 +250,9 @@ impl TypeContext {
     
     pub fn is_monomorphic(&self, id: SemanticTypeId) -> bool {
         let flags = self.type_flags(id);
+        if flags.1 {
+            println!("DEBUG: type_flags for {:?} = {:?}, ty = {:?}", id, flags, self.get(id));
+        }
         !flags.0 && !flags.1 && !flags.2 // has_infer, has_generic, has_error
     }
     
@@ -267,6 +270,12 @@ impl TypeContext {
                 let mut has_err = false;
                 for &a in args.iter().chain(fields.iter()) {
                     let (i, g, e) = self.type_flags(a);
+                    if i {
+                        println!("DEBUG: type_flags inference var at {:?} (resolved: {:?})", a, resolved);
+                    }
+                    if g {
+                        println!("DEBUG: type_flags generic param at {:?} (resolved: {:?}, ty: {:?})", a, resolved, self.get(a));
+                    }
                     has_infer |= i; has_gen |= g; has_err |= e;
                     if has_infer && has_gen && has_err { break; }
                 }
@@ -322,59 +331,62 @@ impl TypeContext {
         }
     }
 
-    pub fn clone_type_from(&mut self, id: SemanticTypeId, source_ctx: &TypeContext, symbol_map: &std::collections::HashMap<SymbolId, SymbolId>) -> SemanticTypeId {
+    pub fn clone_type_from<F>(&mut self, id: SemanticTypeId, source_ctx: &TypeContext, lookup_sym: &F) -> SemanticTypeId
+    where
+        F: Fn(SymbolId) -> SymbolId,
+    {
         let ty = source_ctx.get(id).clone();
         match ty {
             SemanticType::Primitive(p) => self.intern(SemanticType::Primitive(p)),
 
             SemanticType::Struct(sym, args, fields) => {
-                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
-                let new_args = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
-                let new_fields = fields.iter().map(|&f| self.clone_type_from(f, source_ctx, symbol_map)).collect();
+                let new_sym = lookup_sym(sym);
+                let new_args = args.iter().map(|&a| self.clone_type_from(a, source_ctx, lookup_sym)).collect();
+                let new_fields = fields.iter().map(|&f| self.clone_type_from(f, source_ctx, lookup_sym)).collect();
                 self.intern(SemanticType::Struct(new_sym, new_args, new_fields))
             }
             SemanticType::Enum(sym, args, variants) => {
-                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
-                let new_args = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
-                let new_variants = variants.iter().map(|&v| self.clone_type_from(v, source_ctx, symbol_map)).collect();
+                let new_sym = lookup_sym(sym);
+                let new_args = args.iter().map(|&a| self.clone_type_from(a, source_ctx, lookup_sym)).collect();
+                let new_variants = variants.iter().map(|&v| self.clone_type_from(v, source_ctx, lookup_sym)).collect();
                 self.intern(SemanticType::Enum(new_sym, new_args, new_variants))
             }
             SemanticType::Tuple(args) => {
-                let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, symbol_map)).collect();
+                let new_args: Vec<_> = args.iter().map(|&a| self.clone_type_from(a, source_ctx, lookup_sym)).collect();
                 self.intern(SemanticType::Tuple(new_args))
             }
             SemanticType::Array(elem, len) => {
-                let new_elem = self.clone_type_from(elem, source_ctx, symbol_map);
+                let new_elem = self.clone_type_from(elem, source_ctx, lookup_sym);
                 self.intern(SemanticType::Array(new_elem, len))
             }
             SemanticType::Slice(elem) => {
-                let new_elem = self.clone_type_from(elem, source_ctx, symbol_map);
+                let new_elem = self.clone_type_from(elem, source_ctx, lookup_sym);
                 self.intern(SemanticType::Slice(new_elem))
             }
             SemanticType::Function { params, return_type } => {
-                let new_params: Vec<_> = params.iter().map(|&p| self.clone_type_from(p, source_ctx, symbol_map)).collect();
-                let new_ret = self.clone_type_from(return_type, source_ctx, symbol_map);
+                let new_params: Vec<_> = params.iter().map(|&p| self.clone_type_from(p, source_ctx, lookup_sym)).collect();
+                let new_ret = self.clone_type_from(return_type, source_ctx, lookup_sym);
                 self.intern(SemanticType::Function { params: new_params, return_type: new_ret })
             }
             SemanticType::Pointer(mutability, inner) => {
-                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                let new_inner = self.clone_type_from(inner, source_ctx, lookup_sym);
                 self.intern(SemanticType::Pointer(mutability, new_inner))
             }
             SemanticType::Reference(lt, mutability, inner) => {
-                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                let new_inner = self.clone_type_from(inner, source_ctx, lookup_sym);
                 self.intern(SemanticType::Reference(lt, mutability, new_inner))
             }
             SemanticType::Box(inner) => {
-                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                let new_inner = self.clone_type_from(inner, source_ctx, lookup_sym);
                 self.intern(SemanticType::Box(new_inner))
             }
             SemanticType::GenericParam(sym) => {
-                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
+                let new_sym = lookup_sym(sym);
                 self.intern(SemanticType::GenericParam(new_sym))
             }
             SemanticType::InferenceVar(v) => {
                 if let Some(&bound) = source_ctx.inference_bindings.get(&v) {
-                    self.clone_type_from(bound, source_ctx, symbol_map)
+                    self.clone_type_from(bound, source_ctx, lookup_sym)
                 } else {
                     self.new_inference_var()
                 }
@@ -383,20 +395,20 @@ impl TypeContext {
             SemanticType::Never => self.intern(SemanticType::Never),
             SemanticType::Error => self.intern(SemanticType::Error),
             SemanticType::Closure(expr_id, params, ret) => {
-                let new_params = params.iter().map(|p| self.clone_type_from(*p, source_ctx, symbol_map)).collect();
-                let new_ret = self.clone_type_from(ret, source_ctx, symbol_map);
+                let new_params = params.iter().map(|p| self.clone_type_from(*p, source_ctx, lookup_sym)).collect();
+                let new_ret = self.clone_type_from(ret, source_ctx, lookup_sym);
                 self.intern(SemanticType::Closure(expr_id, new_params, new_ret))
             }
             SemanticType::DynTrait(sym) => {
-                let new_sym = *symbol_map.get(&sym).unwrap_or(&sym);
+                let new_sym = lookup_sym(sym);
                 self.intern(SemanticType::DynTrait(new_sym))
             }
             SemanticType::Future(inner) => {
-                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                let new_inner = self.clone_type_from(inner, source_ctx, lookup_sym);
                 self.intern(SemanticType::Future(new_inner))
             }
             SemanticType::Range(inner) => {
-                let new_inner = self.clone_type_from(inner, source_ctx, symbol_map);
+                let new_inner = self.clone_type_from(inner, source_ctx, lookup_sym);
                 self.intern(SemanticType::Range(new_inner))
             }
         }

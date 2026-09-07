@@ -1,4 +1,4 @@
-use mellis_driver::{compile, check, CompilerOptions};
+use mellis_driver::{check, compile, CompilerOptions};
 
 #[test]
 fn test_macro_full_pipeline_arithmetic() {
@@ -19,16 +19,25 @@ fn test_macro_full_pipeline_arithmetic() {
     }
     "#;
 
-    let res = check("test_arithmetic.ms", code.to_string(), &[], true);
-    assert!(res.is_ok(), "Macro arithmetic check failed: {:?}", res.err());
+    let res = check("test_arithmetic.ms", code.to_string(), &mellis_driver::CompilerOptions { search_paths: vec!["../../".to_string()], ..Default::default() });
+    assert!(
+        res.is_ok(),
+        "Macro arithmetic check failed: {:?}",
+        res.err()
+    );
 
     let options = CompilerOptions {
+        search_paths: vec!["../../".to_string()],
         quiet: true,
         no_link: true,
         ..Default::default()
     };
     let compile_res = compile("test_arithmetic.ms", code.to_string(), &options);
-    assert!(compile_res.is_ok(), "Macro arithmetic compile failed: {:?}", compile_res.err());
+    assert!(
+        compile_res.is_ok(),
+        "Macro arithmetic compile failed: {:?}",
+        compile_res.err()
+    );
 }
 
 #[test]
@@ -57,16 +66,21 @@ fn test_macro_full_pipeline_struct_and_impl() {
     }
     "#;
 
-    let res = check("test_struct.ms", code.to_string(), &[], true);
+    let res = check("test_struct.ms", code.to_string(), &mellis_driver::CompilerOptions { search_paths: vec!["../../".to_string()], ..Default::default() });
     assert!(res.is_ok(), "Macro struct check failed: {:?}", res.err());
 
     let options = CompilerOptions {
+        search_paths: vec!["../../".to_string()],
         quiet: true,
         no_link: true,
         ..Default::default()
     };
     let compile_res = compile("test_struct.ms", code.to_string(), &options);
-    assert!(compile_res.is_ok(), "Macro struct compile failed: {:?}", compile_res.err());
+    assert!(
+        compile_res.is_ok(),
+        "Macro struct compile failed: {:?}",
+        compile_res.err()
+    );
 }
 
 #[test]
@@ -88,14 +102,23 @@ fn test_macro_full_pipeline_borrowck_safety() {
     }
     "#;
 
-    let res = check("test_borrowck.ms", code.to_string(), &[], true);
-    assert!(res.is_ok(), "Macro borrowck safety check failed: {:?}", res.err());
+    let res = check("test_borrowck.ms", code.to_string(), &mellis_driver::CompilerOptions { search_paths: vec!["../../".to_string()], ..Default::default() });
+    assert!(
+        res.is_ok(),
+        "Macro borrowck safety check failed: {:?}",
+        res.err()
+    );
 
     let options = CompilerOptions {
+        search_paths: vec!["../../".to_string()],
         quiet: true,
         no_link: true,
         ..Default::default()
     };
     let compile_res = compile("test_borrowck.ms", code.to_string(), &options);
-    assert!(compile_res.is_ok(), "Macro borrowck compile failed: {:?}", compile_res.err());
+    assert!(
+        compile_res.is_ok(),
+        "Macro borrowck compile failed: {:?}",
+        compile_res.err()
+    );
 }

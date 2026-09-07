@@ -49,6 +49,7 @@ pub struct StructField {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct EnumVariant {
+    pub annotations: Vec<Annotation>,
     pub name: Span,
     pub fields: Vec<crate::DeclId>, // ParamDecl
 }
@@ -166,6 +167,27 @@ pub enum Decl {
         rules: Vec<MacroRule>,
     },
 }
+
+impl Decl {
+    pub fn annotations(&self) -> &[Annotation] {
+        match self {
+            Decl::Var { annotations, .. } => annotations,
+            Decl::Param { annotations, .. } => annotations,
+            Decl::Function { annotations, .. } => annotations,
+            Decl::Struct { annotations, .. } => annotations,
+            Decl::Enum { annotations, .. } => annotations,
+            Decl::Trait { annotations, .. } => annotations,
+            Decl::Impl { annotations, .. } => annotations,
+            Decl::Import { annotations, .. } => annotations,
+            Decl::Module { annotations, .. } => annotations,
+            Decl::TypeAlias { annotations, .. } => annotations,
+            Decl::Macro { annotations, .. } => annotations,
+            Decl::Extern { annotations, .. } => annotations,
+            Decl::Using { .. } => &[],
+        }
+    }
+}
+
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum FragmentKind {
