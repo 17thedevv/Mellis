@@ -1,7 +1,8 @@
 use crate::dataflow::{DataflowAnalysis, DataflowEngine};
 use crate::effect::{CallEffectSummary, EscapeKind, ReturnEffect};
 use mellis_common::Diagnostic;
-use mellis_mvir::{Function, GlobalId, Instruction, Operand, Terminator, ValueId};
+use mellis_mvir::{Function, GlobalId, Instruction, Operand, Terminator, ValueId, ValueOrigin};
+use mellis_semantic::{SemanticContext, SemanticType};
 use std::collections::{HashMap, HashSet};
 
 // --- Liveness Analysis ---
@@ -29,6 +30,13 @@ impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
             }
             Instruction::MakeTraitObject { data_ptr, .. } => {
                 if let Operand::Value(v) = data_ptr { state.live.insert(*v); }
+            }
+            Instruction::MakeSlice { data_ptr, len } => {
+                if let Operand::Value(v) = data_ptr { state.live.insert(*v); }
+                if let Operand::Value(v) = len { state.live.insert(*v); }
+            }
+            Instruction::DropVirt { obj } => {
+                if let Operand::Value(v) = obj { state.live.insert(*v); }
             }
             Instruction::CallVirt { obj, args, .. } => {
                 if let Operand::Value(v) = obj { state.live.insert(*v); }
@@ -61,6 +69,12 @@ impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
             Instruction::Drop { value, .. } => {
                 if let Operand::Value(v) = value { state.live.insert(*v); }
             }
+            Instruction::Await { future } => {
+                if let Operand::Value(v) = future { state.live.insert(*v); }
+            }
+            Instruction::Assign(op) | Instruction::Cast { value: op, .. } | Instruction::FieldPtr { base: op, .. } | Instruction::Extract { value: op, .. } | Instruction::Tag { value: op } => {
+                if let Operand::Value(v) = op { state.live.insert(*v); }
+            }
             Instruction::Alloca | _ => {}
         }
     }
@@ -90,13 +104,14 @@ impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
     fn init_entry_state(&mut self, _func: &Function, _state: &mut LivenessState) {}
 }
 
-pub fn compute_liveness(func: &Function) -> (HashMap<String, LivenessState>, HashMap<ValueId, HashSet<ValueId>>) {
+pub fn compute_liveness(func: &Function) -> (HashMap<String, LivenessState>, HashMap<ValueId, HashSet<ValueId>>, HashMap<ValueId, HashSet<ValueId>>) {
     let mut analyzer = LivenessAnalyzer;
     // run_backward gives us the OUT state of each block
     let block_out = DataflowEngine::run_backward(func, &mut analyzer);
     
-    // Now compute liveness BEFORE each instruction
+    // Now compute liveness BEFORE and AFTER each instruction
     let mut live_before = HashMap::new();
+    let mut live_after = HashMap::new();
     
     for block in &func.blocks {
         let mut current_state = block_out.get(&block.label.name).cloned().unwrap_or_default();
@@ -105,12 +120,13 @@ pub fn compute_liveness(func: &Function) -> (HashMap<String, LivenessState>, Has
         }
         
         for &val_id in block.insts.iter().rev() {
+            live_after.insert(val_id, current_state.live.clone());
             analyzer.transfer_instruction(val_id, &func.value(val_id).inst, &mut current_state);
             live_before.insert(val_id, current_state.live.clone());
         }
     }
     
-    (block_out, live_before)
+    (block_out, live_before, live_after)
 }
 
 // --- Borrow Analysis (NLL) ---
@@ -131,11 +147,10 @@ pub struct BorrowStateData {
     pub closure_captures: HashMap<ValueId, Vec<mellis_semantic::CaptureMode>>,
 }
 
-use mellis_semantic::SemanticContext;
-
 pub struct BorrowAnalyzer<'a> {
     pub diagnostics: Vec<Diagnostic>,
     live_before: HashMap<ValueId, HashSet<ValueId>>,
+    live_after: HashMap<ValueId, HashSet<ValueId>>,
     callee_summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
     ctx: Option<&'a SemanticContext>,
     func: &'a Function,
@@ -147,6 +162,7 @@ impl<'a> BorrowAnalyzer<'a> {
         Self {
             diagnostics: Vec::new(),
             live_before,
+            live_after: HashMap::new(),
             callee_summaries,
             ctx,
             func,
@@ -154,9 +170,14 @@ impl<'a> BorrowAnalyzer<'a> {
         }
     }
 
+    pub fn with_live_after(mut self, live_after: HashMap<ValueId, HashSet<ValueId>>) -> Self {
+        self.live_after = live_after;
+        self
+    }
+
     pub fn analyze(func: &'a Function, summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>, ctx: Option<&'a SemanticContext>) -> Vec<Diagnostic> {
-        let (_, live_before) = compute_liveness(func);
-        let mut analyzer = Self::new(live_before, summaries, ctx, func);
+        let (_, live_before, live_after) = compute_liveness(func);
+        let mut analyzer = Self::new(live_before, summaries, ctx, func).with_live_after(live_after);
         let block_states = DataflowEngine::run_forward(func, &mut analyzer);
         
         // Second pass to emit diagnostics with final computed state
@@ -224,12 +245,74 @@ impl<'a> BorrowAnalyzer<'a> {
         active
     }
 
+    fn active_loans_after(&self, val_id: ValueId, state: &BorrowStateData) -> HashSet<Loan> {
+        let mut active = state.escaped_loans.clone();
+        let mut queue = Vec::new();
+        
+        if let Some(live_set) = self.live_after.get(&val_id) {
+            for &v in live_set {
+                queue.push(v);
+            }
+        }
+        
+        let mut visited = std::collections::HashSet::new();
+
+        while let Some(v) = queue.pop() {
+            if visited.insert(v) {
+                if let Some(loans) = state.direct_provenance.get(&v) {
+                    for loan in loans {
+                        active.insert(loan.clone());
+                        let resolved = self.resolve_alias(&loan.place, state);
+                        if let Operand::Value(place_v) = resolved {
+                            queue.push(*place_v);
+                        }
+                    }
+                }
+                if let Some(loans) = state.carried_provenance.get(&v) {
+                    for loan in loans {
+                        active.insert(loan.clone());
+                        let resolved = self.resolve_alias(&loan.place, state);
+                        if let Operand::Value(place_v) = resolved {
+                            queue.push(*place_v);
+                        }
+                    }
+                }
+            }
+        }
+        active
+    }
+
+    fn is_external_loan(&self, loan: &Loan, state: &BorrowStateData) -> bool {
+        let resolved = self.resolve_alias(&loan.place, state);
+        match resolved {
+            Operand::Global(_) => true,
+            Operand::Value(v) => {
+                if (v.0 as usize) >= self.func.values.len() {
+                    return false;
+                }
+                let val_data = &self.func.values[v.0 as usize];
+                match &val_data.origin {
+                    ValueOrigin::Global => true,
+                    ValueOrigin::Parameter(_) => {
+                        // In Mellis, a parameter loan is external only if the parameter type is a Reference
+                        // (i.e. caller storage). By-value parameters are stored in EnvStruct (local).
+                        if let Some(ctx) = self.ctx {
+                            matches!(ctx.types.get(val_data.ty), SemanticType::Reference(..))
+                        } else {
+                            false
+                        }
+                    }
+                    ValueOrigin::Local | ValueOrigin::Temporary => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
     fn check_access(&mut self, place: &Operand, is_write: bool, val_id: ValueId, state: &BorrowStateData) {
         if !self.emit_diagnostics { return; }
         let place_name = print_operand_name(place);
         let active = self.active_loans(val_id, state);
-        
-
         
         for loan in &active {
             if print_operand_name(&loan.place) == place_name {
@@ -239,14 +322,18 @@ impl<'a> BorrowAnalyzer<'a> {
                         place_name
                     ));
                     diag.span = self.func.values[val_id.0 as usize].span.clone();
-                    self.diagnostics.push(diag);
+                    if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                        self.diagnostics.push(diag);
+                    }
                 } else if is_write {
                     let mut diag = Diagnostic::error(format!(
                         "Cannot write to '{}' because it is borrowed as &",
                         place_name
                     ));
                     diag.span = self.func.values[val_id.0 as usize].span.clone();
-                    self.diagnostics.push(diag);
+                    if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                        self.diagnostics.push(diag);
+                    }
                 }
             }
         }
@@ -266,14 +353,18 @@ impl<'a> BorrowAnalyzer<'a> {
                             if is_rw { "&rw" } else { "&" }
                         ));
                         diag.span = self.func.values[val_id.0 as usize].span.clone();
-                        self.diagnostics.push(diag);
+                        if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                            self.diagnostics.push(diag);
+                        }
                     } else if is_rw {
                         let mut diag = Diagnostic::error(format!(
                             "Cannot borrow '{}' as &rw because it is already borrowed as &",
                             place_name
                         ));
                         diag.span = self.func.values[val_id.0 as usize].span.clone();
-                        self.diagnostics.push(diag);
+                        if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                            self.diagnostics.push(diag);
+                        }
                     }
                 }
             }
@@ -318,11 +409,120 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
             }
             Instruction::MakeTraitObject { data_ptr, .. } => {
                 self.check_access(data_ptr, false, val_id, state);
+                if let Operand::Value(dp_v) = data_ptr {
+                    let resolved = self.resolve_alias(data_ptr, state);
+                    let check_val = if let Operand::Value(rv) = resolved { *rv } else { *dp_v };
+                    state.aliases.insert(val_id, Operand::Value(check_val));
+                    if let Some(prov) = state.direct_provenance.get(&check_val).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(&check_val).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.direct_provenance.get(dp_v).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(dp_v).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                }
             }
-            Instruction::CallVirt { obj, args, .. } => {
+            Instruction::MakeSlice { data_ptr, len } => {
+                self.check_access(data_ptr, false, val_id, state);
+                self.check_access(len, false, val_id, state);
+                if let Operand::Value(dp_v) = data_ptr {
+                    let resolved = self.resolve_alias(data_ptr, state);
+                    let check_val = if let Operand::Value(rv) = resolved { *rv } else { *dp_v };
+                    state.aliases.insert(val_id, Operand::Value(check_val));
+                    if let Some(prov) = state.direct_provenance.get(&check_val).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(&check_val).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.direct_provenance.get(dp_v).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(dp_v).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                }
+            }
+            Instruction::DropVirt { obj } => {
                 self.check_access(obj, false, val_id, state);
+            }
+            Instruction::CallVirt { obj, method_idx, args } => {
+                let mut is_write = false;
+                if let Some(ctx) = self.ctx {
+                    if let Operand::Value(obj_v) = obj {
+                        let obj_ty_id = self.func.values[obj_v.0 as usize].ty;
+                        let obj_ty = ctx.types.get(obj_ty_id);
+                        let dyn_trait_sym = match obj_ty {
+                            SemanticType::DynTrait(sym) => Some(*sym),
+                            SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => {
+                                if let SemanticType::DynTrait(sym) = ctx.types.get(*inner) {
+                                    Some(*sym)
+                                } else {
+                                    None
+                                }
+                            }
+                            _ => None,
+                        };
+                        if let Some(trait_sym) = dyn_trait_sym {
+                            if let Some(method_syms) = ctx.tables.trait_methods.get(&trait_sym) {
+                                if let Some(&m_sym) = method_syms.get(*method_idx as usize) {
+                                    if let Some(&m_ty) = ctx.tables.symbol_types.get(&m_sym) {
+                                        if let SemanticType::Function { params, .. } = ctx.types.get(m_ty) {
+                                            if let Some(&first_param) = params.first() {
+                                                if matches!(ctx.types.get(first_param), SemanticType::Reference(_, mellis_semantic::ty::Mutability::Mutable, _)) {
+                                                    is_write = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                self.check_access(obj, is_write, val_id, state);
                 for arg in args {
                     self.check_access(arg, false, val_id, state);
+                }
+
+                let is_future_ret = if let Some(ctx) = self.ctx {
+                    matches!(ctx.types.get(self.func.values[val_id.0 as usize].ty), SemanticType::Future(..))
+                } else {
+                    false
+                };
+
+                if is_future_ret {
+                    for op in std::iter::once(obj).chain(args.iter()) {
+                        if let Operand::Value(op_v) = op {
+                            let is_ref_bearing = if let Some(ctx) = self.ctx {
+                                let ty_id = self.func.values[op_v.0 as usize].ty;
+                                matches!(ctx.types.get(ty_id), SemanticType::Reference(..) | SemanticType::Pointer(..))
+                            } else {
+                                true
+                            };
+                            if is_ref_bearing {
+                                let resolved = self.resolve_alias(op, state);
+                                let resolved_v = if let Operand::Value(rv) = resolved { *rv } else { *op_v };
+                                if let Some(prov) = state.direct_provenance.get(&resolved_v).cloned() {
+                                    state.carried_provenance.entry(val_id).or_default().extend(prov);
+                                }
+                                if let Some(prov) = state.carried_provenance.get(&resolved_v).cloned() {
+                                    state.carried_provenance.entry(val_id).or_default().extend(prov);
+                                }
+                                if let Some(prov) = state.direct_provenance.get(op_v).cloned() {
+                                    state.carried_provenance.entry(val_id).or_default().extend(prov);
+                                }
+                                if let Some(prov) = state.carried_provenance.get(op_v).cloned() {
+                                    state.carried_provenance.entry(val_id).or_default().extend(prov);
+                                }
+                            }
+                        }
+                    }
                 }
             }
             Instruction::Store { ptr, value } => {
@@ -352,15 +552,44 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                         if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
                             state.direct_provenance.entry(resolved_ptr).or_default().extend(prov);
                         }
+                        if let Some(prov) = state.carried_provenance.get(val_v).cloned() {
+                            state.carried_provenance.entry(resolved_ptr).or_default().extend(prov);
+                        }
                     }
                 }
             }
             Instruction::Load { ptr } => {
                 self.check_access(ptr, false, val_id, state);
-                // Load from a pointer inherits its provenance
-                if let Operand::Value(ptr_val) = ptr {
-                    if let Some(prov) = state.direct_provenance.get(ptr_val).cloned() {
-                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                // Load from a pointer inherits its provenance only if loaded value is ref-like
+                let is_ref_like = if let Some(ctx) = self.ctx {
+                    if (val_id.0 as usize) < self.func.values.len() {
+                        matches!(
+                            ctx.types.get(self.func.values[val_id.0 as usize].ty),
+                            SemanticType::Reference(..) | SemanticType::Pointer(..) | SemanticType::Future(..)
+                        )
+                    } else {
+                        true
+                    }
+                } else {
+                    true
+                };
+                if is_ref_like {
+                    if let Operand::Value(ptr_val) = ptr {
+                        let resolved = self.resolve_alias(ptr, state);
+                        let check_val = if let Operand::Value(rv) = resolved { *rv } else { *ptr_val };
+                        state.aliases.insert(val_id, Operand::Value(check_val));
+                        if let Some(prov) = state.direct_provenance.get(&check_val).cloned() {
+                            state.direct_provenance.entry(val_id).or_default().extend(prov);
+                        }
+                        if let Some(prov) = state.carried_provenance.get(&check_val).cloned() {
+                            state.carried_provenance.entry(val_id).or_default().extend(prov);
+                        }
+                        if let Some(prov) = state.direct_provenance.get(ptr_val).cloned() {
+                            state.direct_provenance.entry(val_id).or_default().extend(prov);
+                        }
+                        if let Some(prov) = state.carried_provenance.get(ptr_val).cloned() {
+                            state.carried_provenance.entry(val_id).or_default().extend(prov);
+                        }
                     }
                 }
             }
@@ -369,6 +598,12 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     self.check_access(arg, false, val_id, state);
                 }
                 
+                let is_future_ret = if let Some(ctx) = self.ctx {
+                    matches!(ctx.types.get(self.func.values[val_id.0 as usize].ty), SemanticType::Future(..))
+                } else {
+                    false
+                };
+
                 let mut applied_summary = None;
                 if let Some(map) = self.callee_summaries {
                     if let Some(sum) = map.get(callee) {
@@ -389,7 +624,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                             }
                             
                             // Handle escapes
-                            if arg_effect.escape == crate::effect::EscapeKind::MayEscape {
+                            if !is_future_ret && arg_effect.escape == crate::effect::EscapeKind::MayEscape {
                                 if let Operand::Value(arg_v) = arg {
                                     if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
                                         state.escaped_loans.extend(prov);
@@ -462,7 +697,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                         escape_kind = crate::effect::EscapeKind::NoEscape;
                                         access_kind = crate::effect::AccessKind::None;
                                     }
-                                    SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) => {
+                                    SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) | SemanticType::Future(_) | SemanticType::Box(_) => {
                                         // Passed by value (or opaque copy), no memory effect on the caller's aliasing
                                         escape_kind = crate::effect::EscapeKind::NoEscape;
                                         access_kind = crate::effect::AccessKind::None;
@@ -497,7 +732,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                             access_kind = crate::effect::AccessKind::None;
                         }
 
-                        if escape_kind == crate::effect::EscapeKind::MayEscape || escape_kind == crate::effect::EscapeKind::Unknown {
+                        if !is_future_ret && (escape_kind == crate::effect::EscapeKind::MayEscape || escape_kind == crate::effect::EscapeKind::Unknown) {
                             if let Operand::Value(arg_v) = arg {
                                 if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
                                     state.escaped_loans.extend(prov);
@@ -517,6 +752,28 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                         }
                     }
                 }
+
+                // FutureLoan propagation for CallDirect:
+                if is_future_ret {
+                    for arg in args {
+                        if let Operand::Value(arg_v) = arg {
+                            let resolved = self.resolve_alias(arg, state);
+                            let resolved_v = if let Operand::Value(rv) = resolved { *rv } else { *arg_v };
+                            if let Some(prov) = state.direct_provenance.get(&resolved_v).cloned() {
+                                state.carried_provenance.entry(val_id).or_default().extend(prov);
+                            }
+                            if let Some(prov) = state.carried_provenance.get(&resolved_v).cloned() {
+                                state.carried_provenance.entry(val_id).or_default().extend(prov);
+                            }
+                            if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
+                                state.carried_provenance.entry(val_id).or_default().extend(prov);
+                            }
+                            if let Some(prov) = state.carried_provenance.get(arg_v).cloned() {
+                                state.carried_provenance.entry(val_id).or_default().extend(prov);
+                            }
+                        }
+                    }
+                }
             }
             Instruction::CallIndirect { args, callee } | Instruction::CallClosure { args, closure: callee } => {
                 self.check_access(callee, false, val_id, state);
@@ -524,6 +781,12 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     self.check_access(arg, false, val_id, state);
                 }
                 
+                let is_future_ret = if let Some(ctx) = self.ctx {
+                    matches!(ctx.types.get(self.func.values[val_id.0 as usize].ty), SemanticType::Future(..))
+                } else {
+                    false
+                };
+
                 // Pre-compute callback effects to union into this call
                 let mut cb_worst_access = crate::effect::AccessKind::None;
                 let mut cb_worst_escape = crate::effect::EscapeKind::NoEscape;
@@ -565,7 +828,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                     escape_kind = crate::effect::EscapeKind::NoEscape;
                                     access_kind = crate::effect::AccessKind::None;
                                 }
-                                SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) => {
+                                SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) | SemanticType::Future(_) | SemanticType::Box(_) => {
                                     escape_kind = crate::effect::EscapeKind::NoEscape;
                                     access_kind = crate::effect::AccessKind::None;
                                 }
@@ -599,7 +862,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                          escape_kind = escape_kind.merge(&cb_worst_escape);
                     }
 
-                    if escape_kind == crate::effect::EscapeKind::MayEscape || escape_kind == crate::effect::EscapeKind::Unknown {
+                    if !is_future_ret && (escape_kind == crate::effect::EscapeKind::MayEscape || escape_kind == crate::effect::EscapeKind::Unknown) {
                         if let Operand::Value(arg_v) = arg {
                             if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
                                 state.escaped_loans.extend(prov);
@@ -615,6 +878,28 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     }
                     if access_kind == crate::effect::AccessKind::Write || access_kind == crate::effect::AccessKind::ReadWrite {
                         self.check_access(arg, true, val_id, state);
+                    }
+                }
+
+                // FutureLoan propagation for CallIndirect:
+                if is_future_ret {
+                    for arg in args {
+                        if let Operand::Value(arg_v) = arg {
+                            let resolved = self.resolve_alias(arg, state);
+                            let resolved_v = if let Operand::Value(rv) = resolved { *rv } else { *arg_v };
+                            if let Some(prov) = state.direct_provenance.get(&resolved_v).cloned() {
+                                state.carried_provenance.entry(val_id).or_default().extend(prov);
+                            }
+                            if let Some(prov) = state.carried_provenance.get(&resolved_v).cloned() {
+                                state.carried_provenance.entry(val_id).or_default().extend(prov);
+                            }
+                            if let Some(prov) = state.direct_provenance.get(arg_v).cloned() {
+                                state.carried_provenance.entry(val_id).or_default().extend(prov);
+                            }
+                            if let Some(prov) = state.carried_provenance.get(arg_v).cloned() {
+                                state.carried_provenance.entry(val_id).or_default().extend(prov);
+                            }
+                        }
                     }
                 }
             }
@@ -662,6 +947,37 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
             }
             Instruction::Drop { value, .. } => {
                 self.check_access(value, true, val_id, state);
+            }
+            Instruction::Await { future } => {
+                self.check_access(future, false, val_id, state);
+                if self.emit_diagnostics {
+                    let active = self.active_loans_after(val_id, state);
+                    for loan in &active {
+                        if !self.is_external_loan(loan, state) {
+                            let resolved = self.resolve_alias(&loan.place, state);
+                            let place_name = print_operand_name(resolved);
+                            let mut diag = Diagnostic::error(format!(
+                                "Borrow of local variable '{}' is held across an 'await' point [E_ASYNC_LOCAL_BORROW_ACROSS_AWAIT]. Self-referential futures are not permitted.",
+                                place_name
+                            ));
+                            diag.span = self.func.values[val_id.0 as usize].span.clone();
+                            if !self.diagnostics.iter().any(|d| d.message == diag.message) {
+                                self.diagnostics.push(diag);
+                            }
+                        }
+                    }
+                }
+            }
+            Instruction::Assign(op) => {
+                if let Operand::Value(v) = op {
+                    state.aliases.insert(val_id, Operand::Value(*v));
+                    if let Some(prov) = state.direct_provenance.get(v).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(v).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                }
             }
             Instruction::Alloca | _ => {}
         }

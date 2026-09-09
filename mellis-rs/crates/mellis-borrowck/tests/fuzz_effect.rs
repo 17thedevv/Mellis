@@ -52,7 +52,7 @@ fn generate_linear_function(num_args: u32, ops: Vec<u8>) -> Function {
 
     // Push arguments
     for i in 0..num_args {
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         });
@@ -81,7 +81,7 @@ fn generate_linear_function(num_args: u32, ops: Vec<u8>) -> Function {
             _ => unreachable!(),
         };
 
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst,
             ty: SemanticTypeId(0),
         });

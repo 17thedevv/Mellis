@@ -113,7 +113,7 @@ proptest! {
                     _ => prim,
                 };
                 
-                func.values.push(ValueData { span: None, inst, ty });
+                func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst, ty });
                 block.insts.push(ValueId(val_id_counter));
                 val_id_counter += 1;
             }

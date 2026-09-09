@@ -23,13 +23,13 @@ fn make_func(name: &str, num_args: u32, instructions: Vec<Instruction>) -> Funct
 
     let mut val_id = 0;
     for _ in 0..num_args {
-        func.values.push(ValueData { span: None, inst: Instruction::Alloca, ty: SemanticTypeId(0) });
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst: Instruction::Alloca, ty: SemanticTypeId(0) });
         block.insts.push(ValueId(val_id));
         val_id += 1;
     }
 
     for inst in instructions {
-        func.values.push(ValueData { span: None, inst, ty: SemanticTypeId(0) });
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst, ty: SemanticTypeId(0) });
         block.insts.push(ValueId(val_id));
         val_id += 1;
     }

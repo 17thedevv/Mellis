@@ -1,7 +1,7 @@
 use mellis_borrowck::borrow_analysis::BorrowAnalyzer;
 use mellis_borrowck::dataflow::DataflowEngine;
 use mellis_borrowck::move_analysis::MoveAnalyzer;
-use mellis_mvir::{BasicBlock, Function, GlobalId, Instruction, LabelId, Terminator, Operand, ValueId, ValueData};
+use mellis_mvir::{ValueOrigin, BasicBlock, Function, GlobalId, Instruction, LabelId, Terminator, Operand, ValueId, ValueData};
 use mellis_semantic::ty::SemanticTypeId;
 
 fn make_base_graph() -> Function {
@@ -20,7 +20,7 @@ fn make_base_graph() -> Function {
     // A small CFG: entry -> block1 -> block2 -> block1 -> exit
     
     // Var 0
-    func.values.push(ValueData { span: None, inst: Instruction::Alloca, ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst: Instruction::Alloca, ty: SemanticTypeId(0) });
     
     func.blocks.push(BasicBlock {
         label: LabelId { name: "entry".to_string() },
@@ -63,7 +63,7 @@ fn test_incremental_move_analysis() {
 
     // Modify the CFG (add a read/move instruction in block2)
     // var 1
-    func.values.push(ValueData { span: None, inst: Instruction::Eq { left: Operand::Value(ValueId(0)), right: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst: Instruction::Eq { left: Operand::Value(ValueId(0)), right: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
     let block2_idx = func.blocks.iter().position(|b| b.label.name == "block2").unwrap();
     func.blocks[block2_idx].insts.push(ValueId(1));
 
@@ -95,7 +95,7 @@ fn test_incremental_borrow_analysis() {
 
     // Modify the CFG (add a borrow in block2)
     // var 1
-    func.values.push(ValueData { span: None, inst: Instruction::Borrow { is_rw: true, base: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst: Instruction::Borrow { is_rw: true, base: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0) });
     let block2_idx = func.blocks.iter().position(|b| b.label.name == "block2").unwrap();
     func.blocks[block2_idx].insts.push(ValueId(1));
 

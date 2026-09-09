@@ -1,7 +1,7 @@
 use mellis_borrowck::effect::{AccessKind, CallEffectSummary};
 use mellis_borrowck::effect_inference::EffectInference;
 use mellis_borrowck::dataflow::{DataflowEngine, DataflowAnalysis};
-use mellis_mvir::{BasicBlock, Function, GlobalId, Instruction, LabelId, Operand, Terminator, ValueData, ValueId};
+use mellis_mvir::{ValueOrigin, BasicBlock, Function, GlobalId, Instruction, LabelId, Operand, Terminator, ValueData, ValueId};
 use mellis_semantic::ty::{Mutability, SemanticType, SemanticTypeId};
 use mellis_semantic::SemanticContext;
 use proptest::prelude::*;
@@ -36,8 +36,8 @@ fn build_acyclic_func(
     let ptr_mut_ty = ctx.types.intern(SemanticType::Pointer(Mutability::Mutable, prim_ty));
 
     // Param 0 and 1
-    func.values.push(ValueData { span: None, inst: Instruction::Alloca, ty: ref_mut_ty });
-    func.values.push(ValueData { span: None, inst: Instruction::Alloca, ty: ptr_mut_ty });
+    func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst: Instruction::Alloca, ty: ref_mut_ty });
+    func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst: Instruction::Alloca, ty: ptr_mut_ty });
 
     let mut val_id_counter = 2;
     let mut inst_id_to_val_id = vec![];
@@ -54,7 +54,7 @@ fn build_acyclic_func(
                 1 => Instruction::Load { ptr: Operand::Value(ValueId((kind % 2) as u32)) },
                 _ => Instruction::Store { ptr: Operand::Value(ValueId((kind % 2) as u32)), value: Operand::Value(ValueId(0)) },
             };
-            func.values.push(ValueData { span: None, inst, ty: prim_ty });
+            func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst, ty: prim_ty });
             block_val_ids.push(ValueId(val_id_counter));
             val_id_counter += 1;
         }

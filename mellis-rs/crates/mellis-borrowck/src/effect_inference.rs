@@ -1,6 +1,6 @@
 use crate::dataflow::{DataflowAnalysis, DataflowEngine};
 use crate::effect::{AccessKind, CallEffectSummary, EscapeKind, OwnershipKind, ReturnEffect};
-use mellis_mvir::{Function, GlobalId, Instruction, Operand, Terminator, ValueId};
+use mellis_mvir::{ValueOrigin, Function, GlobalId, Instruction, Operand, Terminator, ValueId};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
@@ -305,6 +305,21 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
                     state.aliases.insert(val_id, Operand::Value(*b));
                 }
             }
+            Instruction::MakeSlice { data_ptr, .. } => {
+                self.add_direct_taint(state, val_id, data_ptr);
+                self.add_carried_taint(state, val_id, data_ptr);
+                if let Operand::Value(b) = data_ptr {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
+            }
+            Instruction::DropVirt { obj } => {
+                for taint in self.get_direct_taints(state, obj) {
+                    if let TaintSource::Direct(arg_idx) = taint {
+                        self.summary.args[arg_idx].access = self.summary.args[arg_idx].access.merge(&AccessKind::Unknown);
+                        self.summary.args[arg_idx].ownership = self.summary.args[arg_idx].ownership.merge(&OwnershipKind::Unknown);
+                    }
+                }
+            }
             Instruction::CallVirt { obj, args, .. } => {
                 let mut all_args = vec![obj];
                 all_args.extend(args.iter());
@@ -432,7 +447,7 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mellis_mvir::{BasicBlock, GlobalId, LabelId, Terminator, ValueData};
+    use mellis_mvir::{ValueOrigin, BasicBlock, GlobalId, LabelId, Terminator, ValueData};
     use mellis_semantic::SemanticTypeId;
 
     fn make_test_func(insts: Vec<Instruction>, terminator: Terminator) -> Function {
@@ -460,7 +475,7 @@ mod tests {
         };
 
         for (i, inst) in insts.into_iter().enumerate() {
-            func.values.push(ValueData { span: None,
+            func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
                 inst,
                 ty: SemanticTypeId(0),
             });
@@ -571,17 +586,17 @@ mod tests {
             values: vec![],
         };
 
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // arg0 (0)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Load {
                 ptr: Operand::Value(ValueId(0)),
             },
             ty: SemanticTypeId(0),
         }); // Read (1)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Store {
                 ptr: Operand::Value(ValueId(0)),
                 value: Operand::Number("1".to_string()),
@@ -653,28 +668,28 @@ mod tests {
             values: vec![],
         };
 
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // arg0 (0)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // tmp (1)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Store {
                 ptr: Operand::Value(ValueId(1)),
                 value: Operand::Value(ValueId(0)),
             },
             ty: SemanticTypeId(0),
         }); // store arg0 -> tmp (2)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Load {
                 ptr: Operand::Value(ValueId(1)),
             },
             ty: SemanticTypeId(0),
         }); // load tmp (3)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Load {
                 ptr: Operand::Value(ValueId(3)),
             },
@@ -835,48 +850,48 @@ mod tests {
             values: vec![],
         };
 
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // arg0 (0)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // arg1 (1)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Borrow {
                 is_rw: false,
                 base: Operand::Value(ValueId(0)),
             },
             ty: SemanticTypeId(0),
         }); // (2)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Borrow {
                 is_rw: false,
                 base: Operand::Value(ValueId(1)),
             },
             ty: SemanticTypeId(0),
         }); // (3)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Alloca,
             ty: SemanticTypeId(0),
         }); // ret_val (4)
 
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Store {
                 ptr: Operand::Value(ValueId(4)),
                 value: Operand::Value(ValueId(2)),
             },
             ty: SemanticTypeId(0),
         }); // (5)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Store {
                 ptr: Operand::Value(ValueId(4)),
                 value: Operand::Value(ValueId(3)),
             },
             ty: SemanticTypeId(0),
         }); // (6)
-        func.values.push(ValueData { span: None,
+        func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary,
             inst: Instruction::Load {
                 ptr: Operand::Value(ValueId(4)),
             },

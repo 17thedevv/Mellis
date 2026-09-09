@@ -38,7 +38,9 @@ pub fn borrow_check_function(
     let dead_drops = move_analyzer.dead_drops;
 
     // 2. Run Borrow Analysis (Loans)
-    let mut borrow_diagnostics = crate::borrow_analysis::BorrowAnalyzer::analyze(func, Some(summaries), Some(_ctx));
+    let mut cleaned_func = func.clone();
+    crate::cleanup::eliminate_redundant_drops(&mut cleaned_func, &dead_drops);
+    let mut borrow_diagnostics = crate::borrow_analysis::BorrowAnalyzer::analyze(&cleaned_func, Some(summaries), Some(_ctx));
     diagnostics.append(&mut borrow_diagnostics);
 
     // 3. Run Return Analysis

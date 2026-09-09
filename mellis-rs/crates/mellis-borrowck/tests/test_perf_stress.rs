@@ -1,7 +1,7 @@
 use mellis_borrowck::borrow_analysis::BorrowAnalyzer;
 use mellis_borrowck::dataflow::DataflowEngine;
 use mellis_borrowck::move_analysis::MoveAnalyzer;
-use mellis_mvir::{BasicBlock, Function, GlobalId, LabelId, Terminator, Operand};
+use mellis_mvir::{ValueOrigin, BasicBlock, Function, GlobalId, LabelId, Terminator, Operand};
 use mellis_semantic::ty::SemanticTypeId;
 
 fn build_massive_graph(num_blocks: usize, deep_scc: bool) -> Function {
@@ -17,7 +17,7 @@ fn build_massive_graph(num_blocks: usize, deep_scc: bool) -> Function {
         values: vec![],
     };
 
-    func.values.push(mellis_mvir::ValueData { span: None, inst: mellis_mvir::Instruction::Alloca, ty: SemanticTypeId(0) });
+    func.values.push(mellis_mvir::ValueData { span: None, origin: ValueOrigin::Temporary, inst: mellis_mvir::Instruction::Alloca, ty: SemanticTypeId(0) });
 
     for i in 0..num_blocks {
         let block_name = format!("block_{}", i);
