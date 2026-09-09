@@ -2,11 +2,6 @@
 // runtime/src/startup/startup.c
 //
 // Mellis Runtime — Program Startup / Shutdown (Hosted)
-//
-// Responsibilities:
-//   - Store argc/argv for std::env access.
-//   - Run global statics initialization hooks.
-//   - After Mellis main returns, run global destructors, then exit.
 // =============================================================================
 
 #include "mellis/runtime/process.h"
@@ -17,26 +12,25 @@
 static int    g_argc = 0;
 static char** g_argv = NULL;
 
-// Global init/fini function table (compiler-generated, registered via pragma/ctor).
-typedef void (*MellisInitFn)(void);
-
-// Called from platform entry (CRT main, _start, etc).
+// Called from compiler-generated entrypoint @main.
 void __mellis_startup(int argc, char** argv) {
     g_argc = argc;
     g_argv = argv;
-    // Global statics initialization runs via CRT constructor mechanism
-    // (platform-specific __attribute__((constructor)) or .init_array).
-    // Nothing explicit needed here in the hosted libc profile.
+    // Set stdout and stderr to unbuffered or line-buffered
+    setvbuf(stdout, NULL, _IONBF, 0);
 }
 
 // Called after Mellis main returns.
 MELLIS_NORETURN void __mellis_shutdown(int exit_code) {
-    // Global destructors run via CRT destructor mechanism.
+    fflush(stdout);
+    fflush(stderr);
     exit(exit_code);
 }
 
 // Unconditional abort.
 MELLIS_NORETURN void __mellis_abort(void) {
+    fflush(stdout);
+    fflush(stderr);
     abort();
 }
 

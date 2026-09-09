@@ -63,3 +63,10 @@ install(TARGETS mellis-runtime
 install(DIRECTORY include/
     DESTINATION include
 )
+
+# ── Conformance Tests ─────────────────────────────────────────────────────────
+enable_testing()
+add_executable(abi_tests tests/abi_tests.c)
+target_link_libraries(abi_tests PRIVATE mellis-runtime)
+target_include_directories(abi_tests PRIVATE ${MELLIS_RUNTIME_INCLUDE_DIR})
+add_test(NAME RuntimeAbiTests COMMAND abi_tests)

@@ -2,90 +2,98 @@
 // runtime/src/panic/panic.c
 //
 // Mellis Runtime — Panic / Trap (Hosted Default Implementation)
-//
-// Default behavior: print a diagnostic to stderr and abort().
-// In release builds, the message may be suppressed for size.
-// In freestanding/embedded, replace this with a minimal trap.
 // =============================================================================
 
 #include "mellis/runtime/panic.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-// --- Primary Panic -----------------------------------------------------------
+// --- Primary Panic Implementation --------------------------------------------
 
-MELLIS_NORETURN void __mellis_panic_info(const MellisPanicInfo* info) {
-    if (info) {
-        const char* file = info->file ? info->file : "<unknown>";
-        const char* msg  = (info->message && info->message_len > 0)
-                           ? info->message : "<no message>";
-        fprintf(stderr,
-            "\nmellis: PANIC [M%03u] %s\n"
-            "    at %s:%u:%u\n",
-            (unsigned)info->error_code, msg,
-            file, (unsigned)info->line, (unsigned)info->column);
-    } else {
-        fprintf(stderr, "\nmellis: PANIC (no info)\n");
-    }
+MELLIS_NORETURN void __mellis_panic_code(
+    uint32_t       error_code,
+    const uint8_t* msg_ptr,
+    size_t         msg_len,
+    const uint8_t* file_ptr,
+    size_t         file_len,
+    uint32_t       line,
+    uint32_t       col
+) {
+    const char* msg = (msg_ptr && msg_len > 0) ? (const char*)msg_ptr : "<no message>";
+    int mlen = (msg_ptr && msg_len > 0) ? (int)msg_len : 12;
+    const char* file = (file_ptr && file_len > 0) ? (const char*)file_ptr : "<unknown>";
+    int flen = (file_ptr && file_len > 0) ? (int)file_len : 9;
+
+    fprintf(stderr,
+        "\nmellis: PANIC [M%03u] %.*s\n"
+        "    at %.*s:%u:%u\n",
+        (unsigned)error_code, mlen, msg,
+        flen, file, (unsigned)line, (unsigned)col);
+    fflush(stderr);
     abort();
 }
 
-MELLIS_NORETURN void __mellis_panic(const uint8_t* msg, uint64_t len,
-                                    const uint8_t* loc) {
-    MellisPanicInfo info = {
-        .message = (const char*)msg,
-        .message_len = (size_t)len,
-        .file = (const char*)loc,
-        .line = 0,
-        .column = 0,
-        .error_code = MELLIS_ERR_INVALID_STATE,
-    };
-    __mellis_panic_info(&info);
+MELLIS_NORETURN void __mellis_panic(
+    const uint8_t* msg_ptr,
+    size_t         msg_len,
+    const uint8_t* file_ptr,
+    size_t         file_len,
+    uint32_t       line,
+    uint32_t       col
+) {
+    __mellis_panic_code(MELLIS_ERR_INVALID_STATE, msg_ptr, msg_len, file_ptr, file_len, line, col);
 }
 
 // --- Bounds Failure ----------------------------------------------------------
 
-MELLIS_NORETURN void __mellis_bounds_fail(size_t idx, size_t len,
-                                          const char* file, uint32_t line) {
+MELLIS_NORETURN void __mellis_bounds_fail(
+    size_t         index,
+    size_t         len,
+    const uint8_t* file_ptr,
+    size_t         file_len,
+    uint32_t       line,
+    uint32_t       col
+) {
+    const char* file = (file_ptr && file_len > 0) ? (const char*)file_ptr : "<unknown>";
+    int flen = (file_ptr && file_len > 0) ? (int)file_len : 9;
+
     fprintf(stderr,
         "\nmellis: PANIC [M%03u] index out of bounds: index %zu, length %zu\n"
-        "    at %s:%u\n",
-        MELLIS_ERR_BOUNDS_VIOLATION, idx, len,
-        file ? file : "<unknown>", (unsigned)line);
+        "    at %.*s:%u:%u\n",
+        MELLIS_ERR_BOUNDS_VIOLATION, index, len,
+        flen, file, (unsigned)line, (unsigned)col);
+    fflush(stderr);
     abort();
 }
 
-// --- Division by Zero --------------------------------------------------------
+// --- Compatibility Traps -----------------------------------------------------
 
 MELLIS_NORETURN void __mellis_div_zero_fail(const char* file, uint32_t line) {
-    fprintf(stderr,
-        "\nmellis: PANIC [M%03u] division by zero\n"
-        "    at %s:%u\n",
+    static const uint8_t msg[] = "division by zero";
+    __mellis_panic_code(
         MELLIS_ERR_DIV_ZERO,
-        file ? file : "<unknown>", (unsigned)line);
-    abort();
+        msg, sizeof(msg) - 1,
+        (const uint8_t*)file, file ? strlen(file) : 0,
+        line, 0
+    );
 }
 
-// --- Assertion Failure -------------------------------------------------------
-
-MELLIS_NORETURN void __mellis_assert_fail(const char* msg,
-                                          const char* file, uint32_t line) {
-    fprintf(stderr,
-        "\nmellis: PANIC [M%03u] assertion failed: %s\n"
-        "    at %s:%u\n",
+MELLIS_NORETURN void __mellis_assert_fail(const char* msg, const char* file, uint32_t line) {
+    __mellis_panic_code(
         MELLIS_ERR_ASSERT_FAILURE,
-        msg ? msg : "<no message>",
-        file ? file : "<unknown>", (unsigned)line);
-    abort();
+        (const uint8_t*)msg, msg ? strlen(msg) : 0,
+        (const uint8_t*)file, file ? strlen(file) : 0,
+        line, 0
+    );
 }
-
-// --- Overflow Failure --------------------------------------------------------
 
 MELLIS_NORETURN void __mellis_overflow_fail(const char* file, uint32_t line) {
-    fprintf(stderr,
-        "\nmellis: PANIC [M%03u] integer overflow\n"
-        "    at %s:%u\n",
-        5, // future stable code
-        file ? file : "<unknown>", (unsigned)line);
-    abort();
+    static const uint8_t msg[] = "integer overflow";
+    __mellis_panic_code(
+        MELLIS_ERR_INVALID_STATE,
+        msg, sizeof(msg) - 1,
+        (const uint8_t*)file, file ? strlen(file) : 0,
+        line, 0
+    );
 }
