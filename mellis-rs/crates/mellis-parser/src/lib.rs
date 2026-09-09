@@ -11,7 +11,7 @@ pub mod ty;
 pub struct Parser<'a> {
     tokens: Vec<Token>,
     pos: usize,
-    pub source: &'a str,
+    pub source: &'a str, pub source_manager: Option<&'a mellis_common::source::SourceManager>,
     pub arena: &'a mut AstArena,
     pub diagnostics: Vec<Diagnostic>,
     pub file_id: mellis_common::ids::FileId,
@@ -60,6 +60,7 @@ impl<'a> Parser<'a> {
         Self {
             tokens,
             pos: 0,
+            source_manager: None,
             source,
             arena,
             diagnostics,
@@ -70,6 +71,7 @@ impl<'a> Parser<'a> {
     pub fn from_tokens(
         mut tokens: Vec<Token>,
         source: &'a str,
+        source_manager: Option<&'a mellis_common::source::SourceManager>,
         arena: &'a mut AstArena,
         file_id: mellis_common::ids::FileId,
     ) -> Self {
@@ -90,6 +92,7 @@ impl<'a> Parser<'a> {
         Self {
             tokens,
             pos: 0,
+            source_manager,
             source,
             arena,
             diagnostics: Vec::new(),

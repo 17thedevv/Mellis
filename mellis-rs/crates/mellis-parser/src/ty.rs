@@ -73,7 +73,11 @@ impl<'a> Parser<'a> {
             return Ok(self.arena.alloc_type(Type::Tuple { elements }));
         }
 
-        if self.match_token(TokenKind::KwFn) {
+        let is_unsafe_fn = self.match_token(TokenKind::KwUnsafe);
+        if is_unsafe_fn || self.match_token(TokenKind::KwFn) {
+            if is_unsafe_fn {
+                self.consume(TokenKind::KwFn, "Expected 'fn' after 'unsafe' in function type")?;
+            }
             self.consume(
                 TokenKind::LParen,
                 "Expected '(' for function type parameters",
@@ -96,7 +100,7 @@ impl<'a> Parser<'a> {
             return Ok(self.arena.alloc_type(Type::Function {
                 params,
                 return_type,
-                is_unsafe: false,
+                is_unsafe: is_unsafe_fn,
             }));
         }
 
@@ -156,9 +160,14 @@ impl<'a> Parser<'a> {
                 if self.match_token(TokenKind::LessThan) {
                     if !self.check(TokenKind::GreaterThan) {
                         loop {
-                            // Binding? e.g. Item = Type
-                            // Let's assume standard generic arg for now
-                            generic_args.push(self.parse_type()?);
+                            if self.check(TokenKind::Identifier) && self.peek_next().kind == TokenKind::Equal {
+                                let name = self.advance().span;
+                                self.consume(TokenKind::Equal, "Expected '=' in associated type binding")?;
+                                let ty = self.parse_type()?;
+                                associated_bindings.push(AssociatedBinding { name, ty });
+                            } else {
+                                generic_args.push(self.parse_type()?);
+                            }
                             if !self.match_token(TokenKind::Comma)
                                 || self.check(TokenKind::GreaterThan)
                             {

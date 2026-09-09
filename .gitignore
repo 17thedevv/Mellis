@@ -64,3 +64,5 @@ err.txt
 llvm.ir
 
 target/
+mellis-rs/scratch/
+scratch/

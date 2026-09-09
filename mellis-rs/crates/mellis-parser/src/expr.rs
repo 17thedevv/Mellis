@@ -234,7 +234,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_factor(&mut self, allow_struct_literal: bool) -> Result<ExprId, ()> {
-        let mut expr = self.parse_unary(allow_struct_literal)?;
+        let mut expr = self.parse_cast(allow_struct_literal)?;
         while self.check(TokenKind::Multiply)
             || self.check(TokenKind::Divide)
             || self.check(TokenKind::Modulo)
@@ -246,12 +246,21 @@ impl<'a> Parser<'a> {
                 _ => unreachable!(),
             };
             self.advance();
-            let right = self.parse_unary(allow_struct_literal)?;
+            let right = self.parse_cast(allow_struct_literal)?;
             expr = self.arena.alloc_expr(Expr::Binary {
                 op,
                 left: expr,
                 right,
             });
+        }
+        Ok(expr)
+    }
+
+    fn parse_cast(&mut self, allow_struct_literal: bool) -> Result<ExprId, ()> {
+        let mut expr = self.parse_unary(allow_struct_literal)?;
+        while self.match_token(TokenKind::KwAs) {
+            let target_type = self.parse_type()?;
+            expr = self.arena.alloc_expr(Expr::Cast { expr, target_type });
         }
         Ok(expr)
     }
@@ -683,7 +692,15 @@ impl<'a> Parser<'a> {
             || self.check(TokenKind::KwFalse)
         {
             let token = self.advance();
-            return Ok(self.arena.alloc_expr(Expr::Literal(token, self.source[token.span.start as usize..token.span.end as usize].to_string())));
+            let text = if let Some(sm) = self.source_manager {
+                let file = sm.get_file(token.span.file_id).unwrap();
+                let text = file.source[token.span.start as usize..token.span.end as usize].to_string();
+                println!("parse_primary: token span {:?} in file {:?} resolves to text {:?}", token.span, token.span.file_id, text);
+                text
+            } else {
+                self.source[token.span.start as usize..token.span.end as usize].to_string()
+            };
+            return Ok(self.arena.alloc_expr(Expr::Literal(token, text)));
         }
 
         if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {
@@ -809,3 +826,7 @@ impl<'a> Parser<'a> {
         }
     }
 }
+
+
+
+

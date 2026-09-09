@@ -44,7 +44,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_item_impl(&mut self) -> Result<Item, ()> {
         let annotations = self.parse_annotations()?;
-        let mut visibility = Visibility::Internal;
+        let mut visibility = Visibility::Private;
 
         if self.match_token(TokenKind::KwExport) {
             visibility = Visibility::Public;
@@ -116,6 +116,12 @@ impl<'a> Parser<'a> {
         visibility: Visibility,
         annotations: Vec<Annotation>,
     ) -> Result<DeclId, ()> {
+        if visibility == Visibility::Public {
+            let span = self.previous().span;
+            self.error_at_current("`import` declarations cannot be exported", span);
+            return Err(());
+        }
+
         let span_start = self.previous().span.start;
         let mut kind = mellis_ast::ImportKind::External;
         let name;
@@ -440,6 +446,15 @@ impl<'a> Parser<'a> {
             .consume(TokenKind::Identifier, "Expected trait name")?
             .span;
         let generic_params = self.parse_generic_params();
+        let mut supertraits = Vec::new();
+        if self.match_token(TokenKind::Colon) {
+            loop {
+                supertraits.push(self.parse_type()?);
+                if !self.match_token(TokenKind::Plus) {
+                    break;
+                }
+            }
+        }
         self.consume(TokenKind::LBrace, "Expected '{'")?;
         let mut methods = Vec::new();
         let mut associated_types = Vec::new();
@@ -449,7 +464,7 @@ impl<'a> Parser<'a> {
             if self.match_token(TokenKind::KwExport) {
                 m_visibility = Visibility::Public;
             }
-            if self.check(TokenKind::KwFn) || self.check(TokenKind::KwUnsafe) || self.check(TokenKind::KwIntrinsic) {
+            if self.check(TokenKind::KwFn) || self.check(TokenKind::KwAsync) || self.check(TokenKind::KwUnsafe) || self.check(TokenKind::KwIntrinsic) || self.check(TokenKind::KwComptime) {
                 let m = self.parse_func_decl(m_visibility, m_annotations, false)?;
                 methods.push(m);
             } else if self.match_token(TokenKind::KwType) {
@@ -467,6 +482,7 @@ impl<'a> Parser<'a> {
             generic_params,
             associated_types,
             methods,
+            supertraits,
         }))
     }
 
@@ -488,11 +504,11 @@ impl<'a> Parser<'a> {
         let mut associated_types = Vec::new();
         while !self.check(TokenKind::RBrace) && !self.is_at_end() {
             let m_annotations = self.parse_annotations()?;
-            let mut m_visibility = Visibility::Internal;
+            let mut m_visibility = Visibility::Private;
             if self.match_token(TokenKind::KwExport) {
                 m_visibility = Visibility::Public;
             }
-            if self.check(TokenKind::KwFn) || self.check(TokenKind::KwUnsafe) || self.check(TokenKind::KwIntrinsic) {
+            if self.check(TokenKind::KwFn) || self.check(TokenKind::KwAsync) || self.check(TokenKind::KwUnsafe) || self.check(TokenKind::KwIntrinsic) || self.check(TokenKind::KwComptime) {
                 let m = self.parse_func_decl(m_visibility, m_annotations, false)?;
                 methods.push(m);
             } else if self.match_token(TokenKind::KwType) {
@@ -651,7 +667,12 @@ impl<'a> Parser<'a> {
             return Err(());
         }
         let tok = self.advance();
-        let text = &self.source[tok.span.start as usize..tok.span.end as usize];
+        let text_string = if let Some(sm) = self.source_manager {
+            sm.get_file(tok.span.file_id).unwrap().source[tok.span.start as usize..tok.span.end as usize].to_string()
+        } else {
+            self.source[tok.span.start as usize..tok.span.end as usize].to_string()
+        };
+        let text = text_string.as_str();
         match text {
             "expr" => Ok(mellis_ast::FragmentKind::Expr),
             "ident" => Ok(mellis_ast::FragmentKind::Ident),

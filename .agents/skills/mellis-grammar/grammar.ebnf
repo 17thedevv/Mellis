@@ -175,7 +175,7 @@ using_decl    ::= KW_USING module_path KW_AS IDENTIFIER ";"
 
 module_path   ::= IDENTIFIER ("::" IDENTIFIER)*
 
-module_decl      ::= annotation* "export"? KW_MODULE IDENTIFIER (";" | "{" declaration* "}")
+module_decl      ::= annotation* "export"? KW_MODULE IDENTIFIER "{" declaration* "}"
 
 extern_decl ::= "extern" KW_FN IDENTIFIER "(" parameters? ")" ("->" type)? ";"
 
@@ -193,11 +193,11 @@ enum_variant_list ::= enum_variant ("," enum_variant)* ","?
 enum_variant ::= IDENTIFIER ("(" parameters ")")?
 
 // --- STRUCT, TRAIT VÀ IMPL ---
-struct_decl ::= annotation* "export"? KW_STRUCT IDENTIFIER generic_params? "{" struct_field* "}"
+struct_decl ::= annotation* "export"? KW_STRUCT IDENTIFIER generic_params? "{" (struct_field ("," struct_field)* ","?)? "}"
 
-struct_field::= IDENTIFIER ":" type ";"
+struct_field::= IDENTIFIER ":" type
 
-trait_decl  ::= annotation* "export"? KW_TRAIT IDENTIFIER generic_params? "{" trait_method* "}"
+trait_decl  ::= annotation* "export"? KW_TRAIT IDENTIFIER generic_params? (":" type_path ("+" type_path)*)? "{" (trait_method | type_alias_decl)* "}"
 
 trait_method::= KW_FN IDENTIFIER "(" parameters? ")" ("->" type)? ";"
 
@@ -211,11 +211,11 @@ full_trait_impl ::= "impl" generic_params? type_path "for" type_path "{" func_de
 var_decl_core ::= "export"? ("dec" | "const") IDENTIFIER (":" type)? "=" expression
 var_decl    ::= var_decl_core ";"
 
-func_decl   ::= annotation* "export"? KW_COMPTIME? KW_ASYNC? KW_FN IDENTIFIER generic_params? "(" parameters? ")" ("->" type)? block_stmt
+func_decl   ::= annotation* "export"? KW_COMPTIME? KW_ASYNC? KW_UNSAFE? KW_FN IDENTIFIER generic_params? "(" parameters? ")" ("->" type)? block_stmt
 
 regular_param  ::= IDENTIFIER ":" type
 variadic_param ::= IDENTIFIER ":" DOT_DOT_DOT type
-receiver_param ::= KW_SELF_VAL ":" type
+receiver_param ::= ("&" KW_RW? | KW_RW)? KW_SELF_VAL (":" type)?
 
 parameters     ::= receiver_param ("," regular_param)* ("," variadic_param)?
                  | receiver_param ("," variadic_param)?
@@ -247,7 +247,7 @@ reference_type ::= "&" KW_RW? type
 pointer_type   ::= "*" KW_RW? type
 array_type     ::= "[" type ("," const_expression)? "]"
 tuple_type     ::= "(" (type ("," type)* ","?)? ")"
-func_type      ::= KW_FN "(" (type ("," type)* ","?)? ")" "->" type
+func_type      ::= KW_UNSAFE? KW_FN "(" (type ("," type)* ","?)? ")" "->" type
 never_type     ::= BANG
 named_type     ::= type_path
 typeof_type    ::= KW_TYPEOF "(" expression ")"
@@ -312,11 +312,10 @@ factor      ::= cast (("*" | "/" | "%") cast)*
 cast        ::= unary (KW_AS type)*
 
 unary       ::= "-" unary 
-              | "*" unary
+              | "*" KW_RW? unary
               | "!" unary
               | "~" unary
               | "&" KW_RW? unary
-              | KW_AWAIT unary
               | primary
 
 postfix_op  ::= "[" expression "]" 

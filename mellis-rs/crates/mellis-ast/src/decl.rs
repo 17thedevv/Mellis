@@ -113,6 +113,7 @@ pub enum Decl {
         generic_params: Vec<GenericParam>,
         associated_types: Vec<crate::DeclId>, // TypeAliasDecl
         methods: Vec<crate::DeclId>,          // FunctionDecl
+        supertraits: Vec<crate::TypeId>,
     },
     Impl {
         annotations: Vec<Annotation>,

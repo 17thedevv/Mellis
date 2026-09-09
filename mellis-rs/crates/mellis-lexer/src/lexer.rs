@@ -6,15 +6,21 @@ pub struct Lexer<'a> {
     bytes: &'a [u8],
     file_id: FileId,
     pos: usize,
+    offset: usize,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(source: &'a str, file_id: FileId) -> Self {
+        Self::new_with_offset(source, file_id, 0)
+    }
+
+    pub fn new_with_offset(source: &'a str, file_id: FileId, offset: usize) -> Self {
         Self {
             source,
             bytes: source.as_bytes(),
             file_id,
             pos: 0,
+            offset,
         }
     }
 
@@ -97,8 +103,8 @@ impl<'a> Lexer<'a> {
             kind,
             Span::new(
                 self.file_id,
-                start_offset as u32,
-                self.pos as u32,
+                (self.offset + start_offset) as u32,
+                (self.offset + self.pos) as u32,
             ),
         )
     }
@@ -108,8 +114,8 @@ impl<'a> Lexer<'a> {
             TokenKind::Error,
             Span::new(
                 self.file_id,
-                start_offset as u32,
-                self.pos as u32,
+                (self.offset + start_offset) as u32,
+                (self.offset + self.pos) as u32,
             ),
         )
     }

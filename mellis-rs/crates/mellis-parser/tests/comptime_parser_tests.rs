@@ -8,7 +8,7 @@ fn parse(input: &str) -> (Result<Vec<Item>, ()>, AstArena, Vec<mellis_common::Di
     let file_id = FileId(0);
     let lexer = Lexer::new(input, file_id);
     let tokens: Vec<mellis_lexer::Token> = lexer.collect();
-    let mut parser = Parser::from_tokens(tokens, input, &mut arena, file_id);
+    let mut parser = Parser::from_tokens(tokens, input, None, &mut arena, file_id);
     let result = parser.parse_file();
     let diags = parser.diagnostics;
     (result, arena, diags)

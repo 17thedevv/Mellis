@@ -11,7 +11,6 @@ pub struct AstRelocator {
     pub type_offset: u32,
     pub pat_offset: u32,
     pub new_file_id: FileId,
-    pub span_offset: u32,
 }
 
 impl AstRelocator {
@@ -22,7 +21,6 @@ impl AstRelocator {
         type_offset: u32,
         pat_offset: u32,
         new_file_id: FileId,
-        span_offset: u32,
     ) -> Self {
         Self {
             expr_offset,
@@ -31,7 +29,6 @@ impl AstRelocator {
             type_offset,
             pat_offset,
             new_file_id,
-            span_offset,
         }
     }
 
@@ -75,8 +72,6 @@ impl AstRelocator {
 
     pub fn shift_span(&self, span: &mut Span) {
         span.file_id = self.new_file_id;
-        span.start += self.span_offset;
-        span.end += self.span_offset;
     }
 
     fn relocate_expr(&self, expr: &mut Expr) {
@@ -271,12 +266,13 @@ impl AstRelocator {
                     for f in &mut variant.fields { *f = self.shift_decl_id(*f); }
                 }
             }
-            Decl::Trait { annotations, name, generic_params, associated_types, methods, .. } => {
+            Decl::Trait { annotations, name, generic_params, associated_types, methods, supertraits, .. } => {
                 self.relocate_annotations(annotations);
                 self.shift_span(name);
                 self.relocate_generic_params(generic_params);
                 for t in associated_types { *t = self.shift_decl_id(*t); }
                 for m in methods { *m = self.shift_decl_id(*m); }
+                for s in supertraits { *s = self.shift_type_id(*s); }
             }
             Decl::Impl { annotations, generic_params, self_type, trait_type, associated_types, methods, .. } => {
                 self.relocate_annotations(annotations);

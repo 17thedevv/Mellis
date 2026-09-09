@@ -14,7 +14,6 @@ pub use stmt::*;
 pub use ty::*;
 pub use relocator::*;
 
-use mellis_common::ids::{FileId, Span};
 
 use serde::{Serialize, Deserialize};
 
