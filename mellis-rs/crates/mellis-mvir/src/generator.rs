@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub struct MvirGenerator<'a> {
     arena: &'a AstArena,
     ctx: &'a SemanticContext,
-    source: &'a str,
+    source_manager: &'a mellis_common::source::SourceManager,
     module: Module,
     
     // State during function generation
@@ -29,11 +29,16 @@ pub struct MvirGenerator<'a> {
 }
 
 impl<'a> MvirGenerator<'a> {
-    pub fn new(arena: &'a AstArena, ctx: &'a SemanticContext, source: &'a str) -> Self {
+
+    pub fn get_span_text(&self, span: mellis_common::ids::Span) -> &'a str {
+        &self.source_manager.get_file(span.file_id).unwrap().source[span.start as usize..span.end as usize]
+    }
+
+    pub fn new(arena: &'a AstArena, ctx: &'a SemanticContext, source_manager: &'a mellis_common::source::SourceManager) -> Self {
         Self {
             arena,
             ctx,
-            source,
+            source_manager,
             module: Module::new(),
             current_function: None,
             current_block: None,
@@ -194,7 +199,16 @@ impl<'a> MvirGenerator<'a> {
             if let Some(&val_id) = self.locals.get(&sym) {
                 let ty_id = self.get_symbol_type(&sym).unwrap_or(mellis_semantic::SemanticTypeId(0));
                 if self.ctx.needs_drop(ty_id) {
-                    self.push_inst(Instruction::Drop { value: Operand::Value(val_id), callee: None, ty: ty_id }, ty_id);
+                    let callee = match self.ctx.types.get(ty_id) {
+                        mellis_semantic::SemanticType::Struct(sym_id, ..) => {
+                            self.ctx.tables.drop_impls.get(sym_id).map(|&meth_sym| {
+                                let name = self.ctx.symbol_table.get_symbol(meth_sym).name.clone();
+                                GlobalId { name, symbol_id: Some(meth_sym) }
+                            })
+                        }
+                        _ => None,
+                    };
+                    self.push_inst(Instruction::Drop { value: Operand::Value(val_id), callee, ty: ty_id }, ty_id);
                 }
             }
         }
@@ -261,10 +275,10 @@ impl<'a> MvirGenerator<'a> {
                         if let mellis_ast::Decl::Struct { fields: struct_fields, .. } = &decl {
                             for field in fields {
                                 if let Some(field_pat) = field.pattern {
-                                    let field_name_str = &self.source[field.name.start as usize..field.name.end as usize];
+                                    let field_name_str = self.get_span_text(field.name);
                                     let mut field_idx = 0;
                                     for (idx, struct_field) in struct_fields.iter().enumerate() {
-                                        let struct_field_name = &self.source[struct_field.name.start as usize..struct_field.name.end as usize];
+                                        let struct_field_name = self.get_span_text(struct_field.name);
                                         if field_name_str == struct_field_name {
                                             field_idx = idx;
                                             break;
@@ -300,10 +314,31 @@ impl<'a> MvirGenerator<'a> {
                     self.bind_pattern(elem, extract_op);
                 }
             }
-            mellis_ast::Pattern::Enum { fields: elements, .. } => {
-                // TODO: enum extraction
-                for elem in elements {
-                    self.bind_pattern(elem, val_op.clone());
+            mellis_ast::Pattern::Enum { fields: elements, path } => {
+                let mut variant_idx = 0;
+                if let Some(name_span) = path.last() {
+                    let name_str = self.get_span_text(*name_span);
+                    for symbol in &self.ctx.symbol_table.symbols {
+                        if let mellis_semantic::SymbolKind::EnumVariant(idx) = symbol.kind {
+                            if symbol.name.ends_with(name_str) {
+                                variant_idx = idx;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                for (field_idx, elem) in elements.iter().enumerate() {
+                    let field_ty = self.ctx.tables.pat_types.get(elem).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                    let extract_op = val_op.as_ref().map(|v| {
+                        let extract_val = self.push_inst(Instruction::Extract {
+                            value: v.clone(),
+                            variant_idx,
+                            field_idx: field_idx as u32,
+                        }, field_ty);
+                        Operand::Value(extract_val)
+                    });
+                    self.bind_pattern(elem, extract_op);
                 }
             }
             _ => unreachable!("ICE: Unhandled variant, should be impossible after semantic invariants")
@@ -323,17 +358,33 @@ impl<'a> MvirGenerator<'a> {
                 Operand::Number("0".to_string())
             }
             Expr::Member { object, member } => {
-                let base_op = self.generate_lvalue(object);
-                let obj_ty_id = self.ctx.tables.expr_types.get(object).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                let mut base_op = self.generate_lvalue(object);
+                let obj_ty_id = self.ctx.tables.expr_types.get(object).copied()
+                    .or_else(|| self.ctx.tables.expr_symbols.get(object).and_then(|sym| self.get_symbol_type(sym)))
+                    .unwrap_or(mellis_semantic::SemanticTypeId(0));
+                let mut struct_sym_opt = None;
+                match self.ctx.types.get(obj_ty_id) {
+                    mellis_semantic::SemanticType::Struct(sym_id, _, _) => {
+                        struct_sym_opt = Some(*sym_id);
+                    }
+                    mellis_semantic::SemanticType::Reference(_, _, inner) | mellis_semantic::SemanticType::Pointer(_, inner) => {
+                        let load_val = self.push_inst(Instruction::Load { ptr: base_op }, obj_ty_id);
+                        base_op = Operand::Value(load_val);
+                        if let mellis_semantic::SemanticType::Struct(sym_id, _, _) = self.ctx.types.get(*inner) {
+                            struct_sym_opt = Some(*sym_id);
+                        }
+                    }
+                    _ => {}
+                }
                 let mut field_idx = 0;
                 
-                if let mellis_semantic::SemanticType::Struct(sym_id, _, _) = self.ctx.types.get(obj_ty_id) {
-                    let sym = self.ctx.symbol_table.get_symbol(*sym_id);
+                if let Some(sym_id) = struct_sym_opt {
+                    let sym = self.ctx.symbol_table.get_symbol(sym_id);
                     if let Some(decl_id) = sym.decl_id {
                         if let mellis_ast::Decl::Struct { fields, .. } = &self.arena.decls[decl_id.0 as usize] {
-                            let member_name = self.source[member.start as usize..member.end as usize].to_string();
+                            let member_name = self.get_span_text(*member).to_string();
                             for (i, f) in fields.iter().enumerate() {
-                                let f_name = self.source[f.name.start as usize..f.name.end as usize].to_string();
+                                let f_name = self.get_span_text(f.name).to_string();
                                 if f_name == member_name {
                                     field_idx = i as u32;
                                     break;
@@ -341,14 +392,28 @@ impl<'a> MvirGenerator<'a> {
                             }
                         }
                     }
+                } else if let Some(&idx) = self.ctx.tables.expr_member_indices.get(expr_id) {
+                    field_idx = idx;
                 }
                 
-                // Ty_id of lvalue is a pointer, but in MVIR we just generate the FieldPtr instruction
-                // The type of the field pointer isn't strictly tracked in ValueData, but we can assign the field type.
                 let field_ty = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
                 let field_ptr_val = self.push_inst(Instruction::FieldPtr {
                     base: base_op,
                     field_idx,
+                }, field_ty);
+                Operand::Value(field_ptr_val)
+            }
+            Expr::TupleIndex { object, index } => {
+                let mut base_op = self.generate_lvalue(object);
+                let obj_ty_id = self.ctx.tables.expr_types.get(object).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                if let mellis_semantic::SemanticType::Reference(_, _, _) | mellis_semantic::SemanticType::Pointer(_, _) = self.ctx.types.get(obj_ty_id) {
+                    let load_val = self.push_inst(Instruction::Load { ptr: base_op }, obj_ty_id);
+                    base_op = Operand::Value(load_val);
+                }
+                let field_ty = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                let field_ptr_val = self.push_inst(Instruction::FieldPtr {
+                    base: base_op,
+                    field_idx: *index,
                 }, field_ty);
                 Operand::Value(field_ptr_val)
             }
@@ -422,13 +487,15 @@ impl<'a> MvirGenerator<'a> {
             
             // The first values must be allocas for the hidden environment and explicit parameters.
             let env_param = self.push_inst(Instruction::Alloca, env_ty_id);
-            for param_id in params {
+            self.current_function.as_mut().unwrap().values[env_param.0 as usize].origin = ValueOrigin::Parameter(0);
+            for (idx, param_id) in params.iter().enumerate() {
                 if let Decl::Param { .. } = &self.arena.decls[param_id.0 as usize] {
                     if let Some(sym_id) = self.ctx.tables.decl_symbols.get(&param_id).copied() {
                         let ty_id = instance.symbol_types.get(&sym_id).copied()
                             .or_else(|| self.ctx.tables.symbol_types.get(&sym_id).copied())
                             .unwrap_or(mellis_semantic::SemanticTypeId(0));
                         let alloc_val = self.push_inst(Instruction::Alloca, ty_id);
+                        self.current_function.as_mut().unwrap().values[alloc_val.0 as usize].origin = ValueOrigin::Parameter((idx + 1) as u32);
                         self.locals.insert(sym_id, alloc_val);
                         self.lexical_scopes.last_mut().unwrap().push(sym_id);
                     }
@@ -483,6 +550,23 @@ impl<'a> MvirGenerator<'a> {
 }
 
     fn generate_mono_instance(&mut self, instance: &mellis_semantic::mono::InstantiatedFunction) {
+        // Monomorphization Barrier (P0-C / Rule 8):
+        // Assert that all types inside the instantiated function are strictly monomorphic.
+        // No GenericParam, InferenceVar, Error, or Unresolved Projection may enter MVIR lowering.
+        for (&sym_id, &ty) in &instance.symbol_types {
+            if !self.ctx.types.is_monomorphic(ty) {
+                panic!("MVIR Monomorphization Barrier Violation: Symbol {:?} has non-monomorphic type {:?}", sym_id, self.ctx.types.get(ty));
+            }
+        }
+        for (&expr_id, &ty) in &instance.expr_types {
+            if !self.ctx.types.is_monomorphic(ty) {
+                // Expressions referencing uncalled generic functions or enum types are exempted
+                if !matches!(self.ctx.types.get(ty), mellis_semantic::SemanticType::Function { .. } | mellis_semantic::SemanticType::Enum(..)) {
+                    panic!("MVIR Monomorphization Barrier Violation: Expr {:?} has non-monomorphic type {:?}", expr_id, self.ctx.types.get(ty));
+                }
+            }
+        }
+
         self.current_instance = Some(instance as *const _);
         
         if let Some(closure_id) = instance.instance.closure_id {
@@ -501,15 +585,15 @@ impl<'a> MvirGenerator<'a> {
 
             if let Decl::Function { annotations, .. } = decl {
                 for annot in annotations {
-                    let annot_name_str = if (annot.name.end as usize) <= self.source.len() && annot.name.start <= annot.name.end {
-                        &self.source[annot.name.start as usize..annot.name.end as usize]
+                    let annot_name_str = if (annot.name.end as usize) <= self.source_manager.get_file(annot.name.file_id).unwrap().source.len() && annot.name.start <= annot.name.end {
+                        self.get_span_text(annot.name)
                     } else { "" };
 
                     if annot_name_str == "link" {
                         for arg in &annot.args {
                             if let Some(key_span) = arg.key {
-                                let key_str = if (key_span.end as usize) <= self.source.len() && key_span.start <= key_span.end {
-                                    &self.source[key_span.start as usize..key_span.end as usize]
+                                let key_str = if (key_span.end as usize) <= self.source_manager.get_file(key_span.file_id).unwrap().source.len() && key_span.start <= key_span.end {
+                                    self.get_span_text(key_span)
                                 } else { "" };
 
                                 if key_str == "name" {
@@ -591,11 +675,12 @@ impl<'a> MvirGenerator<'a> {
             self.start_block(entry_label);
             
             if let Decl::Function { params, .. } = decl {
-                for param_id in params {
+                for (idx, param_id) in params.iter().enumerate() {
                     if let Decl::Param { .. } = &self.arena.decls[param_id.0 as usize] {
                         if let Some(sym_id) = self.ctx.tables.decl_symbols.get(&param_id).copied() {
                             let ty_id = self.get_symbol_type(&sym_id).unwrap_or(mellis_semantic::SemanticTypeId(0));
                             let alloc_val = self.push_inst(Instruction::Alloca, ty_id);
+                            self.current_function.as_mut().unwrap().values[alloc_val.0 as usize].origin = ValueOrigin::Parameter(idx as u32);
                             self.locals.insert(sym_id, alloc_val);
                             self.lexical_scopes.last_mut().unwrap().push(sym_id);
                         }
@@ -658,6 +743,7 @@ impl<'a> MvirGenerator<'a> {
                 self.module.functions.push(func);
             }
         }
+        self.current_instance = None;
     }
 
     fn generate_stmt(&mut self, stmt_id: &mellis_ast::StmtId) {
@@ -937,12 +1023,24 @@ impl<'a> MvirGenerator<'a> {
     fn generate_block_expr(&mut self, stmt_id: &mellis_ast::StmtId) -> Operand {
         let stmt = &self.arena.stmts[stmt_id.0 as usize];
         if let Stmt::Block { body, tail_expr } = stmt {
-            for item in body {
+            let mut last_ret = None;
+            for (i, item) in body.iter().enumerate() {
+                if i == body.len() - 1 && tail_expr.is_none() {
+                    if let Item::Stmt(s) = item {
+                        last_ret = Some(self.generate_block_expr(s));
+                        continue;
+                    }
+                }
                 self.generate_item(item);
             }
             if let Some(expr) = tail_expr {
                 return self.generate_expr(expr);
             }
+            if let Some(ret) = last_ret {
+                return ret;
+            }
+        } else if let Stmt::Unsafe { body } = stmt {
+            return self.generate_block_expr(body);
         } else {
             self.generate_stmt(stmt_id);
         }
@@ -986,20 +1084,37 @@ impl<'a> MvirGenerator<'a> {
 
         let mut result = self.generate_expr_inner(expr_id);
         
-        if let Some(&(trait_sym, concrete_sym)) = self.ctx.tables.dyn_coercions.get(expr_id) {
-            let trait_name = self.ctx.symbol_table.get_symbol(trait_sym).name.clone();
-            let concrete_name = self.ctx.symbol_table.get_symbol(concrete_sym).name.clone();
-            let vtable_global = GlobalId {
-                name: format!("vtable_{}_{}", trait_name, concrete_name),
-                symbol_id: Some(trait_sym),
-            };
-            let ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
-            let trait_obj_val = self.push_inst(Instruction::MakeTraitObject {
-                data_ptr: result,
-                vtable: vtable_global,
-                trait_sym,
-            }, ty_id);
-            result = Operand::Value(trait_obj_val);
+        if let Some(coercion) = self.ctx.tables.coercions.get(expr_id) {
+            match coercion {
+                mellis_semantic::CoercionKind::ConcreteToDyn { trait_sym, concrete_sym } => {
+                    let trait_name = self.ctx.symbol_table.get_symbol(*trait_sym).name.clone();
+                    let concrete_name = self.ctx.symbol_table.get_symbol(*concrete_sym).name.clone();
+                    let vtable_global = GlobalId {
+                        name: format!("vtable_{}_{}", trait_name, concrete_name),
+                        symbol_id: Some(*trait_sym),
+                    };
+                    let ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                    let trait_obj_val = self.push_inst(Instruction::MakeTraitObject {
+                        data_ptr: result,
+                        vtable: vtable_global,
+                        trait_sym: *trait_sym,
+                        concrete_sym: *concrete_sym,
+                    }, ty_id);
+                    result = Operand::Value(trait_obj_val);
+                }
+                mellis_semantic::CoercionKind::ArrayToSlice { element_type: _, length } => {
+                    let ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
+                    let len_operand = Operand::Number(length.to_string());
+                    let slice_val = self.push_inst(Instruction::MakeSlice {
+                        data_ptr: result,
+                        len: len_operand,
+                    }, ty_id);
+                    result = Operand::Value(slice_val);
+                }
+                mellis_semantic::CoercionKind::RefMutToShared => {
+                    // Representation is unchanged
+                }
+            }
         }
         
         let ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
@@ -1022,15 +1137,8 @@ impl<'a> MvirGenerator<'a> {
             }
         }
         
-        if let Some(ct_val) = self.ctx.comptime_values.get(expr_id) {
-            match ct_val {
-                mellis_semantic::ComptimeValue::Int { val, .. } => return Operand::Number(val.to_string()),
-                mellis_semantic::ComptimeValue::Float { val, .. } => return Operand::Number(val.to_string()),
-                mellis_semantic::ComptimeValue::Bool(b) => return Operand::Boolean(*b),
-                mellis_semantic::ComptimeValue::Str(s) => return Operand::Number(format!("\"{}\"", s)),
-                mellis_semantic::ComptimeValue::Char(c) => return Operand::Number((*c as u32).to_string()),
-                _ => unreachable!("ICE: Unhandled variant, should be impossible after semantic invariants")
-            }
+        if let Some(ct_val) = self.ctx.comptime_values.get(expr_id).cloned() {
+            return self.materialize_comptime_value(&ct_val, ty_id);
         }
         
         match expr {
@@ -1216,20 +1324,19 @@ impl<'a> MvirGenerator<'a> {
                         }
                     }
                     
-                    if let Some(ct_val) = self.ctx.const_values.get(&sym_id) {
-                        match ct_val {
-                            mellis_semantic::ComptimeValue::Int { val: n, .. } => return Operand::Number(n.to_string()),
-                            mellis_semantic::ComptimeValue::Float { val: n, .. } => return Operand::Number(n.to_string()),
-                            mellis_semantic::ComptimeValue::Bool(b) => return Operand::Boolean(*b),
-                            mellis_semantic::ComptimeValue::Str(s) => return Operand::Number(format!("\"{}\"", s)),
-                            _ => unreachable!("ICE: Unhandled variant, should be impossible after semantic invariants")
-                        }
+                    if let Some(ct_val) = self.ctx.const_values.get(&sym_id).cloned() {
+                        return self.materialize_comptime_value(&ct_val, ty_id);
                     }
 
                     if let Some(&val_id) = self.locals.get(&sym_id) {
+                        let sym_ty = if ty_id != mellis_semantic::SemanticTypeId(0) {
+                            ty_id
+                        } else {
+                            self.get_symbol_type(&sym_id).unwrap_or(ty_id)
+                        };
                         let load_val = self.push_inst(Instruction::Load {
                             ptr: Operand::Value(val_id),
-                        }, ty_id);
+                        }, sym_ty);
                         return Operand::Value(load_val);
                     }
                     
@@ -1329,7 +1436,7 @@ impl<'a> MvirGenerator<'a> {
                 }, ty_id);
                 Operand::Value(load_val)
             }
-            Expr::Member { .. } => {
+            Expr::Member { .. } | Expr::TupleIndex { .. } => {
                 let ptr_op = self.generate_lvalue(expr_id);
                 let load_val = self.push_inst(Instruction::Load {
                     ptr: ptr_op,
@@ -1456,25 +1563,7 @@ impl<'a> MvirGenerator<'a> {
                 
                 Operand::Value(load_val)
             }
-            Expr::Unary { op, operand } => {
-                use mellis_ast::expr::UnaryOp;
-                let inst = match op {
-                    UnaryOp::Ref => {
-                        let op_val = self.generate_lvalue(operand);
-                        Instruction::Borrow { is_rw: false, base: op_val }
-                    }
-                    UnaryOp::RefMut => {
-                        let op_val = self.generate_lvalue(operand);
-                        Instruction::Borrow { is_rw: true, base: op_val }
-                    }
-                    _ => {
-                        let _op_val = self.generate_expr(operand);
-                        return Operand::Number("0".to_string());
-                    }
-                };
-                let val_id = self.push_inst(inst, ty_id);
-                Operand::Value(val_id)
-            }
+
             Expr::Lambda { .. } => {
                 let env_ty_id = self.ctx.tables.closure_env_types.get(expr_id).copied().unwrap_or_else(|| panic!("ICE: Missing closure_env_types for closure ID {:?}", expr_id));
                 let env_ptr = self.push_inst(Instruction::HeapAlloc, env_ty_id);
@@ -1657,7 +1746,11 @@ impl<'a> MvirGenerator<'a> {
                 Operand::Value(self.push_inst(Instruction::AlignOf { ty: target_ty_id }, ty_id))
             }
             Expr::Comptime { .. } => {
-                unreachable!("ICE: Expr::Comptime reached MVIR generator, should have been blocked by Typechecker");
+                if let Some(ct_val) = self.ctx.comptime_values.get(expr_id).cloned() {
+                    self.materialize_comptime_value(&ct_val, ty_id)
+                } else {
+                    Operand::Number("0".to_string())
+                }
             }
             Expr::Cast { expr, target_type } => {
                 let val_op = self.generate_expr(expr);
@@ -1673,6 +1766,90 @@ impl<'a> MvirGenerator<'a> {
                 Operand::Value(val)
             }
             _ => Operand::Number("0".to_string())
+        }
+    }
+
+    pub fn materialize_comptime_value(&mut self, val: &mellis_semantic::ComptimeValue, ty_id: mellis_semantic::SemanticTypeId) -> Operand {
+        match val {
+            mellis_semantic::ComptimeValue::Unit => Operand::Number("0".to_string()),
+            mellis_semantic::ComptimeValue::Bool(b) => Operand::Boolean(*b),
+            mellis_semantic::ComptimeValue::Int { val, .. } => Operand::Number(val.to_string()),
+            mellis_semantic::ComptimeValue::Float { val, .. } => Operand::Number(val.to_string()),
+            mellis_semantic::ComptimeValue::Char(c) => Operand::Number((*c as u32).to_string()),
+            mellis_semantic::ComptimeValue::Str(s) => Operand::StringRef(format!("\"{}\"", s)),
+            mellis_semantic::ComptimeValue::Tuple(elements) => {
+                let alloca_val = self.push_inst(Instruction::Alloca, ty_id);
+                for (i, elem) in elements.iter().enumerate() {
+                    let elem_ty = match self.ctx.types.get(ty_id) {
+                        mellis_semantic::SemanticType::Tuple(tys) => tys.get(i).copied().unwrap_or(mellis_semantic::SemanticTypeId(0)),
+                        _ => mellis_semantic::SemanticTypeId(0),
+                    };
+                    let elem_op = self.materialize_comptime_value(elem, elem_ty);
+                    let ptr = self.push_inst(Instruction::FieldPtr {
+                        base: Operand::Value(alloca_val),
+                        field_idx: i as u32,
+                    }, elem_ty);
+                    self.push_inst(Instruction::Store {
+                        ptr: Operand::Value(ptr),
+                        value: elem_op,
+                    }, elem_ty);
+                }
+                let load_val = self.push_inst(Instruction::Load {
+                    ptr: Operand::Value(alloca_val),
+                }, ty_id);
+                Operand::Value(load_val)
+            }
+            mellis_semantic::ComptimeValue::Array { elements, elem_ty } => {
+                let alloca_val = self.push_inst(Instruction::Alloca, ty_id);
+                let e_ty = elem_ty.unwrap_or(mellis_semantic::SemanticTypeId(0));
+                for (i, elem) in elements.iter().enumerate() {
+                    let elem_op = self.materialize_comptime_value(elem, e_ty);
+                    let ptr = self.push_inst(Instruction::FieldPtr {
+                        base: Operand::Value(alloca_val),
+                        field_idx: i as u32,
+                    }, e_ty);
+                    self.push_inst(Instruction::Store {
+                        ptr: Operand::Value(ptr),
+                        value: elem_op,
+                    }, e_ty);
+                }
+                let load_val = self.push_inst(Instruction::Load {
+                    ptr: Operand::Value(alloca_val),
+                }, ty_id);
+                Operand::Value(load_val)
+            }
+            mellis_semantic::ComptimeValue::Struct { fields, .. } => {
+                let alloca_val = self.push_inst(Instruction::Alloca, ty_id);
+                for (i, (_, f_val)) in fields.iter().enumerate() {
+                    let f_ty = mellis_semantic::SemanticTypeId(0);
+                    let elem_op = self.materialize_comptime_value(f_val, f_ty);
+                    let ptr = self.push_inst(Instruction::FieldPtr {
+                        base: Operand::Value(alloca_val),
+                        field_idx: i as u32,
+                    }, f_ty);
+                    self.push_inst(Instruction::Store {
+                        ptr: Operand::Value(ptr),
+                        value: elem_op,
+                    }, f_ty);
+                }
+                let load_val = self.push_inst(Instruction::Load {
+                    ptr: Operand::Value(alloca_val),
+                }, ty_id);
+                Operand::Value(load_val)
+            }
+            mellis_semantic::ComptimeValue::Enum { variant_index, payload, .. } => {
+                let mut payload_ops = Vec::new();
+                for p in payload {
+                    payload_ops.push(self.materialize_comptime_value(p, mellis_semantic::SemanticTypeId(0)));
+                }
+                let var_val = self.push_inst(Instruction::Variant {
+                    enum_ty: ty_id,
+                    variant_idx: *variant_index,
+                    args: payload_ops,
+                }, ty_id);
+                Operand::Value(var_val)
+            }
+            _ => Operand::Number("0".to_string()),
         }
     }
     
@@ -1723,7 +1900,11 @@ impl<'a> MvirGenerator<'a> {
     fn push_inst_span(&mut self, inst: Instruction, ty: mellis_semantic::SemanticTypeId, span: Option<mellis_common::Span>) -> ValueId {
         let func = self.current_function.as_mut().expect("Must be in a function");
         let val_id = ValueId(func.values.len() as u32);
-        func.values.push(ValueData { inst, ty, span });
+        let origin = match &inst {
+            Instruction::Alloca => ValueOrigin::Local,
+            _ => ValueOrigin::Temporary,
+        };
+        func.values.push(ValueData { inst, ty, span, origin });
         
         if let Some(block) = &mut self.current_block {
             block.insts.push(val_id);
@@ -1756,7 +1937,7 @@ impl<'a> MvirGenerator<'a> {
             Pattern::Enum { path, fields } => {
                 let mut variant_idx = 0;
                 if let Some(name_span) = path.last() {
-                    let name_str = &self.source[name_span.start as usize..name_span.end as usize];
+                    let name_str = self.get_span_text(*name_span);
                     for symbol in &self.ctx.symbol_table.symbols {
                         if let mellis_semantic::SymbolKind::EnumVariant(idx) = symbol.kind {
                             if symbol.name.ends_with(name_str) {
@@ -1798,7 +1979,7 @@ impl<'a> MvirGenerator<'a> {
                 current_res
             }
             Pattern::Literal(token) => {
-                let text = self.source[token.span.start as usize..token.span.end as usize].to_string();
+                let text = self.get_span_text(token.span).to_string();
                 let expected = match token.kind {
                     mellis_lexer::TokenKind::KwTrue => Operand::Boolean(true),
                     mellis_lexer::TokenKind::KwFalse => Operand::Boolean(false),
@@ -1841,10 +2022,10 @@ impl<'a> MvirGenerator<'a> {
                         if let Some(decl_id) = struct_sym.decl_id {
                             if let mellis_ast::Decl::Struct { fields: decl_fields, .. } = &self.arena.decls[decl_id.0 as usize] {
                                 for struct_field in fields {
-                                    let field_name = &self.source[struct_field.name.start as usize..struct_field.name.end as usize];
+                                    let field_name = self.get_span_text(struct_field.name);
                                     let mut found_idx = None;
                                     for (i, f) in decl_fields.iter().enumerate() {
-                                        let f_name = &self.source[f.name.start as usize..f.name.end as usize];
+                                        let f_name = self.get_span_text(f.name);
                                         if f_name == field_name {
                                             found_idx = Some(i);
                                             break;
@@ -1904,7 +2085,7 @@ impl<'a> MvirGenerator<'a> {
             Pattern::Enum { fields, path } => {
                 let mut variant_idx = 0;
                 if let Some(name_span) = path.last() {
-                    let name_str = &self.source[name_span.start as usize..name_span.end as usize];
+                    let name_str = self.get_span_text(*name_span);
                     for symbol in &self.ctx.symbol_table.symbols {
                         if let mellis_semantic::SymbolKind::EnumVariant(idx) = symbol.kind {
                             if symbol.name.ends_with(name_str) {
@@ -1944,10 +2125,10 @@ impl<'a> MvirGenerator<'a> {
                         if let Some(decl_id) = struct_sym.decl_id {
                             if let mellis_ast::Decl::Struct { fields: decl_fields, .. } = &self.arena.decls[decl_id.0 as usize] {
                                 for struct_field in fields {
-                                    let field_name = &self.source[struct_field.name.start as usize..struct_field.name.end as usize];
+                                    let field_name = self.get_span_text(struct_field.name);
                                     let mut found_idx = None;
                                     for (i, f) in decl_fields.iter().enumerate() {
-                                        let f_name = &self.source[f.name.start as usize..f.name.end as usize];
+                                        let f_name = self.get_span_text(f.name);
                                         if f_name == field_name {
                                             found_idx = Some(i);
                                             break;

@@ -76,7 +76,13 @@ impl Pass for DeadCodeElimination {
                             if let Operand::Value(v) = index { used_values.insert(v.0); }
                             if let Operand::Value(v) = len { used_values.insert(v.0); }
                         }
-                        Instruction::BoxNew { value } | Instruction::BoxFree { value } | Instruction::Drop { value, .. } => {
+                        Instruction::CallVirt { obj, args, .. } => {
+                            if let Operand::Value(v) = obj { used_values.insert(v.0); }
+                            for arg in args {
+                                if let Operand::Value(v) = arg { used_values.insert(v.0); }
+                            }
+                        }
+                        Instruction::BoxNew { value } | Instruction::BoxFree { value } | Instruction::Drop { value, .. } | Instruction::DropVirt { obj: value } => {
                             if let Operand::Value(v) = value { used_values.insert(v.0); }
                         }
                         Instruction::PtrOffset { ptr, offset } => {
@@ -91,6 +97,10 @@ impl Pass for DeadCodeElimination {
                         }
                         Instruction::MakeTraitObject { data_ptr, .. } => {
                             if let Operand::Value(v) = data_ptr { used_values.insert(v.0); }
+                        }
+                        Instruction::MakeSlice { data_ptr, len } => {
+                            if let Operand::Value(v) = data_ptr { used_values.insert(v.0); }
+                            if let Operand::Value(v) = len { used_values.insert(v.0); }
                         }
                         _ => {}
                     }
@@ -107,7 +117,7 @@ impl Pass for DeadCodeElimination {
                     let val = &func.values[inst_id.0 as usize];
                     // Keep instructions with side effects or used ones
                     // INVARIANT: mọi Call, BoxNew, BoxFree, Drop đều effectful trừ khi purity analysis chứng minh ngược lại (TRIPWIRE CẢNH BÁO).
-                    let has_side_effects = matches!(val.inst, Instruction::Store { .. } | Instruction::CallDirect { .. } | Instruction::CallIndirect { .. } | Instruction::CallClosure { .. } | Instruction::MakeClosure { .. } | Instruction::HeapAlloc | Instruction::BoxNew { .. } | Instruction::BoxFree { .. } | Instruction::Drop { .. });
+                    let has_side_effects = matches!(val.inst, Instruction::Store { .. } | Instruction::CallDirect { .. } | Instruction::CallIndirect { .. } | Instruction::CallClosure { .. } | Instruction::CallVirt { .. } | Instruction::MakeClosure { .. } | Instruction::HeapAlloc | Instruction::BoxNew { .. } | Instruction::BoxFree { .. } | Instruction::Drop { .. } | Instruction::DropVirt { .. } | Instruction::BoundsCheck { .. });
                     has_side_effects || used_values.contains(&inst_id.0) || (inst_id.0 < func.arg_count as u32)
                 });
                 if block.insts.len() != initial_len {

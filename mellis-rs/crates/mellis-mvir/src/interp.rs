@@ -9,8 +9,8 @@ use crate::mvir::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Address {
-    Stack { frame_idx: usize, slot_idx: usize, field_idx: Option<u32> },
-    Heap { alloc_id: usize, field_idx: Option<u32> },
+    Stack { frame_idx: usize, slot_idx: usize, field_idx: Option<u32>, offset: isize },
+    Heap { alloc_id: usize, field_idx: Option<u32>, offset: isize },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +38,16 @@ pub enum RuntimeValue {
     Compound(Vec<RuntimeValue>),
     Variant { enum_ty: SemanticTypeId, tag: u32, payload: Vec<RuntimeValue> },
     Closure { func: GlobalId, env_ptr: Address },
+    TraitObject {
+        data: Box<RuntimeValue>,
+        vtable: GlobalId,
+        trait_sym: SymbolId,
+        concrete_sym: SymbolId,
+    },
+    Slice {
+        data: Box<RuntimeValue>,
+        len: usize,
+    },
 }
 
 impl RuntimeValue {
@@ -68,6 +78,24 @@ impl RuntimeValue {
                 Err(ComptimeError::PointerEscape("cannot return raw heap pointer across compile-time boundary".to_string()))
             }
             RuntimeValue::NullPointer => Ok(ComptimeValue::Unit),
+            RuntimeValue::TraitObject { .. } => {
+                // Invariant: RuntimeReachable(V) ∩ VMObjects = ∅
+                // Trait objects created in compile-time evaluation cannot escape into runtime constants
+                // because their data points to VM memory and vtable is an internal compiler representation.
+                Err(ComptimeError::PointerEscape("cannot return trait object across compile-time boundary: fat pointer references compiler-owned memory".to_string()))
+            }
+            RuntimeValue::Slice { data, .. } => {
+                // Invariant: RuntimeReachable(V) ∩ VMObjects = ∅
+                // Slices referencing VM stack or heap cannot escape into runtime
+                if let RuntimeValue::Pointer(Address::Stack { .. }) = **data {
+                    return Err(ComptimeError::PointerEscape("cannot return slice referencing temporary compile-time stack memory".to_string()));
+                }
+                if let RuntimeValue::Pointer(Address::Heap { .. }) = **data {
+                    return Err(ComptimeError::PointerEscape("cannot return slice referencing compile-time heap memory across boundary".to_string()));
+                }
+                data.to_comptime_value(ctx)?;
+                Err(ComptimeError::PointerEscape("cannot return slice fat pointer across compile-time boundary".to_string()))
+            }
             RuntimeValue::Compound(elements) => {
                 let mut converted = Vec::new();
                 for elem in elements {
@@ -89,7 +117,7 @@ impl RuntimeValue {
                 })
             }
             RuntimeValue::Closure { .. } => {
-                Err(ComptimeError::UnsupportedOperation("cannot export closure as compile-time constant value".to_string()))
+                Err(ComptimeError::ResourceEscape("cannot export closure as compile-time constant value: runtime-observable VM resource cannot escape".to_string()))
             }
         }
     }
@@ -185,7 +213,10 @@ impl<'a> MvirInterpreter<'a> {
 
     fn get_slot_mut(&mut self, addr: Address) -> Result<&mut MemorySlot, ComptimeError> {
         match addr {
-            Address::Stack { frame_idx, slot_idx, field_idx } => {
+            Address::Stack { frame_idx, slot_idx, field_idx, offset } => {
+                if offset != 0 {
+                    return Err(ComptimeError::Custom("E_OUT_OF_BOUNDS_DEREF: pointer offset out of bounds".to_string()));
+                }
                 let frame = self.call_stack.get_mut(frame_idx).ok_or_else(|| {
                     ComptimeError::Custom("invalid stack frame reference".to_string())
                 })?;
@@ -201,12 +232,15 @@ impl<'a> MvirInterpreter<'a> {
                 }
                 Ok(slot)
             }
-            Address::Heap { alloc_id, field_idx: _ } => {
+            Address::Heap { alloc_id, field_idx: _, offset } => {
                 if self.heap.freed.contains_key(&alloc_id) {
-                    return Err(ComptimeError::Custom("use-after-free in compile-time heap memory".to_string()));
+                    return Err(ComptimeError::UseAfterFree);
+                }
+                if offset != 0 {
+                    return Err(ComptimeError::Custom("E_OUT_OF_BOUNDS_DEREF: pointer offset out of bounds".to_string()));
                 }
                 let slots = self.heap.allocations.get_mut(&alloc_id).ok_or_else(|| {
-                    ComptimeError::Custom("invalid heap allocation reference".to_string())
+                    ComptimeError::UseAfterFree
                 })?;
                 slots.get_mut(0).ok_or_else(|| {
                     ComptimeError::Custom("empty heap allocation".to_string())
@@ -216,9 +250,16 @@ impl<'a> MvirInterpreter<'a> {
     }
 
     fn read_memory(&mut self, addr: Address, ty: SemanticTypeId) -> Result<RuntimeValue, ComptimeError> {
-        let is_copy = self.is_copy_type(ty);
-        let slot = self.get_slot_mut(addr)?;
-        match slot.state {
+        let (val, state, slot_ty) = {
+            let slot = self.get_slot_mut(addr)?;
+            (slot.value.clone(), slot.state, slot.ty)
+        };
+        let actual_ty = if ty != SemanticTypeId(0) { ty } else { slot_ty };
+        let is_copy = match &val {
+            RuntimeValue::Int { .. } | RuntimeValue::Float { .. } | RuntimeValue::Bool(_) | RuntimeValue::Unit => true,
+            _ => self.is_copy_type(actual_ty),
+        };
+        match state {
             PlaceState::Uninitialized => {
                 Err(ComptimeError::UseOfUninitializedOrMoved("reading uninitialized memory".to_string()))
             }
@@ -228,16 +269,30 @@ impl<'a> MvirInterpreter<'a> {
             PlaceState::Initialized => {
                 match addr {
                     Address::Stack { field_idx: Some(f_idx), .. } | Address::Heap { field_idx: Some(f_idx), .. } => {
-                        if let RuntimeValue::Compound(fields) = &slot.value {
+                        if let RuntimeValue::Compound(fields) = &val {
                             let f_val = fields.get(f_idx as usize).cloned().unwrap_or(RuntimeValue::Unit);
                             Ok(f_val)
+                        } else if let RuntimeValue::TraitObject { data, .. } = &val {
+                            if f_idx == 0 {
+                                Ok(*data.clone())
+                            } else {
+                                Ok(RuntimeValue::Unit)
+                            }
+                        } else if let RuntimeValue::Slice { data, len } = &val {
+                            if f_idx == 0 {
+                                Ok(*data.clone())
+                            } else if f_idx == 1 {
+                                Ok(RuntimeValue::Int { val: *len as i128, width: IntWidth::USize })
+                            } else {
+                                Ok(RuntimeValue::Unit)
+                            }
                         } else {
-                            Ok(slot.value.clone())
+                            Ok(val)
                         }
                     }
                     _ => {
-                        let val = slot.value.clone();
                         if !is_copy {
+                            let slot = self.get_slot_mut(addr)?;
                             slot.state = PlaceState::Moved;
                         }
                         Ok(val)
@@ -252,15 +307,34 @@ impl<'a> MvirInterpreter<'a> {
         match addr {
             Address::Stack { field_idx: Some(f_idx), .. } | Address::Heap { field_idx: Some(f_idx), .. } => {
                 if let RuntimeValue::Compound(fields) = &mut slot.value {
-                    while fields.len() <= f_idx as usize {
-                        fields.push(RuntimeValue::Unit);
+                    if (f_idx as usize) < fields.len() {
+                        fields[f_idx as usize] = value;
+                    } else {
+                        fields.resize(f_idx as usize + 1, RuntimeValue::Unit);
+                        fields[f_idx as usize] = value;
                     }
+                } else if let RuntimeValue::TraitObject { data, .. } = &mut slot.value {
+                    if f_idx == 0 {
+                        *data = Box::new(value);
+                    }
+                } else if let RuntimeValue::Slice { data, len } = &mut slot.value {
+                    if f_idx == 0 {
+                        *data = Box::new(value);
+                    } else if f_idx == 1 {
+                        if let Ok(l) = value.as_i128() {
+                            *len = l as usize;
+                        }
+                    }
+                } else {
+                    let mut fields = Vec::new();
+                    fields.resize(f_idx as usize + 1, RuntimeValue::Unit);
                     fields[f_idx as usize] = value;
-                    slot.state = PlaceState::Initialized;
-                    return Ok(());
+                    slot.value = RuntimeValue::Compound(fields);
                 }
+                slot.state = PlaceState::Initialized;
+                return Ok(());
             }
-            _ => unreachable!("ICE: Unhandled variant in interpreter")
+            _ => {}
         }
         slot.value = value;
         slot.state = PlaceState::Initialized;
@@ -390,7 +464,7 @@ impl<'a> MvirInterpreter<'a> {
                             state: init_state,
                             ty: inst_ty,
                         });
-                        RuntimeValue::Pointer(Address::Stack { frame_idx, slot_idx, field_idx: None })
+                        RuntimeValue::Pointer(Address::Stack { frame_idx, slot_idx, field_idx: None, offset: 0 })
                     }
                     Instruction::HeapAlloc => {
                         let alloc_id = self.heap.next_alloc_id;
@@ -400,7 +474,7 @@ impl<'a> MvirInterpreter<'a> {
                             state: PlaceState::Initialized,
                             ty: inst_ty,
                         }]);
-                        RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: None })
+                        RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: None, offset: 0 })
                     }
                     Instruction::BoxNew { value } => {
                         let val = self.eval_operand(value)?;
@@ -411,13 +485,13 @@ impl<'a> MvirInterpreter<'a> {
                             state: PlaceState::Initialized,
                             ty: inst_ty,
                         }]);
-                        RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: None })
+                        RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: None, offset: 0 })
                     }
                     Instruction::BoxFree { value } => {
                         let ptr = self.eval_operand(value)?;
                         if let RuntimeValue::Pointer(Address::Heap { alloc_id, .. }) = ptr {
                             if self.heap.freed.contains_key(&alloc_id) {
-                                return Err(ComptimeError::Custom("double free in compile-time memory".to_string()));
+                                return Err(ComptimeError::UseAfterFree);
                             }
                             self.heap.allocations.remove(&alloc_id);
                             self.heap.freed.insert(alloc_id, true);
@@ -430,17 +504,25 @@ impl<'a> MvirInterpreter<'a> {
                     Instruction::Store { ptr, value } => {
                         let ptr_val = self.eval_operand(ptr)?;
                         let val = self.eval_operand(value)?;
-                        if let RuntimeValue::Pointer(addr) = ptr_val {
-                            self.write_memory(addr, val)?;
+                        match ptr_val {
+                            RuntimeValue::Pointer(addr) => {
+                                self.write_memory(addr, val)?;
+                                RuntimeValue::Unit
+                            }
+                            RuntimeValue::NullPointer | RuntimeValue::Int { val: 0, .. } => {
+                                return Err(ComptimeError::NullPointerDereference);
+                            }
+                            _ => RuntimeValue::Unit,
                         }
-                        RuntimeValue::Unit
                     }
                     Instruction::Load { ptr } => {
                         let ptr_val = self.eval_operand(ptr)?;
-                        if let RuntimeValue::Pointer(addr) = ptr_val {
-                            self.read_memory(addr, inst_ty)?
-                        } else {
-                            RuntimeValue::Unit
+                        match ptr_val {
+                            RuntimeValue::Pointer(addr) => self.read_memory(addr, inst_ty)?,
+                            RuntimeValue::NullPointer | RuntimeValue::Int { val: 0, .. } => {
+                                return Err(ComptimeError::NullPointerDereference);
+                            }
+                            _ => RuntimeValue::Unit,
                         }
                     }
                     Instruction::Borrow { base, .. } => {
@@ -450,11 +532,11 @@ impl<'a> MvirInterpreter<'a> {
                     Instruction::FieldPtr { base, field_idx } => {
                         let base_val = self.eval_operand(base)?;
                         match base_val {
-                            RuntimeValue::Pointer(Address::Stack { frame_idx, slot_idx, field_idx: _ }) => {
-                                RuntimeValue::Pointer(Address::Stack { frame_idx, slot_idx, field_idx: Some(*field_idx) })
+                            RuntimeValue::Pointer(Address::Stack { frame_idx, slot_idx, field_idx: _, offset }) => {
+                                RuntimeValue::Pointer(Address::Stack { frame_idx, slot_idx, field_idx: Some(*field_idx), offset })
                             }
-                            RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: _ }) => {
-                                RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: Some(*field_idx) })
+                            RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: _, offset }) => {
+                                RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: Some(*field_idx), offset })
                             }
                             _ => base_val,
                         }
@@ -469,6 +551,19 @@ impl<'a> MvirInterpreter<'a> {
                             (RuntimeValue::Float { val: v1, width }, RuntimeValue::Float { val: v2, .. }) => {
                                 RuntimeValue::Float { val: v1 + v2, width }
                             }
+                            (RuntimeValue::Pointer(addr), RuntimeValue::Int { val: offset, .. }) => {
+                                match addr {
+                                    Address::Stack { frame_idx, slot_idx, field_idx, offset: curr_off } => {
+                                        RuntimeValue::Pointer(Address::Stack { frame_idx, slot_idx, field_idx, offset: curr_off + offset as isize })
+                                    }
+                                    Address::Heap { alloc_id, field_idx, offset: curr_off } => {
+                                        RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx, offset: curr_off + offset as isize })
+                                    }
+                                }
+                            }
+                            (RuntimeValue::NullPointer, RuntimeValue::Int { .. }) => {
+                                return Err(ComptimeError::NullPointerDereference);
+                            }
                             _ => return Err(ComptimeError::TypeMismatch("add operand mismatch".to_string())),
                         }
                     }
@@ -482,20 +577,52 @@ impl<'a> MvirInterpreter<'a> {
                             (RuntimeValue::Float { val: v1, width }, RuntimeValue::Float { val: v2, .. }) => {
                                 RuntimeValue::Float { val: v1 - v2, width }
                             }
+                            (RuntimeValue::Pointer(addr), RuntimeValue::Int { val: offset, .. }) => {
+                                match addr {
+                                    Address::Stack { frame_idx, slot_idx, field_idx, offset: curr_off } => {
+                                        RuntimeValue::Pointer(Address::Stack { frame_idx, slot_idx, field_idx, offset: curr_off - offset as isize })
+                                    }
+                                    Address::Heap { alloc_id, field_idx, offset: curr_off } => {
+                                        RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx, offset: curr_off - offset as isize })
+                                    }
+                                }
+                            }
+                            (RuntimeValue::Pointer(addr1), RuntimeValue::Pointer(addr2)) => {
+                                match (addr1, addr2) {
+                                    (Address::Stack { frame_idx: f1, slot_idx: s1, offset: o1, .. }, Address::Stack { frame_idx: f2, slot_idx: s2, offset: o2, .. }) => {
+                                        if f1 == f2 && s1 == s2 {
+                                            RuntimeValue::Int { val: (o1 - o2) as i128, width: IntWidth::ISize }
+                                        } else {
+                                            return Err(ComptimeError::Custom("cannot subtract pointers to different stack allocations".to_string()));
+                                        }
+                                    }
+                                    (Address::Heap { alloc_id: a1, offset: o1, .. }, Address::Heap { alloc_id: a2, offset: o2, .. }) => {
+                                        if a1 == a2 {
+                                            RuntimeValue::Int { val: (o1 - o2) as i128, width: IntWidth::ISize }
+                                        } else {
+                                            return Err(ComptimeError::Custom("cannot subtract pointers to different heap allocations".to_string()));
+                                        }
+                                    }
+                                    _ => return Err(ComptimeError::Custom("cannot subtract pointers to different memory regions".to_string())),
+                                }
+                            }
+                            (RuntimeValue::NullPointer, _) => {
+                                return Err(ComptimeError::NullPointerDereference);
+                            }
                             _ => return Err(ComptimeError::TypeMismatch("sub operand mismatch".to_string())),
                         }
                     }
                     Instruction::Mul { left, right } => {
                         let l = self.eval_operand(left)?;
                         let r = self.eval_operand(right)?;
-                        match (l, r) {
+                        match (&l, &r) {
                             (RuntimeValue::Int { val: v1, width }, RuntimeValue::Int { val: v2, .. }) => {
-                                self.eval_binary_op(v1, v2, width, "*")?
+                                self.eval_binary_op(*v1, *v2, *width, "*")?
                             }
                             (RuntimeValue::Float { val: v1, width }, RuntimeValue::Float { val: v2, .. }) => {
-                                RuntimeValue::Float { val: v1 * v2, width }
+                                RuntimeValue::Float { val: v1 * v2, width: *width }
                             }
-                            _ => return Err(ComptimeError::TypeMismatch("mul operand mismatch".to_string())),
+                            _ => return Err(ComptimeError::TypeMismatch(format!("mul operand mismatch: left={:?}, right={:?}", l, r))),
                         }
                     }
                     Instruction::Div { left, right } => {
@@ -645,6 +772,22 @@ impl<'a> MvirInterpreter<'a> {
                             RuntimeValue::Variant { payload, .. } => {
                                 payload.get(*field_idx as usize).cloned().unwrap_or(RuntimeValue::Unit)
                             }
+                            RuntimeValue::TraitObject { data, .. } => {
+                                if *field_idx == 0 {
+                                    *data
+                                } else {
+                                    RuntimeValue::Unit
+                                }
+                            }
+                            RuntimeValue::Slice { data, len } => {
+                                if *field_idx == 0 {
+                                    *data
+                                } else if *field_idx == 1 {
+                                    RuntimeValue::Int { val: len as i128, width: IntWidth::USize }
+                                } else {
+                                    RuntimeValue::Unit
+                                }
+                            }
                             _ => RuntimeValue::Unit,
                         }
                     }
@@ -679,13 +822,25 @@ impl<'a> MvirInterpreter<'a> {
                     }
                     Instruction::Drop { value, callee, .. } => {
                         let val = self.eval_operand(value)?;
-                        if let Some(c_id) = callee {
-                            if let Some(f) = self.module.functions.iter().find(|f| f.name.name == c_id.name).cloned() {
-                                self.eval_function(&f, vec![val])?;
+                        let mut should_drop = true;
+                        if let RuntimeValue::Pointer(addr) = val {
+                            if let Ok(slot) = self.get_slot_mut(addr) {
+                                if slot.state == PlaceState::Moved || slot.state == PlaceState::Uninitialized {
+                                    should_drop = false;
+                                } else {
+                                    slot.state = PlaceState::Moved;
+                                }
                             }
-                        } else if let RuntimeValue::Pointer(Address::Heap { alloc_id, .. }) = val {
-                            self.heap.allocations.remove(&alloc_id);
-                            self.heap.freed.insert(alloc_id, true);
+                        }
+                        if should_drop {
+                            if let Some(c_id) = callee {
+                                if let Some(f) = self.module.functions.iter().find(|f| f.name.name == c_id.name).cloned() {
+                                    self.eval_function(&f, vec![val])?;
+                                }
+                            } else if let RuntimeValue::Pointer(Address::Heap { alloc_id, .. }) = val {
+                                self.heap.allocations.remove(&alloc_id);
+                                self.heap.freed.insert(alloc_id, true);
+                            }
                         }
                         RuntimeValue::Unit
                     }
@@ -711,6 +866,140 @@ impl<'a> MvirInterpreter<'a> {
                             }
                         } else {
                             return Err(ComptimeError::TypeMismatch("expected closure value".to_string()));
+                        }
+                    }
+                    Instruction::Cast { value, target_ty } => {
+                        let val = self.eval_operand(value)?;
+                        let sem_target = self.ctx.types.get(*target_ty);
+                        match sem_target {
+                            SemanticType::Pointer(..) => {
+                                match val {
+                                    RuntimeValue::Pointer(_) => val,
+                                    RuntimeValue::NullPointer => RuntimeValue::NullPointer,
+                                    RuntimeValue::Int { val: 0, .. } => RuntimeValue::NullPointer,
+                                    _ => val,
+                                }
+                            }
+                            SemanticType::Primitive(b) if b.is_integer() => {
+                                match val {
+                                    RuntimeValue::Int { val: v, .. } => RuntimeValue::Int { val: v, width: IntWidth::from_builtin(*b) },
+                                    RuntimeValue::Pointer(_) => val,
+                                    RuntimeValue::NullPointer => RuntimeValue::Int { val: 0, width: IntWidth::from_builtin(*b) },
+                                    _ => val,
+                                }
+                            }
+                            _ => val,
+                        }
+                    }
+                    Instruction::Null { .. } => RuntimeValue::NullPointer,
+                    Instruction::MakeTraitObject { data_ptr, vtable, trait_sym, concrete_sym } => {
+                        let data_val = self.eval_operand(data_ptr)?;
+                        RuntimeValue::TraitObject {
+                            data: Box::new(data_val),
+                            vtable: vtable.clone(),
+                            trait_sym: *trait_sym,
+                            concrete_sym: *concrete_sym,
+                        }
+                    }
+                    Instruction::MakeSlice { data_ptr, len } => {
+                        let data_val = self.eval_operand(data_ptr)?;
+                        let len_val = self.eval_operand(len)?;
+                        let l = len_val.as_i128().map_err(|_| ComptimeError::TypeMismatch("expected integer length for slice".to_string()))? as usize;
+                        RuntimeValue::Slice {
+                            data: Box::new(data_val),
+                            len: l,
+                        }
+                    }
+                    Instruction::CallVirt { obj, method_idx, args } => {
+                        let obj_val = self.eval_operand(obj)?;
+                        let obj_val = match obj_val {
+                            RuntimeValue::Pointer(addr) => {
+                                if let Ok(slot) = self.get_slot_mut(addr) {
+                                    slot.value.clone()
+                                } else {
+                                    obj_val
+                                }
+                            }
+                            other => other,
+                        };
+                        match obj_val {
+                            RuntimeValue::TraitObject { data, trait_sym, concrete_sym, .. } => {
+                                if let Some(methods) = self.ctx.tables.trait_methods.get(&trait_sym) {
+                                    if let Some(&m_sym) = methods.get(*method_idx as usize) {
+                                        let concrete_name = &self.ctx.symbol_table.get_symbol(concrete_sym).name;
+                                        let m_name = &self.ctx.symbol_table.get_symbol(m_sym).name;
+                                        let mangled_name = format!("{}_{}", concrete_name, m_name);
+                                        let target_func = self.module.functions.iter().find(|f| {
+                                            f.name.name == mangled_name || f.name.name == *m_name || f.name.name.ends_with(m_name)
+                                        }).cloned();
+                                        if let Some(f) = target_func {
+                                            let mut call_args = vec![*data];
+                                            for a in args {
+                                                call_args.push(self.eval_operand(a)?);
+                                            }
+                                            self.eval_function(&f, call_args)?
+                                        } else {
+                                            return Err(ComptimeError::UnsupportedOperation(format!(
+                                                "E_COMPTIME_VIRTUAL_CALL: concrete method `{}` of trait `{}` on `{}` not found in comptime module",
+                                                m_name, self.ctx.symbol_table.get_symbol(trait_sym).name, concrete_name
+                                            )));
+                                        }
+                                    } else {
+                                        return Err(ComptimeError::UnsupportedOperation(format!(
+                                            "E_COMPTIME_VIRTUAL_CALL: method index {} out of range for trait `{}`",
+                                            method_idx, self.ctx.symbol_table.get_symbol(trait_sym).name
+                                        )));
+                                    }
+                                } else {
+                                    return Err(ComptimeError::UnsupportedOperation(format!(
+                                        "E_COMPTIME_VIRTUAL_CALL: no methods found for trait `{}`",
+                                        self.ctx.symbol_table.get_symbol(trait_sym).name
+                                    )));
+                                }
+                            }
+                            _ => {
+                                return Err(ComptimeError::UnsupportedOperation(
+                                    "E_COMPTIME_VIRTUAL_CALL_UNSUPPORTED: virtual call on unsupported or null trait object in comptime".to_string()
+                                ));
+                            }
+                        }
+                    }
+                    Instruction::DropVirt { obj } => {
+                        let obj_val = self.eval_operand(obj)?;
+                        let obj_val = match obj_val {
+                            RuntimeValue::Pointer(addr) => {
+                                if let Ok(slot) = self.get_slot_mut(addr) {
+                                    slot.value.clone()
+                                } else {
+                                    obj_val
+                                }
+                            }
+                            other => other,
+                        };
+                        match obj_val {
+                            RuntimeValue::TraitObject { data, concrete_sym, .. } => {
+                                if let Some(&drop_sym) = self.ctx.tables.drop_impls.get(&concrete_sym) {
+                                    let drop_name = &self.ctx.symbol_table.get_symbol(drop_sym).name;
+                                    let concrete_name = &self.ctx.symbol_table.get_symbol(concrete_sym).name;
+                                    let mangled_name = format!("{}_{}", concrete_name, drop_name);
+                                    let drop_func = self.module.functions.iter().find(|f| {
+                                        f.name.name == mangled_name || f.name.name == *drop_name || f.name.name.ends_with(drop_name)
+                                    }).cloned();
+                                    if let Some(f) = drop_func {
+                                        self.eval_function(&f, vec![*data])?;
+                                    }
+                                } else if let RuntimeValue::Pointer(Address::Heap { alloc_id, .. }) = *data {
+                                    self.heap.allocations.remove(&alloc_id);
+                                    self.heap.freed.insert(alloc_id, true);
+                                }
+                                RuntimeValue::Unit
+                            }
+                            RuntimeValue::NullPointer => RuntimeValue::Unit,
+                            _ => {
+                                return Err(ComptimeError::UnsupportedOperation(
+                                    "E_COMPTIME_DROP_VIRT_UNSUPPORTED: invalid or unsupported object for virtual drop in comptime".to_string()
+                                ));
+                            }
                         }
                     }
                     _ => RuntimeValue::Unit,
@@ -824,30 +1113,88 @@ impl<'a> MvirInterpreter<'a> {
 
 }
 
-pub struct MvirComptimeEngine;
+pub struct MvirComptimeEngine {
+    pub max_steps: usize,
+    pub max_depth: usize,
+}
+
+impl Default for MvirComptimeEngine {
+    fn default() -> Self {
+        Self {
+            max_steps: 1_000_000,
+            max_depth: 512,
+        }
+    }
+}
+
+fn has_unresolved_projection(ctx: &SemanticContext, ty_id: SemanticTypeId) -> bool {
+    let ty = ctx.types.get(ty_id);
+    match ty {
+        SemanticType::Projection { .. } | SemanticType::GenericParam(_) => true,
+        SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => {
+            has_unresolved_projection(ctx, *inner)
+        }
+        SemanticType::Array(inner, _) | SemanticType::Slice(inner) => {
+            has_unresolved_projection(ctx, *inner)
+        }
+        SemanticType::Tuple(elems) => {
+            elems.iter().any(|&e| has_unresolved_projection(ctx, e))
+        }
+        SemanticType::Function { params, return_type } => {
+            has_unresolved_projection(ctx, *return_type) || params.iter().any(|&p| has_unresolved_projection(ctx, p))
+        }
+        _ => false,
+    }
+}
 
 impl mellis_semantic::ComptimeEngine for MvirComptimeEngine {
-    fn eval_expr(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source: &str, expr_id: mellis_ast::ExprId) -> Result<ComptimeValue, ComptimeError> {
+    fn eval_expr(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source_manager: &mellis_common::source::SourceManager, expr_id: mellis_ast::ExprId) -> Result<ComptimeValue, ComptimeError> {
         let expr = &arena.exprs[expr_id.0 as usize];
         if let mellis_ast::Expr::Comptime { body } = expr {
-            return self.eval_stmt(arena, ctx, source, *body);
+            return self.eval_stmt(arena, ctx, source_manager, *body);
         }
         let ret_ty = ctx.tables.expr_types.get(&expr_id).copied().unwrap_or(mellis_semantic::SemanticTypeId(0));
-        let mut generator = crate::generator::MvirGenerator::new(arena, ctx, source);
+        if has_unresolved_projection(ctx, ret_ty) {
+            return Err(ComptimeError::TypeMismatch("E_UNRESOLVED_PROJECTION: cannot evaluate comptime expression with unresolved associated type projection".to_string()));
+        }
+        let mut generator = crate::generator::MvirGenerator::new(arena, ctx, source_manager);
         generator.generate_all_known_functions();
         let func = generator.generate_expr_as_function(&expr_id, ret_ty);
+        if func.values.iter().any(|v| has_unresolved_projection(ctx, v.ty)) {
+            return Err(ComptimeError::TypeMismatch("E_UNRESOLVED_PROJECTION: comptime function contains unresolved associated type projection".to_string()));
+        }
         let mut interp = MvirInterpreter::new(generator.current_module(), ctx);
+        interp.max_steps = self.max_steps;
+        interp.max_depth = self.max_depth;
         let val = interp.eval_function(&func, Vec::new())?;
+        if !interp.heap.allocations.is_empty() {
+            return Err(ComptimeError::ResourceLeak(format!(
+                "comptime evaluation leaked heap memory: {} unfreed allocation(s) at compile-time boundary",
+                interp.heap.allocations.len()
+            )));
+        }
         val.to_comptime_value(ctx)
     }
 
-    fn eval_stmt(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source: &str, stmt_id: mellis_ast::StmtId) -> Result<ComptimeValue, ComptimeError> {
-        let mut generator = crate::generator::MvirGenerator::new(arena, ctx, source);
+    fn eval_stmt(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source_manager: &mellis_common::source::SourceManager, stmt_id: mellis_ast::StmtId) -> Result<ComptimeValue, ComptimeError> {
+        let mut generator = crate::generator::MvirGenerator::new(arena, ctx, source_manager);
         generator.generate_all_known_functions();
         let func = generator.generate_stmt_as_function(&stmt_id, mellis_semantic::SemanticTypeId(0));
+        if func.values.iter().any(|v| has_unresolved_projection(ctx, v.ty)) {
+            return Err(ComptimeError::TypeMismatch("E_UNRESOLVED_PROJECTION: comptime function contains unresolved associated type projection".to_string()));
+        }
         let mut interp = MvirInterpreter::new(generator.current_module(), ctx);
+        interp.max_steps = self.max_steps;
+        interp.max_depth = self.max_depth;
         let val = interp.eval_function(&func, Vec::new())?;
+        if !interp.heap.allocations.is_empty() {
+            return Err(ComptimeError::ResourceLeak(format!(
+                "comptime evaluation leaked heap memory: {} unfreed allocation(s) at compile-time boundary",
+                interp.heap.allocations.len()
+            )));
+        }
         val.to_comptime_value(ctx)
     }
 }
+
 

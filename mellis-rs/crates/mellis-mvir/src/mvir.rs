@@ -151,6 +151,14 @@ pub enum Instruction {
         data_ptr: Operand,
         vtable: GlobalId,
         trait_sym: SymbolId,
+        concrete_sym: SymbolId,
+    },
+    MakeSlice {
+        data_ptr: Operand,
+        len: Operand,
+    },
+    DropVirt {
+        obj: Operand,
     },
     BoundsCheck {
         index: Operand,
@@ -214,11 +222,41 @@ pub enum Instruction {
     },
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ValueOrigin {
+    Parameter(u32),
+    Local,
+    Temporary,
+    Global,
+}
+
+impl Default for ValueOrigin {
+    fn default() -> Self {
+        ValueOrigin::Temporary
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ValueData {
     pub inst: Instruction,
     pub ty: SemanticTypeId,
     pub span: Option<mellis_common::ids::Span>,
+    pub origin: ValueOrigin,
+}
+
+impl ValueData {
+    pub fn new(inst: Instruction, ty: SemanticTypeId, span: Option<mellis_common::ids::Span>) -> Self {
+        let origin = match &inst {
+            Instruction::Alloca => ValueOrigin::Local,
+            _ => ValueOrigin::Temporary,
+        };
+        Self { inst, ty, span, origin }
+    }
+
+    pub fn with_origin(mut self, origin: ValueOrigin) -> Self {
+        self.origin = origin;
+        self
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

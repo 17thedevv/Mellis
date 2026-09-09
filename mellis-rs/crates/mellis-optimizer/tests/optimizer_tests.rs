@@ -1,4 +1,4 @@
-use mellis_mvir::{Module, Function, BasicBlock, ValueData, Instruction, Terminator, Operand, ValueId, GlobalId, LabelId};
+use mellis_mvir::{ValueOrigin, Module, Function, BasicBlock, ValueData, Instruction, Terminator, Operand, ValueId, GlobalId, LabelId};
 use mellis_semantic::SemanticTypeId;
 use mellis_common::ids::SymbolId;
 use mellis_optimizer::{PassManager, ConstantFolding, DeadCodeElimination, verify_module};
@@ -17,18 +17,18 @@ fn dummy_module() -> Module {
     };
     
     // v0 = const 2
-    func.values.push(ValueData { span: None, inst: Instruction::Assign(Operand::Number("2".to_string())), ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst: Instruction::Assign(Operand::Number("2".to_string())), ty: SemanticTypeId(0) });
     
-    func.values.push(ValueData { span: None, inst: Instruction::Assign(Operand::Number("3".to_string())), ty: SemanticTypeId(0) });
+    func.values.push(ValueData { span: None, origin: ValueOrigin::Temporary, inst: Instruction::Assign(Operand::Number("3".to_string())), ty: SemanticTypeId(0) });
     // v2 = add v0, v1 (can be constant folded to 5)
     func.values.push(ValueData {
-            span: None, 
+            span: None, origin: ValueOrigin::Temporary, 
         inst: Instruction::Add { left: Operand::Value(ValueId(0)), right: Operand::Value(ValueId(1)) }, 
         ty: SemanticTypeId(0) 
     });
     // v3 = add v2, 10 (can be folded to 15, then DCE removes v0, v1, v2 if not returned)
     func.values.push(ValueData {
-            span: None, 
+            span: None, origin: ValueOrigin::Temporary, 
         inst: Instruction::Add { left: Operand::Value(ValueId(2)), right: Operand::Number("10".to_string()) }, 
         ty: SemanticTypeId(0) 
     });

@@ -126,6 +126,13 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
             Instruction::MakeTraitObject { data_ptr, .. } => {
                 check_operand(data_ptr, &mut errors, &ctx);
             }
+            Instruction::MakeSlice { data_ptr, len } => {
+                check_operand(data_ptr, &mut errors, &ctx);
+                check_operand(len, &mut errors, &ctx);
+            }
+            Instruction::DropVirt { obj } => {
+                check_operand(obj, &mut errors, &ctx);
+            }
             Instruction::MakeClosure { env_ptr, captures, .. } => {
                 check_operand(env_ptr, &mut errors, &ctx);
                 let mut fields = HashSet::new();

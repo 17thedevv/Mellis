@@ -80,6 +80,12 @@ fn print_instruction(inst: &Instruction) -> String {
         Instruction::MakeTraitObject { data_ptr, vtable, .. } => {
             format!("make_trait_object {{ data: {}, vtable: @{} }}", print_operand(data_ptr), vtable.name)
         }
+        Instruction::MakeSlice { data_ptr, len } => {
+            format!("make_slice {{ data: {}, len: {} }}", print_operand(data_ptr), print_operand(len))
+        }
+        Instruction::DropVirt { obj } => {
+            format!("drop_virt {}", print_operand(obj))
+        }
         Instruction::BoundsCheck { index, len } => {
             format!("bounds_check {} < {}", print_operand(index), print_operand(len))
         }

@@ -353,7 +353,19 @@ impl MlibReader {
                 let mut trait_buf = [0u8; 4];
                 r.read_exact(&mut trait_buf)?;
                 let trait_sym = u32::from_le_bytes(trait_buf);
-                Ok(MlibInstruction::MakeTraitObject { data_ptr, vtable, trait_sym })
+                let mut concrete_buf = [0u8; 4];
+                r.read_exact(&mut concrete_buf)?;
+                let concrete_sym = u32::from_le_bytes(concrete_buf);
+                Ok(MlibInstruction::MakeTraitObject { data_ptr, vtable, trait_sym, concrete_sym })
+            }
+            0x6E => {
+                let data_ptr = Self::deserialize_operand(r)?;
+                let len = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::MakeSlice { data_ptr, len })
+            }
+            0x6F => {
+                let obj = Self::deserialize_operand(r)?;
+                Ok(MlibInstruction::DropVirt { obj })
             }
             5 => {
                 let left = Self::deserialize_operand(r)?;

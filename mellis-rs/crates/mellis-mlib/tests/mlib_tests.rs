@@ -1,6 +1,6 @@
 use std::io::Cursor;
 use mellis_mlib::{MlibHeader, MlibReader, MlibWriter, MLIB_MAGIC, MLIB_FORMAT_VERSION};
-use mellis_mvir::{Module, Function, BasicBlock, ValueData, Instruction, Terminator, Operand, ValueId, GlobalId, LabelId};
+use mellis_mvir::{ValueOrigin, Module, Function, BasicBlock, ValueData, Instruction, Terminator, Operand, ValueId, GlobalId, LabelId};
 use mellis_semantic::ty::SemanticTypeId;
 use mellis_common::SymbolId;
 
@@ -18,8 +18,8 @@ fn dummy_module() -> Module {
     };
     
     // Add some dummy instructions
-    func.values.push(ValueData { inst: Instruction::Alloca, ty: SemanticTypeId(0), span: None });
-    func.values.push(ValueData { inst: Instruction::Load { ptr: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0), span: None });
+    func.values.push(ValueData { inst: Instruction::Alloca, ty: SemanticTypeId(0), span: None, origin: ValueOrigin::Temporary });
+    func.values.push(ValueData { inst: Instruction::Load { ptr: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0), span: None, origin: ValueOrigin::Temporary });
     
     // Add block
     func.blocks.push(BasicBlock {

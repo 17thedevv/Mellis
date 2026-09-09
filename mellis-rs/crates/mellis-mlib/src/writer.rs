@@ -223,10 +223,18 @@ impl MlibWriter {
                 method_idx: *method_idx,
                 args: args.iter().map(Self::convert_operand).collect(),
             },
-            Instruction::MakeTraitObject { data_ptr, vtable, trait_sym } => MlibInstruction::MakeTraitObject {
+            Instruction::MakeTraitObject { data_ptr, vtable, trait_sym, concrete_sym } => MlibInstruction::MakeTraitObject {
                 data_ptr: Self::convert_operand(data_ptr),
                 vtable: vtable.name.clone(),
                 trait_sym: trait_sym.0,
+                concrete_sym: concrete_sym.0,
+            },
+            Instruction::MakeSlice { data_ptr, len } => MlibInstruction::MakeSlice {
+                data_ptr: Self::convert_operand(data_ptr),
+                len: Self::convert_operand(len),
+            },
+            Instruction::DropVirt { obj } => MlibInstruction::DropVirt {
+                obj: Self::convert_operand(obj),
             },
             Instruction::Add { left, right, .. } => MlibInstruction::Add {
                 left: Self::convert_operand(left),
@@ -495,11 +503,21 @@ impl MlibWriter {
                     Self::serialize_operand(w, arg)?;
                 }
             }
-            MlibInstruction::MakeTraitObject { data_ptr, vtable, trait_sym } => {
+            MlibInstruction::MakeTraitObject { data_ptr, vtable, trait_sym, concrete_sym } => {
                 w.write_all(&[0x25u8])?;
                 Self::serialize_operand(w, data_ptr)?;
                 Self::write_string(w, vtable)?;
                 w.write_all(&trait_sym.to_le_bytes())?;
+                w.write_all(&concrete_sym.to_le_bytes())?;
+            }
+            MlibInstruction::MakeSlice { data_ptr, len } => {
+                w.write_all(&[0x6Eu8])?;
+                Self::serialize_operand(w, data_ptr)?;
+                Self::serialize_operand(w, len)?;
+            }
+            MlibInstruction::DropVirt { obj } => {
+                w.write_all(&[0x6Fu8])?;
+                Self::serialize_operand(w, obj)?;
             }
             MlibInstruction::Add { left, right } => {
                 w.write_all(&[5u8])?;
