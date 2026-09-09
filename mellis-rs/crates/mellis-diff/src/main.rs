@@ -1,6 +1,6 @@
 use clap::Parser;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::path::Path;
+use std::process::Command;
 use std::time::Duration;
 use std::fs;
 use colored::*;
@@ -147,7 +147,7 @@ fn run_differential_test(
     cpp_tmp: &Path,
     rust_tmp: &Path,
     failures_dir: &Path,
-    timeout_secs: u64,
+    _timeout_secs: u64,
 ) -> TestResult {
     let base_name = test_file.file_stem().unwrap().to_str().unwrap();
 

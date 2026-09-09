@@ -33,10 +33,11 @@ impl<'a> DriverSession<'a> {
     pub fn bootstrap_core(
         &mut self,
         arena: &mut AstArena,
-        source: &mut String,
+        
     ) -> Result<ProviderId, BootstrapError> {
         // If core is somehow already registered, reuse it directly
         if let Some(&id) = self.registry.providers.get("core") {
+            self.registry.external_providers.insert("core".to_string());
             return Ok(id);
         }
 
@@ -48,7 +49,6 @@ impl<'a> DriverSession<'a> {
         ExternalComponentLoader::load_component(
             &descriptor,
             arena,
-            source,
             self,
         ).map_err(BootstrapError::Component)
     }
@@ -59,7 +59,7 @@ impl<'a> DriverSession<'a> {
         &mut self,
         name: &str,
         arena: &mut AstArena,
-        source: &mut String,
+        
     ) -> Result<ProviderId, ExternalComponentError> {
         if let Some(&id) = self.registry.providers.get(name) {
             return Ok(id);
@@ -71,28 +71,11 @@ impl<'a> DriverSession<'a> {
             None
         };
 
-        let descriptor = match descriptor {
-            Some(d) => d,
-            None => {
-                let mut found = None;
-                for sp in &self.search_paths {
-                    if let Ok(d) = ExternalComponentDiscovery::discover(std::path::Path::new(sp), name) {
-                        found = Some(d);
-                        break;
-                    }
-                }
-                match found {
-                    Some(d) => d,
-                    None => {
-                        return Err(ExternalComponentError::NotFound {
-                            name: name.to_string(),
-                            searched_dir: self.sysroot.external_dir().to_path_buf(),
-                        });
-                    }
-                }
-            }
-        };
+        let descriptor = descriptor.ok_or_else(|| ExternalComponentError::NotFound {
+            name: name.to_string(),
+            searched_dir: self.sysroot.external_dir().to_path_buf(),
+        })?;
 
-        ExternalComponentLoader::load_component(&descriptor, arena, source, self)
+        ExternalComponentLoader::load_component(&descriptor, arena, self)
     }
 }

@@ -92,7 +92,7 @@ fn build_workload_c(module: LLVMModuleRef, builder: LLVMBuilderRef, context: LLV
         let val = LLVMConstInt(i32_type, 100, 0);
         LLVMBuildStore(builder, val, alloca);
 
-        let load = LLVMBuildLoad2(builder, i32_type, alloca, c_str("load_val").as_ptr());
+        let _load = LLVMBuildLoad2(builder, i32_type, alloca, c_str("load_val").as_ptr());
 
         // For simplicity, we just pass alloca (ptr) to puts
         let mut args = [alloca];

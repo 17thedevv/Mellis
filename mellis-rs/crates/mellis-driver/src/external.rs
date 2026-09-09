@@ -13,7 +13,7 @@ impl ExternalComponentLoader {
     pub fn load_component(
         descriptor: &ExternalComponentDescriptor,
         global_arena: &mut AstArena,
-        global_source: &mut String,
+        
         driver_session: &mut DriverSession,
     ) -> Result<ProviderId, ExternalComponentError> {
         // Ensure load-once: return existing provider if already loaded
@@ -78,13 +78,10 @@ impl ExternalComponentLoader {
             }
         };
 
-        let mut input_mut = input.clone();
-
         // Recursively resolve imports for the component using the unified driver session
         if let Err(inner_diags) = crate::importer::resolve_imports(
             &mut provider_items,
             &mut provider_arena,
-            &mut input_mut,
             driver_session,
         ) {
             driver_session.registry.finish_loading();
@@ -93,7 +90,7 @@ impl ExternalComponentLoader {
 
         // Process annotations for the component
         let mut attr_processor =
-            mellis_semantic::AttributeProcessor::new(&mut provider_arena, &mut input_mut, file_id);
+            mellis_semantic::AttributeProcessor::new(&mut provider_arena, &mut driver_session.compiler_session.source_manager, file_id);
         let shifted_provider_items_before_macro = match attr_processor.process_items(provider_items) {
             Ok(items) => items,
             Err(e) => {
@@ -103,9 +100,7 @@ impl ExternalComponentLoader {
         };
 
         // Relocate AST to global arena
-        let offset = global_source.len() as u32;
-        global_source.push('\n');
-        global_source.push_str(&input_mut);
+        
 
         let relocator = mellis_ast::relocator::AstRelocator::new(
             global_arena.exprs.len() as u32,
@@ -114,7 +109,7 @@ impl ExternalComponentLoader {
             global_arena.types.len() as u32,
             global_arena.pats.len() as u32,
             file_id,
-            offset + 1,
+            
         );
 
         relocator.relocate_arena(&mut provider_arena);
@@ -133,12 +128,14 @@ impl ExternalComponentLoader {
         global_arena.pats.append(&mut provider_arena.pats);
 
         // Perform semantic analysis
+        let provider_id = driver_session.registry.allocate_id();
         let mut semantic_ctx = mellis_semantic::SemanticContext::new();
+        semantic_ctx.current_provider = Some(provider_id);
         semantic_ctx.allow_internal_lang_items = true; // External libs can use internal lang items
         driver_session.registry.inject_into_ctx(&mut semantic_ctx);
 
         let mut resolver =
-            mellis_semantic::Resolver::new(&mut semantic_ctx, global_arena, global_source);
+            mellis_semantic::Resolver::new(&mut semantic_ctx, global_arena, &driver_session.compiler_session.source_manager);
         resolver.resolve_items(&shifted_provider_items);
 
         if !semantic_ctx.diagnostics.is_empty() {
@@ -147,7 +144,7 @@ impl ExternalComponentLoader {
         }
 
         let mut typechecker =
-            mellis_semantic::TypeChecker::new(&mut semantic_ctx, global_arena, global_source);
+            mellis_semantic::TypeChecker::new(&mut semantic_ctx, global_arena, &mut driver_session.compiler_session.source_manager);
         typechecker.typecheck_items(&shifted_provider_items);
 
         if !semantic_ctx.diagnostics.is_empty() {
@@ -155,13 +152,12 @@ impl ExternalComponentLoader {
             return Err(ExternalComponentError::SemanticFailed(semantic_ctx.diagnostics));
         }
 
-        let provider_id = driver_session.registry.allocate_id();
         let interface = ModuleRegistry::extract_interface_from_ctx(
             descriptor.name.clone(),
             provider_id,
             &semantic_ctx,
         );
-        driver_session.registry.register(descriptor.name.clone(), interface);
+        driver_session.registry.register_external(descriptor.name.clone(), interface);
         driver_session.registry.finish_loading();
 
         Ok(provider_id)

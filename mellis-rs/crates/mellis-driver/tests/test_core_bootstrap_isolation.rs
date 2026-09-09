@@ -188,7 +188,7 @@ fn test_invariant_e_lang_items_mapped_to_canonical_declarations() {
     let mut arena = mellis_ast::AstArena::new();
     let mut source = String::new();
 
-    let core_id = driver_session.bootstrap_core(&mut arena, &mut source)
+    let core_id = driver_session.bootstrap_core(&mut arena)
         .expect("Failed to bootstrap core");
 
     let interface = driver_session.registry.interfaces.get(&core_id)

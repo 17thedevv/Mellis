@@ -1,4 +1,8 @@
-use mellis_mvir::{Module, Function, Instruction, Operand, Terminator, BasicBlock, ValueId, ValueData, LabelId};
+use mellis_mvir::{Module, Function, Instruction, Operand, Terminator, BasicBlock, ValueId, ValueData, ValueOrigin, LabelId, GlobalId};
+
+pub const FUTURE_STATE_INITIAL: i64 = 0;
+pub const FUTURE_STATE_COMPLETED: i64 = -1;
+pub const FUTURE_STATE_POISONED: i64 = -2;
 use mellis_semantic::{SemanticContext, SemanticType, SemanticTypeId};
 use std::collections::HashMap;
 
@@ -22,6 +26,141 @@ pub fn lower_async(module: &mut Module, ctx: &mut SemanticContext) {
         module.functions[i] = kickoff;
         module.functions.push(resume);
         module.functions.push(drop_fn);
+    }
+
+    wire_caller_future_drops(module, ctx);
+}
+
+fn resolve_future_callee_name(func: &Function, fut_op: &Operand) -> Option<String> {
+    match fut_op {
+        Operand::Value(vid) => {
+            let val = func.values.get(vid.0 as usize)?;
+            match &val.inst {
+                Instruction::CallDirect { callee, .. } => Some(callee.name.clone()),
+                Instruction::Load { ptr: Operand::Value(ptr_vid) } => {
+                    for block in &func.blocks {
+                        for inst_vid in &block.insts {
+                            let inst_data = &func.values[inst_vid.0 as usize];
+                            if let Instruction::Store { ptr: Operand::Value(p), value } = &inst_data.inst {
+                                if p == ptr_vid {
+                                    return resolve_future_callee_name(func, value);
+                                }
+                            }
+                        }
+                    }
+                    None
+                }
+                Instruction::Assign(inner_op) => resolve_future_callee_name(func, inner_op),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+fn resolve_child_drop_callee(func: &Function, await_vid: ValueId) -> Option<GlobalId> {
+    let val_data = func.values.get(await_vid.0 as usize)?;
+    if let Instruction::Await { future } = &val_data.inst {
+        let child_name = resolve_future_callee_name(func, future)?;
+        return Some(GlobalId {
+            name: format!("{}_drop", child_name),
+            symbol_id: None,
+        });
+    }
+    None
+}
+
+fn find_originating_call_callee(func: &Function, op: &Operand) -> Option<String> {
+    match op {
+        Operand::Value(vid) => {
+            let val = func.values.get(vid.0 as usize)?;
+            match &val.inst {
+                Instruction::CallDirect { callee, .. } => Some(callee.name.clone()),
+                Instruction::Load { ptr } => find_originating_call_callee(func, ptr),
+                Instruction::Assign(inner) => find_originating_call_callee(func, inner),
+                Instruction::Alloca => {
+                    for block in &func.blocks {
+                        for inst_vid in &block.insts {
+                            let inst_data = &func.values[inst_vid.0 as usize];
+                            if let Instruction::Store { ptr, value } = &inst_data.inst {
+                                if ptr == op {
+                                    if let Some(name) = find_originating_call_callee(func, value) {
+                                        return Some(name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    None
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+fn wire_caller_future_drops(module: &mut Module, ctx: &mut SemanticContext) {
+    let void_ptr_ty = ctx.types.intern(SemanticType::Pointer(mellis_semantic::ty::Mutability::Mutable, SemanticTypeId(0)));
+
+    for func in &mut module.functions {
+        if func.is_async {
+            continue;
+        }
+
+        let mut insertions: Vec<(usize, usize, ValueId, ValueId, GlobalId)> = Vec::new();
+
+        for (b_idx, block) in func.blocks.iter().enumerate() {
+            for (i_idx, &inst_vid) in block.insts.iter().enumerate() {
+                let val_data = &func.values[inst_vid.0 as usize];
+                if let Instruction::Drop { value, ty, callee } = &val_data.inst {
+                    if callee.is_none() && matches!(ctx.types.get(*ty), SemanticType::Future(..)) {
+                        if let Some(target_name) = find_originating_call_callee(func, value) {
+                            let callee_id = GlobalId {
+                                name: format!("{}_drop", target_name),
+                                symbol_id: None,
+                            };
+
+                            if let Operand::Value(v) = value {
+                                if let Some(target_val) = func.values.get(v.0 as usize) {
+                                    if matches!(target_val.inst, Instruction::Alloca) {
+                                        let load_vid = ValueId(func.values.len() as u32);
+                                        func.values.push(ValueData {
+                                            inst: Instruction::Load { ptr: value.clone() },
+                                            ty: void_ptr_ty,
+                                            span: None,
+                                            origin: ValueOrigin::Temporary,
+                                        });
+                                        insertions.push((b_idx, i_idx, load_vid, inst_vid, callee_id));
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            func.values[inst_vid.0 as usize].inst = Instruction::Drop {
+                                value: value.clone(),
+                                ty: *ty,
+                                callee: Some(callee_id),
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        insertions.sort_by(|a, b| b.0.cmp(&a.0).then(b.1.cmp(&a.1)));
+        for (b_idx, i_idx, load_vid, drop_vid, callee_id) in insertions {
+            let ty = match &func.values[drop_vid.0 as usize].inst {
+                Instruction::Drop { ty, .. } => *ty,
+                _ => SemanticTypeId(0),
+            };
+            func.values[drop_vid.0 as usize].inst = Instruction::Drop {
+                value: Operand::Value(load_vid),
+                ty,
+                callee: Some(callee_id),
+            };
+            func.blocks[b_idx].insts.insert(i_idx, load_vid);
+        }
     }
 }
 
@@ -81,6 +220,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
             inst: Instruction::Alloca,
             ty: arg_ty,
             span: None,
+            origin: ValueOrigin::Parameter(i as u32),
         });
         k_entry.insts.push(arg_val_id);
         kickoff_arg_val_ids.push(arg_val_id);
@@ -92,6 +232,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::HeapAlloc,
         ty: env_ty_id,
         span: None,
+            origin: ValueOrigin::Temporary,
     });
     k_entry.insts.push(env_val_id);
     
@@ -101,6 +242,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::FieldPtr { base: Operand::Value(env_val_id), field_idx: 0 },
         ty: SemanticTypeId(3), // i32 ptr
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     k_entry.insts.push(state_ptr_id);
     
@@ -109,6 +251,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::Store { ptr: Operand::Value(state_ptr_id), value: Operand::Number("0".to_string()) },
         ty: SemanticTypeId(0), // void
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     k_entry.insts.push(store_id);
 
@@ -118,6 +261,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::FieldPtr { base: Operand::Value(env_val_id), field_idx: 1 },
         ty: SemanticTypeId(3),
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     k_entry.insts.push(status_ptr_id);
 
@@ -126,6 +270,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::Store { ptr: Operand::Value(status_ptr_id), value: Operand::Number("0".to_string()) },
         ty: SemanticTypeId(0),
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     k_entry.insts.push(store_status_id);
 
@@ -135,6 +280,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::FieldPtr { base: Operand::Value(env_val_id), field_idx: 2 },
         ty: void_ptr_ty,
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     k_entry.insts.push(child_ptr_id);
 
@@ -143,6 +289,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::Null { ty: void_ptr_ty },
         ty: void_ptr_ty,
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     k_entry.insts.push(null_id);
 
@@ -151,6 +298,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::Store { ptr: Operand::Value(child_ptr_id), value: Operand::Value(null_id) },
         ty: SemanticTypeId(0),
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     k_entry.insts.push(store_child_id);
     
@@ -165,6 +313,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                 inst: Instruction::FieldPtr { base: Operand::Value(env_val_id), field_idx },
                 ty: field_ty,
                 span: None,
+                origin: ValueOrigin::Temporary,
             });
             k_entry.insts.push(field_ptr_id);
             
@@ -173,6 +322,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                 inst: Instruction::Load { ptr: Operand::Value(arg_val_id) },
                 ty: field_ty,
                 span: None,
+                origin: ValueOrigin::Temporary,
             });
             k_entry.insts.push(load_arg_id);
             
@@ -181,6 +331,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                 inst: Instruction::Store { ptr: Operand::Value(field_ptr_id), value: Operand::Value(load_arg_id) },
                 ty: SemanticTypeId(0),
                 span: None,
+                origin: ValueOrigin::Temporary,
             });
             k_entry.insts.push(store_arg_id);
         }
@@ -211,6 +362,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::Alloca,
         ty: env_ty_id,
         span: None,
+            origin: ValueOrigin::Temporary,
     });
     
     let mut val_map = HashMap::new();
@@ -228,6 +380,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     },
                     ty: val.ty,
                     span: val.span.clone(),
+                    origin: val.origin.clone(),
                 });
                 val_map.insert(old_id, new_id);
             }
@@ -272,6 +425,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::FieldPtr { base: Operand::Value(env_arg_id), field_idx: 2 },
                     ty: SemanticTypeId(0),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(child_ptr_id);
 
@@ -283,6 +437,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     },
                     ty: SemanticTypeId(0),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(store_child_id);
 
@@ -292,6 +447,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::FieldPtr { base: Operand::Value(env_arg_id), field_idx: 0 },
                     ty: SemanticTypeId(3),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(state_ptr_id);
                 
@@ -303,6 +459,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     },
                     ty: SemanticTypeId(0),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(store_state_id);
 
@@ -312,6 +469,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::FieldPtr { base: Operand::Value(env_arg_id), field_idx: 1 },
                     ty: SemanticTypeId(3),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(status_ptr_id);
 
@@ -323,6 +481,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     },
                     ty: SemanticTypeId(0),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(store_status_id);
                 
@@ -332,6 +491,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::Alloca,
                     ty: resume.ret_ty,
                     span: None,
+            origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(pending_ret_alloc);
 
@@ -340,6 +500,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::FieldPtr { base: Operand::Value(pending_ret_alloc), field_idx: 0 },
                     ty: SemanticTypeId(3),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(pending_ret_status_ptr);
 
@@ -348,6 +509,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::Store { ptr: Operand::Value(pending_ret_status_ptr), value: Operand::Number("0".to_string()) },
                     ty: SemanticTypeId(0),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(pending_ret_store);
 
@@ -356,6 +518,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::Load { ptr: Operand::Value(pending_ret_alloc) },
                     ty: resume.ret_ty,
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(pending_ret_val);
 
@@ -377,6 +540,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::FieldPtr { base: Operand::Value(env_arg_id), field_idx: 2 },
                     ty: env_ty_id,
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(child_fut_field_id);
                 
@@ -385,6 +549,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::Load { ptr: Operand::Value(child_fut_field_id) },
                     ty: void_ptr_ty,
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(loaded_child_fut_id);
                 
@@ -394,6 +559,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::Await { future: Operand::Value(loaded_child_fut_id) },
                     ty: old_val.ty,
                     span: old_val.span.clone(),
+                    origin: old_val.origin.clone(),
                 });
                 val_map.insert(old_vid, await_res_id);
                 curr_insts.push(await_res_id);
@@ -404,6 +570,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     inst: Instruction::Null { ty: void_ptr_ty },
                     ty: void_ptr_ty,
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(null_val_id);
 
@@ -415,6 +582,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     },
                     ty: SemanticTypeId(0),
                     span: None,
+                    origin: ValueOrigin::Temporary,
                 });
                 curr_insts.push(store_null_id);
 
@@ -466,6 +634,13 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                 Instruction::MakeTraitObject { data_ptr, .. } => {
                     *data_ptr = map_op(data_ptr, &val_map);
                 }
+                Instruction::MakeSlice { data_ptr, len } => {
+                    *data_ptr = map_op(data_ptr, &val_map);
+                    *len = map_op(len, &val_map);
+                }
+                Instruction::DropVirt { obj } => {
+                    *obj = map_op(obj, &val_map);
+                }
                 Instruction::Borrow { base, .. } => *base = map_op(base, &val_map),
                 Instruction::Variant { args, .. } => {
                     for arg in args { *arg = map_op(arg, &val_map); }
@@ -497,6 +672,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                 inst: new_inst,
                 ty: old_val.ty,
                 span: old_val.span.clone(),
+                origin: old_val.origin.clone(),
             });
             val_map.insert(old_vid, new_id);
             curr_insts.push(new_id);
@@ -512,12 +688,13 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     if let Some(val) = value {
                         *val = map_op(val, &val_map);
                     }
-                    // Before Ret, mark state = 9999 (completed) and poll_status = 1 (Ready)
+                    // Before Ret, mark state = FUTURE_STATE_COMPLETED (completed) and poll_status = 1 (Ready)
                     let state_ptr_id = ValueId(resume.values.len() as u32);
                     resume.values.push(ValueData {
                         inst: Instruction::FieldPtr { base: Operand::Value(env_arg_id), field_idx: 0 },
                         ty: SemanticTypeId(3),
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     curr_insts.push(state_ptr_id);
                     
@@ -525,10 +702,11 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     resume.values.push(ValueData {
                         inst: Instruction::Store {
                             ptr: Operand::Value(state_ptr_id),
-                            value: Operand::Number("9999".to_string()),
+                            value: Operand::Number(FUTURE_STATE_COMPLETED.to_string()),
                         },
                         ty: SemanticTypeId(0),
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     curr_insts.push(store_state_id);
 
@@ -537,6 +715,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                         inst: Instruction::FieldPtr { base: Operand::Value(env_arg_id), field_idx: 1 },
                         ty: SemanticTypeId(3),
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     curr_insts.push(status_ptr_id);
 
@@ -548,6 +727,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                         },
                         ty: SemanticTypeId(0),
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     curr_insts.push(store_status_id);
 
@@ -557,6 +737,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                         inst: Instruction::Alloca,
                         ty: resume.ret_ty,
                         span: None,
+            origin: ValueOrigin::Temporary,
                     });
                     curr_insts.push(ready_ret_alloc);
 
@@ -565,6 +746,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                         inst: Instruction::FieldPtr { base: Operand::Value(ready_ret_alloc), field_idx: 0 },
                         ty: SemanticTypeId(3),
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     curr_insts.push(ready_ret_status_ptr);
 
@@ -573,6 +755,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                         inst: Instruction::Store { ptr: Operand::Value(ready_ret_status_ptr), value: Operand::Number("1".to_string()) },
                         ty: SemanticTypeId(0),
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     curr_insts.push(ready_ret_status_store);
 
@@ -582,6 +765,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                             inst: Instruction::FieldPtr { base: Operand::Value(ready_ret_alloc), field_idx: 1 },
                             ty: SemanticTypeId(0), // Doesn't matter
                             span: None,
+                            origin: ValueOrigin::Temporary,
                         });
                         curr_insts.push(ready_ret_val_ptr);
 
@@ -590,6 +774,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                             inst: Instruction::Store { ptr: Operand::Value(ready_ret_val_ptr), value: val.clone() },
                             ty: SemanticTypeId(0),
                             span: None,
+                            origin: ValueOrigin::Temporary,
                         });
                         curr_insts.push(ready_ret_val_store);
                     }
@@ -599,6 +784,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                         inst: Instruction::Load { ptr: Operand::Value(ready_ret_alloc) },
                         ty: resume.ret_ty,
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     curr_insts.push(ready_ret_val_final);
 
@@ -648,6 +834,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
             inst: Instruction::FieldPtr { base: Operand::Value(env_arg_id), field_idx: 0 },
             ty: SemanticTypeId(3),
             span: None,
+            origin: ValueOrigin::Temporary,
         });
         
         let state_val_id = ValueId(resume.values.len() as u32);
@@ -655,6 +842,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
             inst: Instruction::Load { ptr: Operand::Value(state_ptr_id) },
             ty: SemanticTypeId(3),
             span: None,
+            origin: ValueOrigin::Temporary,
         });
         
         let mut dispatch_blocks = Vec::new();
@@ -685,6 +873,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
             },
             ty: SemanticTypeId(1), // bool
             span: None,
+            origin: ValueOrigin::Temporary,
         });
         entry_dispatch.insts.push(eq_0_id);
         
@@ -713,6 +902,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                 },
                 ty: SemanticTypeId(1), // bool
                 span: None,
+                origin: ValueOrigin::Temporary,
             });
             d_block.insts.push(eq_k_id);
             
@@ -762,6 +952,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::Alloca,
         ty: env_ty_id,
         span: None,
+            origin: ValueOrigin::Temporary,
     });
 
     let drop_state_ptr_id = ValueId(drop_fn.values.len() as u32);
@@ -769,6 +960,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::FieldPtr { base: Operand::Value(drop_env_arg_id), field_idx: 0 },
         ty: SemanticTypeId(3),
         span: None,
+        origin: ValueOrigin::Temporary,
     });
 
     let drop_state_val_id = ValueId(drop_fn.values.len() as u32);
@@ -776,6 +968,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::Load { ptr: Operand::Value(drop_state_ptr_id) },
         ty: SemanticTypeId(3),
         span: None,
+        origin: ValueOrigin::Temporary,
     });
 
     let mut drop_entry = BasicBlock {
@@ -784,17 +977,17 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         terminator: None,
     };
 
-    let free_env_label = LabelId { name: "free_env".to_string() };
 
-    // 1. Check if state == 9999 (Completed -> jump directly to free_env)
+    // 1. Check if state == FUTURE_STATE_COMPLETED (Completed -> jump directly to free_env)
     let is_completed_id = ValueId(drop_fn.values.len() as u32);
     drop_fn.values.push(ValueData {
         inst: Instruction::Eq {
             left: Operand::Value(drop_state_val_id),
-            right: Operand::Number("9999".to_string()),
+            right: Operand::Number(FUTURE_STATE_COMPLETED.to_string()),
         },
         ty: SemanticTypeId(1),
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     drop_entry.insts.push(is_completed_id);
 
@@ -831,6 +1024,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
             },
             ty: SemanticTypeId(1),
             span: None,
+            origin: ValueOrigin::Temporary,
         });
 
         let dispatch_block = BasicBlock {
@@ -844,64 +1038,133 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         };
         drop_fn.blocks.push(dispatch_block);
 
-        // Build cleanup block for state_idx
-        let mut cleanup_block = BasicBlock {
-            label: cleanup_label,
-            insts: Vec::new(),
-            terminator: Some(Terminator::Br { target: free_env_label.clone() }),
-        };
+        if state_idx == 0 {
+            // Build cleanup block for state 0 (initial state)
+            let mut cleanup_block = BasicBlock {
+                label: cleanup_label,
+                insts: Vec::new(),
+                terminator: Some(Terminator::Br { target: free_env_label.clone() }),
+            };
 
-        // 1. If state_idx > 0, drop active child future if any
-        if state_idx > 0 {
+            for place in &async_state_map.initial_state.live_places {
+                if let Some(&env_field_idx) = alloca_map.get(&place.local) {
+                    let env_field_ty = env_fields[env_field_idx as usize];
+                    emit_drop_for_place(
+                        func,
+                        &mut drop_fn,
+                        &mut cleanup_block,
+                        drop_env_arg_id,
+                        env_field_idx as usize,
+                        env_field_ty,
+                        place,
+                        ctx,
+                    );
+                }
+            }
+
+            drop_fn.blocks.push(cleanup_block);
+        } else {
+            // Build cleanup blocks for state_idx > 0 (suspended at await point)
+            let (_, _, await_vid) = await_points[state_idx - 1];
+            let child_callee = resolve_child_drop_callee(func, await_vid);
+
+            let drop_child_label = LabelId { name: format!("drop_child_{}", state_idx) };
+            let drop_locals_label = LabelId { name: format!("drop_locals_{}", state_idx) };
+
+            // 1. Load child_future and null-check
             let child_future_field_ptr = ValueId(drop_fn.values.len() as u32);
             drop_fn.values.push(ValueData {
                 inst: Instruction::FieldPtr { base: Operand::Value(drop_env_arg_id), field_idx: 2 },
                 ty: env_ty_id,
                 span: None,
+                origin: ValueOrigin::Temporary,
             });
-            cleanup_block.insts.push(child_future_field_ptr);
 
             let load_child_fut = ValueId(drop_fn.values.len() as u32);
             drop_fn.values.push(ValueData {
                 inst: Instruction::Load { ptr: Operand::Value(child_future_field_ptr) },
                 ty: void_ptr_ty,
                 span: None,
+                origin: ValueOrigin::Temporary,
             });
-            cleanup_block.insts.push(load_child_fut);
 
+            let null_val_id = ValueId(drop_fn.values.len() as u32);
+            drop_fn.values.push(ValueData {
+                inst: Instruction::Null { ty: void_ptr_ty },
+                ty: void_ptr_ty,
+                span: None,
+                origin: ValueOrigin::Temporary,
+            });
+
+            let is_non_null_id = ValueId(drop_fn.values.len() as u32);
+            drop_fn.values.push(ValueData {
+                inst: Instruction::NotEq {
+                    left: Operand::Value(load_child_fut),
+                    right: Operand::Value(null_val_id),
+                },
+                ty: SemanticTypeId(1),
+                span: None,
+                origin: ValueOrigin::Temporary,
+            });
+
+            let check_child_block = BasicBlock {
+                label: cleanup_label,
+                insts: vec![child_future_field_ptr, load_child_fut, null_val_id, is_non_null_id],
+                terminator: Some(Terminator::CondBr {
+                    condition: Operand::Value(is_non_null_id),
+                    true_target: drop_child_label.clone(),
+                    false_target: drop_locals_label.clone(),
+                }),
+            };
+            drop_fn.blocks.push(check_child_block);
+
+            // 2. Drop child future block
             let drop_child_fut = ValueId(drop_fn.values.len() as u32);
             drop_fn.values.push(ValueData {
-                inst: Instruction::Drop { value: Operand::Value(load_child_fut), ty: void_ptr_ty, callee: None },
+                inst: Instruction::Drop {
+                    value: Operand::Value(load_child_fut),
+                    ty: void_ptr_ty,
+                    callee: child_callee,
+                },
                 ty: SemanticTypeId(0),
                 span: None,
+                origin: ValueOrigin::Temporary,
             });
-            cleanup_block.insts.push(drop_child_fut);
-        }
 
-        // 2. Drop live places for state_idx
-        let suspension_state = if state_idx == 0 {
-            &async_state_map.initial_state
-        } else {
-            let (_, _, await_vid) = await_points[state_idx - 1];
-            async_state_map.await_states.get(&await_vid).unwrap_or(&async_state_map.initial_state)
-        };
+            let child_drop_block = BasicBlock {
+                label: drop_child_label,
+                insts: vec![drop_child_fut],
+                terminator: Some(Terminator::Br { target: drop_locals_label.clone() }),
+            };
+            drop_fn.blocks.push(child_drop_block);
 
-        for place in &suspension_state.live_places {
-            if let Some(&env_field_idx) = alloca_map.get(&place.local) {
-                let env_field_ty = env_fields[env_field_idx as usize];
-                emit_drop_for_place(
-                    &mut drop_fn,
-                    &mut cleanup_block,
-                    drop_env_arg_id,
-                    env_field_idx as usize,
-                    env_field_ty,
-                    place,
-                    ctx,
-                );
+            // 3. Locals cleanup block
+            let mut locals_block = BasicBlock {
+                label: drop_locals_label,
+                insts: Vec::new(),
+                terminator: Some(Terminator::Br { target: free_env_label.clone() }),
+            };
+
+            let suspension_state = async_state_map.await_states.get(&await_vid).unwrap_or(&async_state_map.initial_state);
+
+            for place in &suspension_state.live_places {
+                if let Some(&env_field_idx) = alloca_map.get(&place.local) {
+                    let env_field_ty = env_fields[env_field_idx as usize];
+                    emit_drop_for_place(
+                        func,
+                        &mut drop_fn,
+                        &mut locals_block,
+                        drop_env_arg_id,
+                        env_field_idx as usize,
+                        env_field_ty,
+                        place,
+                        ctx,
+                    );
+                }
             }
-        }
 
-        drop_fn.blocks.push(cleanup_block);
+            drop_fn.blocks.push(locals_block);
+        }
     }
 
     // free_env block: BoxFree(env) and Ret None
@@ -916,6 +1179,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         inst: Instruction::BoxFree { value: Operand::Value(drop_env_arg_id) },
         ty: SemanticTypeId(0),
         span: None,
+        origin: ValueOrigin::Temporary,
     });
     free_block.insts.push(free_val_id);
     drop_fn.blocks.push(free_block);
@@ -960,6 +1224,7 @@ fn resolve_place_type(
 }
 
 fn emit_drop_for_place(
+    func: &Function,
     drop_fn: &mut Function,
     block: &mut BasicBlock,
     drop_env_arg_id: ValueId,
@@ -973,6 +1238,12 @@ fn emit_drop_for_place(
             return;
         }
 
+        assert!(
+            !ctx.types.is_unsized(target_ty),
+            "ICE: unsized type {:?} reached emit_drop_for_place — this should have been rejected at P3",
+            ctx.types.get(target_ty)
+        );
+
         // 1. Get base field ptr in EnvStruct
         let mut curr_ptr = ValueId(drop_fn.values.len() as u32);
         drop_fn.values.push(ValueData {
@@ -982,6 +1253,7 @@ fn emit_drop_for_place(
             },
             ty: env_field_ty,
             span: None,
+            origin: ValueOrigin::Temporary,
         });
         block.insts.push(curr_ptr);
 
@@ -1009,6 +1281,7 @@ fn emit_drop_for_place(
                         },
                         ty: curr_ty,
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     block.insts.push(next_ptr);
                     curr_ptr = next_ptr;
@@ -1026,6 +1299,7 @@ fn emit_drop_for_place(
                         },
                         ty: inner_ty,
                         span: None,
+                        origin: ValueOrigin::Temporary,
                     });
                     block.insts.push(deref_ptr);
                     curr_ptr = deref_ptr;
@@ -1043,18 +1317,35 @@ fn emit_drop_for_place(
             },
             ty: target_ty,
             span: None,
+            origin: ValueOrigin::Temporary,
         });
         block.insts.push(load_id);
+
+        let callee = match ctx.types.get(target_ty) {
+            SemanticType::Struct(sym_id, ..) => {
+                ctx.tables.drop_impls.get(sym_id).map(|&meth_sym| {
+                    let name = ctx.symbol_table.get_symbol(meth_sym).name.clone();
+                    GlobalId { name, symbol_id: Some(meth_sym) }
+                })
+            }
+            SemanticType::Future(..) => {
+                find_originating_call_callee(func, &Operand::Value(place.local)).map(|name| {
+                    GlobalId { name: format!("{}_drop", name), symbol_id: None }
+                })
+            }
+            _ => None,
+        };
 
         let drop_id = ValueId(drop_fn.values.len() as u32);
         drop_fn.values.push(ValueData {
             inst: Instruction::Drop {
                 value: Operand::Value(load_id),
                 ty: target_ty,
-                callee: None,
+                callee,
             },
             ty: SemanticTypeId(0),
             span: None,
+            origin: ValueOrigin::Temporary,
         });
         block.insts.push(drop_id);
     }
@@ -1087,8 +1378,8 @@ mod tests {
                 }
             ],
             values: vec![
-                ValueData { inst: Instruction::Alloca, ty: SemanticTypeId(3), span: None },
-                ValueData { inst: Instruction::Load { ptr: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(3), span: None },
+                ValueData { inst: Instruction::Alloca, ty: SemanticTypeId(3), span: None, origin: ValueOrigin::Local },
+                ValueData { inst: Instruction::Load { ptr: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(3), span: None, origin: ValueOrigin::Temporary },
             ],
         };
         
@@ -1137,9 +1428,9 @@ mod tests {
                 }
             ],
             values: vec![
-                ValueData { inst: Instruction::Await { future: Operand::Number("1".to_string()) }, ty: SemanticTypeId(3), span: None },
-                ValueData { inst: Instruction::Await { future: Operand::Number("2".to_string()) }, ty: SemanticTypeId(3), span: None },
-                ValueData { inst: Instruction::Add { left: Operand::Value(ValueId(0)), right: Operand::Value(ValueId(1)) }, ty: SemanticTypeId(3), span: None },
+                ValueData { inst: Instruction::Await { future: Operand::Number("1".to_string()) }, ty: SemanticTypeId(3), span: None, origin: ValueOrigin::Temporary },
+                ValueData { inst: Instruction::Await { future: Operand::Number("2".to_string()) }, ty: SemanticTypeId(3), span: None, origin: ValueOrigin::Temporary },
+                ValueData { inst: Instruction::Add { left: Operand::Value(ValueId(0)), right: Operand::Value(ValueId(1)) }, ty: SemanticTypeId(3), span: None, origin: ValueOrigin::Temporary },
             ],
         };
         
@@ -1194,9 +1485,9 @@ mod tests {
                 }
             ],
             values: vec![
-                ValueData { inst: Instruction::Alloca, ty: struct_ty, span: None },
-                ValueData { inst: Instruction::MarkInit { value: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0), span: None },
-                ValueData { inst: Instruction::Await { future: Operand::Number("42".to_string()) }, ty: SemanticTypeId(3), span: None },
+                ValueData { inst: Instruction::Alloca, ty: struct_ty, span: None, origin: ValueOrigin::Local },
+                ValueData { inst: Instruction::MarkInit { value: Operand::Value(ValueId(0)) }, ty: SemanticTypeId(0), span: None, origin: ValueOrigin::Temporary },
+                ValueData { inst: Instruction::Await { future: Operand::Number("42".to_string()) }, ty: SemanticTypeId(3), span: None, origin: ValueOrigin::Temporary },
             ],
         };
 

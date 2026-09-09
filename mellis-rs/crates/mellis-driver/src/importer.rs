@@ -10,7 +10,7 @@ use mellis_semantic::{SemanticContext, Resolver, TypeChecker};
 pub fn resolve_imports(
     items: &[Item],
     arena: &mut AstArena,
-    source: &mut String,
+    
     session: &mut DriverSession,
 ) -> Result<(), Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
@@ -20,7 +20,8 @@ pub fn resolve_imports(
     for item in items {
         if let Item::Decl(decl_id) = item {
             if let Decl::Import { annotations: _, name: name_span, kind, visibility: _ } = &arena.decls[decl_id.0 as usize] {
-                let mut name_str = &source[name_span.start as usize .. name_span.end as usize];
+                let file_info = session.compiler_session.source_manager.get_file(name_span.file_id).unwrap();
+                let mut name_str = &file_info.source[name_span.start as usize .. name_span.end as usize];
                 if name_str.starts_with('"') && name_str.ends_with('"') {
                     name_str = &name_str[1..name_str.len() - 1];
                 }
@@ -30,14 +31,16 @@ pub fn resolve_imports(
     }
 
     for (name, span, kind) in imports {
-        // Load-once invariant: If already loaded (e.g. core via bootstrap), skip
-        if session.registry.providers.contains_key(&name) {
-            continue;
-        }
-
-        // External package import: import <pkg>; -> delegates to session.load_package
         if kind == ImportKind::External {
-            match session.load_package(&name, arena, source) {
+            // External package import: import <pkg>; -> delegates to session.load_package
+            if session.registry.external_providers.contains(&name) {
+                continue;
+            }
+            if session.registry.is_loading(&name) {
+                diagnostics.push(Diagnostic::error(format!("Cyclic module dependency detected involving '{}'", name)).with_span(span));
+                continue;
+            }
+            match session.load_package(&name, arena) {
                 Ok(_) => continue,
                 Err(err) => {
                     for d in err.into_diagnostics() {
@@ -46,15 +49,17 @@ pub fn resolve_imports(
                     continue;
                 }
             }
-        }
+        } else {
+            // Local module import: import "module"; -> searches in session.search_paths ONLY
+            if session.registry.local_providers.contains(&name) {
+                continue;
+            }
+            if session.registry.is_loading(&name) {
+                diagnostics.push(Diagnostic::error(format!("Cyclic module dependency detected involving '{}'", name)).with_span(span));
+                continue;
+            }
 
-        // Local module import: import "module"; -> searches in session.search_paths
-        if session.registry.is_loading(&name) {
-            diagnostics.push(Diagnostic::error(format!("Cyclic module dependency detected involving '{}'", name)).with_span(span));
-            continue;
-        }
-
-        session.registry.start_loading(&name);
+            session.registry.start_loading(&name);
 
         // Try to find .mlib or .ms in search paths
         let mut found_path = None;
@@ -103,14 +108,10 @@ pub fn resolve_imports(
                     continue;
                 };
                 
-                let mut input_mut = input.clone();
-                if let Err(mut inner_diags) = resolve_imports(&provider_items, &mut provider_arena, &mut input_mut, session) {
+                if let Err(mut inner_diags) = resolve_imports(&provider_items, &mut provider_arena, session) {
                     diagnostics.append(&mut inner_diags);
                 }
                 
-                let offset = source.len() as u32;
-                source.push('\n');
-                source.push_str(&input_mut);
                 
                 let relocator = mellis_ast::relocator::AstRelocator::new(
                     arena.exprs.len() as u32,
@@ -119,7 +120,7 @@ pub fn resolve_imports(
                     arena.types.len() as u32,
                     arena.pats.len() as u32,
                     file_id,
-                    offset + 1,
+                    
                 );
                 
                 relocator.relocate_arena(&mut provider_arena);
@@ -137,11 +138,13 @@ pub fn resolve_imports(
                 arena.types.append(&mut provider_arena.types);
                 arena.pats.append(&mut provider_arena.pats);
                 
+                let provider_id = session.registry.allocate_id();
                 let mut semantic_ctx = SemanticContext::new();
+                semantic_ctx.current_provider = Some(provider_id);
                 semantic_ctx.allow_internal_lang_items = session.compiler_session.allow_internal_lang_items;
                 session.registry.inject_into_ctx(&mut semantic_ctx);
-                Resolver::new(&mut semantic_ctx, arena, source).resolve_items(&shifted_provider_items);
-                TypeChecker::new(&mut semantic_ctx, arena, source).typecheck_items(&shifted_provider_items);
+                Resolver::new(&mut semantic_ctx, arena, &session.compiler_session.source_manager).resolve_items(&shifted_provider_items);
+                TypeChecker::new(&mut semantic_ctx, arena, &session.compiler_session.source_manager).typecheck_items(&shifted_provider_items);
                 
                 if !semantic_ctx.diagnostics.is_empty() {
                     diagnostics.extend(semantic_ctx.diagnostics);
@@ -149,14 +152,14 @@ pub fn resolve_imports(
                     continue;
                 }
                 
-                let provider_id = session.registry.allocate_id();
                 let interface = ModuleRegistry::extract_interface_from_ctx(name.clone(), provider_id, &semantic_ctx);
-                session.registry.register(name.clone(), interface);
+                session.registry.register_local(name.clone(), interface);
             }
         } else {
             diagnostics.push(Diagnostic::error(format!("Could not resolve module provider '{}'", name)).with_span(span));
         }
         session.registry.finish_loading();
+        }
     }
     if diagnostics.is_empty() {
         Ok(())

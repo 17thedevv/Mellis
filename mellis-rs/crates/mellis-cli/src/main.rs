@@ -4,6 +4,14 @@ use std::{fs, path::PathBuf, process};
 #[derive(Parser, Debug)]
 #[command(name = "mellis", about = "Official Mellis Compiler CLI", version)]
 struct Cli {
+    /// Maximum comptime evaluation steps
+    #[arg(long = "comptime-steps", global = true)]
+    comptime_steps: Option<usize>,
+
+    /// Maximum comptime call recursion depth
+    #[arg(long = "comptime-depth", global = true)]
+    comptime_depth: Option<usize>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -132,6 +140,8 @@ fn main() {
                 quiet: *quiet,
                 search_paths: search_paths.iter().map(|p| p.to_string_lossy().to_string()).collect(),
                 no_link: *lib,
+                comptime_steps: cli.comptime_steps,
+                comptime_depth: cli.comptime_depth,
             };
 
             if let Err(rendered_diagnostics) = mellis_driver::compile_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {
@@ -153,9 +163,11 @@ fn main() {
                 quiet: *quiet,
                 search_paths: search_paths.iter().map(|p| p.to_string_lossy().to_string()).collect(),
                 no_link: false,
+                comptime_steps: cli.comptime_steps,
+                comptime_depth: cli.comptime_depth,
             };
 
-            if let Err(rendered_diagnostics) = mellis_driver::compile_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {
+            if let Err(rendered_diagnostics) = mellis_driver::check_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {
                 eprintln!("{}", rendered_diagnostics);
                 process::exit(1);
             }
@@ -174,6 +186,8 @@ fn main() {
                 quiet: *quiet,
                 search_paths: search_paths.iter().map(|p| p.to_string_lossy().to_string()).collect(),
                 no_link: false,
+                comptime_steps: cli.comptime_steps,
+                comptime_depth: cli.comptime_depth,
             };
 
             if let Err(rendered_diagnostics) = mellis_driver::compile_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {

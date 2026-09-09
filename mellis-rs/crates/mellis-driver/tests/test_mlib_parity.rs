@@ -35,8 +35,7 @@ fn test_semantic_parity() {
         quiet: false,
         search_paths: vec!["../../".to_string(), parity_dir.to_str().unwrap().to_string()],
         no_link: true,
-        
-        
+        ..Default::default()
     };
 
     let res_src = compile(
@@ -62,8 +61,7 @@ fn test_semantic_parity() {
         quiet: false,
         search_paths: vec!["../../".to_string()],
         no_link: true,
-        
-        
+        ..Default::default()
     };
     let res_prov = compile(
         provider_path.to_str().unwrap(),

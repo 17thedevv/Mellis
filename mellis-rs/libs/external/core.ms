@@ -4,6 +4,9 @@ export trait Drop {
     fn drop(self: &rw Self);
 }
 
+#[lang("copy")]
+export trait Copy {}
+
 #[lang("from_residual")]
 export trait FromResidual<R> {
     #[lang("from_residual_fn")]

@@ -26,9 +26,44 @@ pub struct CompilerOptions {
     pub search_paths: Vec<String>,
     pub quiet: bool,
     pub no_link: bool,
+    pub comptime_steps: Option<usize>,
+    pub comptime_depth: Option<usize>,
 }
 
-pub fn check(file_name: &str, mut input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
+fn verify_items_lifetime(
+    items: &[mellis_ast::Item],
+    arena: &AstArena,
+    semantic_ctx: &SemanticContext,
+    source_manager: &mellis_common::SourceManager,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for item in items {
+        if let mellis_ast::Item::Decl(decl_id) = item {
+            let decl = &arena.decls[decl_id.0 as usize];
+            match decl {
+                mellis_ast::Decl::Module { items: inner_decls, .. } => {
+                    let inner_items: Vec<mellis_ast::Item> = inner_decls.iter().map(|&d| mellis_ast::Item::Decl(d)).collect();
+                    verify_items_lifetime(&inner_items, arena, semantic_ctx, source_manager, diagnostics);
+                }
+                _ => {
+                    if let Err(e) = mellis_semantic::lifetime::verify_before_codegen(decl, semantic_ctx, source_manager, arena) {
+                        diagnostics.push(e.into_diagnostic());
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Runs the full semantic pipeline (parse → resolve → typecheck → mono → lifetime verify)
+/// and returns the collected diagnostics WITHOUT entering MVIR generation.
+///
+/// This function exists to mechanically verify the pipeline invariant:
+///   "Semantic-invalid AST MUST NOT enter MVIR generation."
+///
+/// Returns `Err(diagnostics)` if any semantic errors are detected (same gate as `check()`),
+/// or `Ok(())` if the program would have passed the semantic gate.
+pub fn check_semantic_only(file_name: &str, input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
     let mut session = CompilerSession::new();
     let file_id = session.source_manager.add_file(file_name.to_string(), input.clone());
     let lexer = Lexer::new(&input, file_id);
@@ -37,25 +72,31 @@ pub fn check(file_name: &str, mut input: String, options: &CompilerOptions) -> R
     let mut items = parser.parse_file().map_err(|_| parser.diagnostics.clone())?;
     if !parser.diagnostics.is_empty() { return Err(parser.diagnostics); }
     let mut semantic_ctx = SemanticContext::new();
-    let mut registry = crate::registry::ModuleRegistry::new();
-    let mut input_mut = input.clone();
+
     let search_paths_buf: Vec<std::path::PathBuf> = options.search_paths.iter().map(std::path::PathBuf::from).collect();
-    let sysroot = crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from(".")));
+    let sysroot = search_paths_buf
+        .iter()
+        .find(|p| p.join("libs").join("external").exists())
+        .map(|p| crate::sysroot::Sysroot::from_root(p.clone()))
+        .or_else(|| crate::sysroot::Sysroot::discover(None).ok())
+        .or_else(|| crate::sysroot::Sysroot::discover_for_test().ok())
+        .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))));
     let mut driver_session = crate::session::DriverSession::new(sysroot, &mut session, options.search_paths.as_slice());
-    
-    if let Err(e) = driver_session.bootstrap_core(&mut arena, &mut input_mut) {
+
+    if let Err(e) = driver_session.bootstrap_core(&mut arena) {
         return Err(e.into_diagnostics());
     }
-    
-    crate::importer::resolve_imports(&mut items, &mut arena, &mut input_mut, &mut driver_session).map_err(|e| e)?;
-    let mut registry = driver_session.registry;
-    
-    let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut input_mut, file_id);
+
+    crate::importer::resolve_imports(&mut items, &mut arena, &mut driver_session).map_err(|e| e)?;
+    let registry = std::mem::take(&mut driver_session.registry);
+    drop(driver_session);
+
+    let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut session.source_manager, file_id);
     let items = attr_processor.process_items(items).map_err(|e| e)?;
 
     registry.inject_into_ctx(&mut semantic_ctx);
 
-    let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &input_mut);
+    let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &session.source_manager);
     resolver.register_macros(&items);
     if !semantic_ctx.diagnostics.is_empty() {
         return Err(semantic_ctx.diagnostics);
@@ -63,29 +104,99 @@ pub fn check(file_name: &str, mut input: String, options: &CompilerOptions) -> R
 
     let mut macro_engine = mellis_semantic::MacroEngine::new(
         &mut arena,
-        &input_mut,
+        &session.source_manager,
         file_id,
         &semantic_ctx.symbol_table,
         &semantic_ctx.tables,
     );
     let items = macro_engine.expand_items(items).map_err(|e| e)?;
 
-    Resolver::new(&mut semantic_ctx, &arena, &input_mut).resolve_items(&items);
-    TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &input_mut, &mellis_mvir::MvirComptimeEngine).typecheck_items(&items);
+    Resolver::new(&mut semantic_ctx, &arena, &session.source_manager).resolve_items(&items);
+    let comptime_engine = mellis_mvir::MvirComptimeEngine {
+        max_steps: options.comptime_steps.unwrap_or(1_000_000),
+        max_depth: options.comptime_depth.unwrap_or(512),
+    };
+    TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &session.source_manager, &comptime_engine).typecheck_items(&items);
+
+    let mut mono = mellis_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
+    mono.run(&items);
+    semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
+
+    let mut diagnostics = semantic_ctx.diagnostics.clone();
+    verify_items_lifetime(&items, &arena, &semantic_ctx, &session.source_manager, &mut diagnostics);
+    let diagnostics: Vec<_> = diagnostics.into_iter().fold(Vec::new(), |mut acc, d| {
+        if !acc.contains(&d) { acc.push(d); }
+        acc
+    });
+
+    // This is the MVIR gate. We stop here — MVIR generation is NOT invoked.
+    if !diagnostics.is_empty() {
+        return Err(diagnostics);
+    }
+    Ok(())
+}
+
+pub fn check(file_name: &str, input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
+    let mut session = CompilerSession::new();
+    let file_id = session.source_manager.add_file(file_name.to_string(), input.clone());
+    let lexer = Lexer::new(&input, file_id);
+    let mut arena = AstArena::new();
+    let mut parser = Parser::new(lexer, &mut arena, file_id);
+    let mut items = parser.parse_file().map_err(|_| parser.diagnostics.clone())?;
+    if !parser.diagnostics.is_empty() { return Err(parser.diagnostics); }
+    let mut semantic_ctx = SemanticContext::new();
+    
+    let search_paths_buf: Vec<std::path::PathBuf> = options.search_paths.iter().map(std::path::PathBuf::from).collect();
+    let sysroot = search_paths_buf
+        .iter()
+        .find(|p| p.join("libs").join("external").exists())
+        .map(|p| crate::sysroot::Sysroot::from_root(p.clone()))
+        .or_else(|| crate::sysroot::Sysroot::discover(None).ok())
+        .or_else(|| crate::sysroot::Sysroot::discover_for_test().ok())
+        .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))));
+    let mut driver_session = crate::session::DriverSession::new(sysroot, &mut session, options.search_paths.as_slice());
+    
+    if let Err(e) = driver_session.bootstrap_core(&mut arena) {
+        return Err(e.into_diagnostics());
+    }
+    
+    crate::importer::resolve_imports(&mut items, &mut arena, &mut driver_session).map_err(|e| e)?;
+    let registry = std::mem::take(&mut driver_session.registry);
+    drop(driver_session);
+    
+    let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut session.source_manager, file_id);
+    let items = attr_processor.process_items(items).map_err(|e| e)?;
+
+    registry.inject_into_ctx(&mut semantic_ctx);
+
+    let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &session.source_manager);
+    resolver.register_macros(&items);
+    if !semantic_ctx.diagnostics.is_empty() {
+        return Err(semantic_ctx.diagnostics);
+    }
+
+    let mut macro_engine = mellis_semantic::MacroEngine::new(
+        &mut arena,
+        &session.source_manager,
+        file_id,
+        &semantic_ctx.symbol_table,
+        &semantic_ctx.tables,
+    );
+    let items = macro_engine.expand_items(items).map_err(|e| e)?;
+
+    Resolver::new(&mut semantic_ctx, &arena, &session.source_manager).resolve_items(&items);
+    let comptime_engine = mellis_mvir::MvirComptimeEngine {
+        max_steps: options.comptime_steps.unwrap_or(1_000_000),
+        max_depth: options.comptime_depth.unwrap_or(512),
+    };
+    TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &session.source_manager, &comptime_engine).typecheck_items(&items);
     
     let mut mono = mellis_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
     mono.run(&items);
     semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
     
     let mut diagnostics = semantic_ctx.diagnostics.clone();
-    for item in &items {
-        if let mellis_ast::Item::Decl(decl_id) = item {
-            let decl = &arena.decls[decl_id.0 as usize];
-            if let Err(e) = mellis_semantic::lifetime::verify_before_codegen(decl, &semantic_ctx, &input_mut, &arena) {
-                diagnostics.push(e.into_diagnostic());
-            }
-        }
-    }
+    verify_items_lifetime(&items, &arena, &semantic_ctx, &session.source_manager, &mut diagnostics);
     let mut diagnostics: Vec<_> = diagnostics.into_iter().fold(Vec::new(), |mut acc, d| {
         if !acc.contains(&d) { acc.push(d); }
         acc
@@ -94,7 +205,7 @@ pub fn check(file_name: &str, mut input: String, options: &CompilerOptions) -> R
         return Err(diagnostics);
     }
     
-    let (module, mvir_diags) = mellis_mvir::MvirGenerator::new(&arena, &semantic_ctx, &input_mut).generate(&items);
+    let (module, mvir_diags) = mellis_mvir::MvirGenerator::new(&arena, &semantic_ctx, &session.source_manager).generate(&items);
     if !mvir_diags.is_empty() {
         return Err(mvir_diags);
     }
@@ -114,6 +225,14 @@ pub fn compile(file_name: &str, input: String, options: &CompilerOptions) -> Res
     compile_with_session(&mut session, file_name, input, options)
 }
 
+pub fn check_and_render(file_name: &str, input: String, options: &CompilerOptions) -> Result<(), String> {
+    let session = CompilerSession::new();
+    match check(file_name, input, options) {
+        Ok(()) => Ok(()),
+        Err(diags) => Err(diags.iter().map(|d| d.render(&session.source_manager)).collect::<Vec<_>>().join("\n")),
+    }
+}
+
 pub fn compile_and_render(file_name: &str, input: String, options: &CompilerOptions) -> Result<(), String> {
     let mut session = CompilerSession::new();
     match compile_with_session(&mut session, file_name, input, options) {
@@ -122,7 +241,7 @@ pub fn compile_and_render(file_name: &str, input: String, options: &CompilerOpti
     }
 }
 
-pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
+pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, input: String, options: &CompilerOptions) -> Result<(), Vec<Diagnostic>> {
     let file_id = session
         .source_manager
         .add_file(file_name.to_string(), input.clone());
@@ -154,30 +273,36 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut 
             // Semantic phase
             let mut semantic_ctx = SemanticContext::new();
             
-            let mut registry = crate::registry::ModuleRegistry::new();
-            let mut input_mut = input.clone();
             
             let mut items_mut = items.clone();
             
             let search_paths_buf: Vec<std::path::PathBuf> = options.search_paths.iter().map(std::path::PathBuf::from).collect();
-            let sysroot = crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from(".")));
+            let sysroot = search_paths_buf
+                .iter()
+                .find(|p| p.join("libs").join("external").exists())
+                .map(|p| crate::sysroot::Sysroot::from_root(p.clone()))
+                .or_else(|| crate::sysroot::Sysroot::discover(None).ok())
+                .or_else(|| crate::sysroot::Sysroot::discover_for_test().ok())
+                .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))));
             let mut driver_session = crate::session::DriverSession::new(sysroot, session, options.search_paths.as_slice());
             
-            if let Err(e) = driver_session.bootstrap_core(&mut arena, &mut input_mut) {
+            if let Err(e) = driver_session.bootstrap_core(&mut arena) {
                 return Err(e.into_diagnostics());
             }
             
-            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut input_mut, &mut driver_session) {
+            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut driver_session) {
                 return Err(e);
             }
             
-            let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut input_mut, file_id);
-            let mut registry = driver_session.registry;
+            let registry = std::mem::take(&mut driver_session.registry);
+            drop(driver_session);
+
+            let mut attr_processor = mellis_semantic::AttributeProcessor::new(&mut arena, &mut session.source_manager, file_id);
             let items_mut = attr_processor.process_items(items_mut).map_err(|e| e)?;
 
             registry.inject_into_ctx(&mut semantic_ctx);
 
-            let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &input_mut);
+            let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &session.source_manager);
             resolver.register_macros(&items_mut);
             if !semantic_ctx.diagnostics.is_empty() {
                 return Err(semantic_ctx.diagnostics);
@@ -185,17 +310,21 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut 
 
             let mut macro_engine = mellis_semantic::MacroEngine::new(
                 &mut arena,
-                &input_mut,
+                &session.source_manager,
                 file_id,
                 &semantic_ctx.symbol_table,
                 &semantic_ctx.tables,
             );
             let items_mut = macro_engine.expand_items(items_mut).map_err(|e| e)?;
 
-            let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &input_mut);
+            let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &session.source_manager);
             resolver.resolve_items(&items_mut);
             
-            let mut typechecker = TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &input_mut, &mellis_mvir::MvirComptimeEngine);
+            let comptime_engine = mellis_mvir::MvirComptimeEngine {
+                max_steps: options.comptime_steps.unwrap_or(1_000_000),
+                max_depth: options.comptime_depth.unwrap_or(512),
+            };
+            let mut typechecker = TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &session.source_manager, &comptime_engine);
             typechecker.typecheck_items(&items_mut);
             
             let mut mono = mellis_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
@@ -226,18 +355,11 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut 
             }
             
             // MVIR phase
-            for item in &items_mut {
-                if let mellis_ast::Item::Decl(decl_id) = item {
-                    let decl = &arena.decls[decl_id.0 as usize];
-                    if let Err(e) = mellis_semantic::lifetime::verify_before_codegen(decl, &semantic_ctx, &input_mut, &arena) {
-                        all_diagnostics.push(e.into_diagnostic());
-                    }
-                }
-            }
+            verify_items_lifetime(&items_mut, &arena, &semantic_ctx, &session.source_manager, &mut all_diagnostics);
             if !all_diagnostics.is_empty() {
                 return Err(all_diagnostics);
             }
-            let generator = MvirGenerator::new(&arena, &semantic_ctx, &input_mut);
+            let generator = MvirGenerator::new(&arena, &semantic_ctx, &session.source_manager);
             let (mut module, mvir_diags) = generator.generate(&items_mut);
             if !mvir_diags.is_empty() {
                 return Err(mvir_diags);
@@ -400,10 +522,23 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut 
                 return Err(vec![Diagnostic::error(format!("Backend Error: {}", e))]);
             }
             
-            // Save to file and compile — use basename so outputs go into cwd
-            let ll_file = format!("{}.ll", base_name);
-            let obj_file = format!("{}.obj", base_name);
-            let exe_file = options.output_path.clone().unwrap_or_else(|| format!("{}.exe", base_name));
+            // Save to file and compile — if output_path is specified, place .ll and .obj alongside it
+            let (ll_file, obj_file, exe_file) = if let Some(ref out) = options.output_path {
+                let out_path = std::path::Path::new(out);
+                let parent = out_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+                let stem = out_path.file_stem().and_then(|s| s.to_str()).unwrap_or(base_name);
+                (
+                    parent.join(format!("{}.ll", stem)).to_string_lossy().to_string(),
+                    parent.join(format!("{}.obj", stem)).to_string_lossy().to_string(),
+                    out.clone(),
+                )
+            } else {
+                (
+                    format!("{}.ll", base_name),
+                    format!("{}.obj", base_name),
+                    format!("{}.exe", base_name),
+                )
+            };
             
             let path_ll = std::path::Path::new(&ll_file);
             let path_obj = std::path::Path::new(&obj_file);
@@ -441,7 +576,7 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, mut 
             }
             
         }
-        Err(e) => {
+        Err(_e) => {
             if !options.quiet { println!("Failed to parse file."); }
         }
     }

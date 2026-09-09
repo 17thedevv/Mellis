@@ -93,17 +93,17 @@ fn test_core_loaded_only_once() {
     let mut driver_session = mellis_driver::DriverSession::new(sysroot, &mut session, &[]);
 
     let mut arena = AstArena::new();
-    let mut source = String::new();
+    let source = String::new();
 
     // 1. Bootstrap core
-    let core_id1 = driver_session.bootstrap_core(&mut arena, &mut source)
+    let core_id1 = driver_session.bootstrap_core(&mut arena)
         .expect("Failed to bootstrap core");
 
     let decl_count_after_bootstrap = arena.decls.len();
     assert!(decl_count_after_bootstrap > 0, "Core should introduce AST declarations");
 
     // 2. Request core via load_package
-    let core_id2 = driver_session.load_package("core", &mut arena, &mut source)
+    let core_id2 = driver_session.load_package("core", &mut arena)
         .expect("load_package('core') should succeed");
 
     assert_eq!(core_id1, core_id2, "ProviderId must be identical");
@@ -149,9 +149,9 @@ fn test_external_component_identity_stable() {
     let mut driver_session = mellis_driver::DriverSession::new(sysroot, &mut session, &[]);
 
     let mut arena = AstArena::new();
-    let mut source = String::new();
+    let source = String::new();
 
-    let core_id = driver_session.bootstrap_core(&mut arena, &mut source)
+    let core_id = driver_session.bootstrap_core(&mut arena)
         .expect("Failed to bootstrap core");
 
     let interface = driver_session.registry.interfaces.get(&core_id)

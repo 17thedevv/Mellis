@@ -38,9 +38,8 @@ fn run_ui_test(file_path: &Path) -> Result<(), String> {
         emit_mlib: false,
         search_paths: vec![sysroot, "tests/ui".to_string(), ".".to_string()],
         quiet: true,
-
         no_link: false,
-        
+        ..Default::default()
     };
     let res = check(
         file_path.to_str().unwrap(),
