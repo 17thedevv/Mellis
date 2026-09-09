@@ -50,7 +50,7 @@ pub struct DeriveContext<'arena> {
     /// The AST arena for allocating new nodes
     pub arena: &'arena mut AstArena,
     /// The source text for span resolution
-    source: &'arena mut String,
+    source_manager: &'arena mut mellis_common::source::SourceManager,
     /// The file ID for diagnostics
     file_id: FileId,
     /// Span of the original derive attribute (for error reporting)
@@ -68,7 +68,7 @@ pub struct DeriveContext<'arena> {
 impl<'arena> DeriveContext<'arena> {
     pub fn new(
         arena: &'arena mut AstArena,
-        source: &'arena mut String,
+        source_manager: &'arena mut mellis_common::source::SourceManager,
         file_id: FileId,
         derive_span: Span,
         expansion_counter: &'arena mut u32,
@@ -77,7 +77,7 @@ impl<'arena> DeriveContext<'arena> {
     ) -> Self {
         Self {
             arena,
-            source,
+            source_manager,
             file_id,
             derive_span,
             expansion_counter,
@@ -110,8 +110,8 @@ impl<'arena> DeriveContext<'arena> {
     /// Get the text content of a span.
     #[allow(dead_code)]
     pub fn get_span_text(&self, span: Span) -> String {
-        if (span.end as usize) <= self.source.len() && span.start <= span.end {
-            self.source[span.start as usize..span.end as usize].to_string()
+        if (span.end as usize) <= self.source_manager.get_file(self.file_id).unwrap().source.len() && span.start <= span.end {
+            self.source_manager.get_file(self.file_id).unwrap().source[span.start as usize..span.end as usize].to_string()
         } else {
             String::new()
         }
@@ -135,12 +135,12 @@ impl<'arena> DeriveContext<'arena> {
 
     /// Append a parsed item to the arena and return it.
     pub fn parse_and_append_item(&mut self, code: &str) -> Result<Vec<Item>, ()> {
-        let offset = self.source.len() as u32;
-        self.source.push('\n');
-        self.source.push_str(code);
+        let offset = self.source_manager.get_file(self.file_id).unwrap().source.len() as u32;
+        self.source_manager.append_to_file(self.file_id, "\n");
+        self.source_manager.append_to_file(self.file_id, code);
 
         let mut temp_arena = AstArena::new();
-        let lexer = Lexer::new(code, self.file_id);
+        let lexer = Lexer::new_with_offset(code, self.file_id, (offset + 1) as usize);
         let mut parser = Parser::new(lexer, &mut temp_arena, self.file_id);
 
         match parser.parse_file() {
@@ -152,7 +152,6 @@ impl<'arena> DeriveContext<'arena> {
                     self.arena.types.len() as u32,
                     self.arena.pats.len() as u32,
                     self.file_id,
-                    offset + 1,
                 );
                 relocator.relocate_arena(&mut temp_arena);
 
@@ -284,6 +283,15 @@ impl DeriveRegistry {
     /// Register the standard library derive macros.
     /// These implementations are part of the standard library, not the compiler itself.
     fn register_builtin_derives(&mut self) {
+        // Register Copy derive
+        let copy_derive = Arc::new(|ctx: &mut DeriveContext, input: &DeriveInput| -> Result<Vec<Item>, Diagnostic> {
+            let type_name = &input.name;
+            let code = format!("impl core::Copy for {} {{}}", type_name);
+            ctx.parse_and_append_item(&code)
+                .map_err(|_| Diagnostic::error(format!("failed to parse generated Copy for `{}`", type_name)).with_span(ctx.derive_span))
+        });
+        self.register("Copy", copy_derive);
+
         // Register Debug derive
         let debug = Arc::new(|ctx: &mut DeriveContext, input: &DeriveInput| -> Result<Vec<Item>, Diagnostic> {
             let type_name = &input.name;

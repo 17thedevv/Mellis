@@ -500,15 +500,15 @@ pub struct LifetimeValidator<'a> {
     name_to_lifetime: HashMap<String, LifetimeIdent>,
     /// Type context for checking type consistency.
     types: &'a crate::ty::TypeContext,
-    source: &'a str,
+    source_manager: &'a mellis_common::source::SourceManager,
 }
 
 impl<'a> LifetimeValidator<'a> {
-    pub fn new(types: &'a crate::ty::TypeContext, source: &'a str) -> Self {
+    pub fn new(types: &'a crate::ty::TypeContext, source_manager: &'a mellis_common::source::SourceManager) -> Self {
         Self {
             name_to_lifetime: HashMap::new(),
             types,
-            source,
+            source_manager,
         }
     }
 
@@ -525,7 +525,7 @@ impl<'a> LifetimeValidator<'a> {
     ) -> Result<ResolvedLifetimeExpr, LifetimeError> {
         match expr {
             LifetimeExpr::Provenance(span) => {
-                let name = extract_name_from_span(span, self.source);
+                let name = extract_name_from_span(span, self.source_manager);
                 let lifetime = self.name_to_lifetime.get(&name)
                     .copied()
                     .ok_or_else(|| LifetimeError::UnresolvedLifetime { name: name.clone(), span: *span })?;
@@ -542,7 +542,7 @@ impl<'a> LifetimeValidator<'a> {
                 let mut lifetime_idents = Vec::new();
 
                 for span in idents {
-                    let name = extract_name_from_span(span, self.source);
+                    let name = extract_name_from_span(span, self.source_manager);
                     let lifetime = self.name_to_lifetime.get(&name)
                         .copied()
                         .ok_or_else(|| LifetimeError::UnresolvedLifetime { name: name.clone(), span: *span })?;
@@ -571,8 +571,8 @@ impl<'a> LifetimeValidator<'a> {
         constraint: &LifetimeConstraint,
         solver: &mut LifetimeSolver,
     ) -> Result<(), LifetimeError> {
-        let first_name = extract_name_from_span(&constraint.first, self.source);
-        let second_name = extract_name_from_span(&constraint.second, self.source);
+        let first_name = extract_name_from_span(&constraint.first, self.source_manager);
+        let second_name = extract_name_from_span(&constraint.second, self.source_manager);
 
         let first_lifetime = self.name_to_lifetime.get(&first_name)
             .copied()
@@ -592,8 +592,8 @@ impl<'a> LifetimeValidator<'a> {
     }
 }
 
-pub fn extract_name_from_span(span: &Span, source: &str) -> String {
-    if let Some(text) = source.get(span.start as usize .. span.end as usize) {
+pub fn extract_name_from_span(span: &Span, source_manager: &mellis_common::source::SourceManager) -> String {
+    if let Some(text) = source_manager.get_file(span.file_id).unwrap().source.get(span.start as usize .. span.end as usize) {
         text.to_string()
     } else {
         format!("_unnamed_{}_{}", span.start, span.end)
@@ -605,10 +605,10 @@ pub fn resolve_fn_lifetime_signature(
     sig: &FnLifetimeSignature,
     param_names: &[String],
     ctx: &mut SemanticContext,
-    source: &str,
+    source_manager: &mellis_common::source::SourceManager,
 ) -> Result<(Option<ResolvedLifetimeExpr>, Vec<LifetimeConstraintExpr>), LifetimeError> {
     let mut solver = LifetimeSolver::new();
-    let mut validator = LifetimeValidator::new(&ctx.types, source);
+    let mut validator = LifetimeValidator::new(&ctx.types, source_manager);
 
     // Register parameters with their lifetimes
     for (i, name) in param_names.iter().enumerate() {
@@ -649,7 +649,7 @@ pub fn check_fn_call_constraints(
     callee_decl: &mellis_ast::Decl,
     caller_args: &[mellis_ast::ExprId],
     ctx: &mut SemanticContext,
-    source: &str,
+    source_manager: &mellis_common::source::SourceManager,
     arena: &mellis_ast::AstArena,
     _call_span: Span,
 ) -> Result<(), LifetimeError> {
@@ -660,7 +660,7 @@ pub fn check_fn_call_constraints(
     let find_param_index = |target_name: &str| -> Option<usize> {
         params.iter().position(|&param_id| {
             if let mellis_ast::Decl::Param { name, .. } = &arena.decls[param_id.0 as usize] {
-                extract_name_from_span(name, source) == target_name
+                extract_name_from_span(name, source_manager) == target_name
             } else {
                 false
             }
@@ -668,8 +668,8 @@ pub fn check_fn_call_constraints(
     };
 
     for constraint in &lifetime_signature.constraints {
-        let first_name = extract_name_from_span(&constraint.first, source);
-        let second_name = extract_name_from_span(&constraint.second, source);
+        let first_name = extract_name_from_span(&constraint.first, source_manager);
+        let second_name = extract_name_from_span(&constraint.second, source_manager);
 
         let Some(first_param_idx) = find_param_index(&first_name) else {
             return Err(LifetimeError::UnresolvedLifetime { name: first_name, span: constraint.first });
@@ -698,7 +698,7 @@ pub fn check_return_provenance(
     decl: &mellis_ast::Decl,
     _return_expr: mellis_ast::ExprId,
     _ctx: &mut SemanticContext,
-    _source: &str,
+    _source_manager: &mellis_common::source::SourceManager,
     _arena: &mellis_ast::AstArena,
     _return_span: Span,
 ) -> Result<(), LifetimeError> {
@@ -715,14 +715,14 @@ pub fn check_return_provenance(
 
 pub struct LifetimeVerifier<'a> {
     ctx: &'a SemanticContext,
-    source: &'a str,
+    source_manager: &'a mellis_common::source::SourceManager,
     arena: &'a mellis_ast::AstArena,
     params: &'a [mellis_ast::DeclId],
 }
 
 impl<'a> LifetimeVerifier<'a> {
-    pub fn new(ctx: &'a SemanticContext, source: &'a str, arena: &'a mellis_ast::AstArena, params: &'a [mellis_ast::DeclId]) -> Self {
-        Self { ctx, source, arena, params }
+    pub fn new(ctx: &'a SemanticContext, source_manager: &'a mellis_common::source::SourceManager, arena: &'a mellis_ast::AstArena, params: &'a [mellis_ast::DeclId]) -> Self {
+        Self { ctx, source_manager, arena, params }
     }
 
     pub fn verify_fn_signature(&self, decl: &mellis_ast::Decl) -> Result<(), LifetimeError> {
@@ -744,7 +744,7 @@ impl<'a> LifetimeVerifier<'a> {
     fn verify_provenance(&self, provenance: &LifetimeExpr) -> Result<(), LifetimeError> {
         match provenance {
             LifetimeExpr::Provenance(span) => {
-                let name = extract_name_from_span(span, self.source);
+                let name = extract_name_from_span(span, self.source_manager);
                 if !self.is_valid_parameter(&name) {
                     return Err(LifetimeError::UnresolvedLifetime {
                         name,
@@ -754,7 +754,7 @@ impl<'a> LifetimeVerifier<'a> {
             }
             LifetimeExpr::ProvenanceSet(idents) => {
                 for span in idents {
-                    let name = extract_name_from_span(span, self.source);
+                    let name = extract_name_from_span(span, self.source_manager);
                     if !self.is_valid_parameter(&name) {
                         return Err(LifetimeError::UnresolvedLifetime {
                             name,
@@ -768,8 +768,8 @@ impl<'a> LifetimeVerifier<'a> {
     }
 
     fn verify_constraint(&self, constraint: &LifetimeConstraint) -> Result<(), LifetimeError> {
-        let first_name = extract_name_from_span(&constraint.first, self.source);
-        let second_name = extract_name_from_span(&constraint.second, self.source);
+        let first_name = extract_name_from_span(&constraint.first, self.source_manager);
+        let second_name = extract_name_from_span(&constraint.second, self.source_manager);
 
         if !self.is_valid_parameter(&first_name) {
             return Err(LifetimeError::UnresolvedLifetime {
@@ -789,7 +789,7 @@ impl<'a> LifetimeVerifier<'a> {
     fn is_valid_parameter(&self, name: &str) -> bool {
         self.params.iter().any(|&param_id| {
             if let mellis_ast::Decl::Param { name: p_name, .. } = &self.arena.decls[param_id.0 as usize] {
-                extract_name_from_span(p_name, self.source) == name
+                extract_name_from_span(p_name, self.source_manager) == name
             } else {
                 false
             }
@@ -800,11 +800,11 @@ impl<'a> LifetimeVerifier<'a> {
 pub fn verify_before_codegen(
     decl: &mellis_ast::Decl,
     ctx: &SemanticContext,
-    source: &str,
+    source_manager: &mellis_common::source::SourceManager,
     arena: &mellis_ast::AstArena,
 ) -> Result<(), LifetimeError> {
     if let mellis_ast::Decl::Function { params, .. } = decl {
-        let verifier = LifetimeVerifier::new(ctx, source, arena, params);
+        let verifier = LifetimeVerifier::new(ctx, source_manager, arena, params);
         verifier.verify_fn_signature(decl)
     } else {
         Ok(())

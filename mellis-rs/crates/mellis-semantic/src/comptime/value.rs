@@ -40,6 +40,24 @@ impl IntWidth {
             IntWidth::I128 | IntWidth::U128 => 128,
         }
     }
+
+    pub fn from_builtin(b: crate::ty::BuiltinType) -> Self {
+        match b {
+            crate::ty::BuiltinType::I8 => IntWidth::I8,
+            crate::ty::BuiltinType::I16 => IntWidth::I16,
+            crate::ty::BuiltinType::I32 => IntWidth::I32,
+            crate::ty::BuiltinType::I64 => IntWidth::I64,
+            crate::ty::BuiltinType::I128 => IntWidth::I128,
+            crate::ty::BuiltinType::Isize => IntWidth::ISize,
+            crate::ty::BuiltinType::U8 => IntWidth::U8,
+            crate::ty::BuiltinType::U16 => IntWidth::U16,
+            crate::ty::BuiltinType::U32 => IntWidth::U32,
+            crate::ty::BuiltinType::U64 => IntWidth::U64,
+            crate::ty::BuiltinType::U128 => IntWidth::U128,
+            crate::ty::BuiltinType::Usize => IntWidth::USize,
+            _ => IntWidth::I32,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -97,11 +115,15 @@ pub enum ComptimeError {
     StepLimitExceeded(usize),
     RecursionLimitExceeded(usize),
     MemoryLimitExceeded,
+    ResourceLeak(String),
     ForbiddenSideEffect(String),
     SymbolNotFound(String),
     UseOfUninitializedOrMoved(String),
     PointerEscape(String),
+    ResourceEscape(String),
     ComptimeAwaitForbidden,
+    NullPointerDereference,
+    UseAfterFree,
     Custom(String),
 }
 
@@ -112,14 +134,18 @@ impl std::fmt::Display for ComptimeError {
             ComptimeError::IntegerOverflow => write!(f, "integer overflow during comptime evaluation"),
             ComptimeError::TypeMismatch(msg) => write!(f, "comptime type mismatch: {}", msg),
             ComptimeError::UnsupportedOperation(msg) => write!(f, "unsupported comptime operation: {}", msg),
-            ComptimeError::StepLimitExceeded(limit) => write!(f, "comptime execution step limit exceeded (limit: {})", limit),
-            ComptimeError::RecursionLimitExceeded(limit) => write!(f, "comptime call recursion limit exceeded (limit: {})", limit),
+            ComptimeError::StepLimitExceeded(limit) => write!(f, "E_COMPTIME_STEP_LIMIT: comptime execution step limit exceeded (limit: {})", limit),
+            ComptimeError::RecursionLimitExceeded(limit) => write!(f, "E_COMPTIME_RECURSION_LIMIT: comptime call recursion limit exceeded (limit: {})", limit),
             ComptimeError::MemoryLimitExceeded => write!(f, "comptime memory allocation limit exceeded"),
+            ComptimeError::ResourceLeak(msg) => write!(f, "E_COMPTIME_RESOURCE_LEAK: {}", msg),
             ComptimeError::ForbiddenSideEffect(msg) => write!(f, "forbidden side-effect in comptime: {}", msg),
             ComptimeError::SymbolNotFound(name) => write!(f, "symbol '{}' not found in comptime context", name),
-            ComptimeError::UseOfUninitializedOrMoved(msg) => write!(f, "use of uninitialized or moved value in comptime: {}", msg),
-            ComptimeError::PointerEscape(msg) => write!(f, "pointer escape error in comptime: {}", msg),
+            ComptimeError::UseOfUninitializedOrMoved(msg) => write!(f, "E_USE_OF_MOVED_VALUE: {}", msg),
+            ComptimeError::PointerEscape(msg) => write!(f, "E_COMPTIME_POINTER_ESCAPE: pointer escape error in comptime: {}", msg),
+            ComptimeError::ResourceEscape(msg) => write!(f, "E_COMPTIME_RESOURCE_ESCAPE: resource escape error in comptime: {}", msg),
             ComptimeError::ComptimeAwaitForbidden => write!(f, "comptime await is not allowed: compile-time domain has no async runtime"),
+            ComptimeError::NullPointerDereference => write!(f, "E_NULL_POINTER_DEREFERENCE: attempt to dereference null pointer in comptime evaluation"),
+            ComptimeError::UseAfterFree => write!(f, "E_USE_AFTER_FREE: use-after-free in compile-time memory"),
             ComptimeError::Custom(msg) => write!(f, "comptime error: {}", msg),
         }
     }

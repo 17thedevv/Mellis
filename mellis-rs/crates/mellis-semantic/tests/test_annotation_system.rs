@@ -6,7 +6,8 @@ use mellis_semantic::{AttributeProcessor, Resolver, SemanticContext};
 
 fn parse_and_process(src: &str, allow_internal: bool) -> (SemanticContext, Vec<mellis_common::Diagnostic>) {
     let mut arena = AstArena::new();
-    let file_id = FileId(0);
+    let mut source_manager = mellis_common::source::SourceManager::new();
+    let file_id = source_manager.add_file("test.ms".to_string(), src.to_string());
     let lexer = Lexer::new(src, file_id);
     let mut parser = Parser::new(lexer, &mut arena, file_id);
     let items = match parser.parse_file() {
@@ -18,7 +19,7 @@ fn parse_and_process(src: &str, allow_internal: bool) -> (SemanticContext, Vec<m
     }
 
     let mut src_mut = src.to_string();
-    let mut attr_processor = AttributeProcessor::new(&mut arena, &mut src_mut, file_id);
+    let mut attr_processor = AttributeProcessor::new(&mut arena, &mut source_manager, file_id);
     let items = match attr_processor.process_items(items) {
         Ok(items) => items,
         Err(diags) => return (SemanticContext::new(), diags),
@@ -27,7 +28,7 @@ fn parse_and_process(src: &str, allow_internal: bool) -> (SemanticContext, Vec<m
     let mut ctx = SemanticContext::new();
     ctx.allow_internal_lang_items = allow_internal;
 
-    let mut resolver = Resolver::new(&mut ctx, &arena, src);
+    let mut resolver = Resolver::new(&mut ctx, &arena, &source_manager);
     resolver.resolve_items(&items);
 
     let diags = ctx.diagnostics.clone();

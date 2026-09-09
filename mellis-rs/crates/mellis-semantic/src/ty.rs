@@ -4,7 +4,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SemanticTypeId(pub u32);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltinType {
     I8,
     I16,
@@ -23,6 +23,26 @@ pub enum BuiltinType {
     Bool,
     String,
     Char,
+}
+
+impl BuiltinType {
+    pub fn is_integer(&self) -> bool {
+        matches!(
+            self,
+            BuiltinType::I8
+                | BuiltinType::I16
+                | BuiltinType::I32
+                | BuiltinType::I64
+                | BuiltinType::I128
+                | BuiltinType::Isize
+                | BuiltinType::U8
+                | BuiltinType::U16
+                | BuiltinType::U32
+                | BuiltinType::U64
+                | BuiltinType::U128
+                | BuiltinType::Usize
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -73,6 +93,7 @@ pub enum SemanticType {
     DynTrait(SymbolId),
     Future(SemanticTypeId),
     Range(SemanticTypeId),
+    Projection { self_type: SemanticTypeId, trait_id: SymbolId, assoc_type: SymbolId },
 }
 
 #[derive(Clone, Debug)]
@@ -99,6 +120,7 @@ impl TypeContext {
         ctx.intern(SemanticType::Primitive(BuiltinType::Bool));
         ctx.intern(SemanticType::Primitive(BuiltinType::F64));
         ctx.intern(SemanticType::Primitive(BuiltinType::String));
+        ctx.intern(SemanticType::Primitive(BuiltinType::Usize));
         ctx
     }
 
@@ -119,8 +141,33 @@ impl TypeContext {
             .expect("Bool primitive must be pre-populated")
     }
 
+    pub fn usize_id(&self) -> SemanticTypeId {
+        self.type_interner
+            .get(&SemanticType::Primitive(BuiltinType::Usize))
+            .copied()
+            .expect("Usize primitive must be pre-populated")
+    }
+
+    pub fn error_id(&self) -> SemanticTypeId {
+        self.type_interner
+            .get(&SemanticType::Error)
+            .copied()
+            .expect("Error type must be pre-populated")
+    }
+
+    pub fn void_id(&self) -> SemanticTypeId {
+        self.type_interner
+            .get(&SemanticType::Void)
+            .copied()
+            .expect("Void type must be pre-populated")
+    }
+
     pub fn get(&self, id: SemanticTypeId) -> &SemanticType {
         &self.types[id.0 as usize]
+    }
+
+    pub fn get_all_types(&self) -> Vec<SemanticTypeId> {
+        (0..self.types.len() as u32).map(SemanticTypeId).collect()
     }
 
     pub fn new_inference_var(&mut self) -> SemanticTypeId {
@@ -196,6 +243,10 @@ impl TypeContext {
                 let new_inner = self.subst(inner, subst);
                 self.intern(SemanticType::Future(new_inner))
             }
+            SemanticType::Projection { self_type, trait_id, assoc_type } => {
+                let new_self = self.subst(self_type, subst);
+                self.intern(SemanticType::Projection { self_type: new_self, trait_id, assoc_type })
+            }
             _ => id, // Primitive, Void, Error, Never, InferenceVar
         }
     }
@@ -220,6 +271,7 @@ impl TypeContext {
             }
             SemanticType::Closure(_, captures, ret) => captures.iter().any(|&c| self.occurs_check(var, c)) || self.occurs_check(var, ret),
             SemanticType::Future(inner) => self.occurs_check(var, inner),
+            SemanticType::Projection { self_type, .. } => self.occurs_check(var, self_type),
             _ => false,
         }
     }
@@ -247,50 +299,58 @@ impl TypeContext {
     pub fn contains_generic_param(&self, id: SemanticTypeId) -> bool {
         self.type_flags(id).1
     }
+
+    pub fn contains_projection(&self, id: SemanticTypeId) -> bool {
+        self.type_flags(id).3
+    }
     
     pub fn is_monomorphic(&self, id: SemanticTypeId) -> bool {
         let flags = self.type_flags(id);
-        if flags.1 {
-            println!("DEBUG: type_flags for {:?} = {:?}, ty = {:?}", id, flags, self.get(id));
-        }
-        !flags.0 && !flags.1 && !flags.2 // has_infer, has_generic, has_error
+        !flags.0 && !flags.1 && !flags.2 && !flags.3 // has_infer, has_generic, has_error, has_projection
+    }
+
+    /// Returns true if the type is unsized (cannot appear in value position).
+    /// Mellis v1: `dyn Trait` and `[T]` are unsized types.
+    /// Unsized types may only appear behind `&`, `&rw`, `*`, `*rw` indirection.
+    pub fn is_unsized(&self, id: SemanticTypeId) -> bool {
+        matches!(self.get(id), SemanticType::DynTrait(_) | SemanticType::Slice(_))
     }
     
-    fn type_flags(&self, id: SemanticTypeId) -> (bool, bool, bool) { // (has_infer, has_generic, has_error)
+    pub fn type_flags(&self, id: SemanticTypeId) -> (bool, bool, bool, bool) { // (has_infer, has_generic, has_error, has_projection)
         let resolved = self.resolve_inference(id);
         let ty = self.get(resolved).clone();
         match ty {
-            SemanticType::Error => (false, false, true),
-            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => (false, false, false),
-            SemanticType::InferenceVar(_) => (true, false, false),
-            SemanticType::GenericParam(_) => (false, true, false),
+            SemanticType::Error => (false, false, true, false),
+            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => (false, false, false, false),
+            SemanticType::InferenceVar(_) => (true, false, false, false),
+            SemanticType::GenericParam(_) => (false, true, false, false),
+            SemanticType::Projection { self_type, .. } => {
+                let (i, g, e, _) = self.type_flags(self_type);
+                (i, g, e, true)
+            }
             SemanticType::Struct(_, args, fields) | SemanticType::Enum(_, args, fields) => {
                 let mut has_infer = false;
                 let mut has_gen = false;
                 let mut has_err = false;
+                let mut has_proj = false;
                 for &a in args.iter().chain(fields.iter()) {
-                    let (i, g, e) = self.type_flags(a);
-                    if i {
-                        println!("DEBUG: type_flags inference var at {:?} (resolved: {:?})", a, resolved);
-                    }
-                    if g {
-                        println!("DEBUG: type_flags generic param at {:?} (resolved: {:?}, ty: {:?})", a, resolved, self.get(a));
-                    }
-                    has_infer |= i; has_gen |= g; has_err |= e;
-                    if has_infer && has_gen && has_err { break; }
+                    let (i, g, e, p) = self.type_flags(a);
+                    has_infer |= i; has_gen |= g; has_err |= e; has_proj |= p;
+                    if has_infer && has_gen && has_err && has_proj { break; }
                 }
-                (has_infer, has_gen, has_err)
+                (has_infer, has_gen, has_err, has_proj)
             }
             SemanticType::Tuple(args) => {
                 let mut has_infer = false;
                 let mut has_gen = false;
                 let mut has_err = false;
+                let mut has_proj = false;
                 for &a in args.iter() {
-                    let (i, g, e) = self.type_flags(a);
-                    has_infer |= i; has_gen |= g; has_err |= e;
-                    if has_infer && has_gen && has_err { break; }
+                    let (i, g, e, p) = self.type_flags(a);
+                    has_infer |= i; has_gen |= g; has_err |= e; has_proj |= p;
+                    if has_infer && has_gen && has_err && has_proj { break; }
                 }
-                (has_infer, has_gen, has_err)
+                (has_infer, has_gen, has_err, has_proj)
             }
             SemanticType::Array(inner, _) | SemanticType::Slice(inner) | SemanticType::Pointer(_, inner) | 
             SemanticType::Reference(_, _, inner) | SemanticType::Box(inner) | SemanticType::Future(inner) | 
@@ -301,33 +361,35 @@ impl TypeContext {
                 let mut has_infer = false;
                 let mut has_gen = false;
                 let mut has_err = false;
+                let mut has_proj = false;
                 for &p in params.iter() {
-                    let (i, g, e) = self.type_flags(p);
-                    has_infer |= i; has_gen |= g; has_err |= e;
-                    if has_infer && has_gen && has_err { break; }
+                    let (i, g, e, p_flag) = self.type_flags(p);
+                    has_infer |= i; has_gen |= g; has_err |= e; has_proj |= p_flag;
+                    if has_infer && has_gen && has_err && has_proj { break; }
                 }
-                if !has_infer || !has_gen || !has_err {
-                    let (i, g, e) = self.type_flags(return_type);
-                    has_infer |= i; has_gen |= g; has_err |= e;
+                if !has_infer || !has_gen || !has_err || !has_proj {
+                    let (i, g, e, p_flag) = self.type_flags(return_type);
+                    has_infer |= i; has_gen |= g; has_err |= e; has_proj |= p_flag;
                 }
-                (has_infer, has_gen, has_err)
+                (has_infer, has_gen, has_err, has_proj)
             }
             SemanticType::Closure(_, params, ret) => {
                 let mut has_infer = false;
                 let mut has_gen = false;
                 let mut has_err = false;
+                let mut has_proj = false;
                 for &p in params.iter() {
-                    let (i, g, e) = self.type_flags(p);
-                    has_infer |= i; has_gen |= g; has_err |= e;
-                    if has_infer && has_gen && has_err { break; }
+                    let (i, g, e, p_flag) = self.type_flags(p);
+                    has_infer |= i; has_gen |= g; has_err |= e; has_proj |= p_flag;
+                    if has_infer && has_gen && has_err && has_proj { break; }
                 }
-                if !has_infer || !has_gen || !has_err {
-                    let (i, g, e) = self.type_flags(ret);
-                    has_infer |= i; has_gen |= g; has_err |= e;
+                if !has_infer || !has_gen || !has_err || !has_proj {
+                    let (i, g, e, p_flag) = self.type_flags(ret);
+                    has_infer |= i; has_gen |= g; has_err |= e; has_proj |= p_flag;
                 }
-                (has_infer, has_gen, has_err)
+                (has_infer, has_gen, has_err, has_proj)
             }
-            SemanticType::DynTrait(_) => (false, false, false),
+            SemanticType::DynTrait(_) => (false, false, false, false),
         }
     }
 
@@ -410,6 +472,12 @@ impl TypeContext {
             SemanticType::Range(inner) => {
                 let new_inner = self.clone_type_from(inner, source_ctx, lookup_sym);
                 self.intern(SemanticType::Range(new_inner))
+            }
+            SemanticType::Projection { self_type, trait_id, assoc_type } => {
+                let new_self = self.clone_type_from(self_type, source_ctx, lookup_sym);
+                let new_trait = lookup_sym(trait_id);
+                let new_assoc = lookup_sym(assoc_type);
+                self.intern(SemanticType::Projection { self_type: new_self, trait_id: new_trait, assoc_type: new_assoc })
             }
         }
     }

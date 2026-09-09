@@ -8,20 +8,21 @@ use mellis_semantic::typechecker::TypeChecker;
 use mellis_semantic::SemanticContext;
 
 fn check_code(source: &str) -> Result<mellis_ast::AstArena, Vec<mellis_common::Diagnostic>> {
-    let file_id = FileId(0);
+    let mut source_manager = mellis_common::source::SourceManager::new();
+    let file_id = source_manager.add_file("test.ms".to_string(), source.to_string());
     let mut arena = AstArena::new();
     let lexer = Lexer::new(source, file_id);
     let mut parser = Parser::new(lexer, &mut arena, file_id);
     let items = parser.parse_file().expect("parse_file failed");
 
     let mut ctx = SemanticContext::new();
-    let mut resolver = Resolver::new(&mut ctx, &arena, source);
+    let mut resolver = Resolver::new(&mut ctx, &arena, &source_manager);
     resolver.register_macros(&items);
     if !ctx.diagnostics.is_empty() {
         return Err(ctx.diagnostics);
     }
 
-    let mut engine = MacroEngine::new(&mut arena, source, file_id, &ctx.symbol_table, &ctx.tables);
+    let mut engine = MacroEngine::new(&mut arena, &source_manager, file_id, &ctx.symbol_table, &ctx.tables);
     let expanded = engine.expand_items(items)?;
 
     // Verify completion invariant: NO MacroCall node survives anywhere in types or expressions
@@ -36,8 +37,8 @@ fn check_code(source: &str) -> Result<mellis_ast::AstArena, Vec<mellis_common::D
         }
     }
 
-    Resolver::new(&mut ctx, &arena, source).resolve_items(&expanded);
-    TypeChecker::new(&mut ctx, &arena, source).typecheck_items(&expanded);
+    Resolver::new(&mut ctx, &arena, &source_manager).resolve_items(&expanded);
+    TypeChecker::new(&mut ctx, &arena, &source_manager).typecheck_items(&expanded);
 
     if !ctx.diagnostics.is_empty() {
         return Err(ctx.diagnostics);

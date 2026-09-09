@@ -11,7 +11,11 @@ pub mod comptime;
 pub mod effect;
 pub mod lifetime;
 pub mod lang_item;
+pub mod coherence;
+pub mod const_eval;
+pub mod coercion;
 
+pub use coercion::{CoercionKind, try_coerce};
 pub use effect::{Effect, EffectSet};
 pub use resolver::Resolver;
 pub use resolver::{ModuleNamespaceProvider, ModuleNamespaceMap};
@@ -33,8 +37,8 @@ pub use lifetime::{
 };
 
 pub trait ComptimeEngine: Send + Sync {
-    fn eval_expr(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source: &str, expr_id: mellis_ast::ExprId) -> Result<ComptimeValue, ComptimeError>;
-    fn eval_stmt(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source: &str, stmt_id: mellis_ast::StmtId) -> Result<ComptimeValue, ComptimeError>;
+    fn eval_expr(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source_manager: &mellis_common::source::SourceManager, expr_id: mellis_ast::ExprId) -> Result<ComptimeValue, ComptimeError>;
+    fn eval_stmt(&self, arena: &mellis_ast::AstArena, ctx: &SemanticContext, source_manager: &mellis_common::source::SourceManager, stmt_id: mellis_ast::StmtId) -> Result<ComptimeValue, ComptimeError>;
 }
 
 use mellis_ast::AstArena;
@@ -62,6 +66,7 @@ pub struct SemanticContext {
     pub const_values: HashMap<SymbolId, comptime::ComptimeValue>,
     pub allow_internal_lang_items: bool,
     pub external_module_scopes: HashMap<String, ScopeId>,
+    pub current_provider: Option<symbol::ProviderId>,
 }
 
 impl SemanticContext {
@@ -78,6 +83,7 @@ impl SemanticContext {
             const_values: HashMap::new(),
             allow_internal_lang_items: false,
             external_module_scopes: HashMap::new(),
+            current_provider: None,
         }
     }
 
@@ -125,9 +131,7 @@ impl SemanticContext {
             ty::SemanticType::Array(elem_ty, _) => {
                 self.needs_drop(*elem_ty)
             }
-            ty::SemanticType::Future(inner) => {
-                self.needs_drop(*inner)
-            }
+            ty::SemanticType::Future(_) => true,
             ty::SemanticType::DynTrait(_) => true,
             ty::SemanticType::GenericParam(_) => false, // TODO(phase_1c): Fix generic substitution. Cannot return true yet because it breaks borrow checker for generic enums (e.g., match Option<T> causes conditional move drop errors).
             _ => false,

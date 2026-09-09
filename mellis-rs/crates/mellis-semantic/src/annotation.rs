@@ -40,7 +40,7 @@ const COMPILER_ATTRS: &[&str] = &["repr", "test", "inline", "no_mangle", "link",
 /// - User-defined derives that are dispatched to the DeriveRegistry
 pub struct AttributeProcessor<'a> {
     arena: &'a mut AstArena,
-    source: &'a mut String,
+    source_manager: &'a mut mellis_common::source::SourceManager,
     file_id: FileId,
     diagnostics: Vec<Diagnostic>,
     /// Registry of available derive macros
@@ -53,10 +53,10 @@ pub struct AttributeProcessor<'a> {
 
 impl<'a> AttributeProcessor<'a> {
     /// Create a new AttributeProcessor with standard library derives pre-registered.
-    pub fn new(arena: &'a mut AstArena, source: &'a mut String, file_id: FileId) -> Self {
+    pub fn new(arena: &'a mut AstArena, source_manager: &'a mut mellis_common::source::SourceManager, file_id: FileId) -> Self {
         Self {
             arena,
-            source,
+            source_manager,
             file_id,
             diagnostics: Vec::new(),
             derive_registry: DeriveRegistry::with_std_derives(),
@@ -70,13 +70,13 @@ impl<'a> AttributeProcessor<'a> {
     /// This allows tests or external tools to provide their own derive implementations.
     pub fn with_registry(
         arena: &'a mut AstArena,
-        source: &'a mut String,
+        source_manager: &'a mut mellis_common::source::SourceManager,
         file_id: FileId,
         registry: DeriveRegistry,
     ) -> Self {
         Self {
             arena,
-            source,
+            source_manager,
             file_id,
             diagnostics: Vec::new(),
             derive_registry: registry,
@@ -120,8 +120,8 @@ impl<'a> AttributeProcessor<'a> {
 
     /// Get text from a span.
     fn get_span_text(&self, span: Span) -> &str {
-        if (span.end as usize) <= self.source.len() && span.start <= span.end {
-            &self.source[span.start as usize..span.end as usize]
+        if (span.end as usize) <= self.source_manager.get_file(span.file_id).unwrap().source.len() && span.start <= span.end {
+            &self.source_manager.get_file(span.file_id).unwrap().source[span.start as usize..span.end as usize]
         } else {
             ""
         }
@@ -377,8 +377,8 @@ impl<'a> AttributeProcessor<'a> {
     fn handle_derive(&mut self, _decl_id: DeclId, decl: &Decl, annot: &mellis_ast::Annotation) -> Vec<Item> {
         // Only structs and enums can derive
         let derive_input = match decl {
-            Decl::Struct { .. } => extract_struct_input(self.arena, self.source, decl),
-            Decl::Enum { .. } => extract_enum_input(self.arena, self.source, decl),
+            Decl::Struct { .. } => extract_struct_input(self.arena, &self.source_manager.get_file(self.file_id).unwrap().source, decl),
+            Decl::Enum { .. } => extract_enum_input(self.arena, &self.source_manager.get_file(self.file_id).unwrap().source, decl),
             _ => {
                 self.diagnostics.push(
                     Diagnostic::error("`#[derive]` can only be applied to structs or enums")
@@ -422,7 +422,7 @@ impl<'a> AttributeProcessor<'a> {
             // Create the derive context
             let mut ctx = DeriveContext::new(
                 self.arena,
-                self.source,
+                self.source_manager,
                 self.file_id,
                 annot.name,
                 &mut self.expansion_counter,

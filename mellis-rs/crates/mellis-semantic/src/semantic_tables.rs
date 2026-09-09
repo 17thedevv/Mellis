@@ -33,6 +33,14 @@ pub struct TraitBound {
     pub trait_id: SymbolId,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TraitImplEntry {
+    pub decl_id: Option<DeclId>,
+    pub trait_id: SymbolId,
+    pub self_type: SemanticTypeId,
+    pub generic_params: Vec<SymbolId>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TraitResolution {
     pub trait_id: SymbolId,
@@ -74,9 +82,9 @@ pub struct SemanticTables {
     pub closure_env_types: HashMap<ExprId, SemanticTypeId>,
     pub closure_env_ptr_types: HashMap<ExprId, SemanticTypeId>,
     
-    // Dynamic dispatch tables
+    // Dynamic dispatch and coercion tables
     pub dyn_method_indices: HashMap<ExprId, u32>,
-    pub dyn_coercions: HashMap<ExprId, (SymbolId, SymbolId)>,
+    pub coercions: HashMap<ExprId, crate::coercion::CoercionKind>,
     
     // Try operator branches: (inner_success_idx, inner_failure_idx, func_failure_idx)
     pub try_branches: HashMap<ExprId, (u32, u32, u32)>,
@@ -125,9 +133,28 @@ pub struct SemanticTables {
     // Maps a method SymbolId to its parent impl block DeclId
     pub method_impls: HashMap<SymbolId, ImplKey>,
     
+    // Maps a Trait's SymbolId to its declared associated type SymbolIds
+    pub trait_associated_types: HashMap<SymbolId, Vec<SymbolId>>,
+    // Maps an associated type SymbolId to its declaring Trait's SymbolId
+    pub assoc_type_traits: HashMap<SymbolId, SymbolId>,
+    // Maps (ImplKey, assoc_type_sym) to the declared aliased SemanticTypeId in that impl
+    pub impl_associated_types: HashMap<(ImplKey, SymbolId), SemanticTypeId>,
+    // Maps (trait_sym, name) to assoc_type_sym
+    pub assoc_type_names: HashMap<(SymbolId, String), SymbolId>,
+    // Maps a generic param symbol to its associated type equality bounds: (trait_id, assoc_type_sym, target_ty)
+    pub assoc_type_bounds: HashMap<SymbolId, Vec<(SymbolId, SymbolId, SemanticTypeId)>>,
+    // Maps ImplKey to lowered SemanticTypeId of self_type in that impl (e.g., Result<T, E>)
+    pub impl_self_types: HashMap<ImplKey, SemanticTypeId>,
+    // Maps ImplKey to list of generic parameter symbols declared on the impl block
+    pub impl_generic_params: HashMap<ImplKey, Vec<SymbolId>>,
+    pub trait_impl_entries: Vec<TraitImplEntry>,
+    pub decl_associated_types: HashMap<(DeclId, SymbolId), SemanticTypeId>,
+
     pub macro_decls: HashMap<SymbolId, DeclId>,
     pub decl_macros: HashMap<DeclId, SymbolId>,
     pub function_effects: HashMap<SymbolId, crate::effect::EffectSet>,
+    pub unsafe_functions: HashSet<SymbolId>,
+    pub unsafe_function_types: HashSet<SemanticTypeId>,
 }
 
 impl SemanticTables {
@@ -158,7 +185,7 @@ impl SemanticTables {
             closure_env_types: HashMap::new(),
             closure_env_ptr_types: HashMap::new(),
             dyn_method_indices: HashMap::new(),
-            dyn_coercions: HashMap::new(),
+            coercions: HashMap::new(),
             try_branches: HashMap::new(),
             for_loop_next: HashMap::new(),
             for_loop_subst: HashMap::new(),
@@ -180,9 +207,20 @@ impl SemanticTables {
             trait_bounds: HashMap::new(),
             impl_methods: HashMap::new(),
             method_impls: HashMap::new(),
+            trait_associated_types: HashMap::new(),
+            assoc_type_traits: HashMap::new(),
+            impl_associated_types: HashMap::new(),
+            assoc_type_names: HashMap::new(),
+            assoc_type_bounds: HashMap::new(),
+            impl_self_types: HashMap::new(),
+            impl_generic_params: HashMap::new(),
+            trait_impl_entries: Vec::new(),
+            decl_associated_types: HashMap::new(),
             macro_decls: HashMap::new(),
             decl_macros: HashMap::new(),
             function_effects: HashMap::new(),
+            unsafe_functions: HashSet::new(),
+            unsafe_function_types: HashSet::new(),
         }
     }
 }

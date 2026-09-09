@@ -27,7 +27,7 @@ pub struct MatchFailure {
 
 pub struct MacroEngine<'a> {
     pub arena: &'a mut AstArena,
-    pub source: &'a str,
+    pub source_manager: &'a mellis_common::source::SourceManager,
     pub file_id: FileId,
     pub symbol_table: &'a SymbolTable,
     pub tables: &'a SemanticTables,
@@ -39,16 +39,21 @@ pub struct MacroEngine<'a> {
 
 impl<'a> MacroEngine<'a> {
 
+    pub fn get_span_text(&self, span: mellis_common::ids::Span) -> &'a str {
+        &self.source_manager.get_file(span.file_id).unwrap().source[span.start as usize..span.end as usize]
+    }
+
+
     pub fn new(
         arena: &'a mut AstArena,
-        source: &'a str,
+        source_manager: &'a mellis_common::source::SourceManager,
         file_id: FileId,
         symbol_table: &'a SymbolTable,
         tables: &'a SemanticTables,
     ) -> Self {
         Self {
             arena,
-            source,
+            source_manager,
             file_id,
             symbol_table,
             tables,
@@ -76,7 +81,7 @@ impl<'a> MacroEngine<'a> {
         let decl = self.arena.decls[decl_id.0 as usize].clone();
         match decl {
             Decl::Function { name, params, return_type, body, .. } => {
-                let name_str = &self.source[name.start as usize..name.end as usize];
+                let name_str = self.get_span_text(name);
                 let func_sym = self.symbol_table.lookup_exact(name_str, self.current_scope);
                 let prev_scope = self.current_scope;
                 if let Some(sym_id) = func_sym {
@@ -151,7 +156,7 @@ impl<'a> MacroEngine<'a> {
                 }
             }
             Decl::Module { name, items, .. } => {
-                let name_str = &self.source[name.start as usize..name.end as usize];
+                let name_str = self.get_span_text(name);
                 let mod_sym = self.symbol_table.lookup_exact(name_str, self.current_scope);
                 let prev_scope = self.current_scope;
                 if let Some(sym_id) = mod_sym {
@@ -361,9 +366,9 @@ impl<'a> MacroEngine<'a> {
         match ty_data {
             Type::MacroCall { name, path, raw_tokens, span, .. } => {
                 let path_strs: Vec<&str> = if !path.is_empty() {
-                    path.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect()
+                    path.iter().map(|seg| self.get_span_text(*seg)).collect()
                 } else {
-                    vec![&self.source[name.start as usize..name.end as usize]]
+                    vec![self.get_span_text(name)]
                 };
                 let macro_name = path_strs.join("::");
 
@@ -374,6 +379,14 @@ impl<'a> MacroEngine<'a> {
                     );
                     return ty_id;
                 };
+
+                if !self.symbol_table.is_accessible(macro_sym, self.current_scope, None) {
+                    self.diagnostics.push(
+                        Diagnostic::error(format!("Macro `{}` is private and cannot be accessed from this scope", macro_name))
+                            .with_span(span),
+                    );
+                    return ty_id;
+                }
 
                 let Some(&decl_id) = self.tables.macro_decls.get(&macro_sym) else {
                     return ty_id;
@@ -405,7 +418,7 @@ impl<'a> MacroEngine<'a> {
                     match self.match_rule(&raw_tokens, rule) {
                         Ok(captures) => {
                             let transcribed = self.transcribe_rule(rule, &captures, span, expansion_id);
-                            let mut parser = Parser::from_tokens(transcribed, self.source, self.arena, self.file_id);
+                            let mut parser = Parser::from_tokens(transcribed, &self.source_manager.get_file(self.file_id).unwrap().source, Some(self.source_manager), self.arena, self.file_id);
                             match parser.parse_type() {
                                 Ok(parsed_ty_id) => {
                                     self.diagnostics.extend(parser.diagnostics.clone());
@@ -492,9 +505,9 @@ impl<'a> MacroEngine<'a> {
 
     fn expand_macro_call(&mut self, name: Span, path: &[Span], raw_tokens: &[Token], call_span: Span) -> ExprId {
         let path_strs: Vec<&str> = if !path.is_empty() {
-            path.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect()
+            path.iter().map(|seg| self.get_span_text(*seg)).collect()
         } else {
-            vec![&self.source[name.start as usize..name.end as usize]]
+            vec![self.get_span_text(name)]
         };
         let macro_name = path_strs.join("::");
 
@@ -513,6 +526,14 @@ impl<'a> MacroEngine<'a> {
             );
             return self.arena.alloc_expr(Expr::Literal(Token::new(TokenKind::IntegerLiteral, call_span), "0".to_string()));
         };
+
+        if !self.symbol_table.is_accessible(macro_sym, self.current_scope, None) {
+            self.diagnostics.push(
+                Diagnostic::error(format!("Macro `{}` is private and cannot be accessed from this scope", macro_name))
+                    .with_span(call_span),
+            );
+            return self.arena.alloc_expr(Expr::Literal(Token::new(TokenKind::IntegerLiteral, call_span), "0".to_string()));
+        }
 
         let Some(&decl_id) = self.tables.macro_decls.get(&macro_sym) else {
             self.diagnostics.push(
@@ -551,7 +572,7 @@ impl<'a> MacroEngine<'a> {
                     let transcribed = self.transcribe_rule(rule, &captures, call_span, expansion_id);
                     
                     // Parse transcribed tokens as expression
-                    let mut parser = Parser::from_tokens(transcribed, self.source, self.arena, self.file_id);
+                    let mut parser = Parser::from_tokens(transcribed, &self.source_manager.get_file(self.file_id).unwrap().source, Some(self.source_manager), self.arena, self.file_id);
                     match parser.parse_expression(true) {
                         Ok(parsed_expr) => {
                             self.diagnostics.extend(parser.diagnostics);
@@ -606,13 +627,20 @@ impl<'a> MacroEngine<'a> {
         has_semi: bool,
     ) -> Option<Vec<Item>> {
         let path_strs: Vec<&str> = if !path.is_empty() {
-            path.iter().map(|seg| &self.source[seg.start as usize..seg.end as usize]).collect()
+            path.iter().map(|seg| self.get_span_text(*seg)).collect()
         } else {
-            vec![&self.source[name.start as usize..name.end as usize]]
+            vec![self.get_span_text(name)]
         };
         let macro_name = path_strs.join("::");
 
         let macro_sym = self.symbol_table.lookup_macro(&path_strs, self.current_scope)?;
+        if !self.symbol_table.is_accessible(macro_sym, self.current_scope, None) {
+            self.diagnostics.push(
+                Diagnostic::error(format!("Macro `{}` is private and cannot be accessed from this scope", macro_name))
+                    .with_span(call_span),
+            );
+            return None;
+        }
         let &decl_id = self.tables.macro_decls.get(&macro_sym)?;
         let rules = if let Decl::Macro { rules, .. } = &self.arena.decls[decl_id.0 as usize] {
             rules.clone()
@@ -639,7 +667,7 @@ impl<'a> MacroEngine<'a> {
         let has_trace = self.tables.macro_decls.get(&macro_sym).and_then(|id| {
             let decl = &self.arena.decls[id.0 as usize];
             if let Decl::Macro { annotations, .. } = decl {
-                Some(annotations.iter().any(|a| &self.source[a.name.start as usize..a.name.end as usize] == "macro_trace"))
+                Some(annotations.iter().any(|a| self.get_span_text(a.name) == "macro_trace"))
             } else {
                 None
             }
@@ -655,7 +683,7 @@ impl<'a> MacroEngine<'a> {
                 let transcribed = self.transcribe_rule(rule, &captures, call_span, expansion_id);
 
                 // Try parsing items (declarations and statements)
-                let mut parser = Parser::from_tokens(transcribed.clone(), self.source, self.arena, self.file_id);
+                let mut parser = Parser::from_tokens(transcribed.clone(), &self.source_manager.get_file(self.file_id).unwrap().source, Some(self.source_manager), self.arena, self.file_id);
                 let mut parsed_items = Vec::new();
                 let mut success = true;
                 while !parser.is_at_end() {
@@ -678,7 +706,7 @@ impl<'a> MacroEngine<'a> {
                 }
 
                 // Fallback: try parsing as expression and wrapping in Stmt::Expr
-                let mut parser = Parser::from_tokens(transcribed, self.source, self.arena, self.file_id);
+                let mut parser = Parser::from_tokens(transcribed, &self.source_manager.get_file(self.file_id).unwrap().source, Some(self.source_manager), self.arena, self.file_id);
                 if let Ok(expr_id) = parser.parse_expression(true) {
                     self.diagnostics.extend(parser.diagnostics);
                     let final_expr = self.expand_expr(expr_id);
@@ -785,7 +813,7 @@ impl<'a> MacroEngine<'a> {
                     if pos >= tokens.len() {
                         return Err(MatchFailure { pos, expected: format!("{:?}", fragment), span: *name });
                     }
-                    let var_name = self.source[name.start as usize..name.end as usize].to_string();
+                    let var_name = self.get_span_text(*name).to_string();
                     let consumed = self.capture_fragment_parser(tokens, pos, *fragment).map_err(|e| MatchFailure { pos, expected: e, span: *name })?;
                     if consumed == 0 {
                         return Err(MatchFailure { pos, expected: format!("{:?}", fragment), span: *name });
@@ -869,7 +897,7 @@ impl<'a> MacroEngine<'a> {
             FragmentKind::Expr | FragmentKind::Ty | FragmentKind::Tt | FragmentKind::Pat | FragmentKind::Path | FragmentKind::Meta => {
                 let remaining = tokens[pos..].to_vec();
                 let mut scratch_arena = AstArena::new();
-                let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
+                let mut parser = Parser::from_tokens(remaining, &self.source_manager.get_file(self.file_id).unwrap().source, Some(self.source_manager), &mut scratch_arena, self.file_id);
                 
                 let success = match fragment {
                     FragmentKind::Expr => parser.parse_expression(true).is_ok(),
@@ -937,7 +965,7 @@ impl<'a> MacroEngine<'a> {
             FragmentKind::Stmt => {
                 let remaining = tokens[pos..].to_vec();
                 let mut scratch_arena = AstArena::new();
-                let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
+                let mut parser = Parser::from_tokens(remaining, &self.source_manager.get_file(self.file_id).unwrap().source, Some(self.source_manager), &mut scratch_arena, self.file_id);
                 match parser.parse_stmt() {
                     Ok(_) if parser.pos() > 0 => Ok(parser.pos()),
                     _ => Err(format!("expected {:?}", fragment)),
@@ -946,7 +974,7 @@ impl<'a> MacroEngine<'a> {
             FragmentKind::Block => {
                 let remaining = tokens[pos..].to_vec();
                 let mut scratch_arena = AstArena::new();
-                let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
+                let mut parser = Parser::from_tokens(remaining, &self.source_manager.get_file(self.file_id).unwrap().source, Some(self.source_manager), &mut scratch_arena, self.file_id);
                 match parser.parse_block_stmt() {
                     Ok(_) if parser.pos() > 0 => Ok(parser.pos()),
                     _ => Err(format!("expected {:?}", fragment)),
@@ -955,7 +983,7 @@ impl<'a> MacroEngine<'a> {
             FragmentKind::Item => {
                 let remaining = tokens[pos..].to_vec();
                 let mut scratch_arena = AstArena::new();
-                let mut parser = Parser::from_tokens(remaining, self.source, &mut scratch_arena, self.file_id);
+                let mut parser = Parser::from_tokens(remaining, &self.source_manager.get_file(self.file_id).unwrap().source, Some(self.source_manager), &mut scratch_arena, self.file_id);
                 match parser.parse_item() {
                     Ok(_) if parser.pos() > 0 => Ok(parser.pos()),
                     _ => Err(format!("expected {:?}", fragment)),
@@ -1007,7 +1035,7 @@ impl<'a> MacroEngine<'a> {
                     output.push(Token::new(close_kind, close_span));
                 }
                 TranscriberElement::MetaVar { name, .. } => {
-                    let var_name = &self.source[name.start as usize..name.end as usize];
+                    let var_name = self.get_span_text(*name);
                     if let Some(captured) = captures.get(var_name) {
                         self.push_capture(captured, output, call_span);
                     } else {
@@ -1059,7 +1087,7 @@ impl<'a> MacroEngine<'a> {
         for element in elements {
             match element {
                 TranscriberElement::MetaVar { name, .. } => {
-                    let var_name = &self.source[name.start as usize..name.end as usize];
+                    let var_name = self.get_span_text(*name);
                     if let Some(CapturedFragment::Repeated(list)) = captures.get(var_name) {
                         *max_len = (*max_len).max(list.len());
                     }
@@ -1079,7 +1107,7 @@ impl<'a> MacroEngine<'a> {
         for element in elements {
             match element {
                 TranscriberElement::MetaVar { name, .. } => {
-                    let var_name = &self.source[name.start as usize..name.end as usize];
+                    let var_name = self.get_span_text(*name);
                     if let Some(CapturedFragment::Repeated(list)) = captures.get(var_name) {
                         if idx < list.len() {
                             sub_captures.insert(var_name.to_string(), list[idx].clone());

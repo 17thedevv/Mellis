@@ -20,6 +20,7 @@ pub enum SymbolKind {
     Trait,
     TraitMethod,
     Alias,
+    AssociatedType,
     Module,
     Type,
     TypeParam,
@@ -183,13 +184,43 @@ impl SymbolTable {
             .push(symbol_id);
     }
 
+    pub fn enclosing_module_scope(&self, mut scope_id: ScopeId) -> ScopeId {
+        loop {
+            let scope = &self.scopes[scope_id.0 as usize];
+            if matches!(scope.kind, ScopeKind::Module | ScopeKind::Global) {
+                return scope_id;
+            }
+            if let Some(parent) = scope.parent {
+                scope_id = parent;
+            } else {
+                return scope_id;
+            }
+        }
+    }
+
     pub fn is_accessible(&self, sym_id: SymbolId, current_scope: ScopeId, current_provider: Option<ProviderId>) -> bool {
         let sym = &self.symbols[sym_id.0 as usize];
         match sym.visibility {
             mellis_ast::Visibility::Public => true,
             mellis_ast::Visibility::Internal => sym.provider_id == current_provider,
-            mellis_ast::Visibility::Private => self.is_ancestor(sym.scope, current_scope) || sym.scope == current_scope,
+            mellis_ast::Visibility::Private => {
+                if sym.provider_id.is_some() && sym.provider_id != current_provider {
+                    return false;
+                }
+                let sym_mod = self.enclosing_module_scope(sym.scope);
+                let cur_mod = self.enclosing_module_scope(current_scope);
+                sym_mod == cur_mod || self.is_ancestor(sym_mod, cur_mod)
+            }
         }
+    }
+
+    pub fn is_symbol_foreign(&self, sym_id: SymbolId, current_provider: Option<ProviderId>) -> bool {
+        let sym = &self.symbols[sym_id.0 as usize];
+        sym.provider_id.is_some() && sym.provider_id != current_provider
+    }
+
+    pub fn is_symbol_local(&self, sym_id: SymbolId, current_provider: Option<ProviderId>) -> bool {
+        !self.is_symbol_foreign(sym_id, current_provider)
     }
 
     pub fn lookup(&self, name: &str, start_scope: ScopeId) -> Option<SymbolId> {

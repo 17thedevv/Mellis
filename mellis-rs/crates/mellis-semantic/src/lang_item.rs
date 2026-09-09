@@ -70,6 +70,7 @@ lang_item_table! {
     (TestTrait, "test_trait", Trait);
     (TestStruct, "test_struct", Struct);
     (Drop, "drop", Trait);
+    (Copy, "copy", Trait);
     (DropFn, "drop_fn", Method);
     (Try, "try", Trait);
     (TryFromOutput, "try_from_output", Method);

@@ -6,7 +6,8 @@ use mellis_common::ids::FileId;
 
 fn check_exhaustiveness(source: &str) -> bool {
     let mut arena = AstArena::new();
-    let file_id = FileId(0);
+    let mut source_manager = mellis_common::source::SourceManager::new();
+    let file_id = source_manager.add_file("test.ms".to_string(), source.to_string());
     let lexer = Lexer::new(source, file_id);
     let mut parser = Parser::new(lexer, &mut arena, file_id);
 
@@ -16,10 +17,10 @@ fn check_exhaustiveness(source: &str) -> bool {
     };
 
     let mut semantic_ctx = SemanticContext::new();
-    let mut resolver = Resolver::new(&mut semantic_ctx, &arena, source);
+    let mut resolver = Resolver::new(&mut semantic_ctx, &arena, &source_manager);
     resolver.resolve_items(&items);
     
-    let mut typechecker = TypeChecker::new(&mut semantic_ctx, &arena, source);
+    let mut typechecker = TypeChecker::new(&mut semantic_ctx, &arena, &source_manager);
     typechecker.typecheck_items(&items);
     
     // Return true if NO diagnostic contains "Match is not exhaustive"

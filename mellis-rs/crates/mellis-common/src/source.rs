@@ -73,6 +73,17 @@ impl SourceManager {
         id
     }
 
+        pub fn append_to_file(&mut self, id: FileId, extra: &str) {
+        if let Some(file) = self.files.get_mut(id.0 as usize) {
+            let offset = file.source.len();
+            file.source.push_str(extra);
+            for (i, byte) in extra.bytes().enumerate() {
+                if byte == b'\n' {
+                    file.line_starts.push((offset + i + 1) as u32);
+                }
+            }
+        }
+    }
     pub fn get_file(&self, id: FileId) -> Option<&SourceFile> {
         self.files.get(id.0 as usize)
     }

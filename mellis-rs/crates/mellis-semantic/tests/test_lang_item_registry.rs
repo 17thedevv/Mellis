@@ -2,9 +2,11 @@ use mellis_ast::AstArena;
 use mellis_semantic::{SemanticContext, Resolver};
 
 fn run_check(src: &str, allow_internal: bool) -> SemanticContext {
+    let mut source_manager = mellis_common::source::SourceManager::new();
+    let file_id = source_manager.add_file("test.ms".to_string(), src.to_string());
     let mut arena = AstArena::new();
-    let lexer = mellis_lexer::lexer::Lexer::new(src, mellis_common::ids::FileId(0));
-    let mut parser = mellis_parser::Parser::new(lexer, &mut arena, mellis_common::ids::FileId(0));
+    let lexer = mellis_lexer::lexer::Lexer::new(src, file_id);
+    let mut parser = mellis_parser::Parser::new(lexer, &mut arena, file_id);
     let items = parser.parse_file().expect("Parse failed");
     if !parser.diagnostics.is_empty() {
         panic!("Parser errors: {:?}", parser.diagnostics);
@@ -13,7 +15,7 @@ fn run_check(src: &str, allow_internal: bool) -> SemanticContext {
     let mut ctx = SemanticContext::new();
     ctx.allow_internal_lang_items = allow_internal;
     
-    let mut resolver = Resolver::new(&mut ctx, &arena, src);
+    let mut resolver = Resolver::new(&mut ctx, &arena, &source_manager);
     resolver.resolve_items(&items);
     
     ctx

@@ -33,20 +33,25 @@ pub enum DeclarationContext {
 pub struct Resolver<'a, 'b, 'c> {
     pub ctx: &'a mut SemanticContext,
     pub arena: &'b AstArena,
-    pub source: &'c str,
+    pub source_manager: &'c mellis_common::source::SourceManager,
     pub current_scope: ScopeId,
     pub module_provider: Option<&'a dyn ModuleNamespaceProvider<'a>>,
     pub active_lambdas: Vec<(mellis_ast::ExprId, ScopeId)>,
 }
 
 impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
-    pub fn new(ctx: &'a mut SemanticContext, arena: &'b AstArena, source: &'c str) -> Self {
+
+    pub fn get_span_text(&self, span: mellis_common::ids::Span) -> &str {
+        &self.source_manager.get_file(span.file_id).unwrap().source[span.start as usize..span.end as usize]
+    }
+
+    pub fn new(ctx: &'a mut SemanticContext, arena: &'b AstArena, source_manager: &'c mellis_common::source::SourceManager) -> Self {
         // Assume global scope is 0
         let global_scope = ScopeId(0);
         Self {
             ctx,
             arena,
-            source,
+            source_manager,
             current_scope: global_scope,
             module_provider: None,
             active_lambdas: Vec::new(),
@@ -81,7 +86,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                 Decl::Macro {
                     name, visibility, ..
                 } => {
-                    let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                    let name_str = self.get_span_text(*name).to_string();
                     let sym_id = self.ctx.symbol_table.declare_symbol(
                         name_str,
                         SymbolKind::Macro,
@@ -102,7 +107,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     visibility,
                     ..
                 } => {
-                    let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                    let name_str = self.get_span_text(*name).to_string();
                     let sym_id = if let Some(existing) = self
                         .ctx
                         .symbol_table
@@ -140,8 +145,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     self.current_scope = prev_scope;
                 }
                 Decl::Using { path, alias, .. } => {
-                    let alias_str = self.source[alias.start as usize..alias.end as usize].trim_matches('"').to_string();
-                    let path_str: Vec<&str> = path.iter().map(|seg| self.source[seg.start as usize..seg.end as usize].trim_matches('"')).collect();
+                    let alias_str = self.get_span_text(*alias).trim_matches('"').to_string();
+                    let path_str: Vec<&str> = path.iter().map(|seg| self.get_span_text(*seg).trim_matches('"')).collect();
                     let target_scope_opt = if path_str.len() == 1 {
                         self.ctx
                             .symbol_table
@@ -184,14 +189,25 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(format!("unresolved module or path `{}`", alias_str)).with_span(*alias));
                     }
                 }
-                Decl::Import { name, .. } => {
-                    let name_str = self.source[name.start as usize..name.end as usize].trim_matches('"').to_string();
-                    let target_scope = if let Some(provider) = self.module_provider {
-                        provider.get_module_scope(&name_str)
-                    } else if let Some(&scope) = self.ctx.external_module_scopes.get(&name_str) {
-                        Some(scope)
-                    } else {
-                        self.ctx.symbol_table.lookup(&name_str, crate::symbol::ScopeId(0)).and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope)
+                Decl::Import { name, kind, .. } => {
+                    let name_str = self.get_span_text(*name).trim_matches('"').to_string();
+                    let target_scope = match kind {
+                        mellis_ast::ImportKind::External => {
+                            if let Some(&scope) = self.ctx.external_module_scopes.get(&name_str) {
+                                Some(scope)
+                            } else if let Some(provider) = self.module_provider {
+                                provider.get_module_scope(&name_str)
+                            } else {
+                                None
+                            }
+                        }
+                        mellis_ast::ImportKind::Local => {
+                            if let Some(provider) = self.module_provider {
+                                provider.get_module_scope(&name_str)
+                            } else {
+                                self.ctx.symbol_table.lookup(&name_str, crate::symbol::ScopeId(0)).and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope)
+                            }
+                        }
                     };
                     if let Some(scope) = target_scope {
                         // Skip if already injected by registry
@@ -227,7 +243,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
         target: crate::lang_item::LangItemTarget,
     ) {
         for annot in annotations {
-            let attr_name = &self.source[annot.name.start as usize..annot.name.end as usize];
+            let attr_name = self.get_span_text(annot.name);
             if attr_name == "lang" {
                 if !self.ctx.allow_internal_lang_items {
                     self.ctx.diagnostics.push(
@@ -300,7 +316,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
         decl_kind: &'static str,
     ) {
         for annot in annotations {
-            let attr_name = &self.source[annot.name.start as usize..annot.name.end as usize];
+            let attr_name = self.get_span_text(annot.name);
             if attr_name == "lang" {
                 if !self.ctx.allow_internal_lang_items {
                     self.ctx.diagnostics.push(
@@ -354,7 +370,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         ..
                     } => {
                         let name_str =
-                            self.source[name.start as usize..name.end as usize].to_string();
+                            self.get_span_text(*name).to_string();
 
                         let effective_visibility = if let DeclarationContext::TraitMethod(v) = context {
                             v
@@ -386,8 +402,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
 
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
-                                let gp_name_str = self.source
-                                    [gp.name.start as usize..gp.name.end as usize]
+                                let gp_name_str = self.source_manager.get_file(gp.name.file_id).unwrap().source[gp.name.start as usize..gp.name.end as usize]
                                     .to_string();
                                 let gp_sym_id = self.ctx.symbol_table.declare_symbol(
                                     gp_name_str,
@@ -417,8 +432,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             {
                                 let mut is_noescape = false;
                                 for ann in annotations {
-                                    let ann_name = &self.source
-                                        [ann.name.start as usize..ann.name.end as usize];
+                                    let ann_name = &self.source_manager.get_file(ann.name.file_id).unwrap().source[ann.name.start as usize..ann.name.end as usize];
                                     if ann_name == "sync_noescape" {
                                         is_noescape = true;
                                         break;
@@ -426,8 +440,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 }
                                 noescapes.push(is_noescape);
 
-                                let p_name_str = self.source
-                                    [p_name.start as usize..p_name.end as usize]
+                                let p_name_str = self.source_manager.get_file(p_name.file_id).unwrap().source[p_name.start as usize..p_name.end as usize]
                                     .to_string();
                                 let p_sym_id = self.ctx.symbol_table.declare_symbol(
                                     p_name_str,
@@ -454,7 +467,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         ..
                     } => {
                         let name_str =
-                            self.source[name.start as usize..name.end as usize].to_string();
+                            self.get_span_text(*name).to_string();
                         let sym_id = self.ctx.symbol_table.declare_symbol(
                             name_str,
                             if *is_mutable {
@@ -484,7 +497,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         ..
                     } => {
                         let name_str =
-                            self.source[name.start as usize..name.end as usize].to_string();
+                            self.get_span_text(*name).to_string();
                         let sym_id = self.ctx.symbol_table.declare_symbol(
                             name_str,
                             SymbolKind::Struct,
@@ -505,8 +518,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
-                                let gp_name_str = self.source
-                                    [gp.name.start as usize..gp.name.end as usize]
+                                let gp_name_str = self.source_manager.get_file(gp.name.file_id).unwrap().source[gp.name.start as usize..gp.name.end as usize]
                                     .to_string();
                                 let gp_sym_id = self.ctx.symbol_table.declare_symbol(
                                     gp_name_str,
@@ -540,7 +552,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         ..
                     } => {
                         let name_str =
-                            self.source[name.start as usize..name.end as usize].to_string();
+                            self.get_span_text(*name).to_string();
                         let sym_id = self.ctx.symbol_table.declare_symbol(
                             name_str.clone(),
                             SymbolKind::Struct, // Enums use Struct kind for now
@@ -561,8 +573,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
-                                let gp_name_str = self.source
-                                    [gp.name.start as usize..gp.name.end as usize]
+                                let gp_name_str = self.source_manager.get_file(gp.name.file_id).unwrap().source[gp.name.start as usize..gp.name.end as usize]
                                     .to_string();
                                 let gp_sym_id = self.ctx.symbol_table.declare_symbol(
                                     gp_name_str,
@@ -583,8 +594,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
 
                         // Declare each variant as a symbol accessible via VariantName inside enum scope
                         for (idx, variant) in variants.iter().enumerate() {
-                            let v_name_str = self.source
-                                [variant.name.start as usize..variant.name.end as usize]
+                            let v_name_str = self.source_manager.get_file(variant.name.file_id).unwrap().source[variant.name.start as usize..variant.name.end as usize]
                                 .to_string();
                             let v_sym_id = self.ctx.symbol_table.declare_symbol(
                                 v_name_str,
@@ -606,10 +616,11 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         visibility,
                         generic_params,
                         annotations,
+                        associated_types,
                         ..
                     } => {
                         let name_str =
-                            self.source[name.start as usize..name.end as usize].to_string();
+                            self.get_span_text(*name).to_string();
                         let sym_id = self.ctx.symbol_table.declare_symbol(
                             name_str.clone(),
                             SymbolKind::Trait,
@@ -630,8 +641,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
-                                let gp_name_str = self.source
-                                    [gp.name.start as usize..gp.name.end as usize]
+                                let gp_name_str = self.source_manager.get_file(gp.name.file_id).unwrap().source[gp.name.start as usize..gp.name.end as usize]
                                     .to_string();
                                 let gp_sym_id = self.ctx.symbol_table.declare_symbol(
                                     gp_name_str,
@@ -649,6 +659,32 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 self.ctx.tables.symbol_decls.insert(gp_sym_id, *decl_id);
                             }
                         }
+
+                        let mut trait_assoc_syms = Vec::new();
+                        for assoc_id in associated_types {
+                            let decl = &self.arena.decls[assoc_id.0 as usize];
+                            if let Decl::TypeAlias { name: assoc_name, visibility: assoc_vis, .. } = decl {
+                                let name_str = self.get_span_text(*assoc_name).to_string();
+                                let assoc_sym = self.ctx.symbol_table.declare_symbol(
+                                    name_str.clone(),
+                                    SymbolKind::AssociatedType,
+                                    self.current_scope,
+                                    *assoc_name,
+                                    Some(*assoc_id),
+                                    *assoc_vis,
+                                    &mut self.ctx.diagnostics,
+                                );
+                                self.ctx.tables.decl_symbols.insert(*assoc_id, assoc_sym);
+                                self.ctx.tables.symbol_decls.insert(assoc_sym, *assoc_id);
+                                self.ctx.tables.assoc_type_traits.insert(assoc_sym, sym_id);
+                                self.ctx.tables.assoc_type_names.insert((sym_id, name_str), assoc_sym);
+                                trait_assoc_syms.push(assoc_sym);
+                            }
+                        }
+                        self.ctx
+                            .tables
+                            .trait_associated_types
+                            .insert(sym_id, trait_assoc_syms);
 
                         let mut trait_method_syms = Vec::new();
                         for method_id in methods {
@@ -670,6 +706,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         methods,
                         generic_params,
                         annotations,
+                        associated_types,
                         ..
                     } => {
                         self.check_unsupported_lang_item(annotations, "impl");
@@ -678,8 +715,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
 
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
-                                let gp_name_str = self.source
-                                    [gp.name.start as usize..gp.name.end as usize]
+                                let gp_name_str = self.source_manager.get_file(gp.name.file_id).unwrap().source[gp.name.start as usize..gp.name.end as usize]
                                     .to_string();
                                 let gp_sym_id = self.ctx.symbol_table.declare_symbol(
                                     gp_name_str,
@@ -698,9 +734,32 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             }
                         }
 
+                        for assoc_id in associated_types {
+                            let decl = &self.arena.decls[assoc_id.0 as usize];
+                            if let Decl::TypeAlias { name: assoc_name, visibility: assoc_vis, .. } = decl {
+                                let name_str = self.get_span_text(*assoc_name).to_string();
+                                let assoc_sym = self.ctx.symbol_table.declare_symbol(
+                                    name_str,
+                                    SymbolKind::AssociatedType,
+                                    self.current_scope,
+                                    *assoc_name,
+                                    Some(*assoc_id),
+                                    *assoc_vis,
+                                    &mut self.ctx.diagnostics,
+                                );
+                                self.ctx.tables.decl_symbols.insert(*assoc_id, assoc_sym);
+                                self.ctx.tables.symbol_decls.insert(assoc_sym, *assoc_id);
+                            }
+                        }
+
+                        let method_context = if trait_type.is_some() {
+                            DeclarationContext::TraitMethod(mellis_ast::Visibility::Public)
+                        } else {
+                            DeclarationContext::ImplMethod
+                        };
                         for method_id in methods {
                             let item = Item::Decl(*method_id);
-                            self.declare_item(&item, DeclarationContext::ImplMethod);
+                            self.declare_item(&item, method_context);
                         }
                         self.exit_scope();
 
@@ -709,14 +768,14 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             if let mellis_ast::Type::Named { segments, .. } = self_ast_ty {
                                 if segments.len() == 1 {
                                     let s = &segments[0];
-                                    let name = &self.source[s.start as usize..s.end as usize];
+                                    let name = self.get_span_text(*s);
                                     self.ctx.symbol_table.lookup_with_ctxt(name, s.ctxt, self.current_scope)
                                         .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(name, s.ctxt, crate::ScopeId(0)))
                                 } else {
                                     let mut scope = self.current_scope;
                                     let mut res = None;
                                     for (i, seg) in segments.iter().enumerate() {
-                                        let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                                        let seg_name = self.get_span_text(*seg);
                                         let sym_id = if i == 0 {
                                             self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, scope)
                                                 .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, crate::ScopeId(0)))
@@ -749,14 +808,14 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 if let mellis_ast::Type::Named { segments, .. } = trait_ast_ty {
                                     if segments.len() == 1 {
                                         let s = &segments[0];
-                                        let name = &self.source[s.start as usize..s.end as usize];
+                                        let name = self.get_span_text(*s);
                                         self.ctx.symbol_table.lookup_with_ctxt(name, s.ctxt, self.current_scope)
                                             .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(name, s.ctxt, crate::ScopeId(0)))
                                     } else {
                                         let mut scope = self.current_scope;
                                         let mut res = None;
                                         for (i, seg) in segments.iter().enumerate() {
-                                            let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                                            let seg_name = self.get_span_text(*seg);
                                             let sym_id = if i == 0 {
                                                 self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, scope)
                                                     .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, crate::ScopeId(0)))
@@ -789,16 +848,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 trait_id: trait_sym_opt,
                                 self_type_def: self_sym,
                             };
-                            
-                            if trait_sym_opt.is_some() && self.ctx.tables.trait_impls.contains_key(&key) {
-                                let span = if let mellis_ast::Type::Named { segments, .. } = &self.arena.types[self_type.0 as usize] {
-                                    *segments.last().unwrap()
-                                } else {
-                                    mellis_common::Span::new(mellis_common::ids::FileId(0), 0, 0)
-                                };
-                                self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error("conflicting implementations for trait".to_string()).with_span(span));
-                            }
-                            
+
                             self.ctx
                                 .tables
                                 .trait_impls
@@ -816,9 +866,11 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             self.ctx
                                 .tables
                                 .impl_methods
-                                .entry(key)
+                                .entry(key.clone())
                                 .or_default()
                                 .extend(method_syms);
+
+
                         }
                     }
                     Decl::Macro {
@@ -826,7 +878,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     } => {
                         if !self.ctx.tables.decl_macros.contains_key(decl_id) {
                             let name_str =
-                                self.source[name.start as usize..name.end as usize].to_string();
+                                self.get_span_text(*name).to_string();
                             let sym_id = self.ctx.symbol_table.declare_symbol(
                                 name_str,
                                 SymbolKind::Macro,
@@ -851,7 +903,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         ..
                     } => {
                         let name_str =
-                            self.source[name.start as usize..name.end as usize].to_string();
+                            self.get_span_text(*name).to_string();
                         let sym_id = self.ctx.symbol_table.declare_symbol(
                             name_str,
                             SymbolKind::Alias,
@@ -870,8 +922,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
-                                let gp_name_str = self.source
-                                    [gp.name.start as usize..gp.name.end as usize]
+                                let gp_name_str = self.source_manager.get_file(gp.name.file_id).unwrap().source[gp.name.start as usize..gp.name.end as usize]
                                     .to_string();
                                 let gp_sym_id = self.ctx.symbol_table.declare_symbol(
                                     gp_name_str,
@@ -899,7 +950,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         ..
                     } => {
                         let name_str =
-                            self.source[name.start as usize..name.end as usize].to_string();
+                            self.get_span_text(*name).to_string();
                         let sym_id = if let Some(existing) = self
                             .ctx
                             .symbol_table
@@ -939,10 +990,10 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     }
                     Decl::Using { path, alias, .. } => {
                         let alias_str =
-                            self.source[alias.start as usize..alias.end as usize].trim_matches('"').to_string();
+                            self.get_span_text(*alias).trim_matches('"').to_string();
                         let path_str: Vec<&str> = path
                             .iter()
-                            .map(|seg| self.source[seg.start as usize..seg.end as usize].trim_matches('"'))
+                            .map(|seg| self.get_span_text(*seg).trim_matches('"'))
                             .collect();
                         let target_scope_opt = if path_str.len() == 1 {
                             self.ctx
@@ -986,15 +1037,26 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             self.ctx.diagnostics.push(mellis_common::diagnostic::Diagnostic::error(format!("unresolved module or path `{}`", alias_str)).with_span(*alias));
                         }
                     }
-                    Decl::Import { name, .. } => {
+                    Decl::Import { name, kind, .. } => {
                         let name_str =
-                            self.source[name.start as usize..name.end as usize].trim_matches('"').to_string();
-                        let target_scope = if let Some(provider) = self.module_provider {
-                            provider.get_module_scope(&name_str)
-                        } else if let Some(&scope) = self.ctx.external_module_scopes.get(&name_str) {
-                            Some(scope)
-                        } else {
-                            self.ctx.symbol_table.lookup(&name_str, crate::symbol::ScopeId(0)).and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope)
+                            self.get_span_text(*name).trim_matches('"').to_string();
+                        let target_scope = match kind {
+                            mellis_ast::ImportKind::External => {
+                                if let Some(&scope) = self.ctx.external_module_scopes.get(&name_str) {
+                                    Some(scope)
+                                } else if let Some(provider) = self.module_provider {
+                                    provider.get_module_scope(&name_str)
+                                } else {
+                                    None
+                                }
+                            }
+                            mellis_ast::ImportKind::Local => {
+                                if let Some(provider) = self.module_provider {
+                                    provider.get_module_scope(&name_str)
+                                } else {
+                                    self.ctx.symbol_table.lookup(&name_str, crate::symbol::ScopeId(0)).and_then(|s| self.ctx.symbol_table.symbols[s.0 as usize].inner_scope)
+                                }
+                            }
                         };
                         if let Some(scope) = target_scope {
                             // Skip if already injected by registry
@@ -1039,7 +1101,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                 let last_span = segments.last().copied();
                 let ctxt = last_span.map(|s| s.ctxt).unwrap_or(mellis_common::ids::SyntaxContext::ROOT);
                 let symbol = if segments.len() == 1 {
-                    let name = segments.last().map(|span| &self.source[span.start as usize..span.end as usize]);
+                    let name = segments.last().map(|span| self.get_span_text(*span));
                     name.and_then(|n| {
                         self.ctx.symbol_table.lookup_with_ctxt(n, ctxt, self.current_scope)
                             .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(n, ctxt, crate::ScopeId(0)))
@@ -1048,7 +1110,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     let mut scope = self.current_scope;
                     let mut res = None;
                     for (i, seg) in segments.iter().enumerate() {
-                        let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                        let seg_name = self.get_span_text(*seg);
                         let sym_id = if i == 0 {
                             self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, scope)
                                 .or_else(|| self.ctx.symbol_table.lookup_with_ctxt(seg_name, seg.ctxt, crate::ScopeId(0)))
@@ -1326,14 +1388,14 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         if i > 0 {
                             full_name.push_str("::");
                         }
-                        full_name.push_str(&self.source[seg.start as usize..seg.end as usize]);
+                        full_name.push_str(self.get_span_text(*seg));
                     }
                     
                     let mut resolved_sym = self.ctx.symbol_table.lookup(&full_name, self.current_scope);
                     if resolved_sym.is_none() {
                         let mut current_scope = self.current_scope;
                         for (i, seg) in segments.iter().enumerate() {
-                            let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                            let seg_name = self.get_span_text(*seg);
                             let sym_id = if i == 0 {
                                 self.ctx.symbol_table.lookup(seg_name, current_scope)
                             } else {
@@ -1364,7 +1426,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     // If not found, we shouldn't declare a variable with a path!
                     // It's just unresolved. We might want to emit an error, but let's leave it for now.
                 } else if let Some(name) = segments.last() {
-                    let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                    let name_str = self.get_span_text(*name).to_string();
 
                     // Check if it's an enum variant (brought into scope, though in Mellis they are usually Enum::Variant)
                     if let Some(existing_sym_id) =
@@ -1404,14 +1466,14 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     if i > 0 {
                         full_name.push_str("::");
                     }
-                    full_name.push_str(&self.source[seg.start as usize..seg.end as usize]);
+                    full_name.push_str(self.get_span_text(*seg));
                 }
                 
                 let mut resolved_sym = self.ctx.symbol_table.lookup(&full_name, self.current_scope);
                 if resolved_sym.is_none() {
                     let mut current_scope = self.current_scope;
                     for (i, seg) in path.iter().enumerate() {
-                        let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                        let seg_name = self.get_span_text(*seg);
                         let sym_id = if i == 0 {
                             self.ctx.symbol_table.lookup(seg_name, current_scope)
                         } else {
@@ -1419,6 +1481,17 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         };
                         
                         if let Some(id) = sym_id {
+                            if i > 0 && !self.ctx.symbol_table.is_accessible(id, self.current_scope, self.ctx.current_provider) {
+                                self.ctx.diagnostics.push(
+                                    mellis_common::Diagnostic::error(format!(
+                                        "Symbol '{}' is private and cannot be accessed from this scope",
+                                        seg_name
+                                    ))
+                                    .with_span(*seg),
+                                );
+                                resolved_sym = None;
+                                break;
+                            }
                             resolved_sym = Some(id);
                             if let Some(inner) = self.ctx.symbol_table.symbols[id.0 as usize].inner_scope {
                                 current_scope = inner;
@@ -1433,9 +1506,20 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                 }
 
                 if let Some(existing_sym_id) = resolved_sym {
-                    let sym = self.ctx.symbol_table.get_symbol(existing_sym_id);
-                    if matches!(sym.kind, SymbolKind::EnumVariant(_)) {
-                        self.ctx.tables.pat_symbols.insert(*pat_id, existing_sym_id);
+                    if !self.ctx.symbol_table.is_accessible(existing_sym_id, self.current_scope, self.ctx.current_provider) {
+                        let span = path.last().copied().unwrap_or(mellis_common::Span::default());
+                        self.ctx.diagnostics.push(
+                            mellis_common::Diagnostic::error(format!(
+                                "Symbol '{}' is private and cannot be accessed from this scope",
+                                full_name
+                            ))
+                            .with_span(span),
+                        );
+                    } else {
+                        let sym = self.ctx.symbol_table.get_symbol(existing_sym_id);
+                        if matches!(sym.kind, SymbolKind::EnumVariant(_)) {
+                            self.ctx.tables.pat_symbols.insert(*pat_id, existing_sym_id);
+                        }
                     }
                 }
                 for element in fields {
@@ -1460,7 +1544,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                 if !segments.is_empty() {
                     let name_str = segments
                         .iter()
-                        .map(|seg| &self.source[seg.start as usize..seg.end as usize])
+                        .map(|seg| self.get_span_text(*seg))
                         .collect::<Vec<_>>()
                         .join("::");
 
@@ -1474,7 +1558,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         let mut current_scope = self.current_scope;
 
                         for (i, seg) in segments.iter().enumerate() {
-                            let seg_name = &self.source[seg.start as usize..seg.end as usize];
+                            let seg_name = self.get_span_text(*seg);
 
                             let sym_id = if i == 0 {
                                 self.ctx.symbol_table.lookup_with_ctxt(
@@ -1491,6 +1575,17 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             };
 
                             if let Some(id) = sym_id {
+                                if i > 0 && !self.ctx.symbol_table.is_accessible(id, self.current_scope, self.ctx.current_provider) {
+                                    self.ctx.diagnostics.push(
+                                        mellis_common::Diagnostic::error(format!(
+                                            "Symbol '{}' is private and cannot be accessed from this scope",
+                                            seg_name
+                                        ))
+                                        .with_span(*seg),
+                                    );
+                                    resolved_sym = None;
+                                    break;
+                                }
                                 resolved_sym = Some(id);
                                 if let Some(inner) =
                                     self.ctx.symbol_table.symbols[id.0 as usize].inner_scope
@@ -1509,10 +1604,31 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
 
                     if let Some(sym_id) = resolved_sym {
                         let sym = self.ctx.symbol_table.get_symbol(sym_id);
+                        if !self.ctx.symbol_table.is_accessible(sym_id, self.current_scope, self.ctx.current_provider) {
+                            let name_str = segments
+                                .iter()
+                                .map(|seg| self.get_span_text(*seg))
+                                .collect::<Vec<_>>()
+                                .join("::");
+                            let span = Span {
+                                file_id: segments[0].file_id,
+                                start: segments[0].start,
+                                end: segments.last().unwrap().end,
+                                ctxt: segments[0].ctxt,
+                            };
+                            self.ctx.diagnostics.push(
+                                mellis_common::Diagnostic::error(format!(
+                                    "Symbol '{}' is private and cannot be accessed from this scope",
+                                    name_str
+                                ))
+                                .with_span(span),
+                            );
+                            return;
+                        }
                         if matches!(sym.kind, crate::symbol::SymbolKind::Macro) {
                             let name_str = segments
                                 .iter()
-                                .map(|seg| &self.source[seg.start as usize..seg.end as usize])
+                                .map(|seg| self.get_span_text(*seg))
                                 .collect::<Vec<_>>()
                                 .join("::");
                             let span = Span {
@@ -1559,7 +1675,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     } else {
                         let name_str = segments
                             .iter()
-                            .map(|seg| &self.source[seg.start as usize..seg.end as usize])
+                            .map(|seg| self.get_span_text(*seg))
                             .collect::<Vec<_>>()
                             .join("::");
                         let diag = mellis_common::Diagnostic::error(format!(
@@ -1653,7 +1769,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     } = &self.arena.decls[param_id.0 as usize]
                     {
                         let p_name_str =
-                            self.source[p_name.start as usize..p_name.end as usize].to_string();
+                            self.get_span_text(*p_name).to_string();
                         let p_sym_id = self.ctx.symbol_table.declare_symbol(
                             p_name_str,
                             SymbolKind::Variable,
@@ -1674,9 +1790,6 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
             Expr::Try { expr: e, .. } | Expr::Await { expr: e } => {
                 self.resolve_expr(e);
             }
-            Expr::Unary { operand, .. } => {
-                self.resolve_expr(operand);
-            }
             Expr::ArrayLiteral { elements } | Expr::TupleLiteral { elements } => {
                 for e in elements {
                     self.resolve_expr(e);
@@ -1687,10 +1800,10 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
             } => {
                 let path_strs: Vec<&str> = if !path.is_empty() {
                     path.iter()
-                        .map(|seg| &self.source[seg.start as usize..seg.end as usize])
+                        .map(|seg| self.get_span_text(*seg))
                         .collect()
                 } else {
-                    vec![&self.source[name.start as usize..name.end as usize]]
+                    vec![self.get_span_text(*name)]
                 };
                 if let Some(sym_id) = self
                     .ctx
@@ -1734,7 +1847,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
             std::collections::HashMap::new();
         for param_id in params {
             if let Decl::Param { name, .. } = &self.arena.decls[param_id.0 as usize] {
-                let name_str = self.source[name.start as usize..name.end as usize].to_string();
+                let name_str = self.get_span_text(*name).to_string();
                 if let Some(&sym_id) = self.ctx.tables.decl_symbols.get(param_id) {
                     param_names.insert(name_str, sym_id);
                 }
@@ -1745,8 +1858,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
         if let Some(ref provenance) = lifetime_signature.provenance {
             match provenance {
                 mellis_ast::LifetimeExpr::Provenance(span) => {
-                    let name = &self.source[span.start as usize..span.end as usize].to_string();
-                    if !param_names.contains_key(name) {
+                    let name = self.get_span_text(*span).to_string();
+                    if !param_names.contains_key(&name) {
                         self.ctx.diagnostics.push(
                             mellis_common::Diagnostic::error(format!(
                                 "lifetime identifier '{}' does not refer to a parameter",
@@ -1758,8 +1871,8 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                 }
                 mellis_ast::LifetimeExpr::ProvenanceSet(idents) => {
                     for span in idents {
-                        let name = &self.source[span.start as usize..span.end as usize].to_string();
-                        if !param_names.contains_key(name) {
+                        let name = self.get_span_text(*span).to_string();
+                        if !param_names.contains_key(&name) {
                             self.ctx.diagnostics.push(
                                 mellis_common::Diagnostic::error(format!(
                                     "lifetime identifier '{}' does not refer to a parameter",
@@ -1775,14 +1888,10 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
 
         // Resolve outlives constraints
         for constraint in &lifetime_signature.constraints {
-            let first_name = &self.source
-                [constraint.first.start as usize..constraint.first.end as usize]
-                .to_string();
-            let second_name = &self.source
-                [constraint.second.start as usize..constraint.second.end as usize]
-                .to_string();
+            let first_name = self.get_span_text(constraint.first).to_string();
+            let second_name = self.get_span_text(constraint.second).to_string();
 
-            if !param_names.contains_key(first_name) {
+            if !param_names.contains_key(&first_name) {
                 self.ctx.diagnostics.push(
                     mellis_common::Diagnostic::error(format!(
                         "lifetime identifier '{}' does not refer to a parameter",
@@ -1791,7 +1900,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     .with_span(constraint.first),
                 );
             }
-            if !param_names.contains_key(second_name) {
+            if !param_names.contains_key(&second_name) {
                 self.ctx.diagnostics.push(
                     mellis_common::Diagnostic::error(format!(
                         "lifetime identifier '{}' does not refer to a parameter",
