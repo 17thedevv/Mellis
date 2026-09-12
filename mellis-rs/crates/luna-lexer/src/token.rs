@@ -1,0 +1,163 @@
+﻿use luna_common::Span;
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum BuiltinKind {
+    I8,
+    I16,
+    I32,
+    I64,
+    I128,
+    Isize,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    Usize,
+    F32,
+    F64,
+    Bool,
+    Char,
+    Str,
+    Void,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum TokenKind {
+    Eof,
+    Error,
+
+    // Operators
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Modulo,
+    Equal,
+    LessThan,
+    GreaterThan,
+    EqualEqual,
+    LessThanEqual,
+    GreaterThanEqual,
+    NotEqual,
+
+    PlusAssign,
+    MinusAssign,
+    StarAssign,
+    SlashAssign,
+    PercAssign,
+    BitAndAssign,
+    BitOrAssign,
+    BitXorAssign,
+    LShiftAssign,
+    RShiftAssign,
+
+    LogicalAnd,
+    LogicalOr,
+    Bang,
+    BitAnd,
+    BitOr,
+    BitXor,
+    BitNot,
+    LShift,
+    RShift,
+
+    Arrow,
+    FatArrow,
+    PlusPlus,
+    MinusMinus,
+    DotDot,
+    DotDotEq,
+    DotDotDot,
+    HashBracket,
+    At,
+    Dollar,
+    Question,
+
+    // Punctuation
+    Colon,
+    ColonColon,
+    Semi,
+    Comma,
+    Dot,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    LBracket,
+    RBracket,
+
+    // Literals & Identifiers
+    Identifier,
+    Lifetime,
+    IntegerLiteral,
+    FloatLiteral,
+    CharLiteral,
+    StringLiteral,
+    RawStringLiteral,
+    ByteLiteral,
+    ByteStringLiteral,
+
+    BuiltinType(BuiltinKind),
+
+    // Keywords
+    KwDec,
+    KwConst,
+    KwFn,
+    KwReturn,
+    KwIf,
+    KwElse,
+    KwWhile,
+    KwFor,
+    KwIn,
+    KwBreak,
+    KwContinue,
+    KwImport,
+    KwModule,
+    KwUsing,
+    KwExport,
+    KwExtern,
+    KwIntrinsic,
+    KwStruct,
+    KwEnum,
+    KwMacro,
+    KwTrait,
+    KwDyn,
+    KwImpl,
+    KwUnsafe,
+    KwAs,
+    KwMove,
+    KwMatch,
+    KwRw,
+    KwTrue,
+    KwFalse,
+    KwType,
+    KwSizeof,
+    KwAlignof,
+    KwTypeof,
+    KwCast,
+    KwAwait,
+    KwAsync,
+    KwComptime,
+    KwPrint,
+    KwSelfVal,
+    KwSelfTyp,
+    KwLifeFrom,
+    KwWhere,
+    KwOutlives,
+    KwPub,
+    KwCrate,
+    KwSuper,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: Span,
+}
+
+impl Token {
+    pub fn new(kind: TokenKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+}

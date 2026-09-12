@@ -1,8 +1,0 @@
-[package]
-name = "mellis-lexer"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-mellis-common = { path = "../mellis-common" }
-serde = { version = "1.0.229", features = ["derive"] }

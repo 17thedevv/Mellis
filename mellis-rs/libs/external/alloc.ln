@@ -1,0 +1,206 @@
+import <core>;
+
+export extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
+export extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
+export extern fn __mellis_realloc(ptr: *rw u8, old_size: u64, old_align: u64, new_size: u64) -> *rw u8;
+
+export struct Vec<T> {
+    ptr: *rw T;
+    len: u64;
+    cap: u64;
+}
+
+export fn vec_new<T>() -> Vec<T> {
+    return Vec<T> {
+        ptr: 0 as u64 as *rw T,
+        len: 0 as u64,
+        cap: 0 as u64,
+    };
+}
+
+export fn vec_with_capacity<T>(capacity: u64) -> Vec<T> {
+    if capacity == (0 as u64) {
+        return vec_new<T>();
+    }
+    dec size = capacity * (sizeof(T) as u64);
+    dec align = alignof(T) as u64;
+    dec ptr = __mellis_alloc(size, align) as u64 as *rw T;
+    return Vec<T> {
+        ptr: ptr,
+        len: 0 as u64,
+        cap: capacity,
+    };
+}
+
+export struct VecIter<T> {
+    ptr: *T;
+    end: *T;
+}
+
+impl<T> Iterator<T> for VecIter<T> {
+    fn next(self: &rw Self) -> Option<T> {
+        if (self.ptr as u64) == (self.end as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec item = *self.ptr;
+            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
+            return Option::Some(item);
+        }
+    }
+}
+
+impl<T> VecIter<T> {
+    export fn next_ref(self: &rw Self) -> Option<&T> life_from(self) {
+        if (self.ptr as u64) == (self.end as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec item_ptr = self.ptr;
+            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
+            return Option::Some(&*item_ptr);
+        }
+    }
+}
+
+export struct VecIterMut<T> {
+    ptr: *rw T;
+    end: *rw T;
+}
+
+impl<T> Vec<T> {
+    export fn push(self: &rw Self, item: T) {
+        if self.len == self.cap {
+            self.grow();
+        }
+        dec offset_ptr = (self.ptr as u64 + (self.len * (sizeof(T) as u64))) as *rw T;
+        unsafe {
+            *offset_ptr = item;
+        }
+        self.len = self.len + (1 as u64);
+    }
+
+    export fn pop(self: &rw Self) -> Option<T> {
+        if self.len == (0 as u64) {
+            return Option::None;
+        }
+        self.len = self.len - (1 as u64);
+        dec offset_ptr = (self.ptr as u64 + (self.len * (sizeof(T) as u64))) as *rw T;
+        unsafe {
+            return Option::Some(*offset_ptr);
+        }
+    }
+
+    export fn clear(self: &rw Self) {
+        self.len = 0 as u64;
+    }
+
+    export fn len(self: &Self) -> u64 {
+        return self.len;
+    }
+
+    export fn capacity(self: &Self) -> u64 {
+        return self.cap;
+    }
+
+    export fn get(self: &Self, index: u64) -> Option<&T> life_from(self) {
+        if index >= self.len {
+            return Option::None;
+        }
+        dec offset_ptr = (self.ptr as u64 + (index * (sizeof(T) as u64))) as *T;
+        unsafe {
+            return Option::Some(&*offset_ptr);
+        }
+    }
+
+    export fn get_mut(self: &rw Self, index: u64) -> Option<&rw T> life_from(self) {
+        if index >= self.len {
+            return Option::None;
+        }
+        dec offset_ptr = (self.ptr as u64 + (index * (sizeof(T) as u64))) as *rw T;
+        unsafe {
+            return Option::Some(&rw *offset_ptr);
+        }
+    }
+
+    export fn grow(self: &rw Self) {
+        dec rw new_cap: u64 = 0 as u64;
+        if self.cap == (0 as u64) {
+            new_cap = 4 as u64;
+        } else {
+            new_cap = self.cap * (2 as u64);
+        }
+        
+        dec new_size = new_cap * (sizeof(T) as u64);
+        dec align = alignof(T) as u64;
+        dec new_ptr = __mellis_alloc(new_size, align) as u64 as *rw T;
+
+        if self.cap > (0 as u64) {
+            dec rw i: u64 = 0 as u64;
+            while i < self.len {
+                dec src = (self.ptr as u64 + (i * (sizeof(T) as u64))) as *rw T;
+                dec dst = (new_ptr as u64 + (i * (sizeof(T) as u64))) as *rw T;
+                unsafe {
+                    *dst = *src;
+                }
+                i = i + (1 as u64);
+            }
+            dec old_size = self.cap * (sizeof(T) as u64);
+            __mellis_dealloc(self.ptr as *rw u8, old_size, align);
+        }
+
+        self.ptr = new_ptr;
+        self.cap = new_cap;
+    }
+
+    export fn iter(self: &Self) -> VecIter<T> life_from(self) {
+        dec end_ptr = (self.ptr as u64 + (self.len * (sizeof(T) as u64))) as *T;
+        return VecIter<T> {
+            ptr: self.ptr as *T,
+            end: end_ptr,
+        };
+    }
+
+    export fn iter_mut(self: &rw Self) -> VecIterMut<T> life_from(self) {
+        dec end_ptr = (self.ptr as u64 + (self.len * (sizeof(T) as u64))) as *rw T;
+        return VecIterMut<T> {
+            ptr: self.ptr,
+            end: end_ptr,
+        };
+    }
+}
+
+impl<T> VecIterMut<T> {
+    export fn next_mut(self: &rw Self) -> Option<&rw T> life_from(self) {
+        if (self.ptr as u64) == (self.end as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec item_ptr = self.ptr;
+            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *rw T;
+            return Option::Some(&rw *item_ptr);
+        }
+    }
+}
+
+impl<T> Iterator<T> for VecIterMut<T> {
+    fn next(self: &rw Self) -> Option<T> {
+        if (self.ptr as u64) == (self.end as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec item = *self.ptr;
+            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *rw T;
+            return Option::Some(item);
+        }
+    }
+}
+
+impl<T> Drop for Vec<T> {
+    fn drop(self: &rw Self) {
+        if self.cap > (0 as u64) {
+            dec old_size = self.cap * (sizeof(T) as u64);
+            __mellis_dealloc(self.ptr as *rw u8, old_size, alignof(T) as u64);
+        }
+    }
+}

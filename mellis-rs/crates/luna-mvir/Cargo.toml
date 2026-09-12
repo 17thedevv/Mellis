@@ -1,0 +1,10 @@
+[package]
+name = "luna-mvir"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+luna-common = { path = "../luna-common" }
+luna-ast = { path = "../luna-ast" }
+luna-semantic = { path = "../luna-semantic" }
+luna-lexer = { path = "../luna-lexer" }

@@ -1,0 +1,19 @@
+[package]
+name = "luna-driver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+luna-common = { path = "../luna-common" }
+luna-lexer = { path = "../luna-lexer" }
+luna-ast = { path = "../luna-ast" }
+luna-parser = { path = "../luna-parser" }
+luna-semantic = { path = "../luna-semantic" }
+luna-mvir = { path = "../luna-mvir" }
+luna-backend = { path = "../luna-backend" }
+luna-borrowck = { path = "../luna-borrowck" }
+luna-llib = { version = "0.1.0", path = "../luna-llib" }
+luna-optimizer = { version = "0.1.0", path = "../luna-optimizer" }
+inkwell = { version = "0.5.0", features = ["llvm18-0"] }
+llvm-sys = { version = "180.0.0", features = ["no-llvm-linking"] }
+sha2 = "0.11.0"

@@ -44,6 +44,7 @@ export enum Infallible {
 impl<T, E> FromResidual<Result<Infallible, E> > for Result<T, E> {
     fn from_residual(residual: Result<Infallible, E>) -> Self {
         return match residual {
+            Result::Ok(v) -> Result::Ok(v),
             Result::Err(e) -> Result::Err(e),
         };
     }

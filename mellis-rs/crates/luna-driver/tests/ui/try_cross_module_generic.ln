@@ -1,0 +1,12 @@
+import <core>;
+
+fn generic_try<T, E>(x: Result<T, E>) -> Result<T, E> {
+    dec val = x?;
+    return Result::Ok(val);
+}
+
+fn main() -> i32 {
+    dec res: Result<i32, i32> = Result::Ok(10);
+    dec final_res = generic_try(res);
+    return 0;
+}

@@ -1,0 +1,11 @@
+[package]
+name = "luna-optimizer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+luna-common = { version = "0.1.0", path = "../luna-common" }
+luna-mvir = { version = "0.1.0", path = "../luna-mvir" }
+
+[dev-dependencies]
+luna-semantic = { path = "../luna-semantic" }

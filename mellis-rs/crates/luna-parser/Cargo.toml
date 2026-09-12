@@ -1,0 +1,9 @@
+[package]
+name = "luna-parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+luna-common = { path = "../luna-common" }
+luna-lexer = { path = "../luna-lexer" }
+luna-ast = { path = "../luna-ast" }

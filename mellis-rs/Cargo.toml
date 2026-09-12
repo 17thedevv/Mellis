@@ -1,8 +1,17 @@
 [workspace]
 members = [
-    "crates/mellis-common",
-    "crates/mellis-driver",
-    "crates/mellis-lexer",
-    "crates/mellis-ast",
-    "crates/mellis-parser", "crates/mellis-semantic", "crates/mellis-mvir", "crates/mellis-backend", "crates/mellis-borrowck", "crates/mellis-mlib", "crates/mellis-optimizer", "crates/mellis-spike-llvm", "crates/mellis-diff", "crates/mellis-cli",
+    "crates/luna-common",
+    "crates/luna-driver",
+    "crates/luna-lexer",
+    "crates/luna-ast",
+    "crates/luna-parser",
+    "crates/luna-semantic",
+    "crates/luna-mvir",
+    "crates/luna-backend",
+    "crates/luna-borrowck",
+    "crates/luna-llib",
+    "crates/luna-optimizer",
+    "crates/luna-spike-llvm",
+    "crates/luna-diff",
+    "crates/luna-cli",
 ]

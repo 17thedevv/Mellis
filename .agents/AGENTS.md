@@ -36,3 +36,8 @@
    - **No Unapproved Additions:** Never introduce a new keyword without updating the grammar in `grammar.ebnf` and the skill.
    - **Test Updates:** Add or update parser tests when changing grammar.
    - **Workflow:** When coding a new feature: (1) Search grammar skill. (2) Search parser tests. (3) Search existing accepted examples. (4) Only then propose changes. If syntax exists, reuse. If it doesn't, propose a grammar change before implementation.
+
+9. Semantic Compliance Rule (luna-semantic-compliance):
+   - **Mandatory Alignment:** Agents MUST follow `luna-semantic-compliance` before writing `.ln`/`.ms` code, Core, Alloc, Stdlib, ABI-facing APIs, compiler-generated code, or semantic tests.
+   - **No Foreign Semantics:** Never substitute Rust, C++, or LLVM semantic models or syntax (e.g. `'a`, turbofish, `let`, `mut`).
+   - **Semantic Contract Enforcement:** Ensure explicit lifetime relations (`life_from`, `where outlives`), proper `rw` mutability, and `.llib` ABI parity are preserved and actively utilized.

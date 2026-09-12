@@ -1,0 +1,8 @@
+[package]
+name = "luna-lexer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+luna-common = { path = "../luna-common" }
+serde = { version = "1.0.229", features = ["derive"] }

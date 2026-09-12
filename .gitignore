@@ -66,3 +66,15 @@ llvm.ir
 target/
 mellis-rs/scratch/
 scratch/
+*.llib
+*.llib.tmp
+mellis-rs/build_out.txt
+mellis-rs/recovered_edits*.txt
+scratch_*.txt
+mvir_audit_package.zip
+diff.patch
+temp_*.rs
+mellis-rs/test_*.ln
+mellis-rs/std.ln
+mellis-rs/trait_lib.ln
+test_*.ln

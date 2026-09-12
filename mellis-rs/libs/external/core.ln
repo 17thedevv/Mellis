@@ -1,0 +1,201 @@
+#[lang("drop")]
+export trait Drop {
+    #[lang("drop_fn")]
+    fn drop(self: &rw Self);
+}
+
+#[lang("copy")]
+export trait Copy {}
+
+#[lang("from_residual")]
+export trait FromResidual<R> {
+    #[lang("from_residual_fn")]
+    fn from_residual(residual: R) -> Self;
+}
+
+#[lang("try")]
+export trait Try {
+    type Output;
+    type Residual;
+    
+    #[lang("try_from_output")]
+    fn from_output(v: Self::Output) -> Self;
+    
+    #[lang("try_branch")]
+    fn branch(self: Self) -> ControlFlow<Self::Residual, Self::Output>;
+}
+
+#[lang("control_flow")]
+export enum ControlFlow<B, C> {
+    #[lang("continue")]
+    Continue(C),
+    #[lang("break")]
+    Break(B),
+}
+
+export enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+export enum Infallible {
+    InfallibleVariant,
+}
+impl<T, E> FromResidual<Result<Infallible, E> > for Result<T, E> {
+    fn from_residual(residual: Result<Infallible, E>) -> Self {
+        return match residual {
+            Result::Err(e) -> Result::Err(e),
+            Result::Ok(_) -> __mellis_panic(),
+        };
+    }
+}
+
+impl<T, E> Try for Result<T, E> {
+    type Output = T;
+    type Residual = Result<Infallible, E>;
+    
+    fn from_output(v: T) -> Self {
+        return Result::Ok(v);
+    }
+    
+    fn branch(self: Self) -> ControlFlow<Result<Infallible, E>, T> {
+        return match self {
+            Result::Ok(v) -> ControlFlow::Continue(v),
+            Result::Err(e) -> ControlFlow::Break(Result::Err(e)),
+        };
+    }
+}
+
+impl<T, E> Result<T, E> {
+    export fn is_ok(self: &Self) -> bool {
+        match *self {
+            Result::Ok(_) -> true,
+            Result::Err(_) -> false,
+        }
+    }
+
+    export fn is_err(self: &Self) -> bool {
+        match *self {
+            Result::Ok(_) -> false,
+            Result::Err(_) -> true,
+        }
+    }
+
+    export fn as_ref(self: &Self) -> Result<&T, &E> life_from(self) {
+        if self.is_ok() {
+            unsafe {
+                dec val_ptr = ((self as *Self as u64) + (4 as u64)) as *T;
+                return Result::Ok(&*val_ptr);
+            }
+        }
+        unsafe {
+            dec err_ptr = ((self as *Self as u64) + (4 as u64)) as *E;
+            return Result::Err(&*err_ptr);
+        }
+    }
+
+    export fn as_mut(self: &rw Self) -> Result<&rw T, &rw E> life_from(self) {
+        if self.is_ok() {
+            unsafe {
+                dec val_ptr = ((self as *rw Self as u64) + (4 as u64)) as *rw T;
+                return Result::Ok(&rw *val_ptr);
+            }
+        }
+        unsafe {
+            dec err_ptr = ((self as *rw Self as u64) + (4 as u64)) as *rw E;
+            return Result::Err(&rw *err_ptr);
+        }
+    }
+
+    export fn unwrap(self: Self) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(_) -> __mellis_panic(),
+        }
+    }
+}
+
+export extern fn __mellis_panic() -> !;
+
+export enum Option<T> {
+    Some(T),
+    None,
+}
+
+impl<T> Option<T> {
+    export fn is_some(self: &Self) -> bool {
+        match *self {
+            Option::Some(_) -> true,
+            Option::None -> false,
+        }
+    }
+
+    export fn is_none(self: &Self) -> bool {
+        match *self {
+            Option::Some(_) -> false,
+            Option::None -> true,
+        }
+    }
+
+    export fn as_ref(self: &Self) -> Option<&T> life_from(self) {
+        if self.is_some() {
+            unsafe {
+                dec val_ptr = ((self as *Self as u64) + (4 as u64)) as *T;
+                return Option::Some(&*val_ptr);
+            }
+        }
+        return Option::None;
+    }
+
+    export fn as_mut(self: &rw Self) -> Option<&rw T> life_from(self) {
+        if self.is_some() {
+            unsafe {
+                dec val_ptr = ((self as *rw Self as u64) + (4 as u64)) as *rw T;
+                return Option::Some(&rw *val_ptr);
+            }
+        }
+        return Option::None;
+    }
+
+    export fn unwrap(self: Self) -> T {
+        match self {
+            Option::Some(val) -> val,
+            Option::None -> __mellis_panic(),
+        }
+    }
+
+    export fn unwrap_or(self: Self, default: T) -> T {
+        match self {
+            Option::Some(val) -> val,
+            Option::None -> default,
+        }
+    }
+
+    export fn map<U>(self: Self, f: fn(T) -> U) -> Option<U> {
+        match self {
+            Option::Some(val) -> Option::Some(f(val)),
+            Option::None -> Option::None,
+        }
+    }
+}
+
+export trait Iterator<Item> {
+    fn next(self: &rw Self) -> Option<Item>;
+}
+
+export trait IntoIterator<Item, IntoIter> {
+    fn into_iter(self: Self) -> IntoIter;
+}
+
+export trait Clone {
+    fn clone(self: &Self) -> Self;
+}
+
+export trait Eq {
+    fn eq(self: &Self, other: &Self) -> bool;
+}
+
+export trait Ord {
+    fn cmp(self: &Self, other: &Self) -> i32;
+}
+
