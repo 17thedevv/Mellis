@@ -304,6 +304,11 @@ impl<'a> Parser<'a> {
         self.consume(TokenKind::LBrace, "Expected '{'")?;
         let mut fields = Vec::new();
         while !self.check(TokenKind::RBrace) && !self.is_at_end() {
+            let f_vis = if self.match_token(TokenKind::KwExport) {
+                Visibility::Public
+            } else {
+                Visibility::Private
+            };
             let f_name = self
                 .consume(TokenKind::Identifier, "Expected field name")?
                 .span;
@@ -312,7 +317,7 @@ impl<'a> Parser<'a> {
             fields.push(luna_ast::StructField {
                 name: f_name,
                 ty,
-                visibility: Visibility::Public,
+                visibility: f_vis,
             });
             if !self.match_token(TokenKind::Semi) && !self.match_token(TokenKind::Comma) {
                 if !self.check(TokenKind::RBrace) {

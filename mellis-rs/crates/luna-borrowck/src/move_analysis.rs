@@ -84,68 +84,72 @@ impl<'a> MoveAnalyzer<'a> {
         effective_state
     }
 
+    fn check_place(&mut self, place: &Place, state: &MoveStateData, val_id: luna_mvir::ValueId) {
+        if !self.emit_diagnostics { return; }
+        let loc_state = self.get_place_state(place, state);
+        let name = format!("%v{}", place.local.0);
+        let mut formatted_name = name;
+        for proj in &place.projections {
+            match proj {
+                crate::place::Projection::Field(idx) => {
+                    formatted_name = format!("{}.{}", formatted_name, idx);
+                }
+                crate::place::Projection::Deref => {
+                    formatted_name = format!("(*{})", formatted_name);
+                }
+                crate::place::Projection::Index => {
+                    formatted_name = format!("{}[_]", formatted_name);
+                }
+            }
+        }
+        
+        let span = self.func.values[val_id.0 as usize].span.clone();
+        if loc_state == MoveState::Moved {
+            let msg = format!("Use of moved value '{}'", formatted_name);
+            if !self.diagnostics.iter().any(|d| d.message == msg) {
+                let mut diag = Diagnostic::error(msg);
+                diag.span = span.clone();
+                self.diagnostics.push(diag);
+            }
+        } else if loc_state == MoveState::ConditionallyMoved {
+            let msg = format!("Use of conditionally moved value '{}'", formatted_name);
+            if !self.diagnostics.iter().any(|d| d.message == msg) {
+                let mut diag = Diagnostic::error(msg);
+                diag.span = span.clone();
+                self.diagnostics.push(diag);
+            }
+        } else if loc_state == MoveState::Dropped {
+            let msg = format!("Use of dropped value '{}'", formatted_name);
+            if !self.diagnostics.iter().any(|d| d.message == msg) {
+                let mut diag = Diagnostic::error(msg);
+                diag.span = span.clone();
+                self.diagnostics.push(diag);
+            }
+        } else if loc_state == MoveState::Uninitialized {
+            let msg = format!("Use of uninitialized value '{}'", formatted_name);
+            if !self.diagnostics.iter().any(|d| d.message == msg) {
+                let mut diag = Diagnostic::error(msg);
+                diag.span = span.clone();
+                self.diagnostics.push(diag);
+            }
+        } else if loc_state == MoveState::PartialMoved {
+            let msg = format!("Use of partially moved value '{}'", formatted_name);
+            if !self.diagnostics.iter().any(|d| d.message == msg) {
+                let mut diag = Diagnostic::error(msg);
+                diag.span = span.clone();
+                self.diagnostics.push(diag);
+            }
+        }
+    }
+
     fn check_operand(&mut self, op: &Operand, state: &MoveStateData, val_id: luna_mvir::ValueId) {
         if !self.emit_diagnostics { return; }
         if let Operand::Value(val) = op {
-            let place = match self.values_to_places.get(val) {
+            let place = match self.values_to_places.get(val).cloned() {
                 Some(p) => p,
                 None => return, // Temporary, assumed live
             };
-            
-            let loc_state = self.get_place_state(place, state);
-            let name = format!("%v{}", place.local.0); // We could format the projections too, e.g. %v0.field(0)
-            let mut formatted_name = name;
-            for proj in &place.projections {
-                match proj {
-                    crate::place::Projection::Field(idx) => {
-                        formatted_name = format!("{}.{}", formatted_name, idx);
-                    }
-                    crate::place::Projection::Deref => {
-                        formatted_name = format!("(*{})", formatted_name);
-                    }
-                    crate::place::Projection::Index => {
-                        formatted_name = format!("{}[_]", formatted_name);
-                    }
-                }
-            }
-            
-            let span = self.func.values[val_id.0 as usize].span.clone();
-            if loc_state == MoveState::Moved {
-                let msg = format!("Use of moved value '{}'", formatted_name);
-                if !self.diagnostics.iter().any(|d| d.message == msg) {
-                    let mut diag = Diagnostic::error(msg);
-                    diag.span = span.clone();
-                    self.diagnostics.push(diag);
-                }
-            } else if loc_state == MoveState::ConditionallyMoved {
-                let msg = format!("Use of conditionally moved value '{}'", formatted_name);
-                if !self.diagnostics.iter().any(|d| d.message == msg) {
-                    let mut diag = Diagnostic::error(msg);
-                    diag.span = span.clone();
-                    self.diagnostics.push(diag);
-                }
-            } else if loc_state == MoveState::Dropped {
-                let msg = format!("Use of dropped value '{}'", formatted_name);
-                if !self.diagnostics.iter().any(|d| d.message == msg) {
-                    let mut diag = Diagnostic::error(msg);
-                    diag.span = span.clone();
-                    self.diagnostics.push(diag);
-                }
-            } else if loc_state == MoveState::Uninitialized {
-                let msg = format!("Use of uninitialized value '{}'", formatted_name);
-                if !self.diagnostics.iter().any(|d| d.message == msg) {
-                    let mut diag = Diagnostic::error(msg);
-                    diag.span = span.clone();
-                    self.diagnostics.push(diag);
-                }
-            } else if loc_state == MoveState::PartialMoved {
-                let msg = format!("Use of partially moved value '{}'", formatted_name);
-                if !self.diagnostics.iter().any(|d| d.message == msg) {
-                    let mut diag = Diagnostic::error(msg);
-                    diag.span = span.clone();
-                    self.diagnostics.push(diag);
-                }
-            }
+            self.check_place(&place, state, val_id);
         }
     }
 
@@ -160,6 +164,9 @@ impl<'a> MoveAnalyzer<'a> {
                         if matches!(b, BuiltinType::I8 | BuiltinType::I16 | BuiltinType::I32 | BuiltinType::I64 | BuiltinType::I128 | BuiltinType::Isize | BuiltinType::U8 | BuiltinType::U16 | BuiltinType::U32 | BuiltinType::U64 | BuiltinType::U128 | BuiltinType::Usize | BuiltinType::F32 | BuiltinType::F64 | BuiltinType::Bool | BuiltinType::Char) {
                             return; // Primitive types are trivially copyable
                         }
+                    }
+                    luna_semantic::SemanticType::Void => {
+                        return;
                     }
                     luna_semantic::SemanticType::Pointer(_, _) | luna_semantic::SemanticType::Reference(..) => {
                         return; // Pointers and references are copyable handles
@@ -248,12 +255,6 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
         inst: &Instruction,
         state: &mut MoveStateData,
     ) {
-        if val_id.0 == 0 && self.func.name.name == "test_branch_join" {
-            println!("Function {} MVIR:", self.func.name.name);
-            for (i, v) in self.func.values.iter().enumerate() {
-                println!("  %v{} = {:?}", i, v.inst);
-            }
-        }
         match inst {
             Instruction::Alloca | Instruction::HeapAlloc => {
                 let p = Place::new(val_id);
@@ -408,12 +409,48 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
                         if self.emit_diagnostics {
                             let loc_state = self.get_place_state(&field_place, state);
                             if matches!(loc_state, MoveState::Moved | MoveState::Dropped | MoveState::ConditionallyMoved | MoveState::Uninitialized) {
-                                self.check_operand(value, state, val_id);
+                                self.check_place(&field_place, state, val_id);
                             }
                         }
                         
-                        // Extract is a move of the subplace — mark it moved and check Drop ancestors
-                        self.mark_moved(&Operand::Value(val_id), state);
+                        // Check E_PARTIAL_MOVE_UNDER_DROP: if any ancestor of field_place
+                        // has a user Drop impl, reject the extraction as a partial move.
+                        // This is checked directly here rather than via mark_moved because
+                        // Extract must NOT mark the place as moved — the downstream consumer
+                        // (Store, Variant, etc.) does that.
+                        if self.emit_diagnostics && !field_place.projections.is_empty() {
+                            if let Some(ctx) = self.semantic_ctx {
+                                for len in 0..field_place.projections.len() {
+                                    let mut ancestor = field_place.clone();
+                                    ancestor.projections.truncate(len);
+                                    let mut ancestor_ty = None;
+                                    for (v_id, p) in &self.values_to_places {
+                                        if p == &ancestor {
+                                            ancestor_ty = Some(self.func.value(*v_id).ty);
+                                            break;
+                                        }
+                                    }
+                                    if let Some(ty_id) = ancestor_ty {
+                                        let sem_ty = ctx.types.get(ty_id).clone();
+                                        let has_drop = match sem_ty {
+                                            luna_semantic::SemanticType::Struct(sym_id, _, _) | luna_semantic::SemanticType::Enum(sym_id, _, _) => {
+                                                ctx.tables.drop_impls.contains_key(&sym_id)
+                                            },
+                                            _ => false,
+                                        };
+                                        if has_drop {
+                                            let msg = "Cannot move out of a subplace of a type that implements Drop [E_PARTIAL_MOVE_UNDER_DROP]".to_string();
+                                            if !self.diagnostics.iter().any(|d| d.message == msg) {
+                                                let mut diag = Diagnostic::error(msg);
+                                                diag.span = self.func.values[val_id.0 as usize].span.clone();
+                                                self.diagnostics.push(diag);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

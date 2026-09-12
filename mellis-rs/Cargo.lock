@@ -352,57 +352,58 @@ dependencies = [
 ]
 
 [[package]]
-name = "mellis-ast"
+name = "luna-ast"
 version = "0.1.0"
 dependencies = [
- "mellis-common",
- "mellis-lexer",
+ "luna-common",
+ "luna-lexer",
  "serde",
 ]
 
 [[package]]
-name = "mellis-backend"
+name = "luna-backend"
 version = "0.1.0"
 dependencies = [
  "inkwell",
  "llvm-sys",
- "mellis-common",
- "mellis-mlib",
- "mellis-mvir",
- "mellis-semantic",
+ "luna-common",
+ "luna-llib",
+ "luna-mvir",
+ "luna-semantic",
  "thiserror 2.0.20",
 ]
 
 [[package]]
-name = "mellis-borrowck"
+name = "luna-borrowck"
 version = "0.1.0"
 dependencies = [
- "mellis-common",
- "mellis-mvir",
- "mellis-semantic",
+ "luna-ast",
+ "luna-common",
+ "luna-mvir",
+ "luna-semantic",
  "proptest",
 ]
 
 [[package]]
-name = "mellis-cli"
+name = "luna-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
- "mellis-ast",
- "mellis-driver",
- "mellis-mlib",
+ "luna-ast",
+ "luna-driver",
+ "luna-llib",
  "serde_json",
 ]
 
 [[package]]
-name = "mellis-common"
+name = "luna-common"
 version = "0.1.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
-name = "mellis-diff"
+name = "luna-diff"
 version = "0.1.0"
 dependencies = [
  "clap",
@@ -411,85 +412,86 @@ dependencies = [
 ]
 
 [[package]]
-name = "mellis-driver"
+name = "luna-driver"
 version = "0.1.0"
 dependencies = [
  "inkwell",
  "llvm-sys",
- "mellis-ast",
- "mellis-backend",
- "mellis-borrowck",
- "mellis-common",
- "mellis-lexer",
- "mellis-mlib",
- "mellis-mvir",
- "mellis-optimizer",
- "mellis-parser",
- "mellis-semantic",
+ "luna-ast",
+ "luna-backend",
+ "luna-borrowck",
+ "luna-common",
+ "luna-lexer",
+ "luna-llib",
+ "luna-mvir",
+ "luna-optimizer",
+ "luna-parser",
+ "luna-semantic",
  "sha2",
 ]
 
 [[package]]
-name = "mellis-lexer"
+name = "luna-lexer"
 version = "0.1.0"
 dependencies = [
- "mellis-common",
+ "luna-common",
  "serde",
 ]
 
 [[package]]
-name = "mellis-mlib"
+name = "luna-llib"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "mellis-ast",
- "mellis-common",
- "mellis-mvir",
- "mellis-semantic",
+ "luna-ast",
+ "luna-common",
+ "luna-mvir",
+ "luna-semantic",
  "serde",
  "sha2",
 ]
 
 [[package]]
-name = "mellis-mvir"
+name = "luna-mvir"
 version = "0.1.0"
 dependencies = [
- "mellis-ast",
- "mellis-common",
- "mellis-lexer",
- "mellis-semantic",
+ "luna-ast",
+ "luna-common",
+ "luna-lexer",
+ "luna-semantic",
 ]
 
 [[package]]
-name = "mellis-optimizer"
+name = "luna-optimizer"
 version = "0.1.0"
 dependencies = [
- "mellis-common",
- "mellis-mvir",
- "mellis-semantic",
+ "luna-common",
+ "luna-mvir",
+ "luna-semantic",
 ]
 
 [[package]]
-name = "mellis-parser"
+name = "luna-parser"
 version = "0.1.0"
 dependencies = [
- "mellis-ast",
- "mellis-common",
- "mellis-lexer",
+ "luna-ast",
+ "luna-common",
+ "luna-lexer",
 ]
 
 [[package]]
-name = "mellis-semantic"
+name = "luna-semantic"
 version = "0.1.0"
 dependencies = [
- "mellis-ast",
- "mellis-common",
- "mellis-lexer",
- "mellis-parser",
+ "luna-ast",
+ "luna-common",
+ "luna-lexer",
+ "luna-parser",
+ "serde",
 ]
 
 [[package]]
-name = "mellis-spike-llvm"
+name = "luna-spike-llvm"
 version = "0.1.0"
 dependencies = [
  "inkwell",

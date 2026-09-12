@@ -403,7 +403,7 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
                 println!("\n--- Borrow Checker ---");
             }
             
-            let mut interproc = luna_borrowck::interprocedural::InterproceduralContext::new();
+            let mut interproc = luna_borrowck::interprocedural::InterproceduralContext::with_context(&semantic_ctx);
             interproc.compute_summaries(&module);
             let summaries = interproc.summaries;
             

@@ -1,16 +1,25 @@
-﻿use crate::effect::{CallEffectSummary, ReturnEffect};
+use crate::effect::{CallEffectSummary, ReturnEffect};
 use crate::effect_inference::EffectInference;
 use luna_mvir::{Function, GlobalId, Module, Operand, Instruction};
 use std::collections::{HashMap, HashSet};
 
-pub struct InterproceduralContext {
+pub struct InterproceduralContext<'a> {
     pub summaries: HashMap<GlobalId, CallEffectSummary>,
+    pub ctx: Option<&'a luna_semantic::SemanticContext>,
 }
 
-impl InterproceduralContext {
+impl<'a> InterproceduralContext<'a> {
     pub fn new() -> Self {
         Self {
             summaries: HashMap::new(),
+            ctx: None,
+        }
+    }
+
+    pub fn with_context(ctx: &'a luna_semantic::SemanticContext) -> Self {
+        Self {
+            summaries: HashMap::new(),
+            ctx: Some(ctx),
         }
     }
 
@@ -64,7 +73,7 @@ impl InterproceduralContext {
                     }
                     
                     let old_summary = self.summaries.get(&gid).cloned().unwrap();
-                    let new_summary = EffectInference::infer(func, arg_values, Some(&self.summaries));
+                    let new_summary = EffectInference::infer_with_context(func, arg_values, Some(&self.summaries), self.ctx);
                     
                     if old_summary != new_summary {
                         self.summaries.insert(func.name.clone(), new_summary.clone());

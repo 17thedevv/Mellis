@@ -197,6 +197,33 @@ impl<'a> MvirGenerator<'a> {
         luna_semantic::SemanticTypeId(0)
     }
 
+    fn find_pointer_type(&self, elem_ty: luna_semantic::SemanticTypeId) -> luna_semantic::SemanticTypeId {
+        for id in self.ctx.types.get_all_types() {
+            if let luna_semantic::SemanticType::Pointer(_, elem) = self.ctx.types.get(id) {
+                if *elem == elem_ty {
+                    return id;
+                }
+            }
+        }
+        for id in self.ctx.types.get_all_types() {
+            if let luna_semantic::SemanticType::Reference(_, _, elem) = self.ctx.types.get(id) {
+                if *elem == elem_ty {
+                    return id;
+                }
+            }
+        }
+        luna_semantic::SemanticTypeId(0)
+    }
+
+    fn find_u64_type(&self) -> luna_semantic::SemanticTypeId {
+        for id in self.ctx.types.get_all_types() {
+            if let luna_semantic::SemanticType::Primitive(luna_semantic::ty::BuiltinType::U64) = self.ctx.types.get(id) {
+                return id;
+            }
+        }
+        self.ctx.types.usize_id()
+    }
+
     pub fn generate_all_known_functions(&mut self) {
         for instance in &self.ctx.instantiated_functions {
             self.generate_mono_instance(instance);
@@ -428,7 +455,7 @@ impl<'a> MvirGenerator<'a> {
                 }
                 
                 for (field_idx, elem) in elements.iter().enumerate() {
-                    let field_ty = self.ctx.tables.pat_types.get(elem).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                    let field_ty = self.get_pat_type(elem).unwrap_or(luna_semantic::SemanticTypeId(0));
                     let extract_op = val_op.as_ref().map(|v| {
                         let extract_val = self.push_inst(Instruction::Extract {
                             value: v.clone(),
@@ -453,6 +480,15 @@ impl<'a> MvirGenerator<'a> {
                     if let Some(&val_id) = self.locals.get(&sym_id) {
                         return Operand::Value(val_id);
                     }
+                    let sym_name = if (sym_id.0 as usize) < self.ctx.symbol_table.symbols.len() {
+                        self.ctx.symbol_table.symbols[sym_id.0 as usize].name.clone()
+                    } else {
+                        format!("global_{}", sym_id.0)
+                    };
+                    return Operand::Global(GlobalId {
+                        name: sym_name,
+                        symbol_id: Some(sym_id),
+                    });
                 }
                 Operand::Number("0".to_string())
             }
@@ -469,11 +505,16 @@ impl<'a> MvirGenerator<'a> {
                         struct_field_tys_opt = Some(field_tys.clone());
                     }
                     luna_semantic::SemanticType::Reference(_, _, inner) | luna_semantic::SemanticType::Pointer(_, inner) => {
-                        let load_val = self.push_inst(Instruction::Load { ptr: base_op }, obj_ty_id);
-                        base_op = Operand::Value(load_val);
-                        if let luna_semantic::SemanticType::Struct(sym_id, _, field_tys) = self.ctx.types.get(*inner) {
-                            struct_sym_opt = Some(*sym_id);
-                            struct_field_tys_opt = Some(field_tys.clone());
+                        if let luna_semantic::SemanticType::Slice(_) = self.ctx.types.get(*inner) {
+                            // Slices are fat pointers represented as structs stored directly in the local alloca.
+                            // Do not load, so base_op remains a pointer to the fat pointer struct!
+                        } else {
+                            let load_val = self.push_inst(Instruction::Load { ptr: base_op }, obj_ty_id);
+                            base_op = Operand::Value(load_val);
+                            if let luna_semantic::SemanticType::Struct(sym_id, _, field_tys) = self.ctx.types.get(*inner) {
+                                struct_sym_opt = Some(*sym_id);
+                                struct_field_tys_opt = Some(field_tys.clone());
+                            }
                         }
                     }
                     _ => {}
@@ -547,7 +588,95 @@ impl<'a> MvirGenerator<'a> {
             Expr::Unary { op: luna_ast::expr::UnaryOp::DerefMut, operand } => {
                 self.generate_expr(operand)
             }
-            _ => Operand::Number("0".to_string()),
+            Expr::Index { base, index } => {
+                let index_op = self.generate_expr(index);
+                let base_ty_id = self.ctx.tables.expr_types.get(base).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                let base_ty = self.ctx.types.get(base_ty_id).clone();
+
+                let mut peeled_base_ty = base_ty.clone();
+                while let luna_semantic::SemanticType::Reference(_, _, inner) | luna_semantic::SemanticType::Pointer(_, inner) = peeled_base_ty {
+                    peeled_base_ty = self.ctx.types.get(inner).clone();
+                }
+
+                match peeled_base_ty {
+                    luna_semantic::SemanticType::Slice(elem_ty_id) => {
+                        let base_ptr = match &self.arena.exprs[base.0 as usize] {
+                            Expr::Identifier { .. } | Expr::Member { .. } | Expr::TupleIndex { .. } | Expr::Index { .. } => {
+                                self.generate_lvalue(base)
+                            }
+                            _ => {
+                                let base_val = self.generate_expr(base);
+                                let alloca = self.push_inst(Instruction::Alloca, base_ty_id);
+                                self.push_inst(Instruction::Store {
+                                    ptr: Operand::Value(alloca),
+                                    value: base_val,
+                                }, self.ctx.types.bool_id());
+                                Operand::Value(alloca)
+                            }
+                        };
+
+                        let ptr_ptr_ty = self.find_pointer_type(elem_ty_id);
+                        let ptr_field = self.push_inst(Instruction::FieldPtr {
+                            base: base_ptr.clone(),
+                            field_idx: 0,
+                        }, ptr_ptr_ty);
+                        let data_ptr = self.push_inst(Instruction::Load {
+                            ptr: Operand::Value(ptr_field),
+                        }, ptr_ptr_ty);
+
+                        let u64_ty = self.find_u64_type();
+                        let len_field = self.push_inst(Instruction::FieldPtr {
+                            base: base_ptr,
+                            field_idx: 1,
+                        }, u64_ty);
+                        let len_val = self.push_inst(Instruction::Load {
+                            ptr: Operand::Value(len_field),
+                        }, u64_ty);
+
+                        self.push_inst(Instruction::BoundsCheck {
+                            index: index_op.clone(),
+                            len: Operand::Value(len_val),
+                        }, self.ctx.types.bool_id());
+
+                        let elem_ptr = self.push_inst(Instruction::PtrOffset {
+                            ptr: Operand::Value(data_ptr),
+                            offset: index_op,
+                        }, elem_ty_id);
+
+                        Operand::Value(elem_ptr)
+                    }
+                    luna_semantic::SemanticType::Array(elem_ty_id, len) => {
+                        self.push_inst(Instruction::BoundsCheck {
+                            index: index_op.clone(),
+                            len: Operand::Number(len.to_string()),
+                        }, self.ctx.types.bool_id());
+
+                        let base_lval = self.generate_lvalue(base);
+                        let elem_ptr = self.push_inst(Instruction::PtrOffset {
+                            ptr: base_lval,
+                            offset: index_op,
+                        }, elem_ty_id);
+                        Operand::Value(elem_ptr)
+                    }
+                    _ => Operand::Number("0".to_string()),
+                }
+            }
+            _ => {
+                let mut ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                if let Some(inst_ptr) = self.current_instance {
+                    let inst = unsafe { &*inst_ptr };
+                    if let Some(&mono_ty) = inst.expr_types.get(expr_id) {
+                        ty_id = mono_ty;
+                    }
+                }
+                let val_op = self.generate_expr(expr_id);
+                let alloca = self.push_inst(Instruction::Alloca, ty_id);
+                self.push_inst(Instruction::Store {
+                    ptr: Operand::Value(alloca),
+                    value: val_op,
+                }, ty_id);
+                Operand::Value(alloca)
+            }
         }
     }
 
@@ -1530,17 +1659,17 @@ impl<'a> MvirGenerator<'a> {
 
                 if let Some((variant_idx, decl_id)) = is_variant {
                     let mut enum_ty = ty_id;
-                    if enum_ty == luna_semantic::SemanticTypeId(0) {
-                        if let Some(enum_sym_id) = self.ctx.tables.decl_symbols.get(&decl_id) {
-                            if let Some(ety) = self.get_symbol_type(enum_sym_id) {
-                                enum_ty = ety;
+                    if enum_ty == luna_semantic::SemanticTypeId(0) || self.ctx.types.contains_inference_var(enum_ty) {
+                        if let Some(func) = &self.current_function {
+                            if matches!(self.ctx.types.get(func.ret_ty), luna_semantic::SemanticType::Enum(..)) && !self.ctx.types.contains_inference_var(func.ret_ty) {
+                                enum_ty = func.ret_ty;
                             }
                         }
                     }
-                    if enum_ty == luna_semantic::SemanticTypeId(0) {
-                        if let Some(func) = &self.current_function {
-                            if matches!(self.ctx.types.get(func.ret_ty), luna_semantic::SemanticType::Enum(..)) {
-                                enum_ty = func.ret_ty;
+                    if enum_ty == luna_semantic::SemanticTypeId(0) || self.ctx.types.contains_inference_var(enum_ty) {
+                        if let Some(enum_sym_id) = self.ctx.tables.decl_symbols.get(&decl_id) {
+                            if let Some(ety) = self.get_symbol_type(enum_sym_id) {
+                                enum_ty = ety;
                             }
                         }
                     }
@@ -1554,6 +1683,16 @@ impl<'a> MvirGenerator<'a> {
                     let callee_ty_id = self.ctx.tables.expr_types.get(callee).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
                     let is_closure = matches!(self.ctx.types.get(callee_ty_id), luna_semantic::SemanticType::Closure(..));
                     
+                    if let Operand::Global(ref id) = callee_op {
+                        if id.name.contains("slice_from_raw_parts") {
+                            let slice_val = self.push_inst(Instruction::MakeSlice {
+                                data_ptr: arg_ops[0].clone(),
+                                len: arg_ops[1].clone(),
+                            }, ty_id);
+                            return Operand::Value(slice_val);
+                        }
+                    }
+
                     let call_val = self.push_inst(if is_closure {
                         Instruction::CallClosure { closure: callee_op, args: arg_ops }
                     } else {
@@ -1585,18 +1724,29 @@ impl<'a> MvirGenerator<'a> {
                     
                     let symbol = self.ctx.symbol_table.get_symbol(sym_id);
                     if let luna_semantic::SymbolKind::EnumVariant(idx) = symbol.kind {
-                        if let Some(decl_id) = symbol.decl_id {
-                            if let Some(enum_sym_id) = self.ctx.tables.decl_symbols.get(&decl_id) {
-                                if let Some(enum_ty) = self.get_symbol_type(enum_sym_id) {
-                                    let variant_val = self.push_inst(Instruction::Variant {
-                                        enum_ty,
-                                        variant_idx: idx,
-                                        args: Vec::new(),
-                                    }, ty_id);
-                                    return Operand::Value(variant_val);
+                        let mut concrete_enum_ty = ty_id;
+                        if concrete_enum_ty == luna_semantic::SemanticTypeId(0) || self.ctx.types.contains_inference_var(concrete_enum_ty) {
+                            if let Some(func) = &self.current_function {
+                                if matches!(self.ctx.types.get(func.ret_ty), luna_semantic::SemanticType::Enum(..)) && !self.ctx.types.contains_inference_var(func.ret_ty) {
+                                    concrete_enum_ty = func.ret_ty;
                                 }
                             }
                         }
+                        if concrete_enum_ty == luna_semantic::SemanticTypeId(0) || self.ctx.types.contains_inference_var(concrete_enum_ty) {
+                            if let Some(decl_id) = symbol.decl_id {
+                                if let Some(enum_sym_id) = self.ctx.tables.decl_symbols.get(&decl_id) {
+                                    if let Some(enum_ty) = self.get_symbol_type(enum_sym_id) {
+                                        concrete_enum_ty = enum_ty;
+                                    }
+                                }
+                            }
+                        }
+                        let variant_val = self.push_inst(Instruction::Variant {
+                            enum_ty: concrete_enum_ty,
+                            variant_idx: idx,
+                            args: Vec::new(),
+                        }, concrete_enum_ty);
+                        return Operand::Value(variant_val);
                     }
                     
                     if let Some(ct_val) = self.ctx.const_values.get(&sym_id).cloned() {
@@ -1761,6 +1911,80 @@ impl<'a> MvirGenerator<'a> {
                 Operand::Value(load_val)
             }
             Expr::MethodCall { object, args, method_name, .. } => {
+                if let Some(&idx) = self.ctx.tables.expr_member_indices.get(expr_id) {
+                    let obj_ty_id = self.ctx.tables.expr_types.get(object).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                    let obj_ty = self.ctx.types.get(obj_ty_id);
+                    let is_slice = match obj_ty {
+                        luna_semantic::SemanticType::Reference(_, _, inner) | luna_semantic::SemanticType::Pointer(_, inner) => {
+                            matches!(self.ctx.types.get(*inner), luna_semantic::SemanticType::Slice(_))
+                        }
+                        luna_semantic::SemanticType::Slice(_) => true,
+                        _ => false,
+                    };
+                    if is_slice {
+                        let lval = self.generate_lvalue(object);
+                        let usize_ty = self.ctx.types.usize_id();
+                        let len_ptr = self.push_inst(Instruction::FieldPtr {
+                            base: lval.clone(),
+                            field_idx: 1,
+                        }, usize_ty);
+                        let len_val = self.push_inst(Instruction::Load {
+                            ptr: Operand::Value(len_ptr),
+                        }, usize_ty);
+                        if idx == 1 {
+                            return Operand::Value(len_val);
+                        } else if idx == 2 {
+                            let zero = Operand::Number("0".to_string());
+                            let eq_val = self.push_inst(Instruction::Eq {
+                                left: Operand::Value(len_val),
+                                right: zero,
+                            }, self.ctx.types.bool_id());
+                            return Operand::Value(eq_val);
+                        } else if idx == 3 || idx == 4 {
+                            let elem_ty_id = match obj_ty {
+                                luna_semantic::SemanticType::Reference(_, _, inner) | luna_semantic::SemanticType::Pointer(_, inner) => {
+                                    if let luna_semantic::SemanticType::Slice(elem) = self.ctx.types.get(*inner) { *elem } else { luna_semantic::SemanticTypeId(0) }
+                                }
+                                luna_semantic::SemanticType::Slice(elem) => *elem,
+                                _ => luna_semantic::SemanticTypeId(0),
+                            };
+                            let elem_ptr_ty = self.find_pointer_type(elem_ty_id);
+                            let ptr_field = self.push_inst(Instruction::FieldPtr {
+                                base: lval,
+                                field_idx: 0,
+                            }, elem_ptr_ty);
+                            let ptr_val = self.push_inst(Instruction::Load {
+                                ptr: Operand::Value(ptr_field),
+                            }, elem_ptr_ty);
+                            let end_val = self.push_inst(Instruction::PtrOffset {
+                                ptr: Operand::Value(ptr_val),
+                                offset: Operand::Value(len_val),
+                            }, elem_ptr_ty);
+                            let struct_alloca = self.push_inst(Instruction::Alloca, ty_id);
+                            let out_ptr_field = self.push_inst(Instruction::FieldPtr {
+                                base: Operand::Value(struct_alloca),
+                                field_idx: 0,
+                            }, elem_ptr_ty);
+                            self.push_inst(Instruction::Store {
+                                ptr: Operand::Value(out_ptr_field),
+                                value: Operand::Value(ptr_val),
+                            }, elem_ptr_ty);
+                            let out_end_field = self.push_inst(Instruction::FieldPtr {
+                                base: Operand::Value(struct_alloca),
+                                field_idx: 1,
+                            }, elem_ptr_ty);
+                            self.push_inst(Instruction::Store {
+                                ptr: Operand::Value(out_end_field),
+                                value: Operand::Value(end_val),
+                            }, elem_ptr_ty);
+                            let loaded_struct = self.push_inst(Instruction::Load {
+                                ptr: Operand::Value(struct_alloca),
+                            }, ty_id);
+                            return Operand::Value(loaded_struct);
+                        }
+                    }
+                }
+
                 if let Some(&method_idx) = self.ctx.tables.dyn_method_indices.get(expr_id) {
                     let obj_op = self.generate_expr(object);
                     let mut arg_ops = Vec::new();
@@ -1810,7 +2034,7 @@ impl<'a> MvirGenerator<'a> {
 
                     let obj_op = if is_ref_self && !is_already_ref {
                         let lval = self.generate_lvalue(object);
-                        let borrow_val = self.push_inst(Instruction::Borrow { is_rw: is_rw_self, base: lval }, ty_id);
+                        let borrow_val = self.push_inst(Instruction::Borrow { is_rw: is_rw_self, base: lval }, luna_semantic::SemanticTypeId(0));
                         Operand::Value(borrow_val)
                     } else {
                         self.generate_expr(object)
@@ -1831,34 +2055,33 @@ impl<'a> MvirGenerator<'a> {
                 }
                 Operand::Number("0".to_string())
             }
-            Expr::Index { base, index } => {
-                let base_op = self.generate_expr(base);
-                let index_op = self.generate_expr(index);
-                
-                // Get base type to extract array length
-                let base_ty_id = self.ctx.tables.expr_types.get(base).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
-                let base_ty = self.ctx.types.get(base_ty_id).clone();
-                
-                if let luna_semantic::SemanticType::Array(_, len) = base_ty {
-                    let len_op = Operand::Number(len.to_string());
-                    self.push_inst(Instruction::BoundsCheck {
-                        index: index_op.clone(),
-                        len: len_op,
-                    }, self.ctx.types.bool_id());
+            Expr::Index { .. } => {
+                let ptr_op = self.generate_lvalue(expr_id);
+                let mut load_ty = ty_id;
+                if load_ty == luna_semantic::SemanticTypeId(0) {
+                    if let Operand::Value(v) = &ptr_op {
+                        let ptr_ty = self.current_function.as_ref().unwrap().values[v.0 as usize].ty;
+                        if let luna_semantic::SemanticType::Pointer(_, inner) | luna_semantic::SemanticType::Reference(_, _, inner) = self.ctx.types.get(ptr_ty) {
+                            load_ty = *inner;
+                        } else {
+                            load_ty = ptr_ty;
+                        }
+                    }
                 }
-                
-                // Emitting the actual element access logic will be done by pointer offset later.
-                // For now we just return an invalid operand or 0 since full code-gen for elements isn't done.
-                Operand::Number("0".to_string())
+                let load_val = self.push_inst(Instruction::Load {
+                    ptr: ptr_op,
+                }, load_ty);
+                Operand::Value(load_val)
             }
             Expr::Match { subject, arms, match_span: _ } => {
                 let subject_op = self.generate_expr(subject);
-                let match_ty_id = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                let match_ty_id = ty_id;
                 
                 let result_alloca = self.push_inst(Instruction::Alloca, match_ty_id);
                 let end_label = self.new_label("match_end");
                 
                 let mut next_arm_label = self.new_label("match_arm");
+                let mut any_arm_reached = false;
                 
                 for (i, arm) in arms.iter().enumerate() {
                     self.terminate_block(Terminator::Br { target: next_arm_label.clone() });
@@ -1881,26 +2104,37 @@ impl<'a> MvirGenerator<'a> {
                     
                     self.start_block(body_label);
                     
+                    self.push_scope();
                     self.bind_pat_vars(&arm.pattern, &subject_op);
                     let body_op = self.generate_block_expr(&arm.body);
-                    self.push_inst(Instruction::Store {
-                        ptr: Operand::Value(result_alloca),
-                        value: body_op,
-                    }, match_ty_id);
-                    
-                    self.terminate_block(Terminator::Br { target: end_label.clone() });
+                    if self.current_block.is_some() {
+                        any_arm_reached = true;
+                        self.push_inst(Instruction::Store {
+                            ptr: Operand::Value(result_alloca),
+                            value: body_op,
+                        }, match_ty_id);
+                        
+                        self.pop_scope_and_drop(None);
+                        self.terminate_block(Terminator::Br { target: end_label.clone() });
+                    } else {
+                        self.lexical_scopes.pop();
+                    }
                 }
                 
                 self.start_block(next_arm_label);
                 self.terminate_block(Terminator::Unreachable);
                 
-                self.start_block(end_label);
-                
-                let load_val = self.push_inst(Instruction::Load {
-                    ptr: Operand::Value(result_alloca),
-                }, match_ty_id);
-                
-                Operand::Value(load_val)
+                if any_arm_reached {
+                    self.start_block(end_label);
+                    
+                    let load_val = self.push_inst(Instruction::Load {
+                        ptr: Operand::Value(result_alloca),
+                    }, match_ty_id);
+                    
+                    Operand::Value(load_val)
+                } else {
+                    Operand::Number("0".to_string())
+                }
             }
 
             Expr::Lambda { .. } => {
@@ -2323,11 +2557,15 @@ impl<'a> MvirGenerator<'a> {
                 let mut current_res = Operand::Value(eq_val);
                 
                 for (field_idx, field_pat) in fields.iter().enumerate() {
+                    if matches!(&self.arena.pats[field_pat.0 as usize], Pattern::Wildcard | Pattern::Identifier { .. }) {
+                        continue;
+                    }
+                    let field_ty = self.get_pat_type(field_pat).unwrap_or(self.ctx.types.bool_id());
                     let extracted = self.push_inst(Instruction::Extract {
                         value: subject.clone(),
                         variant_idx,
                         field_idx: field_idx as u32,
-                    }, self.ctx.types.bool_id());
+                    }, field_ty);
                     
                     let field_match = self.generate_pat_match(field_pat, &Operand::Value(extracted));
                     let and_val = self.push_inst(Instruction::BitAnd {
@@ -2459,23 +2697,28 @@ impl<'a> MvirGenerator<'a> {
                     }
                 }
                 
+                if fields.is_empty() {
+                    self.push_inst(Instruction::Assign(subject.clone()), luna_semantic::SemanticTypeId(0));
+                }
                 for (field_idx, field) in fields.iter().enumerate() {
+                    let field_ty = self.get_pat_type(field).unwrap_or(luna_semantic::SemanticTypeId(0));
                     let extracted = self.push_inst(Instruction::Extract {
                         value: subject.clone(),
                         variant_idx,
                         field_idx: field_idx as u32,
-                    }, luna_semantic::SemanticTypeId(0));
+                    }, field_ty);
                     
                     self.bind_pat_vars(field, &Operand::Value(extracted));
                 }
             }
             Pattern::Tuple { elements, .. } => {
                 for (i, elem) in elements.iter().enumerate() {
+                    let field_ty = self.get_pat_type(elem).unwrap_or(luna_semantic::SemanticTypeId(0));
                     let extracted = self.push_inst(Instruction::Extract {
                         value: subject.clone(),
                         variant_idx: 0,
                         field_idx: i as u32,
-                    }, luna_semantic::SemanticTypeId(0));
+                    }, field_ty);
                     
                     self.bind_pat_vars(elem, &Operand::Value(extracted));
                 }

@@ -1,4 +1,4 @@
-﻿use crate::Parser;
+use crate::Parser;
 use luna_ast::{AssociatedBinding, Type, TypeId};
 use luna_lexer::{BuiltinKind, TokenKind};
 
@@ -158,7 +158,7 @@ impl<'a> Parser<'a> {
                 }
 
                 if self.match_token(TokenKind::LessThan) {
-                    if !self.check(TokenKind::GreaterThan) {
+                    if !self.is_at_generic_close() {
                         loop {
                             if self.check(TokenKind::Identifier) && self.peek_next().kind == TokenKind::Equal {
                                 let name = self.advance().span;
@@ -169,16 +169,13 @@ impl<'a> Parser<'a> {
                                 generic_args.push(self.parse_type()?);
                             }
                             if !self.match_token(TokenKind::Comma)
-                                || self.check(TokenKind::GreaterThan)
+                                || self.is_at_generic_close()
                             {
                                 break;
                             }
                         }
                     }
-                    self.consume(
-                        TokenKind::GreaterThan,
-                        "Expected '>' after type generic arguments",
-                    )?;
+                    self.consume_greater_than("Expected '>' after type generic arguments")?;
                 }
 
                 if !self.match_token(TokenKind::ColonColon) {

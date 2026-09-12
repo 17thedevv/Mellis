@@ -107,6 +107,20 @@ impl<T, E> Result<T, E> {
         }
     }
 
+    export fn ok(self: Self) -> Option<T> {
+        return match self {
+            Result::Ok(val) -> Option::Some(val),
+            Result::Err(e) -> Option::None,
+        };
+    }
+
+    export fn err(self: Self) -> Option<E> {
+        return match self {
+            Result::Ok(val) -> Option::None,
+            Result::Err(e) -> Option::Some(e),
+        };
+    }
+
     export fn unwrap(self: Self) -> T {
         match self {
             Result::Ok(val) -> val,
@@ -157,6 +171,17 @@ impl<T> Option<T> {
         return Option::None;
     }
 
+    export fn ok_or<E>(self: Self, err: E) -> Result<T, E> {
+        return match self {
+            Option::Some(val) -> Result::Ok(val),
+            Option::None -> Result::Err(err),
+        };
+    }
+
+    export fn ok(self: Self) -> Option<T> {
+        return self;
+    }
+
     export fn unwrap(self: Self) -> T {
         match self {
             Option::Some(val) -> val,
@@ -198,4 +223,92 @@ export trait Eq {
 export trait Ord {
     fn cmp(self: &Self, other: &Self) -> i32;
 }
+
+// NOTE: `slice_from_raw_parts` and `slice_from_raw_parts_mut` are unsafe intrinsic boundaries
+// bridging raw pointers to fat-pointer slices. They must NOT be treated as a precedent for safe
+// reference construction without explicit lifetime provenance contracts.
+export unsafe fn slice_from_raw_parts<T>(ptr: *T, len: u64) -> &[T];
+export unsafe fn slice_from_raw_parts_mut<T>(ptr: *rw T, len: u64) -> &rw [T];
+
+export struct SliceIter<T> {
+    ptr: *T;
+    end: *T;
+}
+
+impl<T> SliceIter<T> {
+    export fn next_ref(self: &rw Self) -> Option<&T> life_from(self) {
+        if (self.ptr as u64) >= (self.end as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec item_ptr = self.ptr;
+            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
+            return Option::Some(&*item_ptr);
+        }
+    }
+}
+
+
+impl<T> Iterator<T> for SliceIter<T> {
+    fn next(self: &rw Self) -> Option<T> {
+        if (self.ptr as u64) == (self.end as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec item = *self.ptr;
+            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
+            return Option::Some(item);
+        }
+    }
+}
+
+
+export struct SliceIterMut<T> {
+    ptr: *rw T;
+    end: *rw T;
+}
+
+impl<T> SliceIterMut<T> {
+    export fn next_mut(self: &rw Self) -> Option<&rw T> life_from(self) {
+        if (self.ptr as u64) >= (self.end as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec item_ptr = self.ptr;
+            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *rw T;
+            return Option::Some(&rw *item_ptr);
+        }
+    }
+}
+
+impl<T> Iterator<&rw T> for SliceIterMut<T> {
+    export fn next(self: &rw Self) -> Option<&rw T> {
+        if (self.ptr as u64) >= (self.end as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec item_ptr = self.ptr;
+            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *rw T;
+            return Option::Some(&rw *item_ptr);
+        }
+    }
+}
+
+export fn slice_iter<T>(s: &[T]) -> SliceIter<T> life_from(s) {
+    dec end_ptr = (s.data as u64 + (s.len as u64 * (sizeof(T) as u64))) as *T;
+    return SliceIter<T> {
+        ptr: s.data as *T,
+        end: end_ptr,
+    };
+}
+
+export fn slice_iter_mut<T>(s: &rw [T]) -> SliceIterMut<T> life_from(s) {
+    dec end_ptr = (s.data as u64 + (s.len as u64 * (sizeof(T) as u64))) as *rw T;
+    return SliceIterMut<T> {
+        ptr: s.data as *rw T,
+        end: end_ptr,
+    };
+}
+
+
 

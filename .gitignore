@@ -68,6 +68,8 @@ mellis-rs/scratch/
 scratch/
 *.llib
 *.llib.tmp
+!libs/external/*.llib
+!mellis-rs/libs/external/*.llib
 mellis-rs/build_out.txt
 mellis-rs/recovered_edits*.txt
 scratch_*.txt

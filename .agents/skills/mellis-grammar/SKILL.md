@@ -104,15 +104,23 @@ dec y = identity<i32>(42);
 ### Struct Declarations
 Struct fields **strictly use comma `,` delimiters**. Semicolons `;` are forbidden in v1.0.
 Trailing comma is permitted.
+
+Fields are **private by default**. Prefixing a field with `export` makes it public (only valid on exported structs, per `VIS-STRUCT-2`):
 ```rust
-struct Point {
-    x: f64,
-    y: f64,
+export struct Point {
+    export x: f64,
+    export y: f64,
 }
 
-struct Container<T> {
-    value: T,
-    id: i32,
+export struct User {
+    export name: str,
+    password_hash: str, // private field
+}
+
+// In a private struct, all fields are private; 'export' on fields is rejected (VIS-STRUCT-2)
+struct InternalBuffer {
+    capacity: usize,
+    len: usize,
 }
 ```
 

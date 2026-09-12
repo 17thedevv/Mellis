@@ -22,6 +22,7 @@ impl<'a> ModuleNamespaceProvider<'a> for ModuleNamespaceMap {
 use crate::{ScopeId, SemanticContext, SymbolKind};
 use luna_ast::{AstArena, Decl, Expr, Item, Pattern, Stmt, Visibility};
 use luna_common::ids::Span;
+use luna_common::Diagnostic;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeclarationContext {
@@ -527,7 +528,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     }
                     Decl::Struct {
                         name,
-                        fields: _,
+                        fields,
                         visibility,
                         generic_params,
                         annotations,
@@ -548,10 +549,40 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
                         self.check_lang_item(annotations, sym_id, crate::lang_item::LangItemTarget::Struct);
                         
+                        // Rule VIS-STRUCT-2: Struct field cannot be declared 'export' in a private struct
+                        if *visibility == luna_ast::Visibility::Private {
+                            for field in fields {
+                                if field.visibility == luna_ast::Visibility::Public {
+                                    self.ctx.diagnostics.push(
+                                        Diagnostic::error(
+                                            "Struct field cannot be declared 'export' in a private struct",
+                                        )
+                                        .with_span(field.name),
+                                    );
+                                }
+                            }
+                        }
+
                         let prev_scope = self.current_scope;
                         let struct_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
                         self.ctx.symbol_table.set_inner_scope(sym_id, struct_scope);
                         self.ctx.tables.decl_scopes.insert(*decl_id, struct_scope);
+                        
+                        let mut field_sym_ids = Vec::with_capacity(fields.len());
+                        for field in fields {
+                            let f_name_str = self.get_span_text(field.name).to_string();
+                            let f_sym_id = self.ctx.symbol_table.declare_symbol(
+                                f_name_str,
+                                crate::symbol::SymbolKind::Variable,
+                                struct_scope,
+                                field.name,
+                                Some(*decl_id),
+                                field.visibility,
+                                &mut self.ctx.diagnostics,
+                            );
+                            field_sym_ids.push(f_sym_id);
+                        }
+                        self.ctx.tables.struct_fields.insert(sym_id, field_sym_ids);
                         
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {

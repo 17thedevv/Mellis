@@ -32,41 +32,8 @@ export fn vec_with_capacity<T>(capacity: u64) -> Vec<T> {
     };
 }
 
-export struct VecIter<T> {
-    ptr: *T;
-    end: *T;
-}
-
-impl<T> Iterator<T> for VecIter<T> {
-    fn next(self: &rw Self) -> Option<T> {
-        if (self.ptr as u64) == (self.end as u64) {
-            return Option::None;
-        }
-        unsafe {
-            dec item = *self.ptr;
-            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
-            return Option::Some(item);
-        }
-    }
-}
-
-impl<T> VecIter<T> {
-    export fn next_ref(self: &rw Self) -> Option<&T> life_from(self) {
-        if (self.ptr as u64) == (self.end as u64) {
-            return Option::None;
-        }
-        unsafe {
-            dec item_ptr = self.ptr;
-            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
-            return Option::Some(&*item_ptr);
-        }
-    }
-}
-
-export struct VecIterMut<T> {
-    ptr: *rw T;
-    end: *rw T;
-}
+export type VecIter<T> = SliceIter<T>;
+export type VecIterMut<T> = SliceIterMut<T>;
 
 impl<T> Vec<T> {
     export fn push(self: &rw Self, item: T) {
@@ -123,6 +90,18 @@ impl<T> Vec<T> {
         }
     }
 
+    export fn as_slice(self: &Self) -> &[T] life_from(self) {
+        unsafe {
+            return slice_from_raw_parts(self.ptr as *T, self.len);
+        }
+    }
+
+    export fn as_mut_slice(self: &rw Self) -> &rw [T] life_from(self) {
+        unsafe {
+            return slice_from_raw_parts_mut(self.ptr, self.len);
+        }
+    }
+
     export fn grow(self: &rw Self) {
         dec rw new_cap: u64 = 0 as u64;
         if self.cap == (0 as u64) {
@@ -153,46 +132,12 @@ impl<T> Vec<T> {
         self.cap = new_cap;
     }
 
-    export fn iter(self: &Self) -> VecIter<T> life_from(self) {
-        dec end_ptr = (self.ptr as u64 + (self.len * (sizeof(T) as u64))) as *T;
-        return VecIter<T> {
-            ptr: self.ptr as *T,
-            end: end_ptr,
-        };
+    export fn iter(self: &Self) -> SliceIter<T> life_from(self) {
+        return slice_iter<T>(self.as_slice());
     }
 
-    export fn iter_mut(self: &rw Self) -> VecIterMut<T> life_from(self) {
-        dec end_ptr = (self.ptr as u64 + (self.len * (sizeof(T) as u64))) as *rw T;
-        return VecIterMut<T> {
-            ptr: self.ptr,
-            end: end_ptr,
-        };
-    }
-}
-
-impl<T> VecIterMut<T> {
-    export fn next_mut(self: &rw Self) -> Option<&rw T> life_from(self) {
-        if (self.ptr as u64) == (self.end as u64) {
-            return Option::None;
-        }
-        unsafe {
-            dec item_ptr = self.ptr;
-            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *rw T;
-            return Option::Some(&rw *item_ptr);
-        }
-    }
-}
-
-impl<T> Iterator<T> for VecIterMut<T> {
-    fn next(self: &rw Self) -> Option<T> {
-        if (self.ptr as u64) == (self.end as u64) {
-            return Option::None;
-        }
-        unsafe {
-            dec item = *self.ptr;
-            self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *rw T;
-            return Option::Some(item);
-        }
+    export fn iter_mut(self: &rw Self) -> SliceIterMut<T> life_from(self) {
+        return slice_iter_mut<T>(self.as_mut_slice());
     }
 }
 

@@ -173,6 +173,32 @@ No prefix `await expression`.
 
 ---
 
+# 4.1 Struct Field Visibility Invariants (VIS-STRUCT)
+
+Struct field visibility is independent from struct type visibility. The semantic contracts are strictly frozen:
+
+- **VIS-STRUCT-1**: Field visibility is independent from struct visibility.
+- **VIS-STRUCT-2**: A private struct cannot export fields (`Struct field cannot be declared 'export' in a private struct`).
+- **VIS-STRUCT-3**: Private field access is permitted only from the field's defining module scope and allowed descendants (ancestor rule).
+- **VIS-STRUCT-4**: Struct type visibility is checked before field visibility.
+- **VIS-STRUCT-5**: External construction requires access to every required/private field. Struct literals cannot be constructed from an external scope if the struct contains any private fields.
+- **VIS-STRUCT-6**: Private fields cannot be read, written, borrowed, projected, or destructured from an inaccessible scope. All 6 access paths are enforced:
+  1. Field read: `u.field`
+  2. Field write / assignment: `u.field = val`
+  3. Field borrow: `&u.field`, `&rw u.field`
+  4. Struct literal construction: `User { name: ..., password: ... }`
+  5. Destructuring / pattern match: `match u { User { password, .. } -> { ... } }`
+  6. Nested field projection: `acc.user.password`
+- **VIS-STRUCT-7**: Source `.ln` and `.llib` preserve identical field visibility semantics across binary boundaries.
+
+Key Regression Matrix:
+- `export struct + private field`: Valid declaration; private fields accessible within defining module/descendants, rejected externally.
+- `struct + export field`: Rejected at resolver phase (`VIS-STRUCT-2`).
+- `nested module access`: Allowed if accessing scope is a descendant of the defining module scope; rejected for sibling or parent modules without permission.
+- `external provider`: Private fields strictly rejected across provider boundaries.
+
+---
+
 # 5. Lifetime / Borrow Semantic Compliance
 
 Luna does NOT use Rust-style named lifetime parameters.

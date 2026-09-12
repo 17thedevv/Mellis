@@ -1,4 +1,4 @@
-﻿use crate::Parser;
+use crate::Parser;
 use luna_ast::{AssignOp, BinaryOp, CallArg, Expr, ExprId, FieldInit, MatchArm, UnaryOp};
 use luna_common::Span;
 use luna_lexer::TokenKind;
@@ -462,15 +462,15 @@ impl<'a> Parser<'a> {
                 let mut method_generic_args = Vec::new();
                 if self.is_value_generic_args() {
                     self.advance(); // consume '<'
-                    if !self.check(TokenKind::GreaterThan) {
+                    if !self.is_at_generic_close() {
                         loop {
                             method_generic_args.push(self.parse_type()?);
-                            if !self.match_token(TokenKind::Comma) {
+                            if !self.match_token(TokenKind::Comma) || self.is_at_generic_close() {
                                 break;
                             }
                         }
                     }
-                    self.consume(TokenKind::GreaterThan, "Expected '>' after generic arguments")?;
+                    self.consume_greater_than("Expected '>' after generic arguments")?;
                 }
 
                 if self.match_token(TokenKind::LParen) {
@@ -570,15 +570,15 @@ impl<'a> Parser<'a> {
             segments.push(id_tok.span);
             if self.is_value_generic_args() {
                 self.advance(); // consume '<'
-                if !self.check(TokenKind::GreaterThan) {
+                if !self.is_at_generic_close() {
                     loop {
                         generic_args.push(self.parse_type()?);
-                        if !self.match_token(TokenKind::Comma) {
+                        if !self.match_token(TokenKind::Comma) || self.is_at_generic_close() {
                             break;
                         }
                     }
                 }
-                self.consume(TokenKind::GreaterThan, "Expected '>' after generic arguments")?;
+                self.consume_greater_than("Expected '>' after generic arguments")?;
             }
             if !self.match_token(TokenKind::ColonColon) {
                 break;

@@ -573,7 +573,7 @@ impl ModuleRegistry {
             parent_scope,
             sym.span,
             sym.decl_id,
-            Visibility::Public,
+            sym.visibility,
             &mut ctx.diagnostics,
         );
 
@@ -958,8 +958,9 @@ impl ModuleRegistry {
                     }
                     continue;
                 }
-                // Only extract Public symbols, TypeParams, or Module namespaces
-                if sym.visibility != Visibility::Public
+                // Only extract Public symbols, TypeParams, or Module namespaces (and fields within a struct)
+                if scope.kind != ScopeKind::Struct
+                    && sym.visibility != Visibility::Public
                     && sym.kind != SymbolKind::TypeParam
                     && sym.kind != SymbolKind::Module
                 {

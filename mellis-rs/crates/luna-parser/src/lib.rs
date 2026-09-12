@@ -1,4 +1,4 @@
-﻿use luna_ast::{AstArena, DeclId, ExprId, PatId, StmtId, TypeId};
+use luna_ast::{AstArena, DeclId, ExprId, PatId, StmtId, TypeId};
 use luna_common::{Diagnostic, Span};
 use luna_lexer::{Lexer, Token, TokenKind};
 
@@ -237,6 +237,24 @@ impl<'a> Parser<'a> {
             }
 
             self.advance();
+        }
+    }
+
+    pub fn is_at_generic_close(&self) -> bool {
+        self.check(TokenKind::GreaterThan) || self.check(TokenKind::RShift)
+    }
+
+    pub fn consume_greater_than(&mut self, err_msg: &'static str) -> Result<(), ()> {
+        if self.check(TokenKind::RShift) {
+            let prev_token = self.advance();
+            let span1 = luna_common::ids::Span::new(prev_token.span.file_id, prev_token.span.start, prev_token.span.start + 1);
+            let span2 = luna_common::ids::Span::new(prev_token.span.file_id, prev_token.span.start + 1, prev_token.span.end);
+            self.tokens[self.pos - 1] = luna_lexer::Token::new(TokenKind::GreaterThan, span1);
+            self.tokens.insert(self.pos, luna_lexer::Token::new(TokenKind::GreaterThan, span2));
+            Ok(())
+        } else {
+            self.consume(TokenKind::GreaterThan, err_msg)?;
+            Ok(())
         }
     }
 }

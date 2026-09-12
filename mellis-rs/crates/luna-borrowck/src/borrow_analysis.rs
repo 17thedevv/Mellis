@@ -5,6 +5,18 @@ use luna_mvir::{Function, GlobalId, Instruction, Operand, Terminator, ValueId, V
 use luna_semantic::{SemanticContext, SemanticType};
 use std::collections::{HashMap, HashSet};
 
+fn type_has_borrow(ty: luna_semantic::SemanticTypeId, ctx: &SemanticContext) -> bool {
+    match ctx.types.get(ty) {
+        SemanticType::Reference(..) => true,
+        SemanticType::Struct(_, args, fields) | SemanticType::Enum(_, args, fields) => {
+            args.iter().any(|&a| type_has_borrow(a, ctx))
+                || fields.iter().any(|&f| type_has_borrow(f, ctx))
+        }
+        SemanticType::Tuple(elems) => elems.iter().any(|&e| type_has_borrow(e, ctx)),
+        _ => false,
+    }
+}
+
 // --- Liveness Analysis ---
 
 #[derive(Clone, Default, PartialEq, Eq)]
@@ -68,6 +80,14 @@ impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
             }
             Instruction::Drop { value, .. } => {
                 if let Operand::Value(v) = value { state.live.insert(*v); }
+            }
+            Instruction::BoundsCheck { index, len } => {
+                if let Operand::Value(v) = index { state.live.insert(*v); }
+                if let Operand::Value(v) = len { state.live.insert(*v); }
+            }
+            Instruction::PtrOffset { ptr, offset } => {
+                if let Operand::Value(v) = ptr { state.live.insert(*v); }
+                if let Operand::Value(v) = offset { state.live.insert(*v); }
             }
             Instruction::Await { future } => {
                 if let Operand::Value(v) = future { state.live.insert(*v); }
@@ -811,6 +831,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                 | SemanticType::Struct(..)
                                 | SemanticType::Enum(..)
                                 | SemanticType::Tuple(..)
+                                | SemanticType::Slice(..)
                         )
                     } else {
                         true
@@ -936,26 +957,42 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                         if let Operand::Value(val_id) = arg {
                             if let Some(ctx) = self.ctx {
                                 let val_data = self.func.value(*val_id);
-                                use luna_semantic::ty::SemanticType;
-                                match ctx.types.get(val_data.ty) {
-                                    SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => {
-                                        escape_kind = crate::effect::EscapeKind::NoEscape;
-                                        access_kind = crate::effect::AccessKind::None;
-                                    }
-                                    SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) | SemanticType::Future(_) | SemanticType::Box(_) => {
-                                        // Passed by value (or opaque copy), no memory effect on the caller's aliasing
-                                        escape_kind = crate::effect::EscapeKind::NoEscape;
-                                        access_kind = crate::effect::AccessKind::None;
-                                    }
-                                    SemanticType::Reference(_, is_mut, _) => {
-                                        // Safe Mellis reference contract
-                                        escape_kind = crate::effect::EscapeKind::NoEscape;
-                                        access_kind = if *is_mut == luna_semantic::ty::Mutability::Mutable { 
-                                            crate::effect::AccessKind::ReadWrite 
-                                        } else { 
-                                            crate::effect::AccessKind::Read 
+                                if let Instruction::Borrow { is_rw, .. } = val_data.inst {
+                                    if matches!(ctx.types.get(val_data.ty), SemanticType::Pointer(..)) {
+                                        escape_kind = if has_sync_noescape {
+                                            crate::effect::EscapeKind::NoEscape
+                                        } else {
+                                            crate::effect::EscapeKind::MayEscape
                                         };
+                                    } else {
+                                        escape_kind = crate::effect::EscapeKind::NoEscape;
                                     }
+                                    access_kind = if is_rw {
+                                        crate::effect::AccessKind::ReadWrite
+                                    } else {
+                                        crate::effect::AccessKind::Read
+                                    };
+                                } else {
+                                    use luna_semantic::ty::SemanticType;
+                                    match ctx.types.get(val_data.ty) {
+                                        SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => {
+                                            escape_kind = crate::effect::EscapeKind::NoEscape;
+                                            access_kind = crate::effect::AccessKind::None;
+                                        }
+                                        SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) | SemanticType::Future(_) | SemanticType::Box(_) => {
+                                            // Passed by value (or opaque copy), no memory effect on the caller's aliasing
+                                            escape_kind = crate::effect::EscapeKind::NoEscape;
+                                            access_kind = crate::effect::AccessKind::None;
+                                        }
+                                        SemanticType::Reference(_, is_mut, _) => {
+                                            // Safe Mellis reference contract
+                                            escape_kind = crate::effect::EscapeKind::NoEscape;
+                                            access_kind = if *is_mut == luna_semantic::ty::Mutability::Mutable { 
+                                                crate::effect::AccessKind::ReadWrite 
+                                            } else { 
+                                                crate::effect::AccessKind::Read 
+                                            };
+                                        }
                                     SemanticType::Pointer(is_mut, _) => {
                                         // Conservative C pointer contract
                                         escape_kind = if has_sync_noescape {
@@ -970,6 +1007,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                         };
                                     }
                                     _ => {}
+                                }
                                 }
                             }
                         } else {
@@ -1313,7 +1351,40 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
             Instruction::Tag { .. } => {}
             Instruction::FieldPtr { base, .. } => {
                 if let Operand::Value(b) = base {
-                    state.aliases.insert(val_id, Operand::Value(*b));
+                    let resolved = self.resolve_alias(base, state);
+                    let check_val = if let Operand::Value(rv) = resolved { *rv } else { *b };
+                    state.aliases.insert(val_id, Operand::Value(check_val));
+                    if let Some(prov) = state.direct_provenance.get(&check_val).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(&check_val).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.direct_provenance.get(b).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(b).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                }
+            }
+            Instruction::BoundsCheck { index, len } => {
+                self.check_access(index, false, val_id, state);
+                self.check_access(len, false, val_id, state);
+            }
+            Instruction::PtrOffset { ptr, offset } => {
+                self.check_access(offset, false, val_id, state);
+                self.check_access(ptr, false, val_id, state);
+                if let Operand::Value(p) = ptr {
+                    let resolved = self.resolve_alias(ptr, state);
+                    let check_val = if let Operand::Value(rv) = resolved { *rv } else { *p };
+                    state.aliases.insert(val_id, Operand::Value(check_val));
+                    if let Some(prov) = state.direct_provenance.get(&check_val).cloned() {
+                        state.direct_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    if let Some(prov) = state.carried_provenance.get(&check_val).cloned() {
+                        state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
                 }
             }
             Instruction::Add { left, right, .. }
@@ -1430,6 +1501,11 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
             // Def-site Return Safety validation (P0-A, P0-B, P0-C, P0-D)
             let ret_ty = self.func.ret_ty;
             let is_ref_ret = if let Some(ctx) = self.ctx {
+                type_has_borrow(ret_ty, ctx)
+            } else {
+                false
+            };
+            let is_direct_ref_ret = if let Some(ctx) = self.ctx {
                 matches!(ctx.types.get(ret_ty), SemanticType::Reference(..))
             } else {
                 false
@@ -1509,7 +1585,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                 }
 
                 // If value resolved directly to an operand without explicit loans in provenance:
-                if ret_loans.is_empty() && is_ref_ret {
+                if ret_loans.is_empty() && is_direct_ref_ret {
                     if let Operand::Value(res_v) = resolved_op {
                         if (res_v.0 as usize) < self.func.values.len() {
                             let val_data = &self.func.values[res_v.0 as usize];
@@ -1564,7 +1640,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                             if !self.diagnostics.iter().any(|existing| existing.message == diag.message && existing.span == diag.span) {
                                 self.diagnostics.push(diag);
                             }
-                        } else if is_ref_ret && actual_param_origins.is_empty() && !has_global_origin {
+                        } else if is_direct_ref_ret && actual_param_origins.is_empty() && !has_global_origin {
                             let mut diag = Diagnostic::error(
                                 "error[E2016]: LifetimeConstraintViolation: return expression does not satisfy declared lifetime contract"
                             );

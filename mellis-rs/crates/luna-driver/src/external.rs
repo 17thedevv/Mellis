@@ -103,10 +103,15 @@ impl ExternalComponentLoader {
                 return Err(ExternalComponentError::SemanticFailed(semantic_ctx.diagnostics));
             }
 
-            let mut typechecker = luna_semantic::TypeChecker::new(
+            let comptime_engine = luna_mvir::MvirComptimeEngine {
+                max_steps: 1_000_000,
+                max_depth: 512,
+            };
+            let mut typechecker = luna_semantic::TypeChecker::new_with_engine(
                 &mut semantic_ctx,
                 global_arena,
                 &mut driver_session.compiler_session.source_manager,
+                &comptime_engine,
             );
             typechecker.typecheck_items(&shifted_provider_items);
 
@@ -298,8 +303,12 @@ impl ExternalComponentLoader {
             return Err(ExternalComponentError::SemanticFailed(semantic_ctx.diagnostics));
         }
 
+        let comptime_engine = luna_mvir::MvirComptimeEngine {
+            max_steps: 1_000_000,
+            max_depth: 512,
+        };
         let mut typechecker =
-            luna_semantic::TypeChecker::new(&mut semantic_ctx, global_arena, &mut driver_session.compiler_session.source_manager);
+            luna_semantic::TypeChecker::new_with_engine(&mut semantic_ctx, global_arena, &mut driver_session.compiler_session.source_manager, &comptime_engine);
         typechecker.typecheck_items(&shifted_provider_items);
 
         if !semantic_ctx.diagnostics.is_empty() {

@@ -60,7 +60,7 @@ fn test_import_2_and_7_hierarchy_preservation() {
     let prov_src = r#"
         module foo {
             export struct Bar {
-                x: i32,
+                export x: i32,
             }
         }
     "#;
@@ -101,7 +101,7 @@ fn test_import_6_visibility_enforcement() {
     let prov_path = dir.join("prov_vis.ln");
     let prov_src = r#"
         export struct PublicItem {
-            x: i32,
+            export x: i32,
         }
         struct PrivateItem {
             y: i32,

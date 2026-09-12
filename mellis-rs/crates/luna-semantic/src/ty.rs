@@ -1,4 +1,4 @@
-﻿use luna_common::ids::SymbolId;
+use luna_common::ids::SymbolId;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -247,6 +247,14 @@ impl TypeContext {
                 let new_self = self.subst(self_type, subst);
                 self.intern(SemanticType::Projection { self_type: new_self, trait_id, assoc_type })
             }
+            SemanticType::Slice(inner) => {
+                let new_inner = self.subst(inner, subst);
+                self.intern(SemanticType::Slice(new_inner))
+            }
+            SemanticType::Array(inner, len) => {
+                let new_inner = self.subst(inner, subst);
+                self.intern(SemanticType::Array(new_inner, len))
+            }
             _ => id, // Primitive, Void, Error, Never, InferenceVar
         }
     }
@@ -307,6 +315,24 @@ impl TypeContext {
     pub fn is_monomorphic(&self, id: SemanticTypeId) -> bool {
         let flags = self.type_flags(id);
         !flags.0 && !flags.1 && !flags.2 && !flags.3 // has_infer, has_generic, has_error, has_projection
+    }
+
+    pub fn contains_reference(&self, ty_id: SemanticTypeId) -> bool {
+        if ty_id.0 == 0 {
+            return false;
+        }
+        let ty_id = self.resolve(ty_id);
+        match self.get(ty_id) {
+            SemanticType::Reference(..) | SemanticType::Pointer(..) | SemanticType::Slice(..) => true,
+            SemanticType::Struct(_, _, fields) | SemanticType::Enum(_, _, fields) => {
+                fields.iter().any(|&f| self.contains_reference(f))
+            }
+            SemanticType::Tuple(elems) => elems.iter().any(|&e| self.contains_reference(e)),
+            SemanticType::Array(elem, _) | SemanticType::Box(elem) | SemanticType::Future(elem) | SemanticType::Range(elem) => {
+                self.contains_reference(*elem)
+            }
+            _ => false,
+        }
     }
 
     /// Returns true if the type is unsized (cannot appear in value position).

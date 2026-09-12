@@ -1,4 +1,4 @@
-﻿use crate::Parser;
+use crate::Parser;
 use luna_ast::{ForKind, Item, Stmt, StmtId};
 use luna_lexer::TokenKind;
 
@@ -60,7 +60,7 @@ impl<'a> Parser<'a> {
                 has_semicolon: false,
             }));
         }
-        if let luna_ast::Expr::MacroCall { delimiter: luna_ast::MacroDelimiter::Brace, .. } = &self.arena.exprs[expr.0 as usize] {
+        if matches!(&self.arena.exprs[expr.0 as usize], luna_ast::Expr::MacroCall { delimiter: luna_ast::MacroDelimiter::Brace, .. } | luna_ast::Expr::Match { .. }) {
             let has_semi = self.match_token(TokenKind::Semi);
             return Ok(self.arena.alloc_stmt(Stmt::Expr {
                 expr,

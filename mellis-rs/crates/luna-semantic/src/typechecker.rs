@@ -160,6 +160,8 @@ impl<'a> TypeChecker<'a> {
             (SemanticType::Pointer(m1, i1), SemanticType::Reference(_, m2, i2)) if m1 == m2 => {
                 self.unify(i1, i2)
             }
+            (SemanticType::Void, SemanticType::Tuple(els)) if els.is_empty() => Ok(()),
+            (SemanticType::Tuple(els), SemanticType::Void) if els.is_empty() => Ok(()),
             (SemanticType::Tuple(els1), SemanticType::Tuple(els2)) if els1.len() == els2.len() => {
                 for (e1, e2) in els1.into_iter().zip(els2.into_iter()) {
                     self.unify(e1, e2)?;
@@ -728,6 +730,25 @@ impl<'a> TypeChecker<'a> {
         }
         self.solve_associated_type_obligations();
         self.check_copy_drop_invariants();
+
+        let expr_keys: Vec<_> = self.ctx.tables.expr_types.keys().copied().collect();
+        for k in expr_keys {
+            let ty = self.ctx.tables.expr_types[&k];
+            let resolved = self.ctx.types.resolve(ty);
+            self.ctx.tables.expr_types.insert(k, resolved);
+        }
+        let sym_keys: Vec<_> = self.ctx.tables.symbol_types.keys().copied().collect();
+        for k in sym_keys {
+            let ty = self.ctx.tables.symbol_types[&k];
+            let resolved = self.ctx.types.resolve(ty);
+            self.ctx.tables.symbol_types.insert(k, resolved);
+        }
+        let pat_keys: Vec<_> = self.ctx.tables.pat_types.keys().copied().collect();
+        for k in pat_keys {
+            let ty = self.ctx.tables.pat_types[&k];
+            let resolved = self.ctx.types.resolve(ty);
+            self.ctx.tables.pat_types.insert(k, resolved);
+        }
     }
 
     
@@ -2308,6 +2329,7 @@ impl<'a> TypeChecker<'a> {
             }
             Type::Slice { inner } => {
                 let inner_ty = self.lower_type(*inner);
+                self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Mutable, inner_ty));
                 self.ctx.types.intern(SemanticType::Slice(inner_ty))
             }
             Type::Array { element_type, size } => {
@@ -2699,7 +2721,7 @@ impl<'a> TypeChecker<'a> {
     fn typecheck_pattern(&mut self, pat_id: &luna_ast::PatId, ty: SemanticTypeId) {
         if let Some(sym_id) = self.ctx.tables.pat_symbols.get(pat_id).copied() {
             let kind = self.ctx.symbol_table.get_symbol(sym_id).kind;
-            if matches!(kind, crate::SymbolKind::Variable) {
+            if matches!(kind, crate::SymbolKind::Variable | crate::SymbolKind::Constant) {
                 self.ctx.tables.symbol_types.insert(sym_id, ty);
             }
         }
@@ -2751,24 +2773,25 @@ impl<'a> TypeChecker<'a> {
                             }
 
                             for field in fields {
+                                let field_name_str = self.get_span_text(field.name);
+                                
+                                let mut field_ty = self.ctx.types.new_inference_var();
+                                let mut found = false;
+                                for struct_field in struct_fields {
+                                    let struct_field_name = self.get_span_text(struct_field.name);
+                                    if field_name_str == struct_field_name {
+                                        self.check_field_visibility(sym_id, struct_field.visibility, &field_name_str, field.name);
+                                        field_ty = self.ctx.tables.ast_type_to_semantic.get(&struct_field.ty).copied().unwrap_or(field_ty);
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                
+                                if !found {
+                                    self.ctx.diagnostics.push(luna_common::diagnostic::Diagnostic::error(format!("Struct has no field named `{}`", field_name_str)).with_span(field.name));
+                                }
+                                
                                 if let Some(field_pat) = field.pattern {
-                                    let field_name_str = self.get_span_text(field.name);
-                                    
-                                    let mut field_ty = self.ctx.types.new_inference_var();
-                                    let mut found = false;
-                                    for struct_field in struct_fields {
-                                        let struct_field_name = self.get_span_text(struct_field.name);
-                                        if field_name_str == struct_field_name {
-                                            field_ty = self.ctx.tables.ast_type_to_semantic.get(&struct_field.ty).copied().unwrap_or(field_ty);
-                                            found = true;
-                                            break;
-                                        }
-                                    }
-                                    
-                                    if !found {
-                                        self.ctx.diagnostics.push(luna_common::diagnostic::Diagnostic::error(format!("Struct has no field named `{}`", field_name_str)).with_span(field.name));
-                                    }
-                                    
                                     self.typecheck_pattern(&field_pat, field_ty);
                                 }
                             }
@@ -2777,20 +2800,53 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             luna_ast::Pattern::Enum { fields, path } => {
+                let mut pat_span = luna_common::ids::Span::new(luna_common::ids::FileId(0), 0, 0);
+                if let Some(first) = path.first() { pat_span = *first; }
+
                 let mut variant_payload_tys = Vec::new();
                 if let Some(variant_sym_id) = self.ctx.tables.pat_symbols.get(pat_id).copied() {
                     let variant_sym = self.ctx.symbol_table.get_symbol(variant_sym_id);
                     if let crate::symbol::SymbolKind::EnumVariant(variant_idx) = variant_sym.kind {
                         if let Some(decl_id) = variant_sym.decl_id {
-                            if let luna_ast::Decl::Enum { variants, .. } = &self.arena.decls[decl_id.0 as usize] {
-                                if let Some(variant) = variants.get(variant_idx as usize) {
-                                    for &param_decl_id in &variant.fields {
-                                        if let luna_ast::Decl::Param { ty: Some(ty_id), .. } = &self.arena.decls[param_decl_id.0 as usize] {
-                                            let sem_ty = self.ctx.tables.ast_type_to_semantic.get(ty_id).copied().unwrap_or_else(|| self.ctx.types.new_inference_var());
-                                            variant_payload_tys.push(sem_ty);
+                            let enum_sym_id = self.ctx.tables.decl_symbols.get(&decl_id).copied();
+                            let base_enum_ty = enum_sym_id.and_then(|id| self.ctx.tables.symbol_types.get(&id).copied());
+
+                            if let Some(base_ty) = base_enum_ty {
+                                if let SemanticType::Enum(e_sym, base_args, original_var_tys) = self.ctx.types.get(base_ty).clone() {
+                                    let mut subst = crate::ty::Substitution::new();
+                                    let mut fresh_args = Vec::new();
+                                    for arg in &base_args {
+                                        if let SemanticType::GenericParam(gp) = self.ctx.types.get(*arg).clone() {
+                                            let ivar = self.ctx.types.new_inference_var();
+                                            subst.insert(gp, ivar);
+                                            fresh_args.push(ivar);
                                         } else {
-                                            variant_payload_tys.push(self.ctx.types.new_inference_var());
+                                            fresh_args.push(*arg);
                                         }
+                                    }
+                                    let mut instantiated_var_tys = Vec::new();
+                                    for orig_ty in original_var_tys {
+                                        instantiated_var_tys.push(self.ctx.types.subst(orig_ty, &subst));
+                                    }
+                                    let fresh_enum_ty = self.ctx.types.intern(SemanticType::Enum(e_sym, fresh_args, instantiated_var_tys));
+                                    if let Err(err) = self.unify(fresh_enum_ty, ty) {
+                                        self.ctx.diagnostics.push(luna_common::diagnostic::Diagnostic::error(err).with_span(pat_span));
+                                    }
+                                }
+                            }
+
+                            let resolved_subj_ty = self.ctx.types.resolve(ty);
+                            if let SemanticType::Enum(_, _, ref var_tys) = self.ctx.types.get(resolved_subj_ty).clone() {
+                                if let Some(&payload_ty) = var_tys.get(variant_idx as usize) {
+                                    let resolved_payload = self.ctx.types.resolve(payload_ty);
+                                    if fields.is_empty() {
+                                        // Unit variant
+                                    } else if fields.len() == 1 {
+                                        variant_payload_tys.push(resolved_payload);
+                                    } else if let SemanticType::Tuple(ref elems) = self.ctx.types.get(resolved_payload).clone() {
+                                        variant_payload_tys.extend(elems.iter().map(|&e| self.ctx.types.resolve(e)));
+                                    } else {
+                                        variant_payload_tys.push(resolved_payload);
                                     }
                                 }
                             }
@@ -2799,8 +2855,6 @@ impl<'a> TypeChecker<'a> {
                 }
                 
                 if fields.len() != variant_payload_tys.len() {
-                    let mut pat_span = luna_common::ids::Span::new(luna_common::ids::FileId(0), 0, 0);
-                    if let Some(first) = path.first() { pat_span = *first; }
                     self.ctx.diagnostics.push(luna_common::diagnostic::Diagnostic::error(format!("Enum variant expects {} fields, but {} were provided", variant_payload_tys.len(), fields.len())).with_span(pat_span));
                     return;
                 }
@@ -2990,20 +3044,15 @@ impl<'a> TypeChecker<'a> {
             }
             Expr::Identifier { generic_args, .. } => {
                 if let Some(sym_id) = self.ctx.tables.expr_symbols.get(expr_id) {
-                    eprintln!("EXPR IDENTIFIER: sym_id={:?} sym_name={:?} sym_kind={:?} sym_decl={:?}", sym_id, self.ctx.symbol_table.get_symbol(*sym_id).name, self.ctx.symbol_table.get_symbol(*sym_id).kind, self.ctx.symbol_table.get_symbol(*sym_id).decl_id);
                     let mut base_ty = None;
                     if let Some(ty) = self.ctx.tables.symbol_types.get(sym_id) {
-                        eprintln!("EXPR IDENTIFIER HAS DIRECT SYMBOL_TYPE: sym_id={:?} ty={:?}", sym_id, self.ctx.types.get(*ty));
                         base_ty = Some(*ty);
                     } else {
                         let symbol = self.ctx.symbol_table.get_symbol(*sym_id);
                         if let crate::SymbolKind::EnumVariant(_) = symbol.kind {
                             if let Some(decl_id) = symbol.decl_id {
-                                eprintln!("ENUM VARIANT LOOKUP: decl_id={:?}", decl_id);
                                 if let Some(enum_sym_id) = self.ctx.tables.decl_symbols.get(&decl_id) {
-                                    eprintln!("  enum_sym_id={:?} enum_name={:?}", enum_sym_id, self.ctx.symbol_table.get_symbol(*enum_sym_id).name);
                                     if let Some(ty) = self.ctx.tables.symbol_types.get(enum_sym_id) {
-                                        eprintln!("  ty={:?}", self.ctx.types.get(*ty));
                                         base_ty = Some(*ty);
                                     }
                                 }
@@ -3012,33 +3061,38 @@ impl<'a> TypeChecker<'a> {
                     }
                     if let Some(ty) = base_ty {
                         if generic_args.is_empty() {
-                            let resolved = self.ctx.types.get(ty).clone();
-                            match resolved {
-                                SemanticType::Enum(e_sym, enum_args, original_var_tys) => {
-                                    let mut has_generic_param = false;
-                                    let mut subst = crate::ty::Substitution::new();
-                                    let mut new_args = Vec::new();
-                                    for arg in &enum_args {
-                                        if let SemanticType::GenericParam(gp) = self.ctx.types.get(*arg).clone() {
-                                            has_generic_param = true;
-                                            let ivar = self.ctx.types.new_inference_var();
-                                            subst.insert(gp, ivar);
-                                            new_args.push(ivar);
+                            let sym_kind = self.ctx.symbol_table.get_symbol(*sym_id).kind.clone();
+                            if matches!(sym_kind, crate::SymbolKind::EnumVariant(_) | crate::SymbolKind::Enum) {
+                                let resolved = self.ctx.types.get(ty).clone();
+                                match resolved {
+                                    SemanticType::Enum(e_sym, enum_args, original_var_tys) => {
+                                        let mut has_generic_param = false;
+                                        let mut subst = crate::ty::Substitution::new();
+                                        let mut new_args = Vec::new();
+                                        for arg in &enum_args {
+                                            if let SemanticType::GenericParam(gp) = self.ctx.types.get(*arg).clone() {
+                                                has_generic_param = true;
+                                                let ivar = self.ctx.types.new_inference_var();
+                                                subst.insert(gp, ivar);
+                                                new_args.push(ivar);
+                                            } else {
+                                                new_args.push(*arg);
+                                            }
+                                        }
+                                        if has_generic_param {
+                                            let mut variant_tys = Vec::new();
+                                            for orig_ty in original_var_tys {
+                                                variant_tys.push(self.ctx.types.subst(orig_ty, &subst));
+                                            }
+                                            self.ctx.types.intern(SemanticType::Enum(e_sym, new_args, variant_tys))
                                         } else {
-                                            new_args.push(*arg);
+                                            ty
                                         }
                                     }
-                                    if has_generic_param {
-                                        let mut variant_tys = Vec::new();
-                                        for orig_ty in original_var_tys {
-                                            variant_tys.push(self.ctx.types.subst(orig_ty, &subst));
-                                        }
-                                        self.ctx.types.intern(SemanticType::Enum(e_sym, new_args, variant_tys))
-                                    } else {
-                                        ty
-                                    }
+                                    _ => ty,
                                 }
-                                _ => ty,
+                            } else {
+                                ty
                             }
                         } else {
                             // Substitute generic arguments
@@ -3477,47 +3531,54 @@ impl<'a> TypeChecker<'a> {
                     _ => obj_ty.clone(),
                 };
                 
-                if let SemanticType::Slice(_) = peeled_ty {
-                    if member_name == "length" {
+                if let SemanticType::Slice(elem) = peeled_ty {
+                    if member_name == "length" || member_name == "len" {
                         self.ctx.tables.expr_member_indices.insert(*expr_id, 1);
                         let f_ty = self.ctx.types.intern(SemanticType::Primitive(BuiltinType::Usize));
                         self.ctx.tables.expr_types.insert(*expr_id, f_ty);
                         return f_ty;
+                    } else if member_name == "ptr" || member_name == "data" {
+                        self.ctx.tables.expr_member_indices.insert(*expr_id, 0);
+                        let ptr_ty = self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Mutable, elem));
+                        self.ctx.tables.expr_types.insert(*expr_id, ptr_ty);
+                        return ptr_ty;
                     }
                 }
 
                 if let SemanticType::Struct(sym_id, _, field_tys) = peeled_ty {
+                    let mut found_field = None;
                     if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
                         if (decl_id.0 as usize) < self.arena.decls.len() {
                             if let Decl::Struct { fields, .. } = &self.arena.decls[decl_id.0 as usize] {
                                 if let Some((index, field)) = fields.iter().enumerate().find(|(_, field)| {
                                     self.get_span_text(field.name) == member_name
                                 }) {
-                                    let struct_sym = self.ctx.symbol_table.get_symbol(sym_id);
-                                    let is_accessible = match field.visibility {
-                                        luna_ast::Visibility::Public => true,
-                                        luna_ast::Visibility::Internal => struct_sym.provider_id == self.ctx.current_provider,
-                                        luna_ast::Visibility::Private => {
-                                            if struct_sym.provider_id.is_some() && struct_sym.provider_id != self.ctx.current_provider {
-                                                false
-                                            } else {
-                                                let sym_mod = self.ctx.symbol_table.enclosing_module_scope(struct_sym.scope);
-                                                let cur_mod = self.ctx.symbol_table.enclosing_module_scope(self.current_scope);
-                                                sym_mod == cur_mod || self.ctx.symbol_table.is_ancestor(sym_mod, cur_mod)
-                                            }
-                                        }
-                                    };
-                                    if !is_accessible {
-                                        self.ctx.diagnostics.push(Diagnostic::error(format!("Field `{}` of struct `{}` is private and cannot be accessed from this scope", member_name, struct_sym.name)).with_span(*member));
-                                        return self.ctx.types.intern(SemanticType::Error);
-                                    }
-                                    self.ctx.tables.expr_member_indices.insert(*expr_id, index as u32);
-                                    let f_ty = field_tys[index];
-                                    self.ctx.tables.expr_types.insert(*expr_id, f_ty);
-                                    return f_ty;
+                                    found_field = Some((index, field.visibility));
                                 }
                             }
                         }
+                    }
+                    if found_field.is_none() {
+                        let struct_sym = self.ctx.symbol_table.get_symbol(sym_id);
+                        if let Some(inner_scope) = struct_sym.inner_scope {
+                            if let Some(field_sym_id) = self.ctx.symbol_table.lookup_exact_with_ctxt(member_name, luna_common::ids::SyntaxContext::ROOT, inner_scope) {
+                                let field_sym = self.ctx.symbol_table.get_symbol(field_sym_id);
+                                let index = self.ctx.tables.struct_fields.get(&sym_id)
+                                    .and_then(|ids| ids.iter().position(|&id| id == field_sym_id))
+                                    .unwrap_or(0);
+                                found_field = Some((index, field_sym.visibility));
+                            }
+                        }
+                    }
+                    if let Some((index, visibility)) = found_field {
+                        let is_accessible = self.check_field_visibility(sym_id, visibility, member_name, *member);
+                        if !is_accessible {
+                            return self.ctx.types.intern(SemanticType::Error);
+                        }
+                        self.ctx.tables.expr_member_indices.insert(*expr_id, index as u32);
+                        let f_ty = field_tys.get(index).copied().unwrap_or_else(|| self.ctx.types.intern(SemanticType::Error));
+                        self.ctx.tables.expr_types.insert(*expr_id, f_ty);
+                        return f_ty;
                     }
 
                     // Look up methods on this struct (from local impl blocks)
@@ -3692,9 +3753,10 @@ impl<'a> TypeChecker<'a> {
                 let mut init_indices = Vec::with_capacity(fields.len());
                 for field in fields {
                     let field_name = self.get_span_text(field.name);
-                    if let Some((index, _)) = declared_fields.iter().enumerate().find(|(_, declared)| {
+                    if let Some((index, declared)) = declared_fields.iter().enumerate().find(|(_, declared)| {
                         self.get_span_text(declared.name) == field_name
                     }) {
+                        self.check_field_visibility(symbol, declared.visibility, field_name, field.name);
                         let value_ty = self.typecheck_expr(&field.value);
                         if self.unify(field_tys[index], value_ty).is_err() {
                             self.ctx.diagnostics.push(Diagnostic::error(format!("Type mismatch for field '{}'", field_name)).with_span(field.name));
@@ -3704,6 +3766,15 @@ impl<'a> TypeChecker<'a> {
                         self.ctx.diagnostics.push(Diagnostic::error(format!("Unknown field '{}' for struct '{}'", field_name, full_name)).with_span(field.name));
                         self.typecheck_expr(&field.value);
                         init_indices.push(u32::MAX); // Error recovery
+                    }
+                }
+
+                // Check that all declared fields are initialized
+                for declared in declared_fields {
+                    let declared_name = self.get_span_text(declared.name);
+                    let provided = fields.iter().any(|f| self.get_span_text(f.name) == declared_name);
+                    if !provided {
+                        self.ctx.diagnostics.push(Diagnostic::error(format!("Missing field `{}` in initializer of `{}`", declared_name, full_name)).with_span(span));
                     }
                 }
                 self.ctx.tables.expr_struct_init_indices.insert(*expr_id, init_indices);
@@ -3891,6 +3962,62 @@ impl<'a> TypeChecker<'a> {
                     _ => obj_ty.clone(),
                 };
 
+                if let SemanticType::Slice(_) = peeled_ty {
+                    if member_name == "len" || member_name == "length" {
+                        if !args.is_empty() {
+                            let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                            self.ctx.diagnostics.push(Diagnostic::error("`len()` on slice takes no arguments").with_span(span));
+                        }
+                        let usize_ty = self.ctx.types.intern(SemanticType::Primitive(BuiltinType::Usize));
+                        self.ctx.tables.expr_types.insert(*expr_id, usize_ty);
+                        self.ctx.tables.expr_member_indices.insert(*expr_id, 1);
+                        return usize_ty;
+                    } else if member_name == "is_empty" {
+                        if !args.is_empty() {
+                            let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                            self.ctx.diagnostics.push(Diagnostic::error("`is_empty()` on slice takes no arguments").with_span(span));
+                        }
+                        let bool_ty = self.ctx.types.bool_id();
+                        self.ctx.tables.expr_types.insert(*expr_id, bool_ty);
+                        self.ctx.tables.expr_member_indices.insert(*expr_id, 2);
+                        return bool_ty;
+                    } else if member_name == "iter" {
+                        if !args.is_empty() {
+                            let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                            self.ctx.diagnostics.push(Diagnostic::error("`iter()` on slice takes no arguments").with_span(span));
+                        }
+                        let slice_iter_sym = self.ctx.symbol_table.symbols.iter().find(|s| s.name == "SliceIter").map(|s| s.id);
+                        if let Some(sym_id) = slice_iter_sym {
+                            let elem = match peeled_ty {
+                                SemanticType::Slice(el) => el,
+                                _ => self.ctx.types.usize_id(),
+                            };
+                            let ptr_ty = self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Immutable, elem));
+                            let iter_ty = self.ctx.types.intern(SemanticType::Struct(sym_id, vec![elem], vec![ptr_ty, ptr_ty]));
+                            self.ctx.tables.expr_types.insert(*expr_id, iter_ty);
+                            self.ctx.tables.expr_member_indices.insert(*expr_id, 3);
+                            return iter_ty;
+                        }
+                    } else if member_name == "iter_mut" {
+                        if !args.is_empty() {
+                            let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                            self.ctx.diagnostics.push(Diagnostic::error("`iter_mut()` on slice takes no arguments").with_span(span));
+                        }
+                        let slice_iter_mut_sym = self.ctx.symbol_table.symbols.iter().find(|s| s.name == "SliceIterMut").map(|s| s.id);
+                        if let Some(sym_id) = slice_iter_mut_sym {
+                            let elem = match peeled_ty {
+                                SemanticType::Slice(el) => el,
+                                _ => self.ctx.types.usize_id(),
+                            };
+                            let ptr_ty = self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Mutable, elem));
+                            let iter_ty = self.ctx.types.intern(SemanticType::Struct(sym_id, vec![elem], vec![ptr_ty, ptr_ty]));
+                            self.ctx.tables.expr_types.insert(*expr_id, iter_ty);
+                            self.ctx.tables.expr_member_indices.insert(*expr_id, 4);
+                            return iter_ty;
+                        }
+                    }
+                }
+
                 let nominal_info = match &peeled_ty {
                     SemanticType::Struct(sym_id, struct_args, _) => Some((*sym_id, struct_args.clone())),
                     SemanticType::Enum(sym_id, enum_args, _) => Some((*sym_id, enum_args.clone())),
@@ -3969,7 +4096,18 @@ impl<'a> TypeChecker<'a> {
                                 let mut m_has_generics = false;
                                 
                                 // 1. Bind impl generic params to struct_args
-                                if let Some(impl_decl_id) = impl_decl_id_opt {
+                                if let Some(gp_syms) = self.ctx.tables.impl_generic_params.get(&impl_key) {
+                                    if !gp_syms.is_empty() {
+                                        m_has_generics = true;
+                                        for (gp_idx, &gp_sym) in gp_syms.iter().enumerate() {
+                                            if let Some(&arg_ty) = struct_args.get(gp_idx) {
+                                                subst.insert(gp_sym, arg_ty);
+                                            } else {
+                                                subst.insert(gp_sym, self.ctx.types.new_inference_var());
+                                            }
+                                        }
+                                    }
+                                } else if let Some(impl_decl_id) = impl_decl_id_opt {
                                     if (impl_decl_id.0 as usize) < self.arena.decls.len() {
                                         if let Decl::Impl { generic_params: impl_gps, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
                                             if !impl_gps.is_empty() {
@@ -3982,19 +4120,6 @@ impl<'a> TypeChecker<'a> {
                                                             subst.insert(*gp_sym, self.ctx.types.new_inference_var());
                                                         }
                                                     }
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    if let Some(gp_syms) = self.ctx.tables.impl_generic_params.get(&impl_key) {
-                                        if !gp_syms.is_empty() {
-                                            m_has_generics = true;
-                                            for (gp_idx, &gp_sym) in gp_syms.iter().enumerate() {
-                                                if let Some(&arg_ty) = struct_args.get(gp_idx) {
-                                                    subst.insert(gp_sym, arg_ty);
-                                                } else {
-                                                    subst.insert(gp_sym, self.ctx.types.new_inference_var());
                                                 }
                                             }
                                         }
@@ -4240,7 +4365,7 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
                 
-                result_ty
+                self.ctx.types.resolve(result_ty)
             }
             Expr::Lambda { body, params, return_type, is_move } => {
                 let mut param_tys = Vec::new();
@@ -4666,6 +4791,41 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             _ => {}
+        }
+    }
+
+    pub fn check_field_visibility(
+        &mut self,
+        struct_sym_id: luna_common::ids::SymbolId,
+        field_vis: luna_ast::Visibility,
+        field_name: &str,
+        span: luna_common::Span,
+    ) -> bool {
+        let struct_sym = self.ctx.symbol_table.get_symbol(struct_sym_id);
+        let is_accessible = match field_vis {
+            luna_ast::Visibility::Public => true,
+            luna_ast::Visibility::Internal => struct_sym.provider_id == self.ctx.current_provider,
+            luna_ast::Visibility::Private => {
+                if struct_sym.provider_id.is_some() && struct_sym.provider_id != self.ctx.current_provider {
+                    false
+                } else {
+                    let sym_mod = self.ctx.symbol_table.enclosing_module_scope(struct_sym.scope);
+                    let cur_mod = self.ctx.symbol_table.enclosing_module_scope(self.current_scope);
+                    sym_mod == cur_mod || self.ctx.symbol_table.is_ancestor(sym_mod, cur_mod)
+                }
+            }
+        };
+        if !is_accessible {
+            self.ctx.diagnostics.push(
+                Diagnostic::error(format!(
+                    "Field `{}` of struct `{}` is private and cannot be accessed from this scope",
+                    field_name, struct_sym.name
+                ))
+                .with_span(span),
+            );
+            false
+        } else {
+            true
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿use crate::dataflow::{DataflowAnalysis, DataflowEngine};
+use crate::dataflow::{DataflowAnalysis, DataflowEngine};
 use crate::effect::{AccessKind, CallEffectSummary, EscapeKind, OwnershipKind, ReturnEffect};
 use luna_mvir::{ValueOrigin, Function, GlobalId, Instruction, Operand, Terminator, ValueId};
 use std::collections::{HashMap, HashSet};
@@ -21,28 +21,43 @@ pub struct EffectInference<'a> {
     arg_values: Vec<ValueId>, // The ValueIds corresponding to the function arguments
     pub summary: CallEffectSummary,
     callee_summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
+    func: &'a Function,
+    ctx: Option<&'a luna_semantic::SemanticContext>,
 }
 
 impl<'a> EffectInference<'a> {
     pub fn new(
+        func: &'a Function,
         arg_count: usize,
         arg_values: Vec<ValueId>,
         callee_summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
+        ctx: Option<&'a luna_semantic::SemanticContext>,
     ) -> Self {
         Self {
             arg_count,
             arg_values,
             summary: CallEffectSummary::default_for_args(arg_count),
             callee_summaries,
+            func,
+            ctx,
         }
     }
 
     pub fn infer(
-        func: &Function,
+        func: &'a Function,
         arg_values: Vec<ValueId>,
         callee_summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
     ) -> CallEffectSummary {
-        let mut analyzer = Self::new(arg_values.len(), arg_values, callee_summaries);
+        Self::infer_with_context(func, arg_values, callee_summaries, None)
+    }
+
+    pub fn infer_with_context(
+        func: &'a Function,
+        arg_values: Vec<ValueId>,
+        callee_summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
+        ctx: Option<&'a luna_semantic::SemanticContext>,
+    ) -> CallEffectSummary {
+        let mut analyzer = Self::new(func, arg_values.len(), arg_values, callee_summaries, ctx);
         let _ = DataflowEngine::run_forward(func, &mut analyzer);
         analyzer.summary
     }
@@ -119,10 +134,19 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
                     }
                 }
                 // Loaded value inherits pointer's carried provenance as its own direct and carried provenance
-                if let Operand::Value(ptr_val) = ptr {
-                    if let Some(taints) = state.carried.get(ptr_val).cloned() {
-                        state.direct.entry(val_id).or_default().extend(taints.clone());
-                        state.carried.entry(val_id).or_default().extend(taints);
+                // ONLY if the loaded value's type can contain references!
+                let carries_prov = if let Some(ctx) = self.ctx {
+                    let sem_ty = self.func.values[val_id.0 as usize].ty;
+                    ctx.types.contains_reference(sem_ty)
+                } else {
+                    true
+                };
+                if carries_prov {
+                    if let Operand::Value(ptr_val) = ptr {
+                        if let Some(taints) = state.carried.get(ptr_val).cloned() {
+                            state.direct.entry(val_id).or_default().extend(taints.clone());
+                            state.carried.entry(val_id).or_default().extend(taints);
+                        }
                     }
                 }
             }
@@ -375,6 +399,16 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
 
     fn transfer_terminator(&mut self, term: &Terminator, state: &mut TaintState) {
         if let Terminator::Ret { value: Some(val) } = term {
+            let ret_can_borrow = if let Some(ctx) = self.ctx {
+                let sem_ty = self.func.ret_ty;
+                ctx.types.contains_reference(sem_ty)
+            } else {
+                true
+            };
+            if !ret_can_borrow {
+                return;
+            }
+
             let direct_taints = self.get_direct_taints(state, val);
             let carried_taints = self.get_carried_taints(state, val);
             

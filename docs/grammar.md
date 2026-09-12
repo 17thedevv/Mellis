@@ -194,9 +194,9 @@ enum_variant_list ::= enum_variant ("," enum_variant)* ","?
 enum_variant ::= IDENTIFIER ("(" parameters ")")?
 
 // --- STRUCT, TRAIT VÀ IMPL ---
-struct_decl ::= annotation* "export"? KW_STRUCT IDENTIFIER generic_params? "{" struct_field* "}"
-
-struct_field::= IDENTIFIER ":" type ";"
+struct_decl ::= annotation* "export"? KW_STRUCT IDENTIFIER generic_params? "{" struct_field_list? "}"
+struct_field_list ::= struct_field ("," struct_field)* ","?
+struct_field::= "export"? IDENTIFIER ":" type
 
 trait_decl  ::= annotation* "export"? KW_TRAIT IDENTIFIER generic_params? "{" trait_method* "}"
 

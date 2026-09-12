@@ -1,4 +1,4 @@
-﻿use luna_driver::sysroot::Sysroot;
+use luna_driver::sysroot::Sysroot;
 use luna_driver::{check, compile, CompilerOptions};
 use std::fs;
 use std::path::PathBuf;
@@ -176,8 +176,8 @@ fn test_m2_module_struct_and_impl() {
     let src = r#"
         module shapes {
             export struct Point {
-                x: i32,
-                y: i32,
+                export x: i32,
+                export y: i32,
             }
             export trait Describable {
                 fn val(self: &Self) -> i32;
@@ -323,7 +323,7 @@ fn test_m4_private_method_rejected() {
     let src = r#"
         module engine {
             export struct Motor {
-                power: i32,
+                export power: i32,
             }
             export impl Motor {
                 fn internal_spark(self: &Motor) -> i32 { return self.power; }

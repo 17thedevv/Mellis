@@ -1,4 +1,4 @@
-﻿use luna_borrowck::effect::{AccessKind, CallEffectSummary};
+use luna_borrowck::effect::{AccessKind, CallEffectSummary};
 use luna_borrowck::effect_inference::EffectInference;
 use luna_borrowck::dataflow::{DataflowEngine, DataflowAnalysis};
 use luna_mvir::{ValueOrigin, BasicBlock, Function, GlobalId, Instruction, LabelId, Operand, Terminator, ValueData, ValueId};
@@ -151,8 +151,7 @@ proptest! {
         let mut ctx = SemanticContext::new();
         let func = build_acyclic_func(&mut ctx, num_blocks, inst_counts, term_kinds);
 
-        // 1. Run Dataflow to compute CallEffectSummary
-        let mut inference = EffectInference::new(2, vec![ValueId(0), ValueId(1)], None);
+        let mut inference = EffectInference::new(&func, 2, vec![ValueId(0), ValueId(1)], None, Some(&ctx));
         let block_states = DataflowEngine::run_forward(&func, &mut inference);
         
         let mut access_effects = HashMap::new();

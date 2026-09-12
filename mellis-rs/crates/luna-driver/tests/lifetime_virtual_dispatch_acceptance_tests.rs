@@ -158,7 +158,7 @@ fn test_v3_dynamic_call_via_llib() {
     let provider_src = r#"
 module source_lib {
     export struct Data {
-        val: i32,
+        export val: i32,
     }
 
     export trait Source {
@@ -166,7 +166,7 @@ module source_lib {
     }
 
     export struct MySource {
-        data: Data,
+        export data: Data,
     }
 
     impl Source for MySource {
