@@ -1,4 +1,4 @@
-﻿use std::path::PathBuf;
+use std::path::PathBuf;
 use luna_ast::AstArena;
 use luna_common::CompilerSession;
 use luna_semantic::symbol::ProviderId;

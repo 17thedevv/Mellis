@@ -67,6 +67,8 @@ pub struct ExportedSymbol {
     pub children: HashMap<String, ExportedSymbol>,
     #[serde(default)]
     pub lifetime_contract: Option<luna_semantic::CanonicalLifetimeContract>,
+    #[serde(default)]
+    pub is_unsafe: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

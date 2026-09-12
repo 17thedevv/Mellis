@@ -5,9 +5,9 @@ export extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
 export extern fn __mellis_realloc(ptr: *rw u8, old_size: u64, old_align: u64, new_size: u64) -> *rw u8;
 
 export struct Vec<T> {
-    ptr: *rw T;
-    len: u64;
-    cap: u64;
+    ptr: *rw T,
+    len: u64,
+    cap: u64,
 }
 
 export fn vec_new<T>() -> Vec<T> {
@@ -22,8 +22,8 @@ export fn vec_with_capacity<T>(capacity: u64) -> Vec<T> {
     if capacity == (0 as u64) {
         return vec_new<T>();
     }
-    dec size = capacity * (sizeof(T) as u64);
-    dec align = alignof(T) as u64;
+    dec size = capacity * (mem::size_of<T>() as u64);
+    dec align = mem::align_of<T>() as u64;
     dec ptr = __mellis_alloc(size, align) as u64 as *rw T;
     return Vec<T> {
         ptr: ptr,
@@ -40,9 +40,9 @@ impl<T> Vec<T> {
         if self.len == self.cap {
             self.grow();
         }
-        dec offset_ptr = (self.ptr as u64 + (self.len * (sizeof(T) as u64))) as *rw T;
         unsafe {
-            *offset_ptr = item;
+            dec target_ptr = ptr::add_mut<T>(self.ptr, self.len);
+            ptr::write<T>(target_ptr, item);
         }
         self.len = self.len + (1 as u64);
     }
@@ -52,9 +52,9 @@ impl<T> Vec<T> {
             return Option::None;
         }
         self.len = self.len - (1 as u64);
-        dec offset_ptr = (self.ptr as u64 + (self.len * (sizeof(T) as u64))) as *rw T;
         unsafe {
-            return Option::Some(*offset_ptr);
+            dec target_ptr = ptr::add<T>(self.ptr as *T, self.len);
+            return Option::Some(ptr::read<T>(target_ptr));
         }
     }
 
@@ -74,8 +74,8 @@ impl<T> Vec<T> {
         if index >= self.len {
             return Option::None;
         }
-        dec offset_ptr = (self.ptr as u64 + (index * (sizeof(T) as u64))) as *T;
         unsafe {
+            dec offset_ptr = ptr::add<T>(self.ptr as *T, index);
             return Option::Some(&*offset_ptr);
         }
     }
@@ -84,8 +84,8 @@ impl<T> Vec<T> {
         if index >= self.len {
             return Option::None;
         }
-        dec offset_ptr = (self.ptr as u64 + (index * (sizeof(T) as u64))) as *rw T;
         unsafe {
+            dec offset_ptr = ptr::add_mut<T>(self.ptr, index);
             return Option::Some(&rw *offset_ptr);
         }
     }
@@ -110,21 +110,15 @@ impl<T> Vec<T> {
             new_cap = self.cap * (2 as u64);
         }
         
-        dec new_size = new_cap * (sizeof(T) as u64);
-        dec align = alignof(T) as u64;
+        dec new_size = new_cap * (mem::size_of<T>() as u64);
+        dec align = mem::align_of<T>() as u64;
         dec new_ptr = __mellis_alloc(new_size, align) as u64 as *rw T;
 
         if self.cap > (0 as u64) {
-            dec rw i: u64 = 0 as u64;
-            while i < self.len {
-                dec src = (self.ptr as u64 + (i * (sizeof(T) as u64))) as *rw T;
-                dec dst = (new_ptr as u64 + (i * (sizeof(T) as u64))) as *rw T;
-                unsafe {
-                    *dst = *src;
-                }
-                i = i + (1 as u64);
+            unsafe {
+                ptr::copy<T>(self.ptr as *T, new_ptr, self.len);
             }
-            dec old_size = self.cap * (sizeof(T) as u64);
+            dec old_size = self.cap * (mem::size_of<T>() as u64);
             __mellis_dealloc(self.ptr as *rw u8, old_size, align);
         }
 
@@ -144,8 +138,8 @@ impl<T> Vec<T> {
 impl<T> Drop for Vec<T> {
     fn drop(self: &rw Self) {
         if self.cap > (0 as u64) {
-            dec old_size = self.cap * (sizeof(T) as u64);
-            __mellis_dealloc(self.ptr as *rw u8, old_size, alignof(T) as u64);
+            dec old_size = self.cap * (mem::size_of<T>() as u64);
+            __mellis_dealloc(self.ptr as *rw u8, old_size, mem::align_of<T>() as u64);
         }
     }
 }

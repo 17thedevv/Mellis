@@ -215,6 +215,27 @@ Resolve the 3 architectural blockers and 4 refinements identified in the reviewe
 
 ---
 
+### Component 5: Raw Pointer & Memory Lifecycle Interaction (`ptr::*` & `mem::*`)
+
+#### 1. `ptr::read<T>(src: *T) -> T` Lifecycle Semantics
+- **MVIR Equivalent**: Lowers conceptually to `MoveOut(*src)`.
+- **Ownership**: Transfers ownership of the $T$-sized value out of the raw memory slot to the caller.
+- **Drop Obligations**:
+  - The caller becomes responsible for the returned $T$ and will drop it at scope exit (or when moved).
+  - If $T$ implements `Drop` (or is non-`Copy`), the source memory slot is left in an uninitialized state. Subsequent reads without re-initialization yield undefined behavior / double-free if dropped again.
+
+#### 2. `ptr::write<T>(dst: *rw T, val: T)` Lifecycle Semantics
+- **MVIR Equivalent**: Lowers conceptually to `Initialize(*dst, val)` (NOT `Write(*dst, val)`).
+- **Destructor Bypass**: Overwrites the destination slot *without* invoking `DropInPlace` on any previous contents.
+- **Resource Hazard**: Writing over an already-initialized $T$ that owns resources causes those resources to leak unless the caller explicitly runs destruction first.
+
+#### 3. `ptr::diff<T>(a: *T, b: *T) -> i64` Provenance & Allocation Constraint
+- **Provenance Requirement**: Operands `a` and `b` MUST belong to the same allocated object or one-past-the-end.
+- **Undefined Behavior**: Cross-allocation or cross-provenance pointer difference is strictly undefined behavior at the semantic level.
+- **Calculation**: Signed distance in units of $T$: $((a - b) / \text{sizeof}(T))$.
+
+---
+
 ## Verification Plan
 
 ### 1. Semantic Preservation Tests (End-to-End Positive)

@@ -128,16 +128,19 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     };
                     self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                     self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
+                    let prev_scope = self.current_scope;
                     let mod_scope = if let Some(inner) =
                         self.ctx.symbol_table.symbols[sym_id.0 as usize].inner_scope
                     {
                         inner
                     } else {
-                        let s = self.enter_scope(crate::symbol::ScopeKind::Module);
+                        let s = self
+                            .ctx
+                            .symbol_table
+                            .create_scope(crate::symbol::ScopeKind::Module, Some(self.current_scope));
                         self.ctx.symbol_table.set_inner_scope(sym_id, s);
                         s
                     };
-                    let prev_scope = self.current_scope;
                     self.current_scope = mod_scope;
                     for item_id in items {
                         let inner_item = Item::Decl(*item_id);
@@ -1039,16 +1042,19 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
                         self.check_unsupported_lang_item(annotations, "module");
+                        let prev_scope = self.current_scope;
                         let mod_scope = if let Some(inner) =
                             self.ctx.symbol_table.symbols[sym_id.0 as usize].inner_scope
                         {
                             inner
                         } else {
-                            let s = self.enter_scope(crate::symbol::ScopeKind::Module);
+                            let s = self
+                                .ctx
+                                .symbol_table
+                                .create_scope(crate::symbol::ScopeKind::Module, Some(self.current_scope));
                             self.ctx.symbol_table.set_inner_scope(sym_id, s);
                             s
                         };
-                        let prev_scope = self.current_scope;
                         self.current_scope = mod_scope;
                         for item_id in items {
                             let item = Item::Decl(*item_id);

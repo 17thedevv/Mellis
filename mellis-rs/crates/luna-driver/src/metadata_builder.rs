@@ -190,6 +190,9 @@ impl<'a> MetadataBuilder<'a> {
             .or_else(|| sym.merged_ids.first().and_then(|(_, msid)| self.provider.symbol_lifetime_contracts.get(msid)))
             .cloned();
 
+        let is_unsafe = self.provider.unsafe_functions.contains(&sid)
+            || sym.merged_ids.iter().any(|(_, msid)| self.provider.unsafe_functions.contains(msid));
+
         ExportedSymbol {
             kind: kind_str,
             ty_index,
@@ -205,6 +208,7 @@ impl<'a> MetadataBuilder<'a> {
             },
             children,
             lifetime_contract,
+            is_unsafe,
         }
     }
 

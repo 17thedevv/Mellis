@@ -230,6 +230,79 @@ export trait Ord {
 export unsafe fn slice_from_raw_parts<T>(ptr: *T, len: u64) -> &[T];
 export unsafe fn slice_from_raw_parts_mut<T>(ptr: *rw T, len: u64) -> &rw [T];
 
+module mem {
+    export unsafe fn copy(src: *u8, dst: *rw u8, bytes: u64) {
+        dec rw i: u64 = 0 as u64;
+        while i < bytes {
+            dec s = (src as u64 + i) as *u8;
+            dec d = (dst as u64 + i) as *rw u8;
+            *d = *s;
+            i = i + (1 as u64);
+        }
+    }
+
+    export unsafe fn set(dst: *rw u8, val: u8, bytes: u64) {
+        dec rw i: u64 = 0 as u64;
+        while i < bytes {
+            dec d = (dst as u64 + i) as *rw u8;
+            *d = val;
+            i = i + (1 as u64);
+        }
+    }
+
+    export unsafe fn zero(dst: *rw u8, bytes: u64) {
+        set(dst, 0 as u8, bytes);
+    }
+
+    export fn size_of<T>() -> u64 {
+        return sizeof(T) as u64;
+    }
+
+    export fn align_of<T>() -> u64 {
+        return alignof(T) as u64;
+    }
+}
+
+module ptr {
+    export unsafe fn read<T>(src: *T) -> T {
+        return *src;
+    }
+
+    export unsafe fn write<T>(dst: *rw T, val: T) {
+        *dst = val;
+    }
+
+    export unsafe fn add<T>(p: *T, count: u64) -> *T {
+        return (p as u64 + (count * (sizeof(T) as u64))) as *T;
+    }
+
+    export unsafe fn add_mut<T>(p: *rw T, count: u64) -> *rw T {
+        return (p as u64 + (count * (sizeof(T) as u64))) as *rw T;
+    }
+
+    export unsafe fn offset<T>(p: *T, count: i64) -> *T {
+        return (p as u64 + (count as u64 * (sizeof(T) as u64))) as *T;
+    }
+
+    export unsafe fn offset_mut<T>(p: *rw T, count: i64) -> *rw T {
+        return (p as u64 + (count as u64 * (sizeof(T) as u64))) as *rw T;
+    }
+
+    export unsafe fn diff<T>(a: *T, b: *T) -> i64 {
+        return ((a as i64) - (b as i64)) / (sizeof(T) as i64);
+    }
+
+    export unsafe fn copy<T>(src: *T, dst: *rw T, count: u64) {
+        dec rw i: u64 = 0 as u64;
+        while i < count {
+            dec s = ptr::add<T>(src, i);
+            dec d = ptr::add_mut<T>(dst, i);
+            ptr::write<T>(d, ptr::read<T>(s));
+            i = i + (1 as u64);
+        }
+    }
+}
+
 export struct SliceIter<T> {
     ptr: *T;
     end: *T;
