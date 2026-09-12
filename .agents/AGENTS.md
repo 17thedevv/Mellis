@@ -1,4 +1,3 @@
-
 # Mellis Compiler Architecture Rules
 
 1. Every phase owns exactly one responsibility.
@@ -41,3 +40,7 @@
    - **Mandatory Alignment:** Agents MUST follow `luna-semantic-compliance` before writing `.ln`/`.ms` code, Core, Alloc, Stdlib, ABI-facing APIs, compiler-generated code, or semantic tests.
    - **No Foreign Semantics:** Never substitute Rust, C++, or LLVM semantic models or syntax (e.g. `'a`, turbofish, `let`, `mut`).
    - **Semantic Contract Enforcement:** Ensure explicit lifetime relations (`life_from`, `where outlives`), proper `rw` mutability, and `.llib` ABI parity are preserved and actively utilized.
+
+10. Ownership Abstraction Guard Rule (BOX-FROZEN):
+   - **Generic Ownership Parity:** Any future ownership abstraction (e.g., `Rc<T>`, `Arc<T>`, custom smart pointers, allocator containers) must be expressible strictly through existing generic ownership, move, drop, borrow, lifetime, and memory primitives (`ptr`/`mem`/`HeapFree`).
+   - **No Compiler Builtin Containers:** The compiler must never re-introduce specialized semantic types, dedicated borrowck branches, or distinguished MIR instructions for specific library ownership containers unless a new language-level semantic contract is explicitly justified and frozen.
