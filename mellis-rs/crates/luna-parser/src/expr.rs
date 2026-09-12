@@ -20,6 +20,12 @@ impl<'a> Parser<'a> {
                     let next_kind = self.tokens.get(p + 1).map(|t| t.kind).unwrap_or(TokenKind::Eof);
                     return matches!(next_kind, TokenKind::ColonColon | TokenKind::LParen | TokenKind::LBrace);
                 }
+            } else if kind == TokenKind::RShift {
+                if depth <= 2 {
+                    let next_kind = self.tokens.get(p + 1).map(|t| t.kind).unwrap_or(TokenKind::Eof);
+                    return matches!(next_kind, TokenKind::ColonColon | TokenKind::LParen | TokenKind::LBrace);
+                }
+                depth -= 2;
             } else if kind == TokenKind::Eof || kind == TokenKind::Semi {
                 return false;
             }

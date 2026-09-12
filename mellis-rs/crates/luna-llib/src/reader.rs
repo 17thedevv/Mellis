@@ -1,4 +1,4 @@
-﻿use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom};
 use crate::format::{LlibHeader, MlibHeader, SectionEntry, SectionType, LLIB_MAGIC, MLIB_MAGIC, LLIB_FORMAT_VERSION, MLIB_FORMAT_VERSION};
 use crate::ir::{MlibModule, MlibFunction, MlibValue, MlibBlock, MlibInstruction, MlibTerminator, MlibOperand, MlibTypeEntry, MlibCaptureInfo};
 
@@ -513,13 +513,9 @@ impl MlibReader {
                 let value = Self::deserialize_operand(r)?;
                 Ok(MlibInstruction::Drop { value })
             }
-            14 => {
-                let value = Self::deserialize_operand(r)?;
-                Ok(MlibInstruction::BoxNew { value })
-            }
             15 => {
                 let value = Self::deserialize_operand(r)?;
-                Ok(MlibInstruction::BoxFree { value })
+                Ok(MlibInstruction::HeapFree { value })
             }
             18 => Ok(MlibInstruction::ListNew),
             0x21 => {

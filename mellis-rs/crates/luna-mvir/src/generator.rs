@@ -1691,6 +1691,39 @@ impl<'a> MvirGenerator<'a> {
                             }, ty_id);
                             return Operand::Value(slice_val);
                         }
+                        if id.name.ends_with("drop_in_place") || id.name.contains("drop_in_place") {
+                            let mut pointee_ty = None;
+                            if !args.is_empty() {
+                                let arg_expr = &args[0].value;
+                                let arg_ty_id = self.ctx.tables.expr_types.get(arg_expr).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                                if let luna_semantic::SemanticType::Pointer(_, inner) = self.ctx.types.get(arg_ty_id) {
+                                    pointee_ty = Some(*inner);
+                                }
+                                if let Some(inst_ptr) = self.current_instance {
+                                    let inst = unsafe { &*inst_ptr };
+                                    if let Some(&mono_ty) = inst.expr_types.get(arg_expr) {
+                                        if let luna_semantic::SemanticType::Pointer(_, inner) = self.ctx.types.get(mono_ty) {
+                                            pointee_ty = Some(*inner);
+                                        }
+                                    }
+                                }
+                            }
+                            if let Some(elem_ty) = pointee_ty {
+                                if self.ctx.needs_drop(elem_ty) {
+                                    let callee = match self.ctx.types.get(elem_ty) {
+                                        luna_semantic::SemanticType::Struct(sym_id, ..) => {
+                                            self.ctx.tables.drop_impls.get(sym_id).map(|&meth_sym| {
+                                                let name = self.ctx.symbol_table.get_symbol(meth_sym).name.clone();
+                                                GlobalId { name, symbol_id: Some(meth_sym) }
+                                            })
+                                        }
+                                        _ => None,
+                                    };
+                                    self.push_inst(Instruction::Drop { value: arg_ops[0].clone(), callee, ty: elem_ty }, elem_ty);
+                                }
+                            }
+                            return Operand::Number("0".to_string());
+                        }
                     }
 
                     let call_val = self.push_inst(if is_closure {
@@ -2297,7 +2330,7 @@ impl<'a> MvirGenerator<'a> {
                         let val = self.push_inst(Instruction::Borrow { is_rw: true, base: lval }, ty_id);
                         Operand::Value(val)
                     }
-                    UnaryOp::Deref => {
+                    UnaryOp::Deref | UnaryOp::DerefMut => {
                         let ptr_op = self.generate_expr(operand);
                         let mut load_ty = ty_id;
                         if load_ty == luna_semantic::SemanticTypeId(0) {

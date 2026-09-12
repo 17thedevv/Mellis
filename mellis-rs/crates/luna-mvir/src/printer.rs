@@ -105,9 +105,8 @@ fn print_instruction(inst: &Instruction) -> String {
         Instruction::FieldPtr { base, field_idx } => {
             format!("field_ptr {}, {}", print_operand(base), field_idx)
         }
-        Instruction::BoxNew { value } => format!("box_new {}", print_operand(value)),
         Instruction::MarkInit { value } => format!("mark_init {}", print_operand(value)),
-        Instruction::BoxFree { value } => format!("box_free {}", print_operand(value)),
+        Instruction::HeapFree { value } => format!("heap_free {}", print_operand(value)),
         Instruction::Drop { value, callee, .. } => {
             if let Some(c) = callee {
                 format!("drop {} ({})", print_operand(value), c.name)

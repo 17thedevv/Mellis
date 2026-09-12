@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use luna_common::ids::{SymbolId, Span};
 use luna_semantic::{
     ComptimeValue, ComptimeError, IntWidth, FloatWidth,
@@ -476,18 +476,7 @@ impl<'a> MvirInterpreter<'a> {
                         }]);
                         RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: None, offset: 0 })
                     }
-                    Instruction::BoxNew { value } => {
-                        let val = self.eval_operand(value)?;
-                        let alloc_id = self.heap.next_alloc_id;
-                        self.heap.next_alloc_id += 1;
-                        self.heap.allocations.insert(alloc_id, vec![MemorySlot {
-                            value: val,
-                            state: PlaceState::Initialized,
-                            ty: inst_ty,
-                        }]);
-                        RuntimeValue::Pointer(Address::Heap { alloc_id, field_idx: None, offset: 0 })
-                    }
-                    Instruction::BoxFree { value } => {
+                    Instruction::HeapFree { value } => {
                         let ptr = self.eval_operand(value)?;
                         if let RuntimeValue::Pointer(Address::Heap { alloc_id, .. }) = ptr {
                             if self.heap.freed.contains_key(&alloc_id) {

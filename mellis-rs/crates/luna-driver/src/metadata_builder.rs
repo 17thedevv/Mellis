@@ -264,7 +264,6 @@ impl<'a> MetadataBuilder<'a> {
                 let canon_sym = self.provider.symbol_canonicals.get(sym_id).unwrap();
                 CanonicalType::GenericParam(self.convert_symbol_id(canon_sym))
             }
-            SemanticType::Box(t) => CanonicalType::Box(self.convert_type_id(*t)),
             SemanticType::Closure(expr_id, captures, ret) => {
                 let caps = captures.iter().map(|t| self.convert_type_id(*t)).collect();
                 CanonicalType::Closure(expr_id.0 as u64, caps, self.convert_type_id(*ret))

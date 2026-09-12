@@ -207,8 +207,9 @@ Consumer usage strictly follows Rule 7 (Provider ≠ Namespace):
 
 The 5 semantic contracts are strictly frozen:
 
-- **PTR-MEM-1 (No Automatic Lifetime Inference)**:
+- **PTR-MEM-1 (No Automatic Lifetime Inference & Unsafe Boundary)**:
   Raw pointer operations are explicit `unsafe` escape hatches. Calling `ptr::read` or dereferencing a raw pointer does NOT synthesize or infer a safe lifetime relation (`life_from`). Returned values are owned; raw pointers never masquerade as borrowed references.
+  *Rule*: `unsafe` removes the obligation to prove raw-memory safety at that operation boundary; it does not remove lifetime/provenance requirements from safe references produced afterward (see Section 7.1).
 - **PTR-MEM-2 (Semantic Pointer Arithmetic & Allocation Provenance)**:
   Pointer arithmetic (`ptr::add`, `ptr::add_mut`, `ptr::offset`, `ptr::offset_mut`, `ptr::diff`) is defined at the language semantic level over $T$-sized elements (not defined as source-level integer casts).
   - `ptr::diff(a, b)` computes signed element distance $((a - b) / \text{sizeof}(T))$.
@@ -296,6 +297,21 @@ Any Luna API returning a reference MUST answer:
   ```
 
 Do NOT silently return borrowed values without checking whether the language contract requires an explicit relation.
+
+---
+
+# 7.1 Unsafe Boundary & Lifetime Invariant (UNSAFE-LIFETIME-BOUNDARY)
+
+> [!IMPORTANT]
+> **UNSAFE-LIFETIME-BOUNDARY**:
+> *unsafe removes the obligation to prove raw-memory safety at that operation boundary; it does not remove lifetime/provenance requirements from safe references produced afterward.*
+
+When dereferencing a raw pointer (`*p`) or bridging a raw pointer into a safe reference or slice (`slice_from_raw_parts`, `&*raw_ptr`, `as_ref`), the `unsafe` block discharges the immediate memory access check (e.g., pointer validity, alignment, raw dereference authorization).
+
+However, any safe reference (`&T`, `&rw T`, `&[T]`) produced across that boundary immediately enters the safe type system and MUST obey full lifetime and provenance contracts:
+1. **Explicit Provenance Obligation**: Safe references produced from raw pointers inside an API cannot have their lifetime inferred out of thin air. The enclosing function MUST declare a valid lifetime provenance relation (e.g., `life_from(self)`) linking the reference to a legitimate, outliving borrow root.
+2. **Borrowck Enforceability**: Once created, the safe reference is subject to standard borrow analysis, aliasing restrictions, and escape analysis. `unsafe` is NEVER a license to bypass borrow checking or escape analysis for references downstream.
+3. **No Masquerading**: Raw pointers must never silently masquerade as unbounded (`'static`-like) safe references without explicit lifetime contracts.
 
 ---
 

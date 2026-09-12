@@ -71,7 +71,34 @@ fn test_case_02_suspended_future_cleanup_of_live_drop_locals() {
     let mut ctx = SemanticContext::new();
     let mut module = Module::new();
 
-    let struct_ty = ctx.types.intern(SemanticType::Box(SemanticTypeId(3)));
+    let struct_sym = luna_common::ids::SymbolId(ctx.symbol_table.symbols.len() as u32);
+    ctx.symbol_table.symbols.push(luna_semantic::symbol::Symbol {
+        id: struct_sym,
+        name: "Resource".to_string(),
+        ctxt: luna_common::ids::SyntaxContext::ROOT,
+        kind: luna_semantic::symbol::SymbolKind::Struct,
+        scope: luna_semantic::symbol::ScopeId(0),
+        span: luna_common::Span::default(),
+        visibility: luna_ast::Visibility::Public,
+        decl_id: None,
+        inner_scope: None,
+        provider_id: None,
+    });
+    let drop_meth_sym = luna_common::ids::SymbolId(ctx.symbol_table.symbols.len() as u32);
+    ctx.symbol_table.symbols.push(luna_semantic::symbol::Symbol {
+        id: drop_meth_sym,
+        name: "drop".to_string(),
+        ctxt: luna_common::ids::SyntaxContext::ROOT,
+        kind: luna_semantic::symbol::SymbolKind::Function,
+        scope: luna_semantic::symbol::ScopeId(0),
+        span: luna_common::Span::default(),
+        visibility: luna_ast::Visibility::Public,
+        decl_id: None,
+        inner_scope: None,
+        provider_id: None,
+    });
+    ctx.tables.drop_impls.insert(struct_sym, drop_meth_sym);
+    let struct_ty = ctx.types.intern(SemanticType::Struct(struct_sym, Vec::new(), Vec::new()));
 
     let func = Function {
         name: GlobalId { name: "worker_with_drop".to_string(), symbol_id: None },

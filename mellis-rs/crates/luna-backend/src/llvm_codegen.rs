@@ -131,7 +131,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             SemanticType::Primitive(BuiltinType::I32 | BuiltinType::U32 | BuiltinType::F32 | BuiltinType::Char) => 4,
             SemanticType::Primitive(BuiltinType::I64 | BuiltinType::U64 | BuiltinType::Isize | BuiltinType::Usize | BuiltinType::F64 | BuiltinType::String) => 8,
             SemanticType::Primitive(BuiltinType::I128 | BuiltinType::U128) => 16,
-            SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Box(..) => 8,
+            SemanticType::Pointer(..) | SemanticType::Reference(..) => 8,
             SemanticType::Slice(..) => 16,
             SemanticType::Array(elem, len) => self.layout_size(*elem) * len,
             SemanticType::Struct(_, _, field_tys) => {
@@ -180,7 +180,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             SemanticType::Primitive(BuiltinType::I32 | BuiltinType::U32 | BuiltinType::F32 | BuiltinType::Char) => 4,
             SemanticType::Primitive(BuiltinType::I64 | BuiltinType::U64 | BuiltinType::Isize | BuiltinType::Usize | BuiltinType::F64 | BuiltinType::String) => 8,
             SemanticType::Primitive(BuiltinType::I128 | BuiltinType::U128) => 16,
-            SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Box(..) => 8,
+            SemanticType::Pointer(..) | SemanticType::Reference(..) => 8,
             SemanticType::Struct(_, _, field_tys) => {
                 field_tys.iter().map(|&f| self.layout_align(f)).max().unwrap_or(8)
             }
@@ -274,7 +274,6 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(self.context.struct_type(&[], false).into())
             }
             SemanticType::Function { .. } => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()),
-            SemanticType::Box(_) => Ok(self.context.ptr_type(inkwell::AddressSpace::default()).into()), // Box is just a pointer
             SemanticType::Range(_) => Err(BackendError::UnsupportedType(ty_id)),
         }
     }
@@ -1133,16 +1132,12 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 self.builder.position_at_end(merge_bb);
                 Ok(self.context.i32_type().const_zero().into())
             }
-            Instruction::BoxFree { value } => {
+            Instruction::HeapFree { value } => {
                 if let Some(dealloc_fn) = self.get_function("__mellis_dealloc") {
                     let ptr_val = self.generate_operand(value)?;
                     let (size, align) = if let Operand::Value(val_id) = value {
                         if let Some(val_data) = _func.values.get(val_id.0 as usize) {
-                            if let SemanticType::Box(inner) = self.semantic_ctx.types.get(val_data.ty) {
-                                (self.layout_size(*inner), self.layout_align(*inner).max(1))
-                            } else {
-                                (8, 8)
-                            }
+                            (self.layout_size(val_data.ty), self.layout_align(val_data.ty).max(1))
                         } else {
                             (8, 8)
                         }

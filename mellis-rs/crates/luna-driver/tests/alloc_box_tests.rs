@@ -1,4 +1,4 @@
-﻿/// Alloc + Box<T> Integration Tests
+/// Alloc + Box<T> Integration Tests
 ///
 /// Verifies that the alloc library source files (`box.ln`, `allocator.ln`, `vec.ln`)
 /// pass through the full compilation pipeline: parse → semantic → MVIR → LLVM.
@@ -75,11 +75,7 @@ fn test_box_ln_is_valid() {
     }
     let raw_source = fs::read_to_string(&box_path).unwrap();
     // Prepend the FFI declarations that box.ln expects from allocator.ln
-    let preamble = r#"
-export extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
-export extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
-"#;
-    let source = format!("{}{}", preamble, raw_source);
+    let source = raw_source;
     let result = check_semantic_only(box_path.to_str().unwrap(), source, &options);
     assert!(
         result.is_ok(),
@@ -100,7 +96,9 @@ fn test_box_type_recognized_in_function_signature() {
     let temp = create_temp_dir("box_type_sig");
     let main_path = temp.join("main.ln");
     let src = r#"
-        fn box_identity(b: Box<i32>) -> Box<i32> {
+        import <alloc>;
+
+        fn box_identity(b: std::Box<i32>) -> std::Box<i32> {
             return b;
         }
         fn main() -> i32 {
@@ -124,11 +122,13 @@ fn test_box_nested_generic_type() {
     let temp = create_temp_dir("box_nested_generic");
     let main_path = temp.join("main.ln");
     let src = r#"
+        import <alloc>;
+
         struct Pair {
             a: i32,
             b: i32,
         }
-        fn take_box(b: Box<Pair>) -> Box<Pair> {
+        fn take_box(b: std::Box<Pair>) -> std::Box<Pair> {
             return b;
         }
         fn main() -> i32 {

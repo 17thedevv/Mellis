@@ -365,10 +365,7 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
                 self.check_operand(left, state, val_id);
                 self.check_operand(right, state, val_id);
             }
-            Instruction::BoxNew { value } => {
-                self.mark_moved(value, state);
-            }
-            Instruction::BoxFree { value } => {
+            Instruction::HeapFree { value } => {
                 self.mark_dropped(value, state);
             }
             Instruction::MarkInit { value } => {

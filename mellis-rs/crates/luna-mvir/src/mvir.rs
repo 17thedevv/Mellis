@@ -1,4 +1,4 @@
-﻿use luna_common::ids::SymbolId;
+use luna_common::ids::SymbolId;
 use luna_semantic::{SemanticTypeId, semantic_tables::IntrinsicKind};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -185,10 +185,7 @@ pub enum Instruction {
         base: Operand,
         field_idx: u32,
     },
-    BoxNew {
-        value: Operand,
-    },
-    BoxFree {
+    HeapFree {
         value: Operand,
     },
     MarkInit {

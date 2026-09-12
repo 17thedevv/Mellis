@@ -13,7 +13,7 @@ impl ComptimeReflection {
                 BuiltinType::I128 | BuiltinType::U128 => 16,
                 BuiltinType::String => 16, // ptr + len
             },
-            SemanticType::Pointer(_, _) | SemanticType::Reference(_, _, _) | SemanticType::Box(_) => 8,
+            SemanticType::Pointer(_, _) | SemanticType::Reference(_, _, _) => 8,
             SemanticType::Array(elem, len) => Self::sizeof(*elem, ctx) * (*len as usize),
             SemanticType::Slice(_) => 16, // ptr + len
             SemanticType::Tuple(elems) => {
@@ -50,7 +50,7 @@ impl ComptimeReflection {
                 BuiltinType::I128 | BuiltinType::U128 => 16,
                 BuiltinType::String => 16,
             },
-            SemanticType::Pointer(_, _) | SemanticType::Reference(_, _, _) | SemanticType::Box(_) => 8,
+            SemanticType::Pointer(_, _) | SemanticType::Reference(_, _, _) => 8,
             SemanticType::Array(elem, _) => Self::alignof(*elem, ctx),
             SemanticType::Slice(_) => 8,
             SemanticType::Tuple(elems) => {

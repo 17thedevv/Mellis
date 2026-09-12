@@ -88,7 +88,6 @@ pub enum SemanticType {
     Error,
     InferenceVar(u32),
     GenericParam(SymbolId),
-    Box(SemanticTypeId),
     Closure(luna_ast::ExprId, Vec<SemanticTypeId>, SemanticTypeId),
     DynTrait(SymbolId),
     Future(SemanticTypeId),
@@ -230,10 +229,6 @@ impl TypeContext {
                 let new_inner = self.subst(inner, subst);
                 self.intern(SemanticType::Reference(lt, mutability, new_inner))
             }
-            SemanticType::Box(inner) => {
-                let new_inner = self.subst(inner, subst);
-                self.intern(SemanticType::Box(new_inner))
-            }
             SemanticType::Closure(expr_id, params, return_type) => {
                 let new_params = params.iter().map(|&param| self.subst(param, subst)).collect();
                 let new_return_type = self.subst(return_type, subst);
@@ -271,7 +266,7 @@ impl TypeContext {
                 args.iter().any(|&a| self.occurs_check(var, a)) || variants.iter().any(|&v| self.occurs_check(var, v))
             }
             SemanticType::Tuple(args) => args.iter().any(|&a| self.occurs_check(var, a)),
-            SemanticType::Array(inner, _) | SemanticType::Slice(inner) | SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) | SemanticType::Box(inner) => {
+            SemanticType::Array(inner, _) | SemanticType::Slice(inner) | SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => {
                 self.occurs_check(var, inner)
             }
             SemanticType::Function { params, return_type } => {
@@ -328,7 +323,7 @@ impl TypeContext {
                 fields.iter().any(|&f| self.contains_reference(f))
             }
             SemanticType::Tuple(elems) => elems.iter().any(|&e| self.contains_reference(e)),
-            SemanticType::Array(elem, _) | SemanticType::Box(elem) | SemanticType::Future(elem) | SemanticType::Range(elem) => {
+            SemanticType::Array(elem, _) | SemanticType::Future(elem) | SemanticType::Range(elem) => {
                 self.contains_reference(*elem)
             }
             _ => false,
@@ -379,7 +374,7 @@ impl TypeContext {
                 (has_infer, has_gen, has_err, has_proj)
             }
             SemanticType::Array(inner, _) | SemanticType::Slice(inner) | SemanticType::Pointer(_, inner) | 
-            SemanticType::Reference(_, _, inner) | SemanticType::Box(inner) | SemanticType::Future(inner) | 
+            SemanticType::Reference(_, _, inner) | SemanticType::Future(inner) | 
             SemanticType::Range(inner) => {
                 self.type_flags(inner)
             }
@@ -463,10 +458,6 @@ impl TypeContext {
             SemanticType::Reference(lt, mutability, inner) => {
                 let new_inner = self.clone_type_from(inner, source_ctx, lookup_sym);
                 self.intern(SemanticType::Reference(lt, mutability, new_inner))
-            }
-            SemanticType::Box(inner) => {
-                let new_inner = self.clone_type_from(inner, source_ctx, lookup_sym);
-                self.intern(SemanticType::Box(new_inner))
             }
             SemanticType::GenericParam(sym) => {
                 let new_sym = lookup_sym(sym);

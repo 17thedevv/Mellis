@@ -125,8 +125,6 @@ impl SemanticContext {
                     variants.iter().any(|&v| self.needs_drop(v))
                 }
             }
-            ty::SemanticType::Box(_) => true,
-
             ty::SemanticType::Tuple(fields) => {
                 fields.iter().any(|&f| self.needs_drop(f))
             }

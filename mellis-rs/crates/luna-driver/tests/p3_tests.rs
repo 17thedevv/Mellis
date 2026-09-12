@@ -338,7 +338,7 @@ fn test_case_13_supertrait_dyn_rejected() {
     assert!(err.is_some(), "Expected E_DYN_SUPERTRAIT_UNSUPPORTED, got: {:?}", diags);
 }
 
-// 14. Box<dyn Trait> and Box<[T]> rejected in v1
+// 14. Box<dyn Trait> without <alloc> rejected (Box is a library type, not a compiler builtin)
 #[test]
 fn test_case_14_box_unsized_rejected() {
     let src = r#"
@@ -351,9 +351,9 @@ fn test_case_14_box_unsized_rejected() {
         fn main() -> i32 { return 0; }
     "#;
     let (success, diags) = run_compiler("test_14", src);
-    assert!(!success, "Box<dyn Trait> must be rejected in v1");
-    let err = diags.iter().find(|d| d.message.contains("E_UNSUPPORTED_BOX_UNSIZED"));
-    assert!(err.is_some(), "Expected E_UNSUPPORTED_BOX_UNSIZED, got: {:?}", diags);
+    assert!(!success, "Box<dyn Trait> without <alloc> must be rejected");
+    let err = diags.iter().find(|d| d.message.contains("cannot find type `Box` in this scope"));
+    assert!(err.is_some(), "Expected cannot find type `Box`, got: {:?}", diags);
 }
 
 // -----------------------------------------------------------------------------

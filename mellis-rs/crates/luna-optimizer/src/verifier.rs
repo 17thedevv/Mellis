@@ -1,4 +1,4 @@
-﻿use luna_mvir::{Module, Function, Terminator, Operand, Instruction};
+use luna_mvir::{Module, Function, Terminator, Operand, Instruction};
 use std::collections::HashSet;
 
 pub fn verify_module(module: &Module) -> Result<(), Vec<String>> {
@@ -80,7 +80,7 @@ pub fn verify_function(func: &Function) -> Result<(), Vec<String>> {
         let ctx = format!("Value {}", i);
         match &value.inst {
             Instruction::Nop => {}
-            Instruction::MarkInit { value } | Instruction::BoxNew { value } | Instruction::BoxFree { value } | Instruction::Drop { value, .. } => {
+            Instruction::MarkInit { value } | Instruction::HeapFree { value } | Instruction::Drop { value, .. } => {
                 check_operand(value, &mut errors, &ctx);
             }
             Instruction::CallIntrinsic { args, .. } => {

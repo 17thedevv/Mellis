@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use luna_common::ids::SymbolId;
 use luna_common::{Diagnostic, Span};
 use crate::ty::{SemanticType, SemanticTypeId, Substitution};
@@ -149,7 +149,7 @@ impl SemanticContext {
             SemanticType::Struct(_, args, _) | SemanticType::Enum(_, args, _) | SemanticType::Tuple(args) => {
                 args.iter().any(|&a| self.occurs_in_pattern(target, a, generics_1, generics_2, subst))
             }
-            SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) | SemanticType::Box(inner) | SemanticType::Slice(inner) => {
+            SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) | SemanticType::Slice(inner) => {
                 self.occurs_in_pattern(target, *inner, generics_1, generics_2, subst)
             }
             _ => false,
@@ -231,9 +231,6 @@ impl SemanticContext {
             (SemanticType::Pointer(m1, inner1), SemanticType::Pointer(m2, inner2)) => {
                 m1 == m2 && self.can_unify_patterns(*inner1, *inner2, generics_1, generics_2, subst)
             }
-            (SemanticType::Box(inner1), SemanticType::Box(inner2)) => {
-                self.can_unify_patterns(*inner1, *inner2, generics_1, generics_2, subst)
-            }
             (SemanticType::Slice(inner1), SemanticType::Slice(inner2)) => {
                 self.can_unify_patterns(*inner1, *inner2, generics_1, generics_2, subst)
             }
@@ -285,9 +282,6 @@ impl SemanticContext {
             }
             (&SemanticType::Pointer(ref m1, inner1), &SemanticType::Pointer(ref m2, inner2)) => {
                 m1 == m2 && self.matches_impl_pattern(inner1, inner2, generic_params, subst)
-            }
-            (&SemanticType::Box(inner1), &SemanticType::Box(inner2)) => {
-                self.matches_impl_pattern(inner1, inner2, generic_params, subst)
             }
             (&SemanticType::Slice(inner1), &SemanticType::Slice(inner2)) => {
                 self.matches_impl_pattern(inner1, inner2, generic_params, subst)

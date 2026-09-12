@@ -40,7 +40,6 @@ pub enum CanonicalType {
     Never,
     Error,
     GenericParam(StableSymbolId),
-    Box(u32),
     Closure(u64, Vec<u32>, u32), // unique id, captures, return type
     DynTrait(StableSymbolId),
     Future(u32),

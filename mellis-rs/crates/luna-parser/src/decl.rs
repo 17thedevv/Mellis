@@ -55,8 +55,8 @@ impl<'a> Parser<'a> {
         let is_function = self.check(TokenKind::KwFn)
             || self.check(TokenKind::KwAsync)
             || self.check(TokenKind::KwIntrinsic)
-            || (self.check(TokenKind::KwComptime) && self.peek_next().kind == TokenKind::KwFn)
-            || (self.check(TokenKind::KwUnsafe) && self.peek_next().kind == TokenKind::KwFn);
+            || (self.check(TokenKind::KwComptime) && (self.peek_next().kind == TokenKind::KwFn || self.peek_next().kind == TokenKind::KwAsync))
+            || (self.check(TokenKind::KwUnsafe) && (self.peek_next().kind == TokenKind::KwFn || self.peek_next().kind == TokenKind::KwIntrinsic || self.peek_next().kind == TokenKind::KwAsync));
 
         let decl = if self.check(TokenKind::KwDec) || self.check(TokenKind::KwConst) || self.check(TokenKind::KwRw) {
             self.parse_var_decl(visibility, annotations)?

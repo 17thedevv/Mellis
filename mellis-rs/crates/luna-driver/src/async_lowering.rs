@@ -1,4 +1,4 @@
-﻿use luna_mvir::{Module, Function, Instruction, Operand, Terminator, BasicBlock, ValueId, ValueData, ValueOrigin, LabelId, GlobalId};
+use luna_mvir::{Module, Function, Instruction, Operand, Terminator, BasicBlock, ValueId, ValueData, ValueOrigin, LabelId, GlobalId};
 
 pub const FUTURE_STATE_INITIAL: i64 = 0;
 pub const FUTURE_STATE_COMPLETED: i64 = -1;
@@ -646,7 +646,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
                     for arg in args { *arg = map_op(arg, &val_map); }
                 }
                 Instruction::Tag { value } | Instruction::Extract { value, .. } | Instruction::FieldPtr { base: value, .. } |
-                Instruction::Drop { value, .. } | Instruction::BoxNew { value } | Instruction::BoxFree { value } |
+                Instruction::Drop { value, .. } | Instruction::HeapFree { value } |
                 Instruction::MarkInit { value } | Instruction::Cast { value, .. } | Instruction::Await { future: value } => {
                     *value = map_op(value, &val_map);
                 }
@@ -1167,7 +1167,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
         }
     }
 
-    // free_env block: BoxFree(env) and Ret None
+    // free_env block: HeapFree(env) and Ret None
     let mut free_block = BasicBlock {
         label: free_env_label,
         insts: Vec::new(),
@@ -1176,7 +1176,7 @@ fn lower_single_async_func(func: &Function, ctx: &mut SemanticContext) -> (Funct
 
     let free_val_id = ValueId(drop_fn.values.len() as u32);
     drop_fn.values.push(ValueData {
-        inst: Instruction::BoxFree { value: Operand::Value(drop_env_arg_id) },
+        inst: Instruction::HeapFree { value: Operand::Value(drop_env_arg_id) },
         ty: SemanticTypeId(0),
         span: None,
         origin: ValueOrigin::Temporary,
@@ -1450,7 +1450,7 @@ mod tests {
         assert!(block_labels.contains(&"resume_state_2"));
         assert!(block_labels.contains(&"unreachable_dispatch"));
 
-        // Check that drop function contains state inspection and box free
+        // Check that drop function contains state inspection and heap free
         let drop_labels: Vec<&str> = drop_fn.blocks.iter().map(|b| b.label.name.as_str()).collect();
         assert!(drop_labels.contains(&"entry"));
         assert!(drop_labels.contains(&"drop_state_1"));
@@ -1466,8 +1466,35 @@ mod tests {
         let mut ctx = SemanticContext::new();
         let mut module = Module::new();
 
-        // Create a Boxed heap resource type (which needs Drop)
-        let struct_ty = ctx.types.intern(SemanticType::Box(SemanticTypeId(3)));
+        // Create a struct resource type (which implements Drop)
+        let struct_sym = luna_common::ids::SymbolId(ctx.symbol_table.symbols.len() as u32);
+        ctx.symbol_table.symbols.push(luna_semantic::symbol::Symbol {
+            id: struct_sym,
+            name: "Resource".to_string(),
+            ctxt: luna_common::ids::SyntaxContext::ROOT,
+            kind: luna_semantic::symbol::SymbolKind::Struct,
+            scope: luna_semantic::symbol::ScopeId(0),
+            span: luna_common::Span::default(),
+            visibility: luna_ast::Visibility::Public,
+            decl_id: None,
+            inner_scope: None,
+            provider_id: None,
+        });
+        let drop_meth_sym = luna_common::ids::SymbolId(ctx.symbol_table.symbols.len() as u32);
+        ctx.symbol_table.symbols.push(luna_semantic::symbol::Symbol {
+            id: drop_meth_sym,
+            name: "drop".to_string(),
+            ctxt: luna_common::ids::SyntaxContext::ROOT,
+            kind: luna_semantic::symbol::SymbolKind::Function,
+            scope: luna_semantic::symbol::ScopeId(0),
+            span: luna_common::Span::default(),
+            visibility: luna_ast::Visibility::Public,
+            decl_id: None,
+            inner_scope: None,
+            provider_id: None,
+        });
+        ctx.tables.drop_impls.insert(struct_sym, drop_meth_sym);
+        let struct_ty = ctx.types.intern(SemanticType::Struct(struct_sym, Vec::new(), Vec::new()));
 
         let func = Function {
             name: GlobalId { name: "cancellation_test".to_string(), symbol_id: None },
@@ -1501,9 +1528,9 @@ mod tests {
         let drop_inst_count = drop_fn.values.iter().filter(|v| matches!(v.inst, Instruction::Drop { .. })).count();
         assert!(drop_inst_count >= 2, "Expected at least child_future drop and local resource drop, got {}", drop_inst_count);
 
-        // Verify box free exists in drop_fn
-        let box_free_count = drop_fn.values.iter().filter(|v| matches!(v.inst, Instruction::BoxFree { .. })).count();
-        assert_eq!(box_free_count, 1);
+        // Verify heap free exists in drop_fn
+        let heap_free_count = drop_fn.values.iter().filter(|v| matches!(v.inst, Instruction::HeapFree { .. })).count();
+        assert_eq!(heap_free_count, 1);
 
         assert!(luna_optimizer::verify_module(&module).is_ok());
     }

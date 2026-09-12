@@ -272,6 +272,8 @@ module ptr {
         *dst = val;
     }
 
+    export unsafe intrinsic fn drop_in_place<T>(p: *rw T);
+
     export unsafe fn add<T>(p: *T, count: u64) -> *T {
         return (p as u64 + (count * (sizeof(T) as u64))) as *T;
     }

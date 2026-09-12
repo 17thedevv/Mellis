@@ -50,7 +50,6 @@ pub struct TraitResolution {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IntrinsicKind {
-    BoxNew,
     Null,
     Cast,
     PtrOffset,

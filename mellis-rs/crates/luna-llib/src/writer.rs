@@ -1,4 +1,4 @@
-﻿use std::io::{Write, Cursor};
+use std::io::{Write, Cursor};
 use crate::format::{MlibHeader, SectionEntry, SectionType};
 use crate::ir::{MlibModule, MlibFunction, MlibValue, MlibBlock, MlibInstruction, MlibTerminator, MlibOperand, MlibTypeEntry};
 use luna_mvir::{Module, Function, ValueData, BasicBlock, CaptureInfo, Instruction, Terminator, Operand};
@@ -204,11 +204,10 @@ impl MlibWriter {
     
     fn convert_instruction(inst: &Instruction) -> MlibInstruction {
         match inst {
-            Instruction::BoxNew { value } => MlibInstruction::BoxNew { value: Self::convert_operand(value) },
             Instruction::MarkInit { value } => MlibInstruction::MarkInit {
                 value: Self::convert_operand(value),
             },
-            Instruction::BoxFree { value } => MlibInstruction::BoxFree { value: Self::convert_operand(value) },
+            Instruction::HeapFree { value } => MlibInstruction::HeapFree { value: Self::convert_operand(value) },
 
             Instruction::Drop { value, .. } => MlibInstruction::Drop { value: Self::convert_operand(value) },
             Instruction::Alloca => MlibInstruction::Alloca,
@@ -666,15 +665,11 @@ impl MlibWriter {
                 w.write_all(&[13u8])?;
                 Self::serialize_operand(w, value)?;
             }
-            MlibInstruction::BoxNew { value } => {
-                w.write_all(&[14u8])?;
-                Self::serialize_operand(w, value)?;
-            }
             MlibInstruction::MarkInit { value } => {
                 w.write_all(&[0x21u8])?;
                 Self::serialize_operand(w, value)?;
             }
-            MlibInstruction::BoxFree { value } => {
+            MlibInstruction::HeapFree { value } => {
                 w.write_all(&[17u8])?;
                 Self::serialize_operand(w, value)?;
             }

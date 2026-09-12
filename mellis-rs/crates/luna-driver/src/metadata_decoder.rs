@@ -377,7 +377,6 @@ impl InterfaceDecoder {
                 self.ensure_generic_param_symbol(local, &sym.symbol_path);
                 SemanticType::GenericParam(local)
             }
-            CanonicalType::Box(t) => SemanticType::Box(self.decode_type_index(t)),
             CanonicalType::Closure(expr_id, caps, ret) => {
                 let c_caps = caps.into_iter().map(|c| self.decode_type_index(c)).collect();
                 SemanticType::Closure(luna_ast::ExprId(expr_id as u32), c_caps, self.decode_type_index(ret))

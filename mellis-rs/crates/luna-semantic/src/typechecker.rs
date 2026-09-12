@@ -903,7 +903,7 @@ impl<'a> TypeChecker<'a> {
                 self.check_recursive_type(inner, original_decl, visiting, visited);
             }
             // Indirections do not contribute to infinite size
-            SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Box(..) | SemanticType::Function { .. } | SemanticType::Closure(..) => {}
+            SemanticType::Pointer(..) | SemanticType::Reference(..) | SemanticType::Function { .. } | SemanticType::Closure(..) => {}
             _ => {}
         }
 
@@ -2126,21 +2126,6 @@ impl<'a> TypeChecker<'a> {
                         return self.ctx.types.intern(SemanticType::Future(out_ty));
                     }
                 }
-                if let Some("Box") = name {
-                    if let Some(&arg) = generic_args.first() {
-                        let inner_ty = self.lower_type(arg);
-                        if self.ctx.types.is_unsized(inner_ty) {
-                            let mut diag = Diagnostic::error(format!(
-                                "E_UNSUPPORTED_BOX_UNSIZED: Box of unsized type `{:?}` is unsupported in v1",
-                                self.ctx.types.get(inner_ty)
-                            ));
-                            if let Some(sp) = segments.last() { diag = diag.with_span(*sp); }
-                            self.ctx.diagnostics.push(diag);
-                            return self.ctx.types.intern(SemanticType::Error);
-                        }
-                        return self.ctx.types.intern(SemanticType::Box(inner_ty));
-                    }
-                }
                 let last_span = segments.last().copied();
                 let ctxt = last_span.map(|s| s.ctxt).unwrap_or(luna_common::ids::SyntaxContext::ROOT);
                 // Check if already resolved by Resolver, or resolve path
@@ -2182,7 +2167,6 @@ impl<'a> TypeChecker<'a> {
                     }
                 });
                 if let Some(sym) = symbol {
-                    eprintln!("LOWER TYPE NAMED: sym={:?} sym_name={:?} base_ty={:?}", sym, self.ctx.symbol_table.get_symbol(sym).name, self.ctx.tables.symbol_types.get(&sym).map(|t| self.ctx.types.get(*t)));
                     if !self.ctx.symbol_table.is_accessible(sym, self.current_scope, self.ctx.current_provider) {
                         let name_str = segments.iter().map(|s| self.get_span_text(*s)).collect::<Vec<_>>().join("::");
                         let span = segments.last().copied().unwrap_or(luna_common::Span::default());
@@ -4653,24 +4637,25 @@ impl<'a> TypeChecker<'a> {
                     },
                     UnaryOp::Deref | UnaryOp::DerefMut => {
                         let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
-                        match self.ctx.types.get(inner_ty) {
+                        let inner_ty_kind = self.ctx.types.get(inner_ty).clone();
+                        match inner_ty_kind {
                             SemanticType::Pointer(mutability, pointee) => {
                                 if !self.is_unsafe_context {
                                     self.ctx.diagnostics.push(Diagnostic::error("E_UNSAFE_DEREF_OUTSIDE_UNSAFE: Dereference of raw pointer requires an unsafe block")
                                         .with_span(span));
                                 }
-                                if *op == UnaryOp::DerefMut && *mutability == crate::ty::Mutability::Immutable {
+                                if *op == UnaryOp::DerefMut && mutability == crate::ty::Mutability::Immutable {
                                     self.ctx.diagnostics.push(Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_POINTER: Cannot perform mutable dereference on immutable raw pointer `*T`")
                                         .with_span(span));
                                 }
-                                *pointee
+                                pointee
                             }
                             SemanticType::Reference(_, mutability, pointee) => {
-                                if *op == UnaryOp::DerefMut && *mutability == crate::ty::Mutability::Immutable {
+                                if *op == UnaryOp::DerefMut && mutability == crate::ty::Mutability::Immutable {
                                     self.ctx.diagnostics.push(Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_REFERENCE: Cannot perform mutable dereference on immutable reference `&T`")
                                         .with_span(span));
                                 }
-                                *pointee
+                                pointee
                             }
                             SemanticType::Error => self.ctx.types.error_id(),
                             _ => {

@@ -481,14 +481,6 @@ impl<'a> MonoCollector<'a> {
                     ty_id
                 }
             }
-            SemanticType::Box(inner) => {
-                let ni = self.normalize_type(inner);
-                if ni != inner {
-                    self.ctx.types.intern(SemanticType::Box(ni))
-                } else {
-                    ty_id
-                }
-            }
             SemanticType::Function { params, return_type } => {
                 let mut changed = false;
                 let mut new_params = Vec::with_capacity(params.len());

@@ -1,4 +1,4 @@
-﻿//! Type representation for compile-time type introspection and computation.
+//! Type representation for compile-time type introspection and computation.
 //!
 //! This module provides `TypeRepr`, a value-level representation of types that can be
 //! used during compile-time evaluation. Unlike `SemanticTypeId` which is just an index,
@@ -138,8 +138,6 @@ pub enum PointerKind {
     RefMutable,
     /// Immutable reference: `& T`
     RefImmutable,
-    /// Box (owned pointer): `~T`
-    Box,
 }
 
 /// Field representation for struct types.
@@ -242,9 +240,6 @@ pub enum TypeRepr {
         base: Box<TypeRepr>,
         args: Vec<TypeRepr>,
     },
-
-    /// Box type: `~T`
-    Box(Box<TypeRepr>),
 
     /// Error type (for failed type resolution)
     Error,
@@ -372,7 +367,6 @@ impl TypeRepr {
                     is_method: false,
                 })
             }
-            SemanticType::Box(inner) => TypeRepr::Box(Box::new(Self::from_semantic_type(*inner, ctx))),
             SemanticType::Void => TypeRepr::Primitive(PrimitiveRepr::Void),
             SemanticType::Never => TypeRepr::Primitive(PrimitiveRepr::Never),
             SemanticType::GenericParam(sym_id) => {
@@ -457,10 +451,8 @@ impl TypeRepr {
                     PointerKind::Immutable => "* ",
                     PointerKind::RefMutable => "&rw ",
                     PointerKind::RefImmutable => "& ",
-                    PointerKind::Box => "~",
                 };
-                let suffix = if matches!(kind, PointerKind::Box) { "" } else { " " };
-                format!("{}{}{}", prefix, inner.type_name(), suffix)
+                format!("{}{}{}", prefix, inner.type_name(), " ")
             }
             TypeRepr::Struct { name, type_params, .. } => {
                 if type_params.is_empty() {
@@ -488,7 +480,6 @@ impl TypeRepr {
                 let args_str: Vec<String> = args.iter().map(|t| t.type_name()).collect();
                 format!("{}<{}>", base.type_name(), args_str.join(", "))
             }
-            TypeRepr::Box(inner) => format!("~{}", inner.type_name()),
             TypeRepr::Error => "<error>".to_string(),
         }
     }
@@ -686,7 +677,6 @@ pub enum TypeKind {
     Slice,
     Pointer,
     Function,
-    Box,
     TypeType,
     TypeParam,
     Error,
@@ -735,7 +725,6 @@ impl TypeRepr {
             TypeRepr::Slice(_) => TypeKind::Slice,
             TypeRepr::Pointer { .. } => TypeKind::Pointer,
             TypeRepr::Fn(_) => TypeKind::Function,
-            TypeRepr::Box(_) => TypeKind::Box,
             TypeRepr::TypeType => TypeKind::TypeType,
             TypeRepr::TypeParam(_) => TypeKind::TypeParam,
             TypeRepr::TypeApp { .. } => TypeKind::Struct, // Treat type app as struct for now
@@ -828,7 +817,6 @@ impl TypeRepr {
             }
             TypeRepr::Enum { .. } => 8,
             TypeRepr::Fn(_) => 8,
-            TypeRepr::Box(inner) => inner.calculate_size(ctx),
             TypeRepr::TypeType => 8,
             TypeRepr::TypeParam(_) => 8,
             TypeRepr::TypeApp { .. } => 8,
@@ -849,7 +837,6 @@ impl TypeRepr {
             TypeRepr::Struct { alignment, .. } => *alignment,
             TypeRepr::Enum { .. } => 8,
             TypeRepr::Fn(_) => 8,
-            TypeRepr::Box(inner) => inner.calculate_alignment(ctx),
             TypeRepr::TypeType => 8,
             TypeRepr::TypeParam(_) => 8,
             TypeRepr::TypeApp { .. } => 8,

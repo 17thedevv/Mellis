@@ -979,7 +979,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                             escape_kind = crate::effect::EscapeKind::NoEscape;
                                             access_kind = crate::effect::AccessKind::None;
                                         }
-                                        SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) | SemanticType::Future(_) | SemanticType::Box(_) => {
+                                        SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) | SemanticType::Future(_) => {
                                             // Passed by value (or opaque copy), no memory effect on the caller's aliasing
                                             escape_kind = crate::effect::EscapeKind::NoEscape;
                                             access_kind = crate::effect::AccessKind::None;
@@ -1185,7 +1185,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                     escape_kind = crate::effect::EscapeKind::NoEscape;
                                     access_kind = crate::effect::AccessKind::None;
                                 }
-                                SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) | SemanticType::Future(_) | SemanticType::Box(_) => {
+                                SemanticType::Struct(_, _, _) | SemanticType::Enum(_, _, _) | SemanticType::Tuple(_) | SemanticType::Array(_, _) | SemanticType::Slice(_) | SemanticType::Future(_) => {
                                     escape_kind = crate::effect::EscapeKind::NoEscape;
                                     access_kind = crate::effect::AccessKind::None;
                                 }
