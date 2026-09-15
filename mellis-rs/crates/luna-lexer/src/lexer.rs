@@ -171,6 +171,7 @@ impl<'a> Lexer<'a> {
             "where" => TokenKind::KwWhere,
             "outlives" => TokenKind::KwOutlives,
             "pub" => TokenKind::KwPub,
+            "private" => TokenKind::KwPrivate,
             "crate" => TokenKind::KwCrate,
             "super" => TokenKind::KwSuper,
 

@@ -204,12 +204,6 @@ impl<'a> TypeChecker<'a> {
             _ => {
                 let exp_sem = self.ctx.types.get(expected);
                 let act_sem = self.ctx.types.get(actual);
-                if let SemanticType::Enum(sym, _, _) = exp_sem {
-                    eprintln!("EXPECTED ENUM SYM: {:?} name={:?}", sym, self.ctx.symbol_table.get_symbol(*sym).name);
-                }
-                if let SemanticType::Enum(sym, _, _) = act_sem {
-                    eprintln!("ACTUAL ENUM SYM: {:?} name={:?}", sym, self.ctx.symbol_table.get_symbol(*sym).name);
-                }
                 Err(format!("type mismatch: expected {:?}, got {:?}", exp_sem, act_sem))
             }
         }
@@ -332,7 +326,7 @@ impl<'a> TypeChecker<'a> {
 
         let impl_key = crate::semantic_tables::ImplKey {
             trait_id: Some(trait_id),
-            self_type_def: nominal_sym,
+            self_type_def: nominal_sym.into(),
         };
 
         // 1. Try matching against trait_impl_entries
@@ -612,15 +606,16 @@ impl<'a> TypeChecker<'a> {
                 }
             }
         } else {
-            // Nominal type (Struct / Enum)
-            let nominal_sym = match &sem_ty {
-                SemanticType::Struct(s, _, _) => Some(*s),
-                SemanticType::Enum(e, _, _) => Some(*e),
+            // Nominal type (Struct / Enum) or Primitive
+            let self_key_opt: Option<crate::semantic_tables::ImplSelfTypeKey> = match &sem_ty {
+                SemanticType::Struct(s, _, _) => Some((*s).into()),
+                SemanticType::Enum(e, _, _) => Some((*e).into()),
+                SemanticType::Primitive(b) => Some((*b).into()),
                 _ => None,
             };
-            if let Some(nom_sym) = nominal_sym {
+            if let Some(self_key) = self_key_opt {
                 for (impl_key, _) in &self.ctx.tables.trait_impls {
-                    if impl_key.self_type_def == nom_sym {
+                    if impl_key.self_type_def == self_key {
                         if let Some(t_id) = impl_key.trait_id {
                             if self.ctx.tables.assoc_type_names.contains_key(&(t_id, assoc_name.to_string())) {
                                 if !candidate_traits.contains(&t_id) {
@@ -760,23 +755,24 @@ impl<'a> TypeChecker<'a> {
 
         for (impl_key, decl_ids) in &self.ctx.tables.trait_impls {
             if impl_key.trait_id == Some(copy_trait) {
-                let self_ty_sym = impl_key.self_type_def;
-                if let Some(&self_ty) = self.ctx.tables.symbol_types.get(&self_ty_sym) {
-                    if self.ctx.needs_drop(self_ty) {
-                        for &decl_id in decl_ids {
-                            let mut span = luna_common::Span::new(luna_common::ids::FileId(0), 0, 0);
-                            if let luna_ast::Decl::Impl { self_type, .. } = &self.arena.decls[decl_id.0 as usize] {
-                                if let luna_ast::Type::Named { segments, .. } = &self.arena.types[self_type.0 as usize] {
-                                    if let Some(last) = segments.last() {
-                                        span = *last;
+                if let crate::semantic_tables::ImplSelfTypeKey::Nominal(self_ty_sym) = impl_key.self_type_def {
+                    if let Some(&self_ty) = self.ctx.tables.symbol_types.get(&self_ty_sym) {
+                        if self.ctx.needs_drop(self_ty) {
+                            for &decl_id in decl_ids {
+                                let mut span = luna_common::Span::new(luna_common::ids::FileId(0), 0, 0);
+                                if let luna_ast::Decl::Impl { self_type, .. } = &self.arena.decls[decl_id.0 as usize] {
+                                    if let luna_ast::Type::Named { segments, .. } = &self.arena.types[self_type.0 as usize] {
+                                        if let Some(last) = segments.last() {
+                                            span = *last;
+                                        }
                                     }
                                 }
+                                self.ctx.diagnostics.push(
+                                    luna_common::Diagnostic::error(
+                                        "E_COPY_DROP_CONFLICT: A composite type cannot satisfy or derive Copy if any transitive field satisfies Drop"
+                                    ).with_span(span)
+                                );
                             }
-                            self.ctx.diagnostics.push(
-                                luna_common::Diagnostic::error(
-                                    "E_COPY_DROP_CONFLICT: A composite type cannot satisfy or derive Copy if any transitive field satisfies Drop"
-                                ).with_span(span)
-                            );
                         }
                     }
                 }
@@ -794,7 +790,7 @@ impl<'a> TypeChecker<'a> {
 
                 let impl_key = crate::semantic_tables::ImplKey {
                     trait_id: Some(copy_trait),
-                    self_type_def: sym_id,
+                    self_type_def: sym_id.into(),
                 };
                 
                 if self.ctx.tables.trait_impls.contains_key(&impl_key) {
@@ -918,6 +914,8 @@ impl<'a> TypeChecker<'a> {
             if let Item::Decl(decl_id) = item {
                 let decl = &self.arena.decls[decl_id.0 as usize];
                 let scope_id = *self.ctx.tables.decl_scopes.get(decl_id).unwrap_or(&crate::ScopeId(0));
+                let prev_scope = self.current_scope;
+                self.current_scope = scope_id;
                 match decl {
                     Decl::Function { generic_params, .. } => {
                         for (gp_idx, gp) in generic_params.iter().enumerate() {
@@ -927,15 +925,16 @@ impl<'a> TypeChecker<'a> {
                                 let gp_ty = self.ctx.types.intern(SemanticType::GenericParam(gp_sym));
                                 self.ctx.tables.symbol_types.insert(gp_sym, gp_ty);
                                 for &bound_type_id in &gp.bounds {
-                                    if let luna_ast::Type::Named { segments, associated_bindings, .. } = &self.arena.types[bound_type_id.0 as usize] {
+                                    if let luna_ast::Type::Named { segments, generic_args, associated_bindings, .. } = &self.arena.types[bound_type_id.0 as usize] {
                                         if let Some(last_seg) = segments.last() {
                                             let trait_name = self.get_span_text(*last_seg);
                                             if let Some(trait_sym) = self.ctx.symbol_table.lookup(trait_name, scope_id)
                                                 .or_else(|| self.ctx.symbol_table.lookup(trait_name, crate::ScopeId(0))) {
+                                                let trait_args = generic_args.iter().map(|arg| self.lower_type(*arg)).collect();
                                                 self.ctx.tables.trait_bounds
                                                     .entry(gp_sym)
                                                     .or_insert_with(Vec::new)
-                                                    .push(crate::semantic_tables::TraitBound { param: gp_sym, trait_id: trait_sym });
+                                                    .push(crate::semantic_tables::TraitBound { param: gp_sym, trait_id: trait_sym, trait_args });
 
                                                 for binding in associated_bindings {
                                                     let b_name = self.get_span_text(binding.name);
@@ -971,15 +970,16 @@ impl<'a> TypeChecker<'a> {
                                 let gp_ty = self.ctx.types.intern(SemanticType::GenericParam(gp_sym));
                                 self.ctx.tables.symbol_types.insert(gp_sym, gp_ty);
                                 for &bound_type_id in &gp.bounds {
-                                    if let luna_ast::Type::Named { segments, associated_bindings, .. } = &self.arena.types[bound_type_id.0 as usize] {
+                                    if let luna_ast::Type::Named { segments, generic_args, associated_bindings, .. } = &self.arena.types[bound_type_id.0 as usize] {
                                         if let Some(last_seg) = segments.last() {
                                             let trait_name = self.get_span_text(*last_seg);
                                             if let Some(trait_sym) = self.ctx.symbol_table.lookup(trait_name, scope_id)
                                                 .or_else(|| self.ctx.symbol_table.lookup(trait_name, crate::ScopeId(0))) {
+                                                let trait_args = generic_args.iter().map(|arg| self.lower_type(*arg)).collect();
                                                 self.ctx.tables.trait_bounds
                                                     .entry(gp_sym)
                                                     .or_insert_with(Vec::new)
-                                                    .push(crate::semantic_tables::TraitBound { param: gp_sym, trait_id: trait_sym });
+                                                    .push(crate::semantic_tables::TraitBound { param: gp_sym, trait_id: trait_sym, trait_args });
 
                                                 for binding in associated_bindings {
                                                     let b_name = self.get_span_text(binding.name);
@@ -1013,17 +1013,18 @@ impl<'a> TypeChecker<'a> {
                                         let gp_ty = self.ctx.types.intern(SemanticType::GenericParam(gp_sym));
                                         self.ctx.tables.symbol_types.insert(gp_sym, gp_ty);
                                         for &bound_type_id in &gp.bounds {
-                                            if let luna_ast::Type::Named { segments, associated_bindings, .. } = &self.arena.types[bound_type_id.0 as usize] {
+                                            if let luna_ast::Type::Named { segments, generic_args, associated_bindings, .. } = &self.arena.types[bound_type_id.0 as usize] {
                                                 if let Some(last_seg) = segments.last() {
                                                     let trait_name = self.get_span_text(*last_seg);
                                                     let resolved_trait = self.ctx.symbol_table.lookup(trait_name, m_scope)
                                                         .or_else(|| self.ctx.symbol_table.lookup(trait_name, scope_id))
                                                         .or_else(|| self.ctx.symbol_table.lookup(trait_name, crate::ScopeId(0)));
                                                     if let Some(trait_sym) = resolved_trait {
+                                                        let trait_args = generic_args.iter().map(|arg| self.lower_type(*arg)).collect();
                                                         self.ctx.tables.trait_bounds
                                                             .entry(gp_sym)
                                                             .or_insert_with(Vec::new)
-                                                            .push(crate::semantic_tables::TraitBound { param: gp_sym, trait_id: trait_sym });
+                                                            .push(crate::semantic_tables::TraitBound { param: gp_sym, trait_id: trait_sym, trait_args });
 
                                                         for binding in associated_bindings {
                                                             let b_name = self.get_span_text(binding.name);
@@ -1060,11 +1061,17 @@ impl<'a> TypeChecker<'a> {
                     }
                     _ => {}
                 }
+                self.current_scope = prev_scope;
             }
         }
     }
 
     fn populate_signatures_pass1(&mut self, items: &[Item]) {
+        self.populate_types(items);
+        self.populate_impls(items);
+    }
+
+    fn populate_types(&mut self, items: &[Item]) {
         // Pass 1: Declare all struct/enum/type types
         for item in items {
             if let Item::Decl(decl_id) = item {
@@ -1153,11 +1160,44 @@ impl<'a> TypeChecker<'a> {
                         }
                         self.current_scope = prev_scope;
                     }
+                    Decl::TypeAlias { aliased_type, generic_params, .. } => {
+                        let sym_id_opt = self.ctx.tables.decl_symbols.get(decl_id).copied();
+                        if let Some(sym_id) = sym_id_opt {
+                            if let Some(aliased) = aliased_type {
+                                let prev_scope = self.current_scope;
+                                if let Some(inner) = self.ctx.symbol_table.get_symbol(sym_id).inner_scope {
+                                    self.current_scope = inner;
+                                }
+                                for (gp_idx, _) in generic_params.iter().enumerate() {
+                                    if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(*decl_id, gp_idx)) {
+                                        let gp_ty = self.ctx.types.intern(SemanticType::GenericParam(*gp_sym));
+                                        self.ctx.tables.symbol_types.insert(*gp_sym, gp_ty);
+                                    }
+                                }
+                                let sem_ty = self.lower_type(*aliased);
+                                self.ctx.tables.symbol_types.insert(sym_id, sem_ty);
+                                self.current_scope = prev_scope;
+                            }
+                        }
+                    }
+                    Decl::Module { items: inner_decls, .. } => {
+                        let prev_scope = self.current_scope;
+                        if let Some(&sym_id) = self.ctx.tables.decl_symbols.get(decl_id) {
+                            if let Some(inner) = self.ctx.symbol_table.symbols[sym_id.0 as usize].inner_scope {
+                                self.current_scope = inner;
+                            }
+                        }
+                        let inner_items: Vec<Item> = inner_decls.iter().map(|&d| Item::Decl(d)).collect();
+                        self.populate_types(&inner_items);
+                        self.current_scope = prev_scope;
+                    }
                     _ => {}
                 }
             }
         }
+    }
 
+    fn populate_impls(&mut self, items: &[Item]) {
         // Pass 1.8: Register Trait Impls and Impl Associated Types
         for item in items {
             if let Item::Decl(decl_id) = item {
@@ -1203,10 +1243,9 @@ impl<'a> TypeChecker<'a> {
                             None
                         }
                     });
-
-                    let trait_sym_opt = trait_type.and_then(|trait_ty_id| {
-                        self.ctx.tables.type_symbols.get(&trait_ty_id).copied().or_else(|| {
-                            let trait_ast_ty = &self.arena.types[trait_ty_id.0 as usize];
+                    let trait_sym_opt = trait_type.and_then(|trait_type_id| {
+                        self.ctx.tables.type_symbols.get(&trait_type_id).copied().or_else(|| {
+                            let trait_ast_ty = &self.arena.types[trait_type_id.0 as usize];
                             if let luna_ast::Type::Named { segments, .. } = trait_ast_ty {
                                 if segments.len() == 1 {
                                     let s = &segments[0];
@@ -1280,6 +1319,21 @@ impl<'a> TypeChecker<'a> {
                                 }
                             }
 
+                            let trait_args: Vec<SemanticTypeId> = if let Some(t_ty_id) = trait_type {
+                                let t_ast_ty = &self.arena.types[t_ty_id.0 as usize];
+                                if let luna_ast::Type::Named { generic_args, .. } = t_ast_ty {
+                                    let prev_scope = self.current_scope;
+                                    self.current_scope = impl_scope;
+                                    let args = generic_args.iter().map(|arg| self.lower_type(*arg)).collect();
+                                    self.current_scope = prev_scope;
+                                    args
+                                } else {
+                                    Vec::new()
+                                }
+                            } else {
+                                Vec::new()
+                            };
+
                             // Check coherence
                             let coherence_res = self.ctx.check_impl_coherence(trait_sym, self_sem_ty, &gp_syms, span);
 
@@ -1289,12 +1343,19 @@ impl<'a> TypeChecker<'a> {
                                     trait_id: trait_sym,
                                     self_type: self_sem_ty,
                                     generic_params: gp_syms.clone(),
+                                    trait_args,
                                 });
 
-                                if let Some(self_sym) = self_sym_opt {
+                                let self_key_opt: Option<crate::semantic_tables::ImplSelfTypeKey> = match self.ctx.types.get(self_sem_ty) {
+                                    SemanticType::Primitive(b) => Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
+                                    SemanticType::Struct(s, ..) | SemanticType::Enum(s, ..) => Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*s)),
+                                    _ => self_sym_opt.map(crate::semantic_tables::ImplSelfTypeKey::Nominal),
+                                };
+
+                                if let Some(self_key) = self_key_opt {
                                     let key = crate::semantic_tables::ImplKey {
                                         trait_id: Some(trait_sym),
-                                        self_type_def: self_sym,
+                                        self_type_def: self_key,
                                     };
                                     let entry = self.ctx.tables.trait_impls
                                         .entry(key.clone())
@@ -1332,20 +1393,27 @@ impl<'a> TypeChecker<'a> {
                                     }
                                 }
                             }
-                        } else if let Some(self_sym) = self_sym_opt {
-                            let mut gp_syms = Vec::new();
-                            for idx in 0..generic_params.len() {
-                                if let Some(&gp_sym) = self.ctx.tables.generic_param_symbols.get(&(*decl_id, idx)) {
-                                    gp_syms.push(gp_sym);
-                                }
-                            }
-                            let key = crate::semantic_tables::ImplKey {
-                                trait_id: None,
-                                self_type_def: self_sym,
+                        } else {
+                            let self_key_opt: Option<crate::semantic_tables::ImplSelfTypeKey> = match self.ctx.types.get(self_sem_ty) {
+                                SemanticType::Primitive(b) => Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
+                                SemanticType::Struct(s, ..) | SemanticType::Enum(s, ..) => Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*s)),
+                                _ => self_sym_opt.map(crate::semantic_tables::ImplSelfTypeKey::Nominal),
                             };
-                            self.ctx.tables.impl_self_types.insert(key.clone(), self_sem_ty);
-                            if !gp_syms.is_empty() {
-                                self.ctx.tables.impl_generic_params.insert(key.clone(), gp_syms);
+                            if let Some(self_key) = self_key_opt {
+                                let mut gp_syms = Vec::new();
+                                for idx in 0..generic_params.len() {
+                                    if let Some(&gp_sym) = self.ctx.tables.generic_param_symbols.get(&(*decl_id, idx)) {
+                                        gp_syms.push(gp_sym);
+                                    }
+                                }
+                                let key = crate::semantic_tables::ImplKey {
+                                    trait_id: None,
+                                    self_type_def: self_key,
+                                };
+                                self.ctx.tables.impl_self_types.insert(key.clone(), self_sem_ty);
+                                if !gp_syms.is_empty() {
+                                    self.ctx.tables.impl_generic_params.insert(key.clone(), gp_syms);
+                                }
                             }
                         }
                     }
@@ -1358,7 +1426,7 @@ impl<'a> TypeChecker<'a> {
                             }
                         }
                         let inner_items: Vec<Item> = inner_decls.iter().map(|&d| Item::Decl(d)).collect();
-                        self.populate_signatures_pass1(&inner_items);
+                        self.populate_impls(&inner_items);
                         self.current_scope = prev_scope;
                     }
                     _ => {}
@@ -1710,12 +1778,6 @@ impl<'a> TypeChecker<'a> {
                                     }
                                 }
                             } else {
-                                if let Some(self_sym) = self_sym_opt {
-                                    let key = crate::semantic_tables::ImplKey {
-                                        trait_id: Some(trait_sym),
-                                        self_type_def: self_sym,
-                                    };
-                                }
                                 self.check_trait_impl_lifetime_conformance(trait_sym, methods);
                             }
                         }
@@ -1857,29 +1919,33 @@ impl<'a> TypeChecker<'a> {
                         i += 1;
                         continue;
                     }
-                    // Find the struct symbol for the resolved type (peel through references/pointers)
-                    let concrete_struct_sym = match &resolved_sem {
-                        SemanticType::Struct(s, _, _) | SemanticType::Enum(s, _, _) => Some(*s),
+                    // Find the self key for the resolved type (peel through references/pointers)
+                    let concrete_self_key = match &resolved_sem {
+                        SemanticType::Struct(s, _, _) | SemanticType::Enum(s, _, _) => Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*s)),
+                        SemanticType::Primitive(b) => Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
                         SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) => {
                             let inner_ty = self.ctx.types.get(*inner);
-                            if let SemanticType::Struct(s, _, _) | SemanticType::Enum(s, _, _) = inner_ty {
-                                Some(*s)
-                            } else {
-                                None
+                            match inner_ty {
+                                SemanticType::Struct(s, _, _) | SemanticType::Enum(s, _, _) => Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*s)),
+                                SemanticType::Primitive(b) => Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
+                                _ => None,
                             }
                         }
                         _ => None,
                     };
-                    if let Some(concrete_sym) = concrete_struct_sym {
+                    if let Some(concrete_key) = concrete_self_key {
                         if let Some(bounds) = self.ctx.tables.trait_bounds.get(&gp_sym).cloned() {
                             for bound in &bounds {
                                 let impl_key = crate::semantic_tables::ImplKey {
                                     trait_id: Some(bound.trait_id),
-                                    self_type_def: concrete_sym,
+                                    self_type_def: concrete_key,
                                 };
                                 if !self.ctx.tables.trait_impls.contains_key(&impl_key) {
                                     let trait_name = self.ctx.symbol_table.get_symbol(bound.trait_id).name.clone();
-                                    let type_name = self.ctx.symbol_table.get_symbol(concrete_sym).name.clone();
+                                    let type_name = match concrete_key {
+                                        crate::semantic_tables::ImplSelfTypeKey::Nominal(s) => self.ctx.symbol_table.get_symbol(s).name.clone(),
+                                        crate::semantic_tables::ImplSelfTypeKey::Primitive(b) => format!("{:?}", b).to_lowercase(),
+                                    };
                                     let gp_name = self.ctx.symbol_table.get_symbol(gp_sym).name.clone();
                                     self.ctx.diagnostics.push(
                                         Diagnostic::error(format!(
@@ -1887,6 +1953,32 @@ impl<'a> TypeChecker<'a> {
                                             type_name, trait_name, gp_name
                                         )).with_span(span)
                                     );
+                                } else if !bound.trait_args.is_empty() {
+                                    let matching_entries: Vec<_> = self.ctx.tables.trait_impl_entries
+                                        .iter()
+                                        .filter(|e| e.trait_id == bound.trait_id)
+                                        .cloned()
+                                        .collect();
+                                    for entry in matching_entries {
+                                        let mut test_subst = crate::ty::Substitution::new();
+                                        let matched = self.ctx.matches_impl_pattern(entry.self_type, resolved_ty, &entry.generic_params, &mut test_subst)
+                                            || match self.ctx.types.get(resolved_ty) {
+                                                SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) => {
+                                                    self.ctx.matches_impl_pattern(entry.self_type, *inner, &entry.generic_params, &mut test_subst)
+                                                }
+                                                _ => false,
+                                            };
+                                        if matched {
+                                            for (arg_idx, &b_arg) in bound.trait_args.iter().enumerate() {
+                                                if let Some(&impl_arg) = entry.trait_args.get(arg_idx) {
+                                                    let concrete_impl_arg = self.ctx.types.subst(impl_arg, &test_subst);
+                                                    let expected_b_arg = self.ctx.types.subst(b_arg, subst);
+                                                    let _ = self.unify(expected_b_arg, concrete_impl_arg);
+                                                }
+                                            }
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1896,7 +1988,10 @@ impl<'a> TypeChecker<'a> {
                                 if let Err(e) = self.unify(expected_ty, norm_ty) {
                                     let trait_name = self.ctx.symbol_table.get_symbol(trait_sym).name.clone();
                                     let assoc_name = self.ctx.symbol_table.get_symbol(assoc_sym).name.clone();
-                                    let type_name = self.ctx.symbol_table.get_symbol(concrete_sym).name.clone();
+                                    let type_name = match concrete_key {
+                                        crate::semantic_tables::ImplSelfTypeKey::Nominal(s) => self.ctx.symbol_table.get_symbol(s).name.clone(),
+                                        crate::semantic_tables::ImplSelfTypeKey::Primitive(b) => format!("{:?}", b).to_lowercase(),
+                                    };
                                     self.ctx.diagnostics.push(
                                         Diagnostic::error(format!(
                                             "E_ASSOCIATED_TYPE_MISMATCH: The type `{}` implements `{}` with associated type `{}` = `{:?}`, but `{:?}` was expected: {}",
@@ -3135,6 +3230,9 @@ impl<'a> TypeChecker<'a> {
                                             new_params.push(self.ctx.types.subst(p, &subst));
                                         }
                                         let new_ret = self.ctx.types.subst(return_type, &subst);
+                                        if !subst.map.is_empty() {
+                                            self.ctx.tables.expr_substs.insert(*expr_id, subst.clone());
+                                        }
                                         self.ctx.types.intern(SemanticType::Function { params: new_params, return_type: new_ret })
                                     }
                                     _ => self.ctx.types.subst(ty, &subst),
@@ -3348,7 +3446,8 @@ impl<'a> TypeChecker<'a> {
                             resolved_subst.insert(sym, self.ctx.types.subst(ty, &empty));
                         }
                         if !resolved_subst.map.is_empty() {
-                            self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst);
+                            self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst.clone());
+                            ret_ty_id = self.ctx.types.subst(return_type, &resolved_subst);
                         }
                     }
                 } else if let SemanticType::Enum(enum_sym_id, enum_args, variants) = callee_ty {
@@ -3566,9 +3665,10 @@ impl<'a> TypeChecker<'a> {
                     }
 
                     // Look up methods on this struct (from local impl blocks)
+                    let target_key = crate::semantic_tables::ImplSelfTypeKey::Nominal(sym_id);
                     for (impl_key, impl_decl_ids) in &self.ctx.tables.trait_impls {
                         for &impl_decl_id in impl_decl_ids {
-                            if impl_key.self_type_def == sym_id && (impl_decl_id.0 as usize) < self.arena.decls.len() {
+                            if impl_key.self_type_def == target_key && (impl_decl_id.0 as usize) < self.arena.decls.len() {
                                 if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
                                     for &m_id in methods {
                                         if (m_id.0 as usize) < self.arena.decls.len() {
@@ -3602,7 +3702,7 @@ impl<'a> TypeChecker<'a> {
 
                     // Look up methods from external impl_methods table
                     for (impl_key, method_syms) in &self.ctx.tables.impl_methods {
-                        if impl_key.self_type_def == sym_id {
+                        if impl_key.self_type_def == target_key {
                             for &m_sym in method_syms {
                                 let sym = self.ctx.symbol_table.get_symbol(m_sym);
                                 if sym.name == member_name {
@@ -3629,6 +3729,84 @@ impl<'a> TypeChecker<'a> {
                     let infer = self.ctx.types.new_inference_var();
                     self.ctx.tables.expr_types.insert(*expr_id, infer);
                     return infer;
+                }
+
+                if let SemanticType::GenericParam(gp_sym) = &peeled_ty {
+                    if let Some(bounds) = self.ctx.tables.trait_bounds.get(gp_sym) {
+                        for bound in bounds {
+                            if let Some(m_syms) = self.ctx.tables.trait_methods.get(&bound.trait_id) {
+                                for &m_sym in m_syms {
+                                    let sym = self.ctx.symbol_table.get_symbol(m_sym);
+                                    if sym.name == member_name {
+                                        if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
+                                            let mut subst = crate::ty::Substitution::new();
+                                            let mut m_has_generics = false;
+                                            if let Some(trait_gps) = self.ctx.tables.trait_generic_params.get(&bound.trait_id).cloned() {
+                                                for (gp_idx, &arg_ty) in bound.trait_args.iter().enumerate() {
+                                                    if let Some(&trait_gp_sym) = trait_gps.get(gp_idx) {
+                                                        subst.insert(trait_gp_sym, arg_ty);
+                                                        m_has_generics = true;
+                                                    }
+                                                }
+                                            } else if let Some(&trait_decl_id) = self.ctx.tables.symbol_decls.get(&bound.trait_id) {
+                                                for (gp_idx, &arg_ty) in bound.trait_args.iter().enumerate() {
+                                                    if let Some(&trait_gp_sym) = self.ctx.tables.generic_param_symbols.get(&(trait_decl_id, gp_idx)) {
+                                                        subst.insert(trait_gp_sym, arg_ty);
+                                                        m_has_generics = true;
+                                                    }
+                                                }
+                                            }
+                                            let actual_m_ty = if m_has_generics { self.ctx.types.subst(m_ty, &subst) } else { m_ty };
+                                            self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
+                                            self.ctx.tables.expr_types.insert(*expr_id, actual_m_ty);
+                                            return actual_m_ty;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if let SemanticType::Primitive(b) = &peeled_ty {
+                    let target_key = crate::semantic_tables::ImplSelfTypeKey::Primitive(*b);
+                    for (impl_key, impl_decl_ids) in &self.ctx.tables.trait_impls {
+                        for &impl_decl_id in impl_decl_ids {
+                            if impl_key.self_type_def == target_key && (impl_decl_id.0 as usize) < self.arena.decls.len() {
+                                if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
+                                    for &m_id in methods {
+                                        if (m_id.0 as usize) < self.arena.decls.len() {
+                                            if let Decl::Function { name, .. } = &self.arena.decls[m_id.0 as usize] {
+                                                if self.get_span_text(*name) == member_name {
+                                                    if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(&m_id) {
+                                                        if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
+                                                            self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
+                                                            self.ctx.tables.expr_types.insert(*expr_id, m_ty);
+                                                            return m_ty;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    for (impl_key, method_syms) in &self.ctx.tables.impl_methods {
+                        if impl_key.self_type_def == target_key {
+                            for &m_sym in method_syms {
+                                let sym = self.ctx.symbol_table.get_symbol(m_sym);
+                                if sym.name == member_name {
+                                    if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
+                                        self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
+                                        self.ctx.tables.expr_types.insert(*expr_id, m_ty);
+                                        return m_ty;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 self.ctx.diagnostics.push(Diagnostic::error("Member access requires a struct or trait object").with_span(*member));
                 self.ctx.types.new_inference_var()
@@ -4002,17 +4180,83 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
 
-                let nominal_info = match &peeled_ty {
-                    SemanticType::Struct(sym_id, struct_args, _) => Some((*sym_id, struct_args.clone())),
-                    SemanticType::Enum(sym_id, enum_args, _) => Some((*sym_id, enum_args.clone())),
+                if let SemanticType::GenericParam(gp_sym) = &peeled_ty {
+                    let mut found_bound_method = None;
+                    if let Some(bounds) = self.ctx.tables.trait_bounds.get(gp_sym) {
+                        for bound in bounds {
+                            if let Some(m_syms) = self.ctx.tables.trait_methods.get(&bound.trait_id) {
+                                for &m_sym in m_syms {
+                                    let sym = self.ctx.symbol_table.get_symbol(m_sym);
+                                    if sym.name == member_name {
+                                        found_bound_method = Some((m_sym, bound.clone()));
+                                        break;
+                                    }
+                                }
+                            }
+                            if found_bound_method.is_some() { break; }
+                        }
+                    }
+                    if let Some((m_sym, bound)) = found_bound_method {
+                        self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
+                        if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
+                            let semantic_ty = self.ctx.types.get(m_ty).clone();
+                            if let SemanticType::Function { params, return_type } = semantic_ty {
+                                let mut subst = crate::ty::Substitution::new();
+                                let mut m_has_generics = false;
+                                if let Some(trait_gps) = self.ctx.tables.trait_generic_params.get(&bound.trait_id).cloned() {
+                                    for (gp_idx, &arg_ty) in bound.trait_args.iter().enumerate() {
+                                        if let Some(&trait_gp_sym) = trait_gps.get(gp_idx) {
+                                            subst.insert(trait_gp_sym, arg_ty);
+                                            m_has_generics = true;
+                                        }
+                                    }
+                                } else if let Some(&trait_decl_id) = self.ctx.tables.symbol_decls.get(&bound.trait_id) {
+                                    for (gp_idx, &arg_ty) in bound.trait_args.iter().enumerate() {
+                                        if let Some(&trait_gp_sym) = self.ctx.tables.generic_param_symbols.get(&(trait_decl_id, gp_idx)) {
+                                            subst.insert(trait_gp_sym, arg_ty);
+                                            m_has_generics = true;
+                                        }
+                                    }
+                                }
+                                if params.len() == args.len() + 1 {
+                                    self.bind_matching_generics(params[0], obj_ty_id, &mut subst, &mut m_has_generics);
+                                    let receiver_p = if m_has_generics { self.ctx.types.subst(params[0], &subst) } else { params[0] };
+                                    let _ = self.unify(receiver_p, obj_ty_id);
+                                }
+                                let return_type = if m_has_generics { self.ctx.types.subst(return_type, &subst) } else { return_type };
+                                let expected_params = if params.len() == args.len() + 1 { &params[1..] } else { &params[..] };
+                                for (i, arg) in args.iter().enumerate() {
+                                    let arg_ty = self.typecheck_expr(&arg.value);
+                                    if let Some(&expected_p) = expected_params.get(i) {
+                                        let expected_p = if m_has_generics { self.ctx.types.subst(expected_p, &subst) } else { expected_p };
+                                        if !self.try_coerce(arg.value, arg_ty, expected_p) {
+                                            if let Err(e) = self.unify(expected_p, arg_ty) {
+                                                let span = self.get_expr_span_for_diag(&arg.value).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                                                self.ctx.diagnostics.push(Diagnostic::error(e).with_span(span));
+                                            }
+                                        }
+                                    }
+                                }
+                                let return_type = self.ctx.types.resolve(return_type);
+                                self.ctx.tables.expr_types.insert(*expr_id, return_type);
+                                return return_type;
+                            }
+                        }
+                    }
+                }
+
+                let target_self_info = match &peeled_ty {
+                    SemanticType::Struct(sym_id, struct_args, _) => Some((crate::semantic_tables::ImplSelfTypeKey::Nominal(*sym_id), struct_args.clone(), Some(*sym_id))),
+                    SemanticType::Enum(sym_id, enum_args, _) => Some((crate::semantic_tables::ImplSelfTypeKey::Nominal(*sym_id), enum_args.clone(), Some(*sym_id))),
+                    SemanticType::Primitive(b) => Some((crate::semantic_tables::ImplSelfTypeKey::Primitive(*b), Vec::new(), None)),
                     _ => None,
                 };
 
-                if let Some((sym_id, struct_args)) = nominal_info {
+                if let Some((target_key, struct_args, nominal_sym_opt)) = target_self_info {
                     let mut found_method = None;
                     for (impl_key, impl_decl_ids) in &self.ctx.tables.trait_impls {
                         for &impl_decl_id in impl_decl_ids {
-                            if impl_key.self_type_def == sym_id && (impl_decl_id.0 as usize) < self.arena.decls.len() {
+                            if impl_key.self_type_def == target_key && (impl_decl_id.0 as usize) < self.arena.decls.len() {
                                 if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
                                     for &m_id in methods {
                                         if (m_id.0 as usize) < self.arena.decls.len() {
@@ -4035,7 +4279,7 @@ impl<'a> TypeChecker<'a> {
 
                     if found_method.is_none() {
                         for (impl_key, method_syms) in &self.ctx.tables.impl_methods {
-                            if impl_key.self_type_def == sym_id {
+                            if impl_key.self_type_def == target_key {
                                 for &m_sym in method_syms {
                                     let sym = self.ctx.symbol_table.get_symbol(m_sym);
                                     if sym.name == member_name {
@@ -4059,9 +4303,12 @@ impl<'a> TypeChecker<'a> {
                             return self.ctx.types.intern(SemanticType::Error);
                         }
                         self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
+                        let is_nominal_drop = nominal_sym_opt.map_or(false, |sym_id| {
+                            self.ctx.tables.drop_impls.get(&sym_id) == Some(&m_sym)
+                        });
                         if member_name == "drop"
                             || Some(m_sym) == self.ctx.lang_items.get(crate::lang_item::LangItem::DropFn)
-                            || self.ctx.tables.drop_impls.get(&sym_id) == Some(&m_sym)
+                            || is_nominal_drop
                             || self.ctx.tables.drop_impls.values().any(|&d_sym| d_sym == m_sym)
                         {
                             let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
@@ -4111,11 +4358,13 @@ impl<'a> TypeChecker<'a> {
                                 }
 
                                 // 1b. Also bind nominal struct/enum generic params to struct_args
-                                if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id).copied() {
-                                    for (gp_idx, &arg_ty) in struct_args.iter().enumerate() {
-                                        if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(decl_id, gp_idx)) {
-                                            m_has_generics = true;
-                                            subst.insert(*gp_sym, arg_ty);
+                                if let Some(sym_id) = nominal_sym_opt {
+                                    if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id).copied() {
+                                        for (gp_idx, &arg_ty) in struct_args.iter().enumerate() {
+                                            if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(decl_id, gp_idx)) {
+                                                m_has_generics = true;
+                                                subst.insert(*gp_sym, arg_ty);
+                                            }
                                         }
                                     }
                                 }
@@ -4149,7 +4398,7 @@ impl<'a> TypeChecker<'a> {
                                     let _ = self.unify(receiver_p, obj_ty_id);
                                 }
 
-                                let return_type = if m_has_generics { self.ctx.types.subst(return_type, &subst) } else { return_type };
+                                let mut return_type = if m_has_generics { self.ctx.types.subst(return_type, &subst) } else { return_type };
                                 let expected_params = if params.len() == args.len() + 1 { &params[1..] } else { &params[..] };
                                 for (i, arg) in args.iter().enumerate() {
                                     let arg_ty = self.typecheck_expr(&arg.value);
@@ -4174,11 +4423,13 @@ impl<'a> TypeChecker<'a> {
                                         resolved_subst.insert(sym, self.ctx.types.subst(res_ty, &empty));
                                     }
                                     if !resolved_subst.map.is_empty() {
-                                        self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst);
+                                        self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst.clone());
+                                        return_type = self.ctx.types.subst(return_type, &resolved_subst);
                                     }
                                 }
 
-                                let return_type = self.ctx.types.resolve(return_type);
+                                let empty = crate::ty::Substitution::new();
+                                let return_type = self.ctx.types.subst(return_type, &empty);
                                 self.ctx.tables.expr_types.insert(*expr_id, return_type);
                                 return return_type;
                             }
@@ -4473,7 +4724,7 @@ impl<'a> TypeChecker<'a> {
                     SemanticType::Struct(sym, _, _) | SemanticType::Enum(sym, _, _) => {
                         let key = crate::semantic_tables::ImplKey {
                             trait_id: Some(try_sym),
-                            self_type_def: *sym,
+                            self_type_def: (*sym).into(),
                         };
                         if self.ctx.tables.trait_impls.contains_key(&key) {
                             found_try_impl = true;
@@ -4497,7 +4748,7 @@ impl<'a> TypeChecker<'a> {
                 if let Some(def_sym) = inner_def_sym {
                     let key = crate::semantic_tables::ImplKey {
                         trait_id: Some(try_sym),
-                        self_type_def: def_sym,
+                        self_type_def: def_sym.into(),
                     };
                     if let Some(method_syms) = self.ctx.tables.impl_methods.get(&key) {
                         for &m_sym in method_syms {
@@ -4558,7 +4809,7 @@ impl<'a> TypeChecker<'a> {
                         if let Some(def_sym) = ret_def_sym {
                             let key = crate::semantic_tables::ImplKey {
                                 trait_id: Some(from_residual_sym),
-                                self_type_def: def_sym,
+                                self_type_def: def_sym.into(),
                             };
                             
                             if let Some(method_syms) = self.ctx.tables.impl_methods.get(&key) {

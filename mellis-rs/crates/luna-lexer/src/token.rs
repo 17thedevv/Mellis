@@ -145,6 +145,7 @@ pub enum TokenKind {
     KwLifeFrom,
     KwWhere,
     KwOutlives,
+    KwPrivate,
     KwPub,
     KwCrate,
     KwSuper,

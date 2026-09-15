@@ -26,26 +26,29 @@ fn check_source(dir: &PathBuf, file_name: &str, src: &str) -> Result<(), Vec<lun
 }
 
 #[test]
-fn test_vis_struct_2_reject_export_field_in_private_struct() {
-    let dir = setup_test_dir("vis_struct_2");
+fn test_vis_struct_2_removed_private_struct_public_field_allowed() {
+    // Visibility-02: Private struct CAN have public fields
+    // The field is declared Public, but external access is blocked at struct type gate
+    let dir = setup_test_dir("vis_struct_2_removed");
     let src = r#"
         struct Secret {
             export x: i32,
             y: i32,
         }
 
+        fn get_secret() -> Secret {
+            return Secret { x: 1, y: 2 };
+        }
+
         fn main() -> i32 {
-            return 0;
+            dec s = get_secret();
+            return s.x + s.y;
         }
     "#;
 
     let res = check_source(&dir, "main.ln", src);
-    assert!(res.is_err(), "Expected error declaring export field in private struct");
-    let diags = res.err().unwrap();
-    assert!(
-        diags.iter().any(|d| d.message.contains("Struct field cannot be declared 'export' in a private struct")),
-        "Expected VIS-STRUCT-2 diagnostic, got: {:?}", diags
-    );
+    // VIS-STRUCT-2 removed: this should compile now
+    assert!(res.is_ok(), "Expected private struct with public fields to compile, got: {:?}", res.err());
 }
 
 #[test]
@@ -53,8 +56,8 @@ fn test_path_1_field_read() {
     let dir = setup_test_dir("path_1_read");
     let prov = r#"
         export struct User {
-            export name: i32,
-            password: i32,
+            name: i32,              // Visibility-02: implicit public
+            private password: i32,  // Visibility-02: explicit private
         }
 
         export fn create_user() -> User {
@@ -101,8 +104,8 @@ fn test_path_2_field_write() {
     let dir = setup_test_dir("path_2_write");
     let prov = r#"
         export struct User {
-            export name: i32,
-            password: i32,
+            name: i32,
+            private password: i32,
         }
 
         export fn create_user() -> User {
@@ -151,8 +154,8 @@ fn test_path_3_field_borrow() {
     let dir = setup_test_dir("path_3_borrow");
     let prov = r#"
         export struct User {
-            export name: i32,
-            password: i32,
+            name: i32,
+            private password: i32,
         }
 
         export fn create_user() -> User {
@@ -219,8 +222,8 @@ fn test_path_4_struct_literal_construction() {
     let dir = setup_test_dir("path_4_construction");
     let prov = r#"
         export struct User {
-            export name: i32,
-            password: i32,
+            name: i32,
+            private password: i32,
         }
 
         export fn create_user() -> User {
@@ -277,8 +280,8 @@ fn test_path_5_destructuring_match() {
     let dir = setup_test_dir("path_5_destructuring");
     let prov = r#"
         export struct User {
-            export name: i32,
-            password: i32,
+            name: i32,
+            private password: i32,
         }
 
         export fn create_user() -> User {
@@ -339,12 +342,12 @@ fn test_path_6_nested_field_projection() {
     let dir = setup_test_dir("path_6_nested");
     let prov = r#"
         export struct Credential {
-            export id: i32,
-            secret: i32,
+            id: i32,
+            private secret: i32,
         }
 
         export struct Account {
-            export cred: Credential,
+            cred: Credential,
         }
 
         export fn make_account() -> Account {
@@ -393,8 +396,8 @@ fn test_vis_struct_1_same_module_internal_access() {
     let dir = setup_test_dir("same_module");
     let src = r#"
         export struct User {
-            export name: i32,
-            password: i32,
+            name: i32,
+            private password: i32,
         }
 
         fn check_password(u: &User) -> i32 {
@@ -424,8 +427,8 @@ fn test_compiled_mlib_parity() {
     let dir = setup_test_dir("mlib_parity");
     let prov = r#"
         export struct User {
-            export name: i32,
-            password: i32,
+            name: i32,
+            private password: i32,
         }
 
         export fn create_user() -> User {

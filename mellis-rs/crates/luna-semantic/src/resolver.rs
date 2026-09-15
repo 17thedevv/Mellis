@@ -551,20 +551,10 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self.ctx.tables.decl_symbols.insert(*decl_id, sym_id);
                         self.ctx.tables.symbol_decls.insert(sym_id, *decl_id);
                         self.check_lang_item(annotations, sym_id, crate::lang_item::LangItemTarget::Struct);
-                        
-                        // Rule VIS-STRUCT-2: Struct field cannot be declared 'export' in a private struct
-                        if *visibility == luna_ast::Visibility::Private {
-                            for field in fields {
-                                if field.visibility == luna_ast::Visibility::Public {
-                                    self.ctx.diagnostics.push(
-                                        Diagnostic::error(
-                                            "Struct field cannot be declared 'export' in a private struct",
-                                        )
-                                        .with_span(field.name),
-                                    );
-                                }
-                            }
-                        }
+
+                        // Note: VIS-STRUCT-2 was removed in Visibility-02
+                        // Private struct can now have public fields - external access is blocked
+                        // at the struct type visibility gate, not the field level.
 
                         let prev_scope = self.current_scope;
                         let struct_scope = self.enter_scope(crate::symbol::ScopeKind::Struct);
@@ -710,6 +700,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                         self.ctx.symbol_table.set_inner_scope(sym_id, trait_scope);
                         self.ctx.tables.decl_scopes.insert(*decl_id, trait_scope);
                         
+                        let mut trait_gps = Vec::new();
                         if !generic_params.is_empty() {
                             for (idx, gp) in generic_params.iter().enumerate() {
                                 let gp_name_str = self.source_manager.get_file(gp.name.file_id).unwrap().source[gp.name.start as usize..gp.name.end as usize]
@@ -728,8 +719,10 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                     .generic_param_symbols
                                     .insert((*decl_id, idx), gp_sym_id);
                                 self.ctx.tables.symbol_decls.insert(gp_sym_id, *decl_id);
+                                trait_gps.push(gp_sym_id);
                             }
                         }
+                        self.ctx.tables.trait_generic_params.insert(sym_id, trait_gps);
 
                         let mut trait_assoc_syms = Vec::new();
                         for assoc_id in associated_types {
@@ -914,10 +907,39 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             })
                         });
 
-                        if let Some(self_sym) = self_sym_opt {
+                        let self_key_opt: Option<crate::semantic_tables::ImplSelfTypeKey> = {
+                            let self_ast_ty = &self.arena.types[self_type.0 as usize];
+                            if let luna_ast::Type::Builtin(kind) = self_ast_ty {
+                                let bt = match kind {
+                                    luna_lexer::BuiltinKind::I8 => crate::ty::BuiltinType::I8,
+                                    luna_lexer::BuiltinKind::I16 => crate::ty::BuiltinType::I16,
+                                    luna_lexer::BuiltinKind::I32 => crate::ty::BuiltinType::I32,
+                                    luna_lexer::BuiltinKind::I64 => crate::ty::BuiltinType::I64,
+                                    luna_lexer::BuiltinKind::I128 => crate::ty::BuiltinType::I128,
+                                    luna_lexer::BuiltinKind::Isize => crate::ty::BuiltinType::Isize,
+                                    luna_lexer::BuiltinKind::U8 => crate::ty::BuiltinType::U8,
+                                    luna_lexer::BuiltinKind::U16 => crate::ty::BuiltinType::U16,
+                                    luna_lexer::BuiltinKind::U32 => crate::ty::BuiltinType::U32,
+                                    luna_lexer::BuiltinKind::U64 => crate::ty::BuiltinType::U64,
+                                    luna_lexer::BuiltinKind::U128 => crate::ty::BuiltinType::U128,
+                                    luna_lexer::BuiltinKind::Usize => crate::ty::BuiltinType::Usize,
+                                    luna_lexer::BuiltinKind::F32 => crate::ty::BuiltinType::F32,
+                                    luna_lexer::BuiltinKind::F64 => crate::ty::BuiltinType::F64,
+                                    luna_lexer::BuiltinKind::Bool => crate::ty::BuiltinType::Bool,
+                                    luna_lexer::BuiltinKind::Str => crate::ty::BuiltinType::String,
+                                    luna_lexer::BuiltinKind::Char => crate::ty::BuiltinType::Char,
+                                    luna_lexer::BuiltinKind::Void => return,
+                                };
+                                Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(bt))
+                            } else {
+                                self_sym_opt.map(crate::semantic_tables::ImplSelfTypeKey::Nominal)
+                            }
+                        };
+
+                        if let Some(self_key) = self_key_opt {
                             let key = crate::semantic_tables::ImplKey {
                                 trait_id: trait_sym_opt,
-                                self_type_def: self_sym,
+                                self_type_def: self_key,
                             };
 
                             self.ctx
@@ -940,8 +962,6 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 .entry(key.clone())
                                 .or_default()
                                 .extend(method_syms);
-
-
                         }
                     }
                     Decl::Macro {
@@ -1474,7 +1494,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                     }
 
                     let sym_id = self.ctx.symbol_table.declare_symbol(
-                        name_str,
+                        name_str.clone(),
                         if is_mutable {
                             SymbolKind::Variable
                         } else {
@@ -1574,7 +1594,10 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
     fn resolve_expr(&mut self, expr_id: &luna_ast::ExprId) {
         let expr = &self.arena.exprs[expr_id.0 as usize];
         match expr {
-            Expr::Identifier { segments, .. } => {
+            Expr::Identifier { segments, generic_args } => {
+                for arg in generic_args {
+                    self.resolve_type(arg);
+                }
                 if !segments.is_empty() {
                     let name_str = segments
                         .iter()

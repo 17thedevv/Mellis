@@ -304,10 +304,16 @@ impl<'a> Parser<'a> {
         self.consume(TokenKind::LBrace, "Expected '{'")?;
         let mut fields = Vec::new();
         while !self.check(TokenKind::RBrace) && !self.is_at_end() {
+            // Visibility-02: Field default is Public
+            // - no modifier → Public
+            // - export → Public
+            // - private → Private
             let f_vis = if self.match_token(TokenKind::KwExport) {
                 Visibility::Public
-            } else {
+            } else if self.match_token(TokenKind::KwPrivate) {
                 Visibility::Private
+            } else {
+                Visibility::Public  // default for Visibility-02
             };
             let f_name = self
                 .consume(TokenKind::Identifier, "Expected field name")?

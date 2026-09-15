@@ -10,23 +10,59 @@ impl<'a> Parser<'a> {
         }
         let mut p = self.pos + 1;
         let mut depth = 1;
+        let mut has_type_token = false;
         while p < self.tokens.len() {
             let kind = self.tokens[p].kind;
+            if matches!(kind, TokenKind::BuiltinType(_) | TokenKind::KwFn) {
+                has_type_token = true;
+            }
             if kind == TokenKind::LessThan {
                 depth += 1;
             } else if kind == TokenKind::GreaterThan {
                 depth -= 1;
                 if depth == 0 {
                     let next_kind = self.tokens.get(p + 1).map(|t| t.kind).unwrap_or(TokenKind::Eof);
-                    return matches!(next_kind, TokenKind::ColonColon | TokenKind::LParen | TokenKind::LBrace);
+                    if matches!(next_kind, TokenKind::ColonColon | TokenKind::LParen | TokenKind::LBrace) {
+                        return true;
+                    }
+                    if has_type_token && matches!(next_kind, TokenKind::Semi | TokenKind::Comma | TokenKind::RParen | TokenKind::RBracket) {
+                        return true;
+                    }
+                    return false;
                 }
             } else if kind == TokenKind::RShift {
                 if depth <= 2 {
                     let next_kind = self.tokens.get(p + 1).map(|t| t.kind).unwrap_or(TokenKind::Eof);
-                    return matches!(next_kind, TokenKind::ColonColon | TokenKind::LParen | TokenKind::LBrace);
+                    if matches!(next_kind, TokenKind::ColonColon | TokenKind::LParen | TokenKind::LBrace) {
+                        return true;
+                    }
+                    if has_type_token && matches!(next_kind, TokenKind::Semi | TokenKind::Comma | TokenKind::RParen | TokenKind::RBracket) {
+                        return true;
+                    }
+                    return false;
                 }
                 depth -= 2;
-            } else if kind == TokenKind::Eof || kind == TokenKind::Semi {
+            } else if matches!(
+                kind,
+                TokenKind::Eof
+                    | TokenKind::Semi
+                    | TokenKind::LogicalOr
+                    | TokenKind::LogicalAnd
+                    | TokenKind::EqualEqual
+                    | TokenKind::NotEqual
+                    | TokenKind::KwAs
+                    | TokenKind::KwIf
+                    | TokenKind::KwElse
+                    | TokenKind::KwWhile
+                    | TokenKind::KwReturn
+                    | TokenKind::KwDec
+                    | TokenKind::KwConst
+                    | TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Divide
+                    | TokenKind::Modulo
+                    | TokenKind::Equal
+            ) {
                 return false;
             }
             p += 1;
@@ -446,13 +482,17 @@ impl<'a> Parser<'a> {
                 }
                 if self.check(TokenKind::IntegerLiteral) {
                     let token = self.advance();
-                    // Basic parse to u32. Assuming token text is valid.
-                    // Needs text access... Wait, token doesn't have text, it has span!
-                    // We'll just store the span or dummy index for now, because lexer only gives token.
+                    let text = if let Some(sm) = self.source_manager {
+                        let file = sm.get_file(token.span.file_id).unwrap();
+                        file.source[token.span.start as usize..token.span.end as usize].to_string()
+                    } else {
+                        self.source[token.span.start as usize..token.span.end as usize].to_string()
+                    };
+                    let index = text.parse::<u32>().unwrap_or(0);
                     expr = self.arena.alloc_expr(Expr::TupleIndex {
                         object: expr,
-                        index: 0,
-                    }); // FIXME: get text
+                        index,
+                    });
                     continue;
                 }
 
@@ -700,9 +740,7 @@ impl<'a> Parser<'a> {
             let token = self.advance();
             let text = if let Some(sm) = self.source_manager {
                 let file = sm.get_file(token.span.file_id).unwrap();
-                let text = file.source[token.span.start as usize..token.span.end as usize].to_string();
-                println!("parse_primary: token span {:?} in file {:?} resolves to text {:?}", token.span, token.span.file_id, text);
-                text
+                file.source[token.span.start as usize..token.span.end as usize].to_string()
             } else {
                 self.source[token.span.start as usize..token.span.end as usize].to_string()
             };

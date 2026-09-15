@@ -442,4 +442,42 @@ impl SymbolTable {
     pub fn get_symbol_mut(&mut self, id: SymbolId) -> &mut Symbol {
         &mut self.symbols[id.0 as usize]
     }
+
+    pub fn get_logical_path(&self, sym_id: SymbolId) -> Vec<String> {
+        if (sym_id.0 as usize) >= self.symbols.len() {
+            return vec![];
+        }
+        let sym = &self.symbols[sym_id.0 as usize];
+        let mut path = Vec::new();
+        let mut cur_scope = Some(sym.scope);
+
+        while let Some(sc_id) = cur_scope {
+            let sc = &self.scopes[sc_id.0 as usize];
+            if sc.kind == ScopeKind::Global {
+                break;
+            }
+            for s in &self.symbols {
+                if s.inner_scope == Some(sc_id) {
+                    if matches!(s.kind, SymbolKind::Module | SymbolKind::Struct | SymbolKind::Enum | SymbolKind::Trait) {
+                        path.push(s.name.clone());
+                        break;
+                    }
+                }
+            }
+            cur_scope = sc.parent;
+        }
+
+        path.reverse();
+        path
+    }
+
+    pub fn get_full_logical_path(&self, sym_id: SymbolId) -> Vec<String> {
+        if (sym_id.0 as usize) >= self.symbols.len() {
+            return vec![];
+        }
+        let sym = &self.symbols[sym_id.0 as usize];
+        let mut path = self.get_logical_path(sym_id);
+        path.push(sym.name.clone());
+        path
+    }
 }
