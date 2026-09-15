@@ -103,8 +103,14 @@ fn main() -> i32 {
     dec s = v.as_slice();
     dec rw it = s.iter();
 
-    dec item1 = it.next().unwrap();
-    dec item2 = it.next().unwrap();
+    dec item1 = match it.next() {
+        Option::Some(r) -> *r,
+        Option::None -> 0,
+    };
+    dec item2 = match it.next() {
+        Option::Some(r) -> *r,
+        Option::None -> 0,
+    };
     dec item3_is_none = it.next().is_none();
 
     if item1 == 100 && item2 == 200 && item3_is_none {
@@ -324,3 +330,334 @@ fn main() {
     let res_consumer = compile(consumer_path.to_str().unwrap(), consumer_src.to_string(), &consumer_opts);
     assert!(res_consumer.is_ok(), "Consumer using .llib slice iterator MUST compile: {:?}", res_consumer.err());
 }
+
+/// 7. ITER-9: SliceIter<T>::Item is &T (proven by type-correct compilation)
+#[test]
+fn test_iter_9_slice_iter_item_is_ref() {
+    let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
+    let dir = create_temp_dir("iter_9_item_is_ref");
+    let src_path = dir.join("main.ln");
+    let bin_path = dir.join("main.exe");
+
+    let src = r#"
+import <core>;
+import <alloc>;
+
+fn inspect_ref(r: &i32) -> i32 {
+    return *r;
+}
+
+fn main() -> i32 {
+    dec rw v = vec_new<i32>();
+    v.push(42);
+    dec s = v.as_slice();
+    dec rw it = s.iter();
+
+    // next() yields Option<&i32>, passing directly to inspect_ref proves Item == &T
+    dec opt = it.next();
+    dec val = match opt {
+        Option::Some(r) -> inspect_ref(r),
+        Option::None -> 0,
+    };
+
+    if val == 42 {
+        return 0;
+    }
+    return 1;
+}
+"#;
+    fs::write(&src_path, src).unwrap();
+
+    let opts = CompilerOptions {
+        output_path: Some(bin_path.to_string_lossy().to_string()),
+        search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
+        quiet: true,
+        ..Default::default()
+    };
+
+    let res = compile(src_path.to_str().unwrap(), src.to_string(), &opts);
+    assert!(res.is_ok(), "ITER-9 SliceIter next() Item is &T MUST compile: {:?}", res.err());
+
+    let (exit_code, _out, _err) = run_binary(&bin_path);
+    assert_eq!(exit_code, 0, "ITER-9 binary must exit with 0");
+}
+
+/// 8. ITER-10: SliceIter never drops backing elements during iteration
+#[test]
+fn test_iter_10_slice_iter_never_drops_backing_elements() {
+    let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
+    let dir = create_temp_dir("iter_10_never_drops");
+    let src_path = dir.join("main.ln");
+    let bin_path = dir.join("main.exe");
+
+    let src = r#"
+import <core>;
+import <alloc>;
+
+struct DropCounter {
+    private created: u64,
+    private dropped: u64,
+}
+
+struct TrackedItem {
+    val: i32,
+    counter: *rw DropCounter,
+}
+
+impl Drop for TrackedItem {
+    fn drop(self: &rw Self) {
+        unsafe {
+            (*self.counter).dropped = (*self.counter).dropped + (1 as u64);
+        }
+    }
+}
+
+fn main() -> i32 {
+    dec rw counter = DropCounter { created: 0 as u64, dropped: 0 as u64 };
+    dec c_ptr = &rw counter as *rw DropCounter;
+
+    {
+        dec rw v = vec_with_capacity<TrackedItem>(4 as u64);
+        dec rw i: i32 = 0;
+        while i < 4 {
+            unsafe {
+                (*c_ptr).created = (*c_ptr).created + (1 as u64);
+            }
+            v.push(TrackedItem { val: i, counter: c_ptr });
+            i = i + 1;
+        }
+
+        dec s = v.as_slice();
+        dec rw it = s.iter();
+
+        // Consume 2 elements via next()
+        dec _r1 = it.next();
+        dec _r2 = it.next();
+
+        // During iteration, iterator only yields &TrackedItem without dropping
+        if counter.dropped != (0 as u64) {
+            return 1;
+        }
+
+        // Exhaust iterator
+        dec _r3 = it.next();
+        dec _r4 = it.next();
+        dec _r5 = it.next(); // None
+
+        // Still 0 drops
+        if counter.dropped != (0 as u64) {
+            return 2;
+        }
+    }
+
+    // After Vec v goes out of scope, exactly 4 drops occur from Vec storage
+    if counter.created != (4 as u64) {
+        return 3;
+    }
+    if counter.dropped != (4 as u64) {
+        return 4;
+    }
+
+    return 0;
+}
+"#;
+    fs::write(&src_path, src).unwrap();
+
+    let opts = CompilerOptions {
+        output_path: Some(bin_path.to_string_lossy().to_string()),
+        search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
+        quiet: true,
+        ..Default::default()
+    };
+
+    let res = compile(src_path.to_str().unwrap(), src.to_string(), &opts);
+    assert!(res.is_ok(), "ITER-10 SliceIter never drops backing elements MUST compile: {:?}", res.err());
+
+    let (exit_code, _out, _err) = run_binary(&bin_path);
+    assert_eq!(exit_code, 0, "ITER-10 binary must exit with 0");
+}
+
+/// 9. ITER-11: DropTracker lifecycle invariant: during iteration created == live + dropped (dropped == 0), after Vec drop created == dropped
+#[test]
+fn test_iter_11_droptracker_lifecycle() {
+    let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
+    let dir = create_temp_dir("iter_11_lifecycle");
+    let src_path = dir.join("main.ln");
+    let bin_path = dir.join("main.exe");
+
+    let src = r#"
+import <core>;
+import <alloc>;
+
+struct DropCounter {
+    private created: u64,
+    private dropped: u64,
+}
+
+struct TrackedItem {
+    val: i32,
+    counter: *rw DropCounter,
+}
+
+impl Drop for TrackedItem {
+    fn drop(self: &rw Self) {
+        unsafe {
+            (*self.counter).dropped = (*self.counter).dropped + (1 as u64);
+        }
+    }
+}
+
+fn main() -> i32 {
+    dec rw counter = DropCounter { created: 0 as u64, dropped: 0 as u64 };
+    dec c_ptr = &rw counter as *rw DropCounter;
+
+    {
+        dec rw v = vec_with_capacity<TrackedItem>(3 as u64);
+        dec rw i: i32 = 1;
+        while i <= 3 {
+            unsafe {
+                (*c_ptr).created = (*c_ptr).created + (1 as u64);
+            }
+            v.push(TrackedItem { val: i, counter: c_ptr });
+            i = i + 1;
+        }
+
+        dec rw it = v.iter();
+        dec rw sum: i32 = 0;
+        dec rw running = true;
+        while running {
+            dec opt = it.next();
+            match opt {
+                Option::Some(r) -> {
+                    sum = sum + (*r).val;
+                    // Invariant check during each step of iteration:
+                    // Iterator itself does not increase dropped count!
+                    if counter.dropped != (0 as u64) {
+                        return 1;
+                    }
+                },
+                Option::None -> {
+                    running = false;
+                },
+            }
+        }
+
+        if sum != 6 {
+            return 2;
+        }
+
+        // Before Vec drops: created (3) == live (3) + dropped (0)
+        if counter.dropped != (0 as u64) {
+            return 3;
+        }
+    }
+
+    // After Vec drops: created (3) == dropped (3)
+    if counter.created != (3 as u64) || counter.dropped != (3 as u64) {
+        return 4;
+    }
+
+    return 0;
+}
+"#;
+    fs::write(&src_path, src).unwrap();
+
+    let opts = CompilerOptions {
+        output_path: Some(bin_path.to_string_lossy().to_string()),
+        search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
+        quiet: true,
+        ..Default::default()
+    };
+
+    let res = compile(src_path.to_str().unwrap(), src.to_string(), &opts);
+    assert!(res.is_ok(), "ITER-11 DropTracker lifecycle MUST compile: {:?}", res.err());
+
+    let (exit_code, _out, _err) = run_binary(&bin_path);
+    assert_eq!(exit_code, 0, "ITER-11 binary must exit with 0");
+}
+
+/// 10. ITER-12: Reference provenance: while reference from next() is alive, mutating Vec is rejected; after reference dies, mutating Vec is allowed.
+#[test]
+fn test_iter_12_reference_provenance_reject_and_allow() {
+    let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
+    let dir = create_temp_dir("iter_12_provenance");
+
+    // Subcase 1: While r is alive, xs.push() MUST be rejected by borrowck
+    let reject_src = r#"
+import <core>;
+import <alloc>;
+
+fn main() {
+    dec rw xs = vec_new<i32>();
+    xs.push(1);
+    dec rw it = xs.iter();
+    dec opt = it.next();
+    match opt {
+        Option::Some(r) -> {
+            // while r is alive:
+            xs.push(2); // must be rejected: xs is borrowed by r
+            dec use_r = *r;
+        },
+        Option::None -> {},
+    }
+}
+"#;
+    let reject_path = dir.join("reject.ln");
+    fs::write(&reject_path, reject_src).unwrap();
+
+    let opts = CompilerOptions {
+        search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
+        quiet: true,
+        ..Default::default()
+    };
+
+    let res_reject = check(reject_path.to_str().unwrap(), reject_src.to_string(), &opts);
+    assert!(
+        res_reject.is_err(),
+        "ITER-12: xs.push() while r is alive MUST be rejected by borrow checker!"
+    );
+
+    // Subcase 2: When scope of r ends (r dies), xs.push() MUST be allowed
+    let allow_src = r#"
+import <core>;
+import <alloc>;
+
+fn main() -> i32 {
+    dec rw xs = vec_new<i32>();
+    xs.push(1);
+    {
+        dec rw it = xs.iter();
+        dec opt = it.next();
+        match opt {
+            Option::Some(r) -> {
+                dec use_r = *r;
+            },
+            Option::None -> {},
+        }
+    }
+    // r dies here
+    xs.push(2); // OK: borrow has ended
+    if xs.len() == (2 as u64) {
+        return 0;
+    }
+    return 1;
+}
+"#;
+    let allow_path = dir.join("allow.ln");
+    let bin_path = dir.join("allow.exe");
+    fs::write(&allow_path, allow_src).unwrap();
+
+    let mut compile_opts = opts.clone();
+    compile_opts.output_path = Some(bin_path.to_string_lossy().to_string());
+
+    let res_allow = compile(allow_path.to_str().unwrap(), allow_src.to_string(), &compile_opts);
+    assert!(
+        res_allow.is_ok(),
+        "ITER-12: xs.push() after r dies MUST be allowed: {:?}",
+        res_allow.err()
+    );
+
+    let (exit_code, _out, _err) = run_binary(&bin_path);
+    assert_eq!(exit_code, 0, "ITER-12 binary must exit with 0");
+}
+

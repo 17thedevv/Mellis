@@ -70,6 +70,7 @@ fn check_source_with_sysroot(
 }
 
 /// A1. Basic Map adapter using function pointer
+/// ITER-9: SliceIter<T>::Item is &T
 #[test]
 fn test_iter_map_basic() {
     let sysroot = Sysroot::discover_for_test().expect("sysroot required");
@@ -78,8 +79,9 @@ fn test_iter_map_basic() {
     let src = r#"
         import <core>;
 
-        fn square(x: i32) -> i32 {
-            return x * x;
+        // ITER-9: Map over borrowed slice receives &T, must deref for value
+        fn square(x: &i32) -> i32 {
+            return (*x) * (*x);
         }
 
         fn main() -> i32 {
@@ -150,7 +152,7 @@ fn test_iter_filter_basic() {
                 match opt {
                     Option::Some(val) -> {
                         count = count + 1;
-                        sum = sum + val;
+                        sum = sum + *val;
                     },
                     Option::None -> {
                         running = false;
@@ -203,7 +205,7 @@ fn test_iter_enumerate_basic() {
                     Option::Some(pair) -> {
                         count = count + 1;
                         idx_sum = idx_sum + pair.0;
-                        val_sum = val_sum + pair.1;
+                        val_sum = val_sum + *pair.1;
                     },
                     Option::None -> {
                         running = false;
@@ -258,7 +260,7 @@ fn test_iter_take_exact_count() {
                 match opt {
                     Option::Some(val) -> {
                         count = count + 1;
-                        sum = sum + val;
+                        sum = sum + *val;
                     },
                     Option::None -> {
                         running = false;
@@ -316,7 +318,7 @@ fn test_iter_skip_exact_count() {
                 match opt {
                     Option::Some(val) -> {
                         count = count + 1;
-                        sum = sum + val;
+                        sum = sum + *val;
                     },
                     Option::None -> {
                         running = false;
@@ -370,8 +372,8 @@ fn test_iter_zip_unequal_lengths() {
                 match opt {
                     Option::Some(pair) -> {
                         count = count + 1;
-                        sum_a = sum_a + pair.0;
-                        sum_b = sum_b + pair.1;
+                        sum_a = sum_a + *pair.0;
+                        sum_b = sum_b + *pair.1;
                     },
                     Option::None -> {
                         running = false;
@@ -416,8 +418,8 @@ fn test_iter_adapter_pipeline_chaining() {
             return (*x % 2) == 0;
         }
 
-        fn square(x: i32) -> i32 {
-            return x * x;
+        fn square(x: &i32) -> i32 {
+            return (*x) * (*x);
         }
 
         fn main() -> i32 {
@@ -473,8 +475,8 @@ fn test_adapter_source_vs_llib_parity() {
     let src = r#"
         import <core>;
 
-        fn add_ten(x: i32) -> i32 {
-            return x + 10;
+        fn add_ten(x: &i32) -> i32 {
+            return (*x) + 10;
         }
 
         fn main() -> i32 {
@@ -562,7 +564,7 @@ fn test_iter_filter_droptracker() {
 
                 // 5 items created (vals 1, 2, 3, 4, 5)
                 // Filter keeps even (2, 4), rejects odd (1, 3, 5).
-                // Rejected items must be dropped in-place as filter iterates!
+                // With borrowed iteration, iterator yields &TrackedItem without transferring ownership.
                 dec it = v.iter();
                 dec rw filtered = iter_filter(it, is_even);
 
@@ -584,20 +586,19 @@ fn test_iter_filter_droptracker() {
                     return 1;
                 }
 
-                // All 5 items yielded during iteration are dropped:
-                // 3 odd items rejected and dropped in-place by Filter,
-                // 2 even items processed and dropped by the loop body.
-                if counter.dropped != (5 as u64) {
+                // Invariant: Iterator borrows from Vec, so it NEVER drops backing elements!
+                // During iteration: created (5) == live (5) + dropped (0)
+                if counter.dropped != (0 as u64) {
                     return 2;
                 }
             }
 
             // After scope exits (Vec v dropped, releasing its 5 backing elements):
-            // 5 iteration drops + 5 Vec drops = 10 total drops.
+            // Exactly 5 items created, exactly 5 items dropped by the Vec.
             if counter.created != (5 as u64) {
                 return 3;
             }
-            if counter.dropped != (10 as u64) {
+            if counter.dropped != (5 as u64) {
                 return 4;
             }
 
@@ -664,11 +665,11 @@ fn test_iter_zip_droptracker() {
                 dec it_b = slice_iter<i32>(&b_arr);
                 dec rw zipped = iter_zip(it_a, it_b);
 
-                // Step 1: yields (TrackedItem 1, 100)
+                // Step 1: yields (&TrackedItem 1, &100)
                 dec opt1 = zipped.next();
                 match opt1 {
                     Option::Some(pair) -> {
-                        if pair.1 != 100 {
+                        if *pair.1 != 100 {
                             return 1;
                         }
                     },
@@ -677,8 +678,7 @@ fn test_iter_zip_droptracker() {
                     },
                 }
 
-                // Step 2: Stream A yields TrackedItem 2, but Stream B yields None.
-                // TrackedItem 2 must be dropped cleanly without leak!
+                // Step 2: Stream B is exhausted, Zip returns None
                 dec opt2 = zipped.next();
                 match opt2 {
                     Option::Some(_) -> {
@@ -687,20 +687,19 @@ fn test_iter_zip_droptracker() {
                     Option::None -> {},
                 }
 
-                // Exactly 2 items dropped so far:
-                // - TrackedItem 1 was yielded in opt1 and dropped when match arm exited
-                // - TrackedItem 2 was unconsumed and dropped cleanly in Zip when Stream B was exhausted
-                if counter.dropped != (2 as u64) {
+                // Invariant: Iterator borrows from collections, so it does NOT drop backing elements!
+                // During iteration: 0 items dropped.
+                if counter.dropped != (0 as u64) {
                     return 4;
                 }
             }
 
             // After scope exits (Vec v_a dropped, releasing its 3 backing elements):
-            // 2 iteration drops + 3 Vec drops = 5 total drops.
+            // Exactly 3 items created, exactly 3 items dropped by the Vec.
             if counter.created != (3 as u64) {
                 return 5;
             }
-            if counter.dropped != (5 as u64) {
+            if counter.dropped != (3 as u64) {
                 return 6;
             }
 
@@ -726,7 +725,7 @@ fn test_iter_deep_lifetime_chain_locks_collection() {
         import <core>;
         import <alloc>;
 
-        fn pred(pair: &(&i32, &i32)) -> bool {
+        fn pred(pair: (&i32, &i32)) -> bool {
             return true;
         }
 

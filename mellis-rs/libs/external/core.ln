@@ -362,12 +362,19 @@ module ptr {
     }
 }
 
+// =========================================================================
+// SliceIter: Borrowed iterator over slice
+// ITER-4: A borrowed collection iterator MUST NOT transfer ownership
+// ITER-9: SliceIter<T>::Item is &T
+// ITER-10: SliceIter does not move/drop backing elements
+// =========================================================================
 export struct SliceIter<T> {
-    private ptr: *T;
-    private end: *T;
+    private ptr: *T,
+    private end: *T,
 }
 
 impl<T> SliceIter<T> {
+    // Shared borrow iteration - returns reference to backing element
     export fn next_ref(self: &rw Self) -> Option<&T> life_from(self) {
         if (self.ptr as u64) >= (self.end as u64) {
             return Option::None;
@@ -380,16 +387,16 @@ impl<T> SliceIter<T> {
     }
 }
 
-
-impl<T> Iterator<T> for SliceIter<T> {
-    fn next(self: &rw Self) -> Option<T> {
-        if (self.ptr as u64) == (self.end as u64) {
+// ITER-9: Item is &T (borrowed reference, not owned value)
+impl<T> Iterator<&T> for SliceIter<T> {
+    fn next(self: &rw Self) -> Option<&T> {
+        if (self.ptr as u64) >= (self.end as u64) {
             return Option::None;
         }
         unsafe {
-            dec item = *self.ptr;
+            dec item_ptr = self.ptr;
             self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
-            return Option::Some(item);
+            return Option::Some(&*item_ptr);
         }
     }
 }
@@ -468,7 +475,8 @@ impl<I: Iterator<Item>, Item, Out> Iterator<Out> for Map<I, Item, Out> {
 
 export struct Filter<I, Item> {
     private iter: I,
-    private pred: fn(&Item) -> bool,
+    // Predicate takes Item directly (borrowed iterators: Item=&T, owned: Item=T)
+    private pred: fn(Item) -> bool,
 }
 
 impl<I: Iterator<Item>, Item> Iterator<Item> for Filter<I, Item> {
@@ -479,7 +487,7 @@ impl<I: Iterator<Item>, Item> Iterator<Item> for Filter<I, Item> {
             match opt {
                 Option::Some(x) -> {
                     dec p_ptr = self.pred;
-                    if p_ptr(&x) {
+                    if p_ptr(x) {
                         return Option::Some(x);
                     }
                 },
@@ -591,7 +599,7 @@ export fn iter_map<I: Iterator<Item>, Item, Out>(iter: I, f: fn(Item) -> Out) ->
     };
 }
 
-export fn iter_filter<I: Iterator<Item>, Item>(iter: I, pred: fn(&Item) -> bool) -> Filter<I, Item> {
+export fn iter_filter<I: Iterator<Item>, Item>(iter: I, pred: fn(Item) -> bool) -> Filter<I, Item> {
     return Filter<I, Item> {
         iter: iter,
         pred: pred,
