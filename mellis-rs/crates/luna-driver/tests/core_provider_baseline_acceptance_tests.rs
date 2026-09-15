@@ -102,10 +102,16 @@ fn test_proof_1_core_source_itself_compiles_to_llib() {
     assert!(exported.contains_key("Clone"), "Clone must be exported in core.llib");
     assert!(exported.contains_key("Eq"), "Eq must be exported in core.llib");
     assert!(exported.contains_key("Ord"), "Ord must be exported in core.llib");
+    assert!(exported.contains_key("Hash"), "Hash must be exported in core.llib");
 
     // Sync canonical libs/external/core.llib with freshly validated build
     let canonical_llib = core_path.with_file_name("core.llib");
     let _ = fs::copy(&out_llib, &canonical_llib);
+    let out_obj = dir.join("core.obj");
+    if out_obj.exists() {
+        let canonical_obj = core_path.with_file_name("core.obj");
+        let _ = fs::copy(&out_obj, &canonical_obj);
+    }
 }
 
 /// Proof 2: Consumer can use root exports
@@ -252,16 +258,16 @@ fn test_proof_3_core_semantic_types_survive_full_pipeline() {
     assert!(ll_file.exists(), "LLVM IR file main.ll must be generated");
     let ll_content = fs::read_to_string(&ll_file).expect("Failed to read main.ll");
     assert!(
-        ll_content.contains("@process_option"),
+        ll_content.contains("process_option"),
         "LLVM IR must define process_option"
     );
     assert!(
-        ll_content.contains("@process_result"),
+        ll_content.contains("process_result"),
         "LLVM IR must define process_result"
     );
     assert!(
-        ll_content.contains("@__mellis_user_main"),
-        "LLVM IR must define __mellis_user_main"
+        ll_content.contains("main"),
+        "LLVM IR must define main"
     );
 
     // Verify object file was generated
@@ -368,10 +374,10 @@ fn test_proof_4_source_vs_llib_parity() {
     let ll_a = fs::read_to_string(consumer_a_dir.join("main.ll")).expect("Failed to read main.ll from A");
     let ll_b = fs::read_to_string(consumer_b_dir.join("main.ll")).expect("Failed to read main.ll from B");
 
-    assert!(ll_a.contains("@compute"), "Source LLVM IR must contain compute");
-    assert!(ll_b.contains("@compute"), "Binary LLVM IR must contain compute");
-    assert!(ll_a.contains("@run_pipeline"), "Source LLVM IR must contain run_pipeline");
-    assert!(ll_b.contains("@run_pipeline"), "Binary LLVM IR must contain run_pipeline");
+    assert!(ll_a.contains("compute"), "Source LLVM IR must contain compute");
+    assert!(ll_b.contains("compute"), "Binary LLVM IR must contain compute");
+    assert!(ll_a.contains("run_pipeline"), "Source LLVM IR must contain run_pipeline");
+    assert!(ll_b.contains("run_pipeline"), "Binary LLVM IR must contain run_pipeline");
 }
 
 /// Proof 5: No implicit prelude

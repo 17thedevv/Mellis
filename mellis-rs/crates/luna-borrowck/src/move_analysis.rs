@@ -168,8 +168,8 @@ impl<'a> MoveAnalyzer<'a> {
                     luna_semantic::SemanticType::Void => {
                         return;
                     }
-                    luna_semantic::SemanticType::Pointer(_, _) | luna_semantic::SemanticType::Reference(..) => {
-                        return; // Pointers and references are copyable handles
+                    luna_semantic::SemanticType::Pointer(_, _) | luna_semantic::SemanticType::Reference(..) | luna_semantic::SemanticType::Function { .. } => {
+                        return; // Pointers, references, and function pointers are copyable handles
                     }
                     _ => {}
                 }
@@ -277,8 +277,15 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
             Instruction::Load { ptr, .. } => {
                 self.check_operand(ptr, state, val_id);
                 if let Operand::Value(ptr_val) = ptr {
-                    if let Some(ptr_place) = self.values_to_places.get(ptr_val).cloned() {
-                        self.values_to_places.insert(val_id, ptr_place);
+                    let is_lvalue_addr = if let Some(val_data) = self.func.values.get(ptr_val.0 as usize) {
+                        matches!(val_data.inst, Instruction::Alloca | Instruction::HeapAlloc | Instruction::FieldPtr { .. })
+                    } else {
+                        false
+                    };
+                    if is_lvalue_addr {
+                        if let Some(ptr_place) = self.values_to_places.get(ptr_val).cloned() {
+                            self.values_to_places.insert(val_id, ptr_place);
+                        }
                     }
                 }
             }
@@ -452,25 +459,41 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
                 }
             }
             Instruction::Drop { value, .. } => {
-                if self.emit_diagnostics {
-                    if let Operand::Value(val) = value {
-                        if let Some(place) = self.values_to_places.get(val).cloned() {
-                            let loc_state = self.get_place_state(&place, state);
-                            if loc_state == MoveState::ConditionallyMoved {
-                                let msg = format!("Cannot drop conditionally moved value");
-                                if !self.diagnostics.iter().any(|d| d.message == msg) {
-                                    let mut diag = Diagnostic::error(msg);
-                                    diag.span = self.func.values[val.0 as usize].span.clone();
-                                    self.diagnostics.push(diag);
+                let mut is_heap_ptr_drop = false;
+                if let Operand::Value(val) = value {
+                    if let Some(val_data) = self.func.values.get(val.0 as usize) {
+                        is_heap_ptr_drop = matches!(
+                            val_data.inst,
+                            Instruction::Load { .. }
+                                | Instruction::CallDirect { .. }
+                                | Instruction::CallIndirect { .. }
+                                | Instruction::Cast { .. }
+                                | Instruction::Assign(..)
+                        );
+                    }
+                }
+
+                if !is_heap_ptr_drop {
+                    if self.emit_diagnostics {
+                        if let Operand::Value(val) = value {
+                            if let Some(place) = self.values_to_places.get(val).cloned() {
+                                let loc_state = self.get_place_state(&place, state);
+                                if loc_state == MoveState::ConditionallyMoved {
+                                    let msg = format!("Cannot drop conditionally moved value");
+                                    if !self.diagnostics.iter().any(|d| d.message == msg) {
+                                        let mut diag = Diagnostic::error(msg);
+                                        diag.span = self.func.values[val.0 as usize].span.clone();
+                                        self.diagnostics.push(diag);
+                                    }
                                 }
-                            }
-                            if loc_state == MoveState::Moved || loc_state == MoveState::Dropped || loc_state == MoveState::Uninitialized {
-                                self.dead_drops.insert(val_id);
+                                if loc_state == MoveState::Moved || loc_state == MoveState::Dropped || loc_state == MoveState::Uninitialized {
+                                    self.dead_drops.insert(val_id);
+                                }
                             }
                         }
                     }
+                    self.mark_dropped(value, state);
                 }
-                self.mark_dropped(value, state);
             }
             Instruction::Nop => {}
         }

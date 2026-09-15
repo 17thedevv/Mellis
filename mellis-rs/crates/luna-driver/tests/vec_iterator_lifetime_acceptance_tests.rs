@@ -50,6 +50,7 @@ fn test_proof_1_alloc_compiles_to_llib_with_contracts() {
     let out_llib = dir.join("alloc.llib");
     let compile_opts = CompilerOptions {
         output_path: Some(out_llib.to_string_lossy().to_string()),
+        emit_llib: true,
         emit_mlib: true,
         no_link: true,
         quiet: true,
@@ -80,6 +81,11 @@ fn test_proof_1_alloc_compiles_to_llib_with_contracts() {
     // Sync canonical libs/external/alloc.llib with freshly validated build
     let canonical_llib = alloc_path.with_file_name("alloc.llib");
     let _ = fs::copy(&out_llib, &canonical_llib);
+    let out_obj = dir.join("alloc.obj");
+    if out_obj.exists() {
+        let canonical_obj = alloc_path.with_file_name("alloc.obj");
+        let _ = fs::copy(&out_obj, &canonical_obj);
+    }
 }
 
 /// Phase 5 Proof 2: Vec::get borrowck enforcement.

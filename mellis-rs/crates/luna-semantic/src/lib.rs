@@ -15,12 +15,15 @@ pub mod coherence;
 pub mod const_eval;
 pub mod coercion;
 
+pub mod mangler;
+
 pub use coercion::{CoercionKind, try_coerce};
 pub use effect::{Effect, EffectSet};
 pub use resolver::Resolver;
 pub use resolver::{ModuleNamespaceProvider, ModuleNamespaceMap};
 pub use typechecker::TypeChecker;
-pub use mono::{MonoCollector, MonoInstance, InstantiatedFunction};
+pub use mangler::Mangler;
+pub use mono::{MonoCollector, MonoInstance, InstantiatedFunction, CanonicalInstanceKind, CanonicalInstanceIdentity, canonical_type_mangling};
 pub use macro_engine::MacroEngine;
 pub use annotation::AttributeProcessor;
 pub use derive::{DeriveRegistry, DeriveContext, DeriveInput, DeriveKind};
@@ -60,6 +63,7 @@ pub struct SemanticContext {
     pub tables: SemanticTables,
     pub types: TypeContext,
     pub instantiated_functions: Vec<InstantiatedFunction>,
+    pub drop_glue_instances: Vec<mono::CanonicalInstanceIdentity>,
     pub diagnostics: Vec<Diagnostic>,
     pub lang_items: lang_item::LangItemRegistry,
     pub needs_drop_cache: RefCell<HashMap<ty::SemanticTypeId, NeedsDropState>>,
@@ -80,6 +84,7 @@ impl SemanticContext {
             types: TypeContext::new(),
             lang_items: lang_item::LangItemRegistry::new(),
             instantiated_functions: Vec::new(),
+            drop_glue_instances: Vec::new(),
             diagnostics: Vec::new(),
             needs_drop_cache: RefCell::new(HashMap::new()),
             comptime_values: HashMap::new(),
@@ -112,14 +117,38 @@ impl SemanticContext {
         let ty = self.types.get(id);
         let result = match ty {
             ty::SemanticType::Struct(sym_id, _, fields) => {
-                if self.tables.drop_impls.contains_key(sym_id) {
+                let has_drop_impl = self.tables.drop_impls.contains_key(sym_id)
+                    || self.lang_items.get(crate::lang_item::LangItem::Drop).map_or(false, |drop_sym| {
+                        self.tables.trait_impls.contains_key(&crate::semantic_tables::ImplKey {
+                            trait_id: Some(drop_sym),
+                            self_type_def: (*sym_id).into(),
+                        })
+                    })
+                    || self.tables.trait_impls.keys().any(|k| {
+                        k.self_type_def == (*sym_id).into() && k.trait_id.map_or(false, |ts| {
+                            (ts.0 as usize) < self.symbol_table.symbols.len() && self.symbol_table.symbols[ts.0 as usize].name == "Drop"
+                        })
+                    });
+                if has_drop_impl {
                     true
                 } else {
                     fields.iter().any(|&f| self.needs_drop(f))
                 }
             }
             ty::SemanticType::Enum(sym_id, _, variants) => {
-                if self.tables.drop_impls.contains_key(&sym_id) {
+                let has_drop_impl = self.tables.drop_impls.contains_key(&sym_id)
+                    || self.lang_items.get(crate::lang_item::LangItem::Drop).map_or(false, |drop_sym| {
+                        self.tables.trait_impls.contains_key(&crate::semantic_tables::ImplKey {
+                            trait_id: Some(drop_sym),
+                            self_type_def: (*sym_id).into(),
+                        })
+                    })
+                    || self.tables.trait_impls.keys().any(|k| {
+                        k.self_type_def == (*sym_id).into() && k.trait_id.map_or(false, |ts| {
+                            (ts.0 as usize) < self.symbol_table.symbols.len() && self.symbol_table.symbols[ts.0 as usize].name == "Drop"
+                        })
+                    });
+                if has_drop_impl {
                     true
                 } else {
                     variants.iter().any(|&v| self.needs_drop(v))

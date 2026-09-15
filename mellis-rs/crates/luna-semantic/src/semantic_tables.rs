@@ -21,16 +21,35 @@ pub struct CaptureBinding {
     pub env_ty: SemanticTypeId,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ImplSelfTypeKey {
+    Nominal(SymbolId),
+    Primitive(crate::ty::BuiltinType),
+}
+
+impl From<SymbolId> for ImplSelfTypeKey {
+    fn from(sym: SymbolId) -> Self {
+        ImplSelfTypeKey::Nominal(sym)
+    }
+}
+
+impl From<crate::ty::BuiltinType> for ImplSelfTypeKey {
+    fn from(b: crate::ty::BuiltinType) -> Self {
+        ImplSelfTypeKey::Primitive(b)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ImplKey {
     pub trait_id: Option<SymbolId>,
-    pub self_type_def: SymbolId,
+    pub self_type_def: ImplSelfTypeKey,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TraitBound {
     pub param: SymbolId,
     pub trait_id: SymbolId,
+    pub trait_args: Vec<SemanticTypeId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,6 +58,7 @@ pub struct TraitImplEntry {
     pub trait_id: SymbolId,
     pub self_type: SemanticTypeId,
     pub generic_params: Vec<SymbolId>,
+    pub trait_args: Vec<SemanticTypeId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -126,6 +146,9 @@ pub struct SemanticTables {
     // Maps a GenericParam's SymbolId to its TraitBounds
     pub trait_bounds: HashMap<SymbolId, Vec<TraitBound>>,
     
+    // Maps a Trait's SymbolId to its generic parameter SymbolIds
+    pub trait_generic_params: HashMap<SymbolId, Vec<SymbolId>>,
+    
     // Maps a base struct/enum SymbolId to a list of its method SymbolIds (from inherent impl blocks without trait)
     pub impl_methods: HashMap<ImplKey, Vec<SymbolId>>,
     
@@ -205,6 +228,7 @@ impl SemanticTables {
             trait_methods: HashMap::new(),
             struct_fields: HashMap::new(),
             trait_bounds: HashMap::new(),
+            trait_generic_params: HashMap::new(),
             impl_methods: HashMap::new(),
             method_impls: HashMap::new(),
             trait_associated_types: HashMap::new(),

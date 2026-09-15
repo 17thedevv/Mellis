@@ -528,7 +528,7 @@ impl MlibWriter {
                 }
             }
             MlibInstruction::CallVirt { obj, method_idx, args } => {
-                w.write_all(&[0x24u8])?;
+                w.write_all(&[0x70u8])?;
                 Self::serialize_operand(w, obj)?;
                 w.write_all(&method_idx.to_le_bytes())?;
                 w.write_all(&(args.len() as u32).to_le_bytes())?;

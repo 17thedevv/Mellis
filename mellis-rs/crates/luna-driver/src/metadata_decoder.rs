@@ -101,14 +101,17 @@ impl InterfaceDecoder {
             let sem_self_ty = self.types.get(self_type).clone();
             let self_type_def = match &sem_self_ty {
                 SemanticType::Struct(sym_id, _, _) | SemanticType::Enum(sym_id, _, _) => {
-                    self.canonical_syms[sym_id].clone()
+                    crate::registry::ExternalImplSelfTypeKey::Nominal(self.canonical_syms[sym_id].clone())
+                }
+                SemanticType::Primitive(b) => {
+                    crate::registry::ExternalImplSelfTypeKey::Primitive(*b)
                 }
                 _ => {
-                    trait_id.clone().unwrap_or_else(|| CanonicalSymbolId {
+                    crate::registry::ExternalImplSelfTypeKey::Nominal(trait_id.clone().unwrap_or_else(|| CanonicalSymbolId {
                         provider_id: self.provider_id,
                         decl_id: None,
                         name: "unknown".to_string(),
-                    })
+                    }))
                 }
             };
 
@@ -124,12 +127,14 @@ impl InterfaceDecoder {
                 canon_gps.push(self.canonical_syms[&local_gp].clone());
             }
 
+            let trait_args: Vec<_> = impl_header.trait_args.iter().map(|t_idx| self.type_map[t_idx]).collect();
             if let Some(t_id) = trait_id {
                 trait_impl_entries.push(ExternalTraitImplEntry {
                     decl_id: None,
                     trait_id: t_id,
                     self_type,
                     generic_params: canon_gps.clone(),
+                    trait_args,
                 });
             }
 
@@ -194,10 +199,13 @@ impl InterfaceDecoder {
             expr_types: HashMap::new(),
             expr_substs: HashMap::new(),
             expr_struct_init_indices: HashMap::new(),
+            expr_member_indices: HashMap::new(),
             raw_generic_param_symbols: HashMap::new(),
             symbol_lifetime_contracts: self.symbol_lifetime_contracts,
             trait_methods,
             unsafe_functions: self.unsafe_functions,
+            trait_bounds: HashMap::new(),
+            assoc_type_bounds: HashMap::new(),
         }
     }
 

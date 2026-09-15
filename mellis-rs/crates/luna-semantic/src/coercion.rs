@@ -1,4 +1,4 @@
-﻿use crate::ty::{SemanticType, SemanticTypeId, Mutability};
+use crate::ty::{SemanticType, SemanticTypeId, Mutability};
 use crate::semantic_tables::ImplKey;
 use crate::SemanticContext;
 use luna_common::ids::SymbolId;
@@ -141,7 +141,7 @@ fn try_concrete_to_dyn(
 
     let key = ImplKey {
         trait_id: Some(trait_sym),
-        self_type_def: concrete_sym,
+        self_type_def: concrete_sym.into(),
     };
     if ctx.tables.trait_impls.contains_key(&key) {
         Some(CoercionKind::ConcreteToDyn {

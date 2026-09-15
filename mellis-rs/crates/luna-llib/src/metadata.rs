@@ -83,5 +83,7 @@ pub struct ImplHeader {
     pub self_type: u32,
     #[serde(default)]
     pub generic_params: Vec<StableSymbolId>,
+    #[serde(default)]
+    pub trait_args: Vec<u32>,
     pub methods: HashMap<String, u32>, // Method name -> Type index
 }

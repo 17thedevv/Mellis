@@ -1,4 +1,4 @@
-﻿use luna_ast::AstArena;
+use luna_ast::AstArena;
 use luna_common::ids::FileId;
 use luna_common::ids::SymbolId;
 use luna_common::Span;
@@ -315,6 +315,7 @@ fn test_case_10_coherence_local_vs_imported_duplicate_fail() {
                 trait_id: clone_sym,
                 self_type: s_ty,
                 generic_params: Vec::new(),
+                trait_args: Vec::new(),
             });
         },
     );
@@ -338,6 +339,7 @@ fn test_case_11_coherence_cross_imported_providers_collision_fail() {
         trait_id: clone_sym,
         self_type: opt_ty,
         generic_params: Vec::new(),
+        trait_args: Vec::new(),
     });
 
     // Provider B attempts to also inject Clone for Option

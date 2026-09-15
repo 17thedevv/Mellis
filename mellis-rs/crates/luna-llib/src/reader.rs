@@ -46,6 +46,27 @@ impl MlibReader {
         Err(MlibError::CorruptedData) // Or MissingManifest
     }
 
+    pub fn read_object_code<R: Read + Seek>(reader: &mut R) -> Result<Option<Vec<u8>>, MlibError> {
+        let header = LlibHeader::read_from(reader)?;
+        if header.magic != LLIB_MAGIC && header.magic != MLIB_MAGIC {
+            return Err(MlibError::InvalidMagic);
+        }
+        if header.format_version != LLIB_FORMAT_VERSION && header.format_version != MLIB_FORMAT_VERSION {
+            return Err(MlibError::VersionMismatch(header.format_version));
+        }
+        reader.seek(SeekFrom::Start(header.section_table_offset))?;
+        for _ in 0..header.section_count {
+            let section = SectionEntry::read_from(reader)?;
+            if section.section_type == SectionType::ObjectCode {
+                reader.seek(SeekFrom::Start(section.offset))?;
+                let mut data = vec![0u8; section.size as usize];
+                reader.read_exact(&mut data)?;
+                return Ok(Some(data));
+            }
+        }
+        Ok(None)
+    }
+
     pub fn read_module<R: Read + Seek>(reader: &mut R) -> Result<(MlibModule, Option<crate::format::Manifest>, Option<Vec<u8>>, Option<crate::metadata::SemanticMetadata>), MlibError> {
         let header = LlibHeader::read_from(reader)?;
         
@@ -343,7 +364,7 @@ impl MlibReader {
                 }
                 Ok(MlibInstruction::MakeClosure { func, env_ptr, captures })
             }
-            0x24 => {
+            0x70 => {
                 let obj = Self::deserialize_operand(r)?;
                 let mut idx_buf = [0u8; 4];
                 r.read_exact(&mut idx_buf)?;

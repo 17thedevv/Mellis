@@ -206,11 +206,7 @@ impl TypeContext {
             SemanticType::Enum(sym, args, variants) => {
                 let new_args: Vec<_> = args.iter().map(|&a| self.subst(a, subst)).collect();
                 let new_variants: Vec<_> = variants.iter().map(|&v| self.subst(v, subst)).collect();
-                let ret = self.intern(SemanticType::Enum(sym, new_args, new_variants));
-                if id.0 == 56 || ret.0 == 56 {
-                    println!("DEBUG: subst(56) -> Enum({:?}, {:?}, ...) -> ret {}", sym, args, ret.0);
-                }
-                ret
+                self.intern(SemanticType::Enum(sym, new_args, new_variants))
             }
             SemanticType::Tuple(args) => {
                 let new_args: Vec<_> = args.iter().map(|&a| self.subst(a, subst)).collect();

@@ -13,6 +13,7 @@ pub struct DriverSession<'a> {
     pub registry: ModuleRegistry,
     pub compiler_session: &'a mut CompilerSession,
     pub search_paths: Vec<PathBuf>,
+    pub collected_objects: Vec<PathBuf>,
 }
 
 impl<'a> DriverSession<'a> {
@@ -26,6 +27,13 @@ impl<'a> DriverSession<'a> {
             registry: ModuleRegistry::new(),
             compiler_session,
             search_paths: search_paths.iter().map(PathBuf::from).collect(),
+            collected_objects: Vec::new(),
+        }
+    }
+
+    pub fn add_collected_object(&mut self, path: PathBuf) {
+        if !self.collected_objects.contains(&path) {
+            self.collected_objects.push(path);
         }
     }
 

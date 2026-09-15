@@ -27,9 +27,36 @@ pub struct CanonicalSymbolId {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ExternalImplSelfTypeKey {
+    Nominal(CanonicalSymbolId),
+    Primitive(luna_semantic::ty::BuiltinType),
+}
+
+impl ExternalImplSelfTypeKey {
+    pub fn provider_id(&self) -> Option<ProviderId> {
+        match self {
+            Self::Nominal(canon) => Some(canon.provider_id),
+            Self::Primitive(_) => None,
+        }
+    }
+}
+
+impl From<CanonicalSymbolId> for ExternalImplSelfTypeKey {
+    fn from(sym: CanonicalSymbolId) -> Self {
+        Self::Nominal(sym)
+    }
+}
+
+impl From<luna_semantic::ty::BuiltinType> for ExternalImplSelfTypeKey {
+    fn from(b: luna_semantic::ty::BuiltinType) -> Self {
+        Self::Primitive(b)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ExternalImplKey {
     pub trait_id: Option<CanonicalSymbolId>,
-    pub self_type_def: CanonicalSymbolId,
+    pub self_type_def: ExternalImplSelfTypeKey,
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +65,22 @@ pub struct ExternalTraitImplEntry {
     pub trait_id: CanonicalSymbolId,
     pub self_type: luna_semantic::ty::SemanticTypeId,
     pub generic_params: Vec<CanonicalSymbolId>,
+    pub trait_args: Vec<luna_semantic::ty::SemanticTypeId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExternalTraitBound {
+    pub param: CanonicalSymbolId,
+    pub trait_id: CanonicalSymbolId,
+    pub trait_args: Vec<luna_semantic::ty::SemanticTypeId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExternalAssocTypeBound {
+    pub param: CanonicalSymbolId,
+    pub trait_id: CanonicalSymbolId,
+    pub assoc_sym: CanonicalSymbolId,
+    pub target_ty: luna_semantic::ty::SemanticTypeId,
 }
 
 #[derive(Debug, Clone)]
@@ -71,10 +114,13 @@ pub struct ProviderInterface {
     pub expr_types: HashMap<luna_ast::ExprId, luna_semantic::ty::SemanticTypeId>,
     pub expr_substs: HashMap<luna_ast::ExprId, Vec<(luna_common::ids::SymbolId, luna_semantic::ty::SemanticTypeId)>>,
     pub expr_struct_init_indices: HashMap<luna_ast::ExprId, Vec<u32>>,
+    pub expr_member_indices: HashMap<luna_ast::ExprId, u32>,
     pub raw_generic_param_symbols: HashMap<(luna_ast::DeclId, usize), luna_common::ids::SymbolId>,
     pub symbol_lifetime_contracts: HashMap<luna_common::ids::SymbolId, luna_semantic::CanonicalLifetimeContract>,
     pub trait_methods: HashMap<CanonicalSymbolId, Vec<CanonicalSymbolId>>,
     pub unsafe_functions: HashSet<luna_common::ids::SymbolId>,
+    pub trait_bounds: HashMap<CanonicalSymbolId, Vec<ExternalTraitBound>>,
+    pub assoc_type_bounds: HashMap<CanonicalSymbolId, Vec<ExternalAssocTypeBound>>,
 }
 
 #[derive(Default)]
@@ -106,11 +152,19 @@ impl ModuleRegistry {
         ctx: &luna_semantic::SemanticContext,
         current_provider_id: luna_semantic::symbol::ProviderId,
     ) -> ExternalImplKey {
+        let self_type_def = match key.self_type_def {
+            luna_semantic::semantic_tables::ImplSelfTypeKey::Nominal(id) => {
+                ExternalImplSelfTypeKey::Nominal(Self::get_canonical(id, ctx, current_provider_id))
+            }
+            luna_semantic::semantic_tables::ImplSelfTypeKey::Primitive(b) => {
+                ExternalImplSelfTypeKey::Primitive(b)
+            }
+        };
         ExternalImplKey {
             trait_id: key
                 .trait_id
                 .map(|id| Self::get_canonical(id, ctx, current_provider_id)),
-            self_type_def: Self::get_canonical(key.self_type_def, ctx, current_provider_id),
+            self_type_def,
         }
     }
 
@@ -259,13 +313,17 @@ impl ModuleRegistry {
             let pid = sym
                 .provider_id
                 .unwrap_or(luna_semantic::symbol::ProviderId(0));
-            let canonical = CanonicalSymbolId {
-                provider_id: pid,
-                decl_id: sym.decl_id,
-                name: sym.name.clone(),
-            };
-            canonical_map.insert(canonical, luna_common::ids::SymbolId(sym_id as u32));
-            by_name_map.insert((pid, sym.name.clone()), luna_common::ids::SymbolId(sym_id as u32));
+            if sym.decl_id.is_some() {
+                let canonical = CanonicalSymbolId {
+                    provider_id: pid,
+                    decl_id: sym.decl_id,
+                    name: sym.name.clone(),
+                };
+                canonical_map.insert(canonical, luna_common::ids::SymbolId(sym_id as u32));
+            }
+            if !matches!(sym.kind, SymbolKind::TypeParam | SymbolKind::Variable | SymbolKind::EnumVariant(_)) {
+                by_name_map.insert((pid, sym.name.clone()), luna_common::ids::SymbolId(sym_id as u32));
+            }
         }
 
         let resolve_canonical =
@@ -278,26 +336,26 @@ impl ModuleRegistry {
         // Now inject types
         for interface in self.interfaces.values() {
             let lookup_sym = |sym: luna_common::ids::SymbolId| -> luna_common::ids::SymbolId {
-                if let Some(&new_id) = provider_symbol_maps
-                    .get(&interface.id)
-                    .and_then(|m| m.get(&sym))
-                {
-                    return new_id;
-                }
-                if let Some(canon) = interface.symbol_canonicals.get(&sym) {
-                    if let Some(new_id) = resolve_canonical(canon) {
+                let res = (|| {
+                    if let Some(&new_id) = provider_symbol_maps
+                        .get(&interface.id)
+                        .and_then(|m| m.get(&sym))
+                    {
                         return new_id;
                     }
-                    for pid in self.providers.values() {
-                        if let Some(&new_id) = by_name_map.get(&(*pid, canon.name.clone())) {
+                    if let Some(canon) = interface.symbol_canonicals.get(&sym) {
+                        if let Some(new_id) = resolve_canonical(canon) {
                             return new_id;
                         }
+                        for pid in self.providers.values() {
+                            if let Some(&new_id) = by_name_map.get(&(*pid, canon.name.clone())) {
+                                return new_id;
+                            }
+                        }
                     }
-                }
-                if let Some(&new_id) = provider_symbol_maps.values().find_map(|m| m.get(&sym)) {
-                    return new_id;
-                }
-                sym
+                    sym
+                })();
+                res
             };
 
             for (&old_sym_id, &old_ty_id) in &interface.symbol_types {
@@ -334,14 +392,73 @@ impl ModuleRegistry {
             // Inject generic param symbols
             for (old_canon_id, gp_list) in &interface.generic_param_symbols {
                 if let Some(new_sym_id) = resolve_canonical(old_canon_id) {
-                    if let Some(&decl_id) = ctx.tables.symbol_decls.get(&new_sym_id) {
-                        for (idx, old_gp_canon) in gp_list.iter().enumerate() {
-                            if let Some(new_gp_sym) = resolve_canonical(old_gp_canon) {
-                                ctx.tables
-                                    .generic_param_symbols
-                                    .insert((decl_id, idx), new_gp_sym);
-                            }
+                    let mut resolved_gps = Vec::new();
+                    for old_gp_canon in gp_list {
+                        if let Some(new_gp_sym) = resolve_canonical(old_gp_canon) {
+                            resolved_gps.push(new_gp_sym);
                         }
+                    }
+                    if !resolved_gps.is_empty() {
+                        ctx.tables.trait_generic_params.insert(new_sym_id, resolved_gps.clone());
+                    }
+                    if let Some(&decl_id) = ctx.tables.symbol_decls.get(&new_sym_id) {
+                        for (idx, &new_gp_sym) in resolved_gps.iter().enumerate() {
+                            ctx.tables
+                                .generic_param_symbols
+                                .insert((decl_id, idx), new_gp_sym);
+                        }
+                    }
+                }
+            }
+
+            // Inject trait bounds
+            for (old_param_canon, bounds) in &interface.trait_bounds {
+                if let Some(new_param_sym) = resolve_canonical(old_param_canon) {
+                    let mut resolved_bounds = Vec::new();
+                    for b in bounds {
+                        if let Some(new_trait_sym) = resolve_canonical(&b.trait_id) {
+                            let new_trait_args: Vec<_> = b
+                                .trait_args
+                                .iter()
+                                .map(|&a| ctx.types.clone_type_from(a, &interface.types, &lookup_sym))
+                                .collect();
+                            resolved_bounds.push(luna_semantic::semantic_tables::TraitBound {
+                                param: new_param_sym,
+                                trait_id: new_trait_sym,
+                                trait_args: new_trait_args,
+                            });
+                        }
+                    }
+                    if !resolved_bounds.is_empty() {
+                        ctx.tables
+                            .trait_bounds
+                            .entry(new_param_sym)
+                            .or_default()
+                            .extend(resolved_bounds);
+                    }
+                }
+            }
+
+            // Inject assoc type bounds
+            for (old_param_canon, bounds) in &interface.assoc_type_bounds {
+                if let Some(new_param_sym) = resolve_canonical(old_param_canon) {
+                    let mut resolved_bounds = Vec::new();
+                    for b in bounds {
+                        if let (Some(new_trait_sym), Some(new_assoc_sym)) = (
+                            resolve_canonical(&b.trait_id),
+                            resolve_canonical(&b.assoc_sym),
+                        ) {
+                            let new_target_ty =
+                                ctx.types.clone_type_from(b.target_ty, &interface.types, &lookup_sym);
+                            resolved_bounds.push((new_trait_sym, new_assoc_sym, new_target_ty));
+                        }
+                    }
+                    if !resolved_bounds.is_empty() {
+                        ctx.tables
+                            .assoc_type_bounds
+                            .entry(new_param_sym)
+                            .or_default()
+                            .extend(resolved_bounds);
                     }
                 }
             }
@@ -361,6 +478,11 @@ impl ModuleRegistry {
                     {
                         continue;
                     }
+                    let new_trait_args: Vec<_> = entry
+                        .trait_args
+                        .iter()
+                        .map(|&a| ctx.types.clone_type_from(a, &interface.types, &lookup_sym))
+                        .collect();
                     ctx.tables
                         .trait_impl_entries
                         .push(luna_semantic::semantic_tables::TraitImplEntry {
@@ -368,14 +490,22 @@ impl ModuleRegistry {
                             trait_id: trait_sym,
                             self_type: new_self_ty,
                             generic_params: new_gps,
+                            trait_args: new_trait_args,
                         });
                 }
             }
 
+            let resolve_self_type = |ext_self: &ExternalImplSelfTypeKey| -> Option<luna_semantic::semantic_tables::ImplSelfTypeKey> {
+                match ext_self {
+                    ExternalImplSelfTypeKey::Nominal(canon) => resolve_canonical(canon).map(luna_semantic::semantic_tables::ImplSelfTypeKey::Nominal),
+                    ExternalImplSelfTypeKey::Primitive(b) => Some(luna_semantic::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
+                }
+            };
+
             // Inject trait impls
             for (old_impl_key, decl_ids) in &interface.trait_impls {
                 let new_trait_id = old_impl_key.trait_id.as_ref().and_then(resolve_canonical);
-                if let Some(new_self_type) = resolve_canonical(&old_impl_key.self_type_def) {
+                if let Some(new_self_type) = resolve_self_type(&old_impl_key.self_type_def) {
                     let new_impl_key = luna_semantic::semantic_tables::ImplKey {
                         trait_id: new_trait_id,
                         self_type_def: new_self_type,
@@ -396,13 +526,24 @@ impl ModuleRegistry {
             // Inject impl methods
             for (old_impl_key, old_canon_ids) in &interface.impl_methods {
                 let new_trait_id = old_impl_key.trait_id.as_ref().and_then(resolve_canonical);
-                if let Some(new_self_type) = resolve_canonical(&old_impl_key.self_type_def) {
+                if let Some(new_self_type) = resolve_self_type(&old_impl_key.self_type_def) {
                     let new_impl_key = luna_semantic::semantic_tables::ImplKey {
                         trait_id: new_trait_id,
                         self_type_def: new_self_type,
                     };
                     let new_sym_ids: Vec<_> =
                         old_canon_ids.iter().filter_map(resolve_canonical).collect();
+                    if let Some(&first_sym) = new_sym_ids.first() {
+                        let is_drop = new_trait_id.map_or(false, |ts| {
+                            Some(ts) == ctx.lang_items.get(luna_semantic::lang_item::LangItem::Drop)
+                                || ((ts.0 as usize) < ctx.symbol_table.symbols.len() && ctx.symbol_table.symbols[ts.0 as usize].name == "Drop")
+                        });
+                        if is_drop {
+                            if let luna_semantic::semantic_tables::ImplSelfTypeKey::Nominal(nom_sym) = new_self_type {
+                                ctx.tables.drop_impls.insert(nom_sym, first_sym);
+                            }
+                        }
+                    }
                     ctx.tables.impl_methods.insert(new_impl_key, new_sym_ids);
                 }
             }
@@ -411,7 +552,7 @@ impl ModuleRegistry {
             for (old_canon_id, old_impl_key) in &interface.method_impls {
                 if let Some(new_sym_id) = resolve_canonical(old_canon_id) {
                     let new_trait_id = old_impl_key.trait_id.as_ref().and_then(resolve_canonical);
-                    if let Some(new_self_type) = resolve_canonical(&old_impl_key.self_type_def) {
+                    if let Some(new_self_type) = resolve_self_type(&old_impl_key.self_type_def) {
                         let new_impl_key = luna_semantic::semantic_tables::ImplKey {
                             trait_id: new_trait_id,
                             self_type_def: new_self_type,
@@ -455,7 +596,7 @@ impl ModuleRegistry {
             // Inject impl associated types
             for ((old_impl_key, old_assoc_canon), &old_ty_id) in &interface.impl_associated_types {
                 let new_trait_id = old_impl_key.trait_id.as_ref().and_then(resolve_canonical);
-                if let Some(new_self_type) = resolve_canonical(&old_impl_key.self_type_def) {
+                if let Some(new_self_type) = resolve_self_type(&old_impl_key.self_type_def) {
                     if let Some(new_assoc_sym) = resolve_canonical(old_assoc_canon) {
                         let new_impl_key = luna_semantic::semantic_tables::ImplKey {
                             trait_id: new_trait_id,
@@ -474,7 +615,7 @@ impl ModuleRegistry {
             // Inject impl self types
             for (old_impl_key, &old_self_ty) in &interface.impl_self_types {
                 let new_trait_id = old_impl_key.trait_id.as_ref().and_then(resolve_canonical);
-                if let Some(new_self_type) = resolve_canonical(&old_impl_key.self_type_def) {
+                if let Some(new_self_type) = resolve_self_type(&old_impl_key.self_type_def) {
                     let new_impl_key = luna_semantic::semantic_tables::ImplKey {
                         trait_id: new_trait_id,
                         self_type_def: new_self_type,
@@ -489,7 +630,7 @@ impl ModuleRegistry {
             // Inject impl generic params
             for (old_impl_key, canon_gps) in &interface.impl_generic_params {
                 let new_trait_id = old_impl_key.trait_id.as_ref().and_then(resolve_canonical);
-                if let Some(new_self_type) = resolve_canonical(&old_impl_key.self_type_def) {
+                if let Some(new_self_type) = resolve_self_type(&old_impl_key.self_type_def) {
                     let new_impl_key = luna_semantic::semantic_tables::ImplKey {
                         trait_id: new_trait_id,
                         self_type_def: new_self_type,
@@ -539,6 +680,9 @@ impl ModuleRegistry {
             }
             for (&expr_id, indices) in &interface.expr_struct_init_indices {
                 ctx.tables.expr_struct_init_indices.insert(expr_id, indices.clone());
+            }
+            for (&expr_id, &idx) in &interface.expr_member_indices {
+                ctx.tables.expr_member_indices.insert(expr_id, idx);
             }
             for (&(decl_id, idx), &old_gp) in &interface.raw_generic_param_symbols {
                 let new_gp = lookup_sym(old_gp);
@@ -712,7 +856,7 @@ impl ModuleRegistry {
                 .trait_id
                 .as_ref()
                 .map_or(false, |t| t.provider_id == provider_id)
-                || ext_key.self_type_def.provider_id == provider_id
+                || ext_key.self_type_def.provider_id() == Some(provider_id)
             {
                 trait_impls.insert(ext_key, v.clone());
             }
@@ -725,7 +869,7 @@ impl ModuleRegistry {
                 .trait_id
                 .as_ref()
                 .map_or(false, |t| t.provider_id == provider_id)
-                || ext_key.self_type_def.provider_id == provider_id
+                || ext_key.self_type_def.provider_id() == Some(provider_id)
             {
                 impl_methods.insert(
                     ext_key,
@@ -794,7 +938,7 @@ impl ModuleRegistry {
                 .trait_id
                 .as_ref()
                 .map_or(false, |t| t.provider_id == provider_id)
-                || ext_key.self_type_def.provider_id == provider_id
+                || ext_key.self_type_def.provider_id() == Some(provider_id)
             {
                 impl_associated_types.insert((ext_key, canon_assoc), ty_id);
             }
@@ -820,7 +964,7 @@ impl ModuleRegistry {
                 .trait_id
                 .as_ref()
                 .map_or(false, |t| t.provider_id == provider_id)
-                || ext_key.self_type_def.provider_id == provider_id
+                || ext_key.self_type_def.provider_id() == Some(provider_id)
             {
                 let canon_gps = gp_syms
                     .iter()
@@ -837,7 +981,7 @@ impl ModuleRegistry {
                 .trait_id
                 .as_ref()
                 .map_or(false, |t| t.provider_id == provider_id)
-                || ext_key.self_type_def.provider_id == provider_id
+                || ext_key.self_type_def.provider_id() == Some(provider_id)
             {
                 impl_self_types.insert(ext_key, self_ty_id);
             }
@@ -861,6 +1005,7 @@ impl ModuleRegistry {
                     trait_id: canon_trait,
                     self_type: entry.self_type,
                     generic_params: canon_gps,
+                    trait_args: entry.trait_args.clone(),
                 });
             }
         }
@@ -880,11 +1025,45 @@ impl ModuleRegistry {
         let pat_types = ctx.tables.pat_types.clone();
         let expr_types = ctx.tables.expr_types.clone();
         let expr_struct_init_indices = ctx.tables.expr_struct_init_indices.clone();
+        let expr_member_indices = ctx.tables.expr_member_indices.clone();
         let raw_generic_param_symbols = ctx.tables.generic_param_symbols.clone();
         let mut expr_substs = HashMap::new();
         for (&eid, subst) in &ctx.tables.expr_substs {
             let list: Vec<_> = subst.map.iter().map(|(&s, &t)| (s, t)).collect();
             expr_substs.insert(eid, list);
+        }
+
+        let mut trait_bounds = HashMap::new();
+        for (&gp_sym, bounds) in &ctx.tables.trait_bounds {
+            let canon_gp = Self::get_canonical(gp_sym, ctx, provider_id);
+            let mut ext_bounds = Vec::new();
+            for b in bounds {
+                let canon_param = Self::get_canonical(b.param, ctx, provider_id);
+                let canon_trait = Self::get_canonical(b.trait_id, ctx, provider_id);
+                ext_bounds.push(ExternalTraitBound {
+                    param: canon_param,
+                    trait_id: canon_trait,
+                    trait_args: b.trait_args.clone(),
+                });
+            }
+            trait_bounds.insert(canon_gp, ext_bounds);
+        }
+
+        let mut assoc_type_bounds = HashMap::new();
+        for (&gp_sym, bounds) in &ctx.tables.assoc_type_bounds {
+            let canon_gp = Self::get_canonical(gp_sym, ctx, provider_id);
+            let mut ext_bounds = Vec::new();
+            for &(trait_id, assoc_sym, target_ty) in bounds {
+                let canon_trait = Self::get_canonical(trait_id, ctx, provider_id);
+                let canon_assoc = Self::get_canonical(assoc_sym, ctx, provider_id);
+                ext_bounds.push(ExternalAssocTypeBound {
+                    param: canon_gp.clone(),
+                    trait_id: canon_trait,
+                    assoc_sym: canon_assoc,
+                    target_ty,
+                });
+            }
+            assoc_type_bounds.insert(canon_gp, ext_bounds);
         }
 
         ProviderInterface {
@@ -915,10 +1094,13 @@ impl ModuleRegistry {
             expr_types,
             expr_substs,
             expr_struct_init_indices,
+            expr_member_indices,
             raw_generic_param_symbols,
             symbol_lifetime_contracts: ctx.tables.fn_lifetime_contracts.clone(),
             trait_methods,
             unsafe_functions: ctx.tables.unsafe_functions.clone(),
+            trait_bounds,
+            assoc_type_bounds,
         }
     }
 

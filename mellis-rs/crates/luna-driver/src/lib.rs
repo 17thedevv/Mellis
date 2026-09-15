@@ -17,7 +17,7 @@ use luna_lexer::Lexer;
 use luna_parser::Parser;
 use luna_semantic::{SemanticContext, Resolver, TypeChecker};
 use luna_mvir::{MvirGenerator, print_module};
-use luna_backend::{LLVMBackend, TargetConfig, link_obj_to_exe};
+use luna_backend::{LLVMBackend, TargetConfig, link_objs_to_exe};
 
 #[derive(Default, Clone, Debug)]
 pub struct CompilerOptions {
@@ -123,7 +123,10 @@ pub fn check_semantic_only(file_name: &str, input: String, options: &CompilerOpt
 
     let mut mono = luna_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
     mono.run(&items);
-    semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
+    let drop_glues = mono.drop_glues;
+    let instantiated_functions = mono.instantiated.into_values().collect();
+    semantic_ctx.instantiated_functions = instantiated_functions;
+    semantic_ctx.drop_glue_instances = drop_glues;
 
     let mut diagnostics = semantic_ctx.diagnostics.clone();
     verify_items_lifetime(&items, &arena, &semantic_ctx, &session.source_manager, &mut diagnostics);
@@ -204,7 +207,10 @@ pub fn check(file_name: &str, input: String, options: &CompilerOptions) -> Resul
     
     let mut mono = luna_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
     mono.run(&items);
-    semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
+    let drop_glues = mono.drop_glues;
+    let instantiated_functions = mono.instantiated.into_values().collect();
+    semantic_ctx.instantiated_functions = instantiated_functions;
+    semantic_ctx.drop_glue_instances = drop_glues;
     
     let mut diagnostics = semantic_ctx.diagnostics.clone();
     verify_items_lifetime(&items, &arena, &semantic_ctx, &session.source_manager, &mut diagnostics);
@@ -313,6 +319,7 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
                 return Err(e);
             }
             
+            let collected_objects = driver_session.collected_objects.clone();
             let registry = std::mem::take(&mut driver_session.registry);
             drop(driver_session);
 
@@ -348,7 +355,10 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
             
             let mut mono = luna_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
             mono.run(&items_mut);
-            semantic_ctx.instantiated_functions = mono.instantiated.into_values().collect();
+            let drop_glues = mono.drop_glues;
+            let instantiated_functions = mono.instantiated.into_values().collect();
+            semantic_ctx.instantiated_functions = instantiated_functions;
+            semantic_ctx.drop_glue_instances = drop_glues;
             
             for diag in semantic_ctx.diagnostics.clone() {
                 if !all_diagnostics.contains(&diag) {
@@ -467,75 +477,6 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
                 return Ok(());
             }
 
-            // MLib generation phase
-            if !options.quiet {
-                println!("\n--- Serializing MLib v2 ---");
-            }
-            let base_name = std::path::Path::new(file_name)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("output");
-            let mlib_file = if let Some(ref out_path) = options.output_path {
-                if options.emit_llib || options.emit_mlib || options.no_link || out_path.ends_with(".llib") || out_path.ends_with(".mlib") {
-                    out_path.clone()
-                } else if options.emit_llib {
-                    format!("{}.llib", base_name)
-                } else {
-                    format!("{}.mlib", base_name)
-                }
-            } else if options.emit_llib {
-                format!("{}.llib", base_name)
-            } else {
-                format!("{}.mlib", base_name)
-            };
-            let mut mlib_buffer = std::fs::File::create(&mlib_file).expect("Failed to create library file");
-            let manifest = luna_llib::Manifest {
-                identity: luna_llib::ArtifactIdentity {
-                    package_id: "".to_string(),
-                    version: "0.1.0".to_string(),
-                    module_id: "".to_string(),
-                    artifact_id: "".to_string(),
-                },
-                target: luna_llib::TargetContract {
-                    target_triple: "".to_string(),
-                    object_format: "ELF".to_string(),
-                    abi: "".to_string(),
-                    pointer_width: 64,
-                    endianness: "".to_string(),
-                },
-                dependencies: luna_llib::DependencyTable {
-                    mlib_deps: vec![],
-                    native_deps: vec![],
-                },
-                object_metadata: None,
-                provenance: luna_llib::Provenance {
-                    source_fingerprint: [0; 32],
-                    compiler_version: "0.1.0".to_string(),
-                    codegen_options: "".to_string(),
-                    interface_hash: [0; 32],
-                },
-                export_table: None,
-            };
-            
-            let semantic_metadata = if options.emit_llib || options.emit_mlib {
-                let main_provider_id = luna_semantic::symbol::ProviderId(0);
-                let interface = crate::registry::ModuleRegistry::extract_interface_from_ctx(base_name.to_string(), main_provider_id, &semantic_ctx);
-                let builder = crate::metadata_builder::MetadataBuilder::new(&registry, &interface);
-                Some(builder.build())
-            } else { None };
-
-            match luna_llib::MlibWriter::write_module(&module, &arena, &items, &input, manifest, semantic_metadata.as_ref(), None, &mut mlib_buffer) {
-                Ok(_) => {
-                    if !options.quiet { println!("Successfully wrote {}", mlib_file); }
-                }
-                Err(e) => {
-                    if !options.quiet { println!("Failed to write library: {}", e); }
-                }
-            }
-            if !options.quiet {
-                println!("---------------------------\n");
-            }
-
             // LLVM IR / Backend phase
             if !options.quiet {
                 println!("\n--- Async Lowering & LLVM Backend ---");
@@ -556,6 +497,11 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
                 return Err(vec![Diagnostic::error(format!("Backend Error: {}", e))]);
             }
             
+            let base_name = std::path::Path::new(file_name)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("output");
+
             // Save to file and compile — if output_path is specified, place .ll and .obj alongside it
             let (ll_file, obj_file, exe_file) = if let Some(ref out) = options.output_path {
                 let out_path = std::path::Path::new(out);
@@ -595,10 +541,85 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
             } else {
                 if !options.quiet { println!("Successfully wrote {}", obj_file); }
             }
+
+            // MLib / LLib generation phase with embedded ObjectCode
+            if options.emit_llib || options.emit_mlib {
+                if !options.quiet {
+                    println!("\n--- Serializing MLib/LLib with ObjectCode ---");
+                }
+                let mlib_file = if let Some(ref out_path) = options.output_path {
+                    if out_path.ends_with(".llib") || out_path.ends_with(".mlib") {
+                        out_path.clone()
+                    } else if options.emit_llib {
+                        format!("{}.llib", base_name)
+                    } else {
+                        format!("{}.mlib", base_name)
+                    }
+                } else if options.emit_llib {
+                    format!("{}.llib", base_name)
+                } else {
+                    format!("{}.mlib", base_name)
+                };
+                let mut mlib_buffer = std::fs::File::create(&mlib_file).expect("Failed to create library file");
+                let manifest = luna_llib::Manifest {
+                    identity: luna_llib::ArtifactIdentity {
+                        package_id: "".to_string(),
+                        version: "0.1.0".to_string(),
+                        module_id: "".to_string(),
+                        artifact_id: "".to_string(),
+                    },
+                    target: luna_llib::TargetContract {
+                        target_triple: "".to_string(),
+                        object_format: "ELF".to_string(),
+                        abi: "".to_string(),
+                        pointer_width: 64,
+                        endianness: "".to_string(),
+                    },
+                    dependencies: luna_llib::DependencyTable {
+                        mlib_deps: vec![],
+                        native_deps: vec![],
+                    },
+                    object_metadata: None,
+                    provenance: luna_llib::Provenance {
+                        source_fingerprint: [0; 32],
+                        compiler_version: "0.1.0".to_string(),
+                        codegen_options: "".to_string(),
+                        interface_hash: [0; 32],
+                    },
+                    export_table: None,
+                };
+                
+                let main_provider_id = luna_semantic::symbol::ProviderId(0);
+                let interface = crate::registry::ModuleRegistry::extract_interface_from_ctx(base_name.to_string(), main_provider_id, &semantic_ctx);
+                let builder = crate::metadata_builder::MetadataBuilder::new(&registry, &interface);
+                let semantic_metadata = Some(builder.build());
+
+                let obj_bytes = std::fs::read(path_obj).ok();
+
+                match luna_llib::MlibWriter::write_module(&module, &arena, &items, &input, manifest, semantic_metadata.as_ref(), obj_bytes.as_deref(), &mut mlib_buffer) {
+                    Ok(_) => {
+                        if !options.quiet { println!("Successfully wrote {}", mlib_file); }
+                    }
+                    Err(e) => {
+                        if !options.quiet { println!("Failed to write library: {}", e); }
+                    }
+                }
+                if !options.quiet {
+                    println!("---------------------------\n");
+                }
+            }
             
             if !options.no_link {
-                if !options.quiet { println!("Linking to {}...", exe_file); }
-                match link_obj_to_exe(&obj_file, &exe_file) {
+                let mut all_objs = vec![path_obj.to_path_buf()];
+                for ext_obj in &collected_objects {
+                    if ext_obj.exists() && !all_objs.contains(ext_obj) {
+                        all_objs.push(ext_obj.clone());
+                    }
+                }
+                if !options.quiet {
+                    println!("Linking {} object file(s) to {}...", all_objs.len(), exe_file);
+                }
+                match luna_backend::link_objs_to_exe(&all_objs, std::path::Path::new(&exe_file)) {
                     Ok(_) => {
                         if !options.quiet { println!("Build successful: {}", exe_file); }
                     }

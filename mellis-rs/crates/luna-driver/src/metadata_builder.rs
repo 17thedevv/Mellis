@@ -48,11 +48,19 @@ impl<'a> MetadataBuilder<'a> {
             let self_type = if let Some(&st) = self.provider.impl_self_types.get(impl_key) {
                 self.convert_type_id(st)
             } else {
-                let canon_def = &impl_key.self_type_def;
-                let stable = self.convert_symbol_id(canon_def);
-                let ty = self.canonical_types.len() as u32;
-                self.canonical_types.push(CanonicalType::Struct(stable, vec![], vec![]));
-                ty
+                match &impl_key.self_type_def {
+                    crate::registry::ExternalImplSelfTypeKey::Nominal(canon_def) => {
+                        let stable = self.convert_symbol_id(canon_def);
+                        let ty = self.canonical_types.len() as u32;
+                        self.canonical_types.push(CanonicalType::Struct(stable, vec![], vec![]));
+                        ty
+                    }
+                    crate::registry::ExternalImplSelfTypeKey::Primitive(b) => {
+                        let ty = self.canonical_types.len() as u32;
+                        self.canonical_types.push(CanonicalType::Primitive(*b));
+                        ty
+                    }
+                }
             };
 
             let generic_params = self.provider.impl_generic_params.get(impl_key)
@@ -62,7 +70,7 @@ impl<'a> MetadataBuilder<'a> {
             let mut methods = HashMap::new();
             for m_canon in method_canons {
                 let m_ty_opt = self.provider.impl_method_symbols.iter()
-                    .find(|s| s.sym.name == m_canon.name)
+                    .find(|s| s.sym.name == m_canon.name && (m_canon.decl_id.is_none() || s.sym.decl_id == m_canon.decl_id))
                     .and_then(|s| self.provider.symbol_types.get(&s.sym.id).copied());
                 if let Some(m_ty) = m_ty_opt {
                     let ty_idx = self.convert_type_id(m_ty);
@@ -74,23 +82,32 @@ impl<'a> MetadataBuilder<'a> {
                 trait_id,
                 self_type,
                 generic_params,
+                trait_args: Vec::new(),
                 methods,
             });
         }
 
         for entry in &self.provider.trait_impl_entries {
+            let self_type_def = match self.provider.types.get(entry.self_type) {
+                SemanticType::Primitive(b) => crate::registry::ExternalImplSelfTypeKey::Primitive(*b),
+                _ => crate::registry::ExternalImplSelfTypeKey::Nominal(
+                    self.get_canonical_from_type(entry.self_type).unwrap_or_else(|| entry.trait_id.clone())
+                ),
+            };
             let key = ExternalImplKey {
                 trait_id: Some(entry.trait_id.clone()),
-                self_type_def: self.get_canonical_from_type(entry.self_type).unwrap_or_else(|| entry.trait_id.clone()),
+                self_type_def,
             };
             if !processed_keys.contains(&key) {
                 let trait_id = Some(self.convert_symbol_id(&entry.trait_id));
                 let self_type = self.convert_type_id(entry.self_type);
                 let generic_params = entry.generic_params.iter().map(|p| self.convert_symbol_id(p)).collect();
+                let trait_args = entry.trait_args.iter().map(|&a| self.convert_type_id(a)).collect();
                 impl_headers.push(ImplHeader {
                     trait_id,
                     self_type,
                     generic_params,
+                    trait_args,
                     methods: HashMap::new(),
                 });
             }

@@ -128,6 +128,23 @@ impl ExternalComponentLoader {
             driver_session.registry.register_external(descriptor.name.clone(), interface);
             driver_session.registry.finish_loading();
 
+            // Collect or extract provider object code
+            let sidecar_obj = descriptor.entry_file.with_extension("obj");
+            if sidecar_obj.exists() {
+                driver_session.add_collected_object(sidecar_obj);
+            } else {
+                use std::io::Seek;
+                let _ = file.seek(std::io::SeekFrom::Start(0));
+                if let Ok(Some(obj_bytes)) = luna_llib::reader::MlibReader::read_object_code(&mut file) {
+                    if !obj_bytes.is_empty() {
+                        let extracted_obj = descriptor.entry_file.with_extension("obj");
+                        if let Ok(_) = std::fs::write(&extracted_obj, &obj_bytes) {
+                            driver_session.add_collected_object(extracted_obj);
+                        }
+                    }
+                }
+            }
+
             return Ok(provider_id);
         }
 
@@ -163,6 +180,23 @@ impl ExternalComponentLoader {
 
         driver_session.registry.interfaces.insert(provider_id, provider_interface);
         driver_session.registry.providers.insert(descriptor.name.clone(), provider_id);
+
+        // Collect or extract provider object code
+        let sidecar_obj = descriptor.entry_file.with_extension("obj");
+        if sidecar_obj.exists() {
+            driver_session.add_collected_object(sidecar_obj);
+        } else {
+            use std::io::Seek;
+            let _ = file.seek(std::io::SeekFrom::Start(0));
+            if let Ok(Some(obj_bytes)) = luna_llib::reader::MlibReader::read_object_code(&mut file) {
+                if !obj_bytes.is_empty() {
+                    let extracted_obj = descriptor.entry_file.with_extension("obj");
+                    if let Ok(_) = std::fs::write(&extracted_obj, &obj_bytes) {
+                        driver_session.add_collected_object(extracted_obj);
+                    }
+                }
+            }
+        }
 
         Ok(provider_id)
     }
