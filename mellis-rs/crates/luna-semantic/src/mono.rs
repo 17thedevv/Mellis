@@ -10,6 +10,112 @@ pub struct MonoInstance {
     pub closure_id: Option<luna_ast::ExprId>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CanonicalInstanceKind {
+    Decl(DeclId),
+    DropGlue {
+        struct_sym: SymbolId,
+        concrete_ty: SemanticTypeId,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CanonicalInstanceIdentity {
+    pub kind: CanonicalInstanceKind,
+    pub subst: Vec<(SymbolId, SemanticTypeId)>,
+}
+
+pub fn canonical_type_mangling(types: &crate::ty::TypeContext, symbol_table: &crate::SymbolTable, ty_id: SemanticTypeId) -> String {
+    crate::Mangler::mangle_type(types, symbol_table, ty_id)
+}
+
+impl CanonicalInstanceIdentity {
+    pub fn symbol_name_with_tables(
+        &self,
+        types: &crate::ty::TypeContext,
+        symbol_table: &crate::SymbolTable,
+        tables: &crate::SemanticTables,
+        nominal_name: &str,
+    ) -> String {
+        match self.kind {
+            CanonicalInstanceKind::Decl(decl_id) => {
+                if nominal_name == "main" || nominal_name.starts_with("__mellis_") {
+                    return nominal_name.to_string();
+                }
+                let mut found_sym = None;
+                for s in &symbol_table.symbols {
+                    if s.decl_id == Some(decl_id) {
+                        found_sym = Some(s);
+                        break;
+                    }
+                }
+                let subst_types: Vec<_> = self.subst.iter().map(|&(_, ty)| ty).collect();
+                if let Some(s) = found_sym {
+                    if let Some(impl_key) = tables.method_impls.get(&s.id) {
+                        let self_path = match impl_key.self_type_def {
+                            crate::semantic_tables::ImplSelfTypeKey::Nominal(sym) => symbol_table.get_full_logical_path(sym),
+                            crate::semantic_tables::ImplSelfTypeKey::Primitive(b) => vec![format!("{:?}", b).to_lowercase()],
+                        };
+                        if let Some(trait_sym) = impl_key.trait_id {
+                            let trait_path = symbol_table.get_full_logical_path(trait_sym);
+                            let self_ty = tables.impl_self_types.get(impl_key).copied().unwrap_or(SemanticTypeId(0));
+                            return crate::Mangler::mangle_trait_method(
+                                types,
+                                symbol_table,
+                                &trait_path,
+                                &[],
+                                self_ty,
+                                &s.name,
+                                &subst_types,
+                            );
+                        } else {
+                            return crate::Mangler::mangle_method(
+                                types,
+                                symbol_table,
+                                &self_path,
+                                &s.name,
+                                &subst_types,
+                            );
+                        }
+                    }
+                    let full_path = symbol_table.get_full_logical_path(s.id);
+                    return crate::Mangler::mangle_function(types, symbol_table, &full_path, &subst_types);
+                }
+                let full_path = vec![nominal_name.to_string()];
+                crate::Mangler::mangle_function(types, symbol_table, &full_path, &subst_types)
+            }
+            CanonicalInstanceKind::DropGlue { concrete_ty, .. } => {
+                crate::Mangler::mangle_drop_glue(types, symbol_table, concrete_ty)
+            }
+        }
+    }
+
+    pub fn symbol_name(&self, types: &crate::ty::TypeContext, symbol_table: &crate::SymbolTable, nominal_name: &str) -> String {
+        match self.kind {
+            CanonicalInstanceKind::Decl(decl_id) => {
+                if nominal_name == "main" || nominal_name.starts_with("__mellis_") {
+                    return nominal_name.to_string();
+                }
+                let mut full_path = Vec::new();
+                for s in &symbol_table.symbols {
+                    if s.decl_id == Some(decl_id) {
+                        full_path = symbol_table.get_full_logical_path(s.id);
+                        break;
+                    }
+                }
+                if full_path.is_empty() {
+                    full_path = vec![nominal_name.to_string()];
+                }
+                let subst_types: Vec<_> = self.subst.iter().map(|&(_, ty)| ty).collect();
+                crate::Mangler::mangle_function(types, symbol_table, &full_path, &subst_types)
+            }
+            CanonicalInstanceKind::DropGlue { concrete_ty, .. } => {
+                crate::Mangler::mangle_drop_glue(types, symbol_table, concrete_ty)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct InstantiatedFunction {
     pub instance: MonoInstance,
@@ -29,6 +135,8 @@ pub struct MonoCollector<'a> {
     
     pub worklist: Vec<MonoInstance>,
     pub instantiated: HashMap<MonoInstance, InstantiatedFunction>,
+    pub drop_glues: Vec<CanonicalInstanceIdentity>,
+    pub visited_drop_types: HashSet<SemanticTypeId>,
     
     // Temporary state
     current_instance: Option<MonoInstance>,
@@ -47,6 +155,8 @@ impl<'a> MonoCollector<'a> {
             arena,
             worklist: Vec::new(),
             instantiated: HashMap::new(),
+            drop_glues: Vec::new(),
+            visited_drop_types: HashSet::new(),
             current_instance: None,
             current_expr_types: HashMap::new(),
             current_symbol_types: HashMap::new(),
@@ -54,6 +164,142 @@ impl<'a> MonoCollector<'a> {
             current_mono_calls: HashMap::new(),
             current_mono_for_loops: HashMap::new(),
             current_subst: Substitution::new(),
+        }
+    }
+
+    pub fn discover_drop_obligations(&mut self, ty_id: SemanticTypeId) {
+        let concrete_ty = self.ctx.types.resolve(ty_id);
+        if !self.ctx.types.is_monomorphic(concrete_ty) {
+            return;
+        }
+        if !self.ctx.needs_drop(concrete_ty) {
+            return;
+        }
+        if !self.visited_drop_types.insert(concrete_ty) {
+            return;
+        }
+
+        match self.ctx.types.get(concrete_ty).clone() {
+            SemanticType::Struct(sym_id, _, fields) => {
+                let drop_sym_opt = self.ctx.lang_items.get(crate::lang_item::LangItem::Drop);
+                let mut instance_subst = Vec::new();
+                if let Some(drop_sym) = drop_sym_opt {
+                    let impl_key = crate::semantic_tables::ImplKey {
+                        trait_id: Some(drop_sym),
+                        self_type_def: sym_id.into(),
+                    };
+                    if let Some(impl_decls) = self.ctx.tables.trait_impls.get(&impl_key).cloned() {
+                        for impl_decl_id in impl_decls {
+                            if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
+                                let mut subst = crate::ty::Substitution::new();
+                                if let Some(&pattern_ty) = self.ctx.tables.impl_self_types.get(&impl_key) {
+                                    self.match_types(pattern_ty, concrete_ty, &mut subst);
+                                }
+                                instance_subst = subst.map.into_iter().collect();
+                                instance_subst.sort_by_key(|k| k.0);
+                                for &m_decl_id in methods {
+                                    let instance = MonoInstance {
+                                        decl_id: m_decl_id,
+                                        subst: instance_subst.clone(),
+                                        closure_id: None,
+                                    };
+                                    if !self.instantiated.contains_key(&instance) && !self.worklist.contains(&instance) {
+                                        self.worklist.push(instance);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let glue_id = CanonicalInstanceIdentity {
+                    kind: CanonicalInstanceKind::DropGlue {
+                        struct_sym: sym_id,
+                        concrete_ty,
+                    },
+                    subst: instance_subst,
+                };
+                if !self.drop_glues.contains(&glue_id) {
+                    self.drop_glues.push(glue_id);
+                }
+
+                self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Mutable, concrete_ty));
+
+                for field_ty in fields {
+                    self.discover_drop_obligations(field_ty);
+                }
+            }
+            SemanticType::Enum(sym_id, _, variants) => {
+                let drop_sym_opt = self.ctx.lang_items.get(crate::lang_item::LangItem::Drop);
+                let mut instance_subst = Vec::new();
+                if let Some(drop_sym) = drop_sym_opt {
+                    let impl_key = crate::semantic_tables::ImplKey {
+                        trait_id: Some(drop_sym),
+                        self_type_def: sym_id.into(),
+                    };
+                    if let Some(impl_decls) = self.ctx.tables.trait_impls.get(&impl_key).cloned() {
+                        for impl_decl_id in impl_decls {
+                            if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
+                                let mut subst = crate::ty::Substitution::new();
+                                if let Some(&pattern_ty) = self.ctx.tables.impl_self_types.get(&impl_key) {
+                                    self.match_types(pattern_ty, concrete_ty, &mut subst);
+                                }
+                                instance_subst = subst.map.into_iter().collect();
+                                instance_subst.sort_by_key(|k| k.0);
+                                for &m_decl_id in methods {
+                                    let instance = MonoInstance {
+                                        decl_id: m_decl_id,
+                                        subst: instance_subst.clone(),
+                                        closure_id: None,
+                                    };
+                                    if !self.instantiated.contains_key(&instance) && !self.worklist.contains(&instance) {
+                                        self.worklist.push(instance);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let glue_id = CanonicalInstanceIdentity {
+                    kind: CanonicalInstanceKind::DropGlue {
+                        struct_sym: sym_id,
+                        concrete_ty,
+                    },
+                    subst: instance_subst,
+                };
+                if !self.drop_glues.contains(&glue_id) {
+                    self.drop_glues.push(glue_id);
+                }
+
+                self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Mutable, concrete_ty));
+
+                for var_ty in variants {
+                    self.discover_drop_obligations(var_ty);
+                }
+            }
+            SemanticType::Tuple(elems) => {
+                if self.ctx.needs_drop(concrete_ty) {
+                    let glue_id = CanonicalInstanceIdentity {
+                        kind: CanonicalInstanceKind::DropGlue {
+                            struct_sym: luna_common::ids::SymbolId(0),
+                            concrete_ty,
+                        },
+                        subst: Vec::new(),
+                    };
+                    if !self.drop_glues.contains(&glue_id) {
+                        self.drop_glues.push(glue_id);
+                    }
+                    self.ctx.types.intern(SemanticType::Pointer(crate::ty::Mutability::Mutable, concrete_ty));
+                }
+                for elem_ty in elems {
+                    self.discover_drop_obligations(elem_ty);
+                }
+            }
+            SemanticType::Array(elem_ty, _) => {
+                self.discover_drop_obligations(elem_ty);
+            }
+            _ => {}
         }
     }
 
@@ -69,6 +315,21 @@ impl<'a> MonoCollector<'a> {
                                 subst: vec![],
                                 closure_id: None,
                             });
+                        }
+                    }
+                    Decl::Impl { generic_params, methods, .. } => {
+                        if generic_params.is_empty() {
+                            for m_id in methods {
+                                if let Decl::Function { generic_params: m_gps, .. } = &self.arena.decls[m_id.0 as usize] {
+                                    if m_gps.is_empty() {
+                                        self.worklist.push(MonoInstance {
+                                            decl_id: *m_id,
+                                            subst: vec![],
+                                            closure_id: None,
+                                        });
+                                    }
+                                }
+                            }
                         }
                     }
                     Decl::Module { items: inner_decls, .. } => {
@@ -89,7 +350,7 @@ impl<'a> MonoCollector<'a> {
             if let crate::coercion::CoercionKind::ConcreteToDyn { trait_sym, concrete_sym } = coercion {
                 let key = crate::semantic_tables::ImplKey {
                     trait_id: Some(*trait_sym),
-                    self_type_def: *concrete_sym,
+                    self_type_def: (*concrete_sym).into(),
                 };
                 if let Some(impl_decls) = self.ctx.tables.trait_impls.get(&key) {
                     for impl_decl_id in impl_decls {
@@ -109,7 +370,7 @@ impl<'a> MonoCollector<'a> {
                 if let Some(drop_sym) = self.ctx.lang_items.get(crate::lang_item::LangItem::Drop) {
                     let drop_key = crate::semantic_tables::ImplKey {
                         trait_id: Some(drop_sym),
-                        self_type_def: *concrete_sym,
+                        self_type_def: (*concrete_sym).into(),
                     };
                     if let Some(drop_impls) = self.ctx.tables.trait_impls.get(&drop_key) {
                         for impl_decl_id in drop_impls {
@@ -201,6 +462,7 @@ impl<'a> MonoCollector<'a> {
                             if let Some(&ty) = self.ctx.tables.symbol_types.get(&param_sym) {
                                 let sub_ty = self.substitute(ty);
                                 self.current_symbol_types.insert(param_sym, sub_ty);
+                                self.discover_drop_obligations(sub_ty);
                             }
                         }
                     }
@@ -210,11 +472,18 @@ impl<'a> MonoCollector<'a> {
                 if (instance.decl_id.0 as usize) < self.arena.decls.len() {
                     let decl = &self.arena.decls[instance.decl_id.0 as usize];
                     if let Decl::Function { body: Some(body_stmt), params, .. } = decl {
+                        if let Some(&fn_sym) = self.ctx.tables.decl_symbols.get(&instance.decl_id) {
+                            if let Some(&fn_ty) = self.ctx.tables.symbol_types.get(&fn_sym) {
+                                let sub_fn_ty = self.substitute(fn_ty);
+                                self.current_symbol_types.insert(fn_sym, sub_fn_ty);
+                            }
+                        }
                         for param_id in params {
                             if let Some(&param_sym) = self.ctx.tables.decl_symbols.get(param_id) {
                                 if let Some(&ty) = self.ctx.tables.symbol_types.get(&param_sym) {
                                     let sub_ty = self.substitute(ty);
                                     self.current_symbol_types.insert(param_sym, sub_ty);
+                                    self.discover_drop_obligations(sub_ty);
                                 }
                             }
                         }
@@ -274,7 +543,7 @@ impl<'a> MonoCollector<'a> {
             }
 
             let mut current_pat_types = std::mem::take(&mut self.current_pat_types);
-            for (_pat_id, ty) in current_pat_types.iter_mut() {
+            for (pat_id, ty) in current_pat_types.iter_mut() {
                 let resolved = self.substitute(*ty);
                 *ty = resolved;
                 if !self.ctx.types.is_monomorphic(resolved) {
@@ -319,7 +588,7 @@ impl<'a> MonoCollector<'a> {
 
         let impl_key = crate::semantic_tables::ImplKey {
             trait_id: Some(trait_id),
-            self_type_def: nominal_sym,
+            self_type_def: nominal_sym.into(),
         };
 
         let decl_ids = match self.ctx.tables.trait_impls.get(&impl_key) {
@@ -597,6 +866,12 @@ impl<'a> MonoCollector<'a> {
                         if let Some(pat_id) = pattern {
                             self.visit_pattern(pat_id);
                         }
+                        if let Some(decl_sym) = self.ctx.tables.decl_symbols.get(decl_id).copied() {
+                            if let Some(&ty) = self.ctx.tables.symbol_types.get(&decl_sym) {
+                                let sub_ty = self.substitute(ty);
+                                self.discover_drop_obligations(sub_ty);
+                            }
+                        }
                     }
                     _ => {}
                 }
@@ -611,6 +886,7 @@ impl<'a> MonoCollector<'a> {
         if let Some(&ty) = self.ctx.tables.pat_types.get(pat_id) {
             let sub_ty = self.substitute(ty);
             self.current_pat_types.insert(*pat_id, sub_ty);
+            self.discover_drop_obligations(sub_ty);
         }
 
         let pattern = &self.arena.pats[pat_id.0 as usize];
@@ -635,10 +911,18 @@ impl<'a> MonoCollector<'a> {
             // Leaf variants with no children to traverse
             luna_ast::Pattern::Wildcard | luna_ast::Pattern::Literal(_) => {}
             luna_ast::Pattern::Identifier { .. } => {
-                if let Some(&sym_id) = self.ctx.tables.pat_symbols.get(pat_id) {
-                    if let Some(&ty) = self.ctx.tables.symbol_types.get(&sym_id) {
+                let pat_sym = self.ctx.tables.pat_symbols.get(pat_id).copied();
+                if let Some(sym_id) = pat_sym {
+                    let ty_opt = self.ctx.tables.symbol_types.get(&sym_id).copied()
+                        .or_else(|| self.ctx.tables.pat_types.get(pat_id).copied());
+                    if let Some(ty) = ty_opt {
                         let sub_ty = self.substitute(ty);
+                        if format!("{:?}", self.ctx.types.get(ty)).contains("GenericParam") {
+                            eprintln!("[DEBUG ZIP MONO] in inst={:?}, sym_id={:?}, orig_ty={:?}, sub_ty={:?}",
+                                self.current_instance.as_ref().map(|i| i.decl_id), sym_id, self.ctx.types.get(ty), self.ctx.types.get(sub_ty));
+                        }
                         self.current_symbol_types.insert(sym_id, sub_ty);
+                        self.discover_drop_obligations(sub_ty);
                     }
                 }
             }
@@ -744,22 +1028,104 @@ impl<'a> MonoCollector<'a> {
                         }
                     }
                 }
+
+                // Special check for ptr::drop_in_place<T>(p)
+                let callee_name = if let Some(&sym_id) = self.ctx.tables.expr_symbols.get(callee) {
+                    if (sym_id.0 as usize) < self.ctx.symbol_table.symbols.len() {
+                        Some(self.ctx.symbol_table.symbols[sym_id.0 as usize].name.clone())
+                    } else { None }
+                } else { None };
+                if let Some(ref name) = callee_name {
+                    if name.ends_with("drop_in_place") || name.contains("drop_in_place") {
+                        if let Some(first_arg) = args.first() {
+                            if let Some(&arg_ty) = self.ctx.tables.expr_types.get(&first_arg.value) {
+                                let sub_arg_ty = self.substitute(arg_ty);
+                                if let SemanticType::Pointer(_, inner) = self.ctx.types.get(sub_arg_ty) {
+                                    let pointee = *inner;
+                                    self.discover_drop_obligations(pointee);
+                                }
+                            }
+                        }
+                    }
+                }
+                if let Some(&ty) = self.current_expr_types.get(expr_id) {
+                    self.discover_drop_obligations(ty);
+                }
             }
             Expr::MethodCall { object, args, .. } => {
                 self.visit_expr(object);
                 for arg in args {
                     self.visit_expr(&arg.value);
                 }
-                // Handle instantiation for generic method calls
+                // Handle instantiation for method calls (including generic trait calls)
                 if let Some(&sym_id) = self.ctx.tables.expr_symbols.get(expr_id) {
-                    if let Some(&decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
-                        let mut instance_subst = Vec::new();
+                    let trait_owner_opt = self.ctx.tables.trait_methods.iter()
+                        .find(|(_, meths)| meths.contains(&sym_id))
+                        .map(|(&t_sym, _)| t_sym);
+
+                    let (target_decl_id, mut instance_subst) = if let Some(trait_sym) = trait_owner_opt {
+                        let obj_ty = self.ctx.tables.expr_types.get(object).copied().unwrap_or(SemanticTypeId(0));
+                        let sub_obj_ty = self.substitute(obj_ty);
+                        let peeled_sub_ty = match self.ctx.types.get(sub_obj_ty) {
+                            SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) => *inner,
+                            _ => sub_obj_ty,
+                        };
+                        let target_key = match self.ctx.types.get(peeled_sub_ty) {
+                            SemanticType::Struct(s, ..) | SemanticType::Enum(s, ..) => Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*s)),
+                            SemanticType::Primitive(b) => Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
+                            _ => None,
+                        };
+                        let mut concrete_decl = None;
+                        let mut impl_subst = crate::ty::Substitution::new();
+                        if let Some(self_key) = target_key {
+                            let key = crate::semantic_tables::ImplKey {
+                                trait_id: Some(trait_sym),
+                                self_type_def: self_key,
+                            };
+                            if let Some(impl_decls) = self.ctx.tables.trait_impls.get(&key) {
+                                for &impl_decl_id in impl_decls {
+                                    if (impl_decl_id.0 as usize) < self.arena.decls.len() {
+                                        if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
+                                            let method_name = self.ctx.symbol_table.get_symbol(sym_id).name.clone();
+                                            for &m_decl_id in methods {
+                                                if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(&m_decl_id) {
+                                                    if self.ctx.symbol_table.get_symbol(m_sym).name == method_name {
+                                                        concrete_decl = Some(m_decl_id);
+                                                        if let Some(&pattern_ty) = self.ctx.tables.impl_self_types.get(&key) {
+                                                            self.match_types(pattern_ty, peeled_sub_ty, &mut impl_subst);
+                                                        }
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if concrete_decl.is_some() { break; }
+                                }
+                            }
+                        }
+                        let mut subst_pairs: Vec<(SymbolId, SemanticTypeId)> = impl_subst.map.into_iter().map(|(k, v)| (k, self.substitute(v))).collect();
                         if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id).cloned() {
                             for (sym, ty) in subst.map {
                                 let sub_ty = self.substitute(ty);
-                                instance_subst.push((sym, sub_ty));
+                                if !subst_pairs.iter().any(|(s, _)| *s == sym) {
+                                    subst_pairs.push((sym, sub_ty));
+                                }
                             }
                         }
+                        (concrete_decl.or_else(|| self.ctx.tables.symbol_decls.get(&sym_id).copied()), subst_pairs)
+                    } else {
+                        let mut subst_pairs = Vec::new();
+                        if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id).cloned() {
+                            for (sym, ty) in subst.map {
+                                let sub_ty = self.substitute(ty);
+                                subst_pairs.push((sym, sub_ty));
+                            }
+                        }
+                        (self.ctx.tables.symbol_decls.get(&sym_id).copied(), subst_pairs)
+                    };
+
+                    if let Some(decl_id) = target_decl_id {
                         instance_subst.sort_by_key(|k| k.0);
                         let instance = MonoInstance {
                             decl_id,
@@ -771,6 +1137,9 @@ impl<'a> MonoCollector<'a> {
                             self.worklist.push(instance);
                         }
                     }
+                }
+                if let Some(&ty) = self.current_expr_types.get(expr_id) {
+                    self.discover_drop_obligations(ty);
                 }
             }
             Expr::Binary { left, right, .. } => {
@@ -807,10 +1176,16 @@ impl<'a> MonoCollector<'a> {
                 for field in fields {
                     self.visit_expr(&field.value);
                 }
+                if let Some(&ty) = self.current_expr_types.get(expr_id) {
+                    self.discover_drop_obligations(ty);
+                }
             }
             Expr::TupleLiteral { elements } => {
                 for element in elements {
                     self.visit_expr(element);
+                }
+                if let Some(&ty) = self.current_expr_types.get(expr_id) {
+                    self.discover_drop_obligations(ty);
                 }
             }
             Expr::ArrayLiteral { elements } => {
@@ -844,8 +1219,34 @@ impl<'a> MonoCollector<'a> {
             Expr::Comptime { body } => {
                 self.visit_stmt(body);
             }
+            Expr::Identifier { .. } => {
+                if let Some(&sym_id) = self.ctx.tables.expr_symbols.get(expr_id) {
+                    let symbol = self.ctx.symbol_table.get_symbol(sym_id);
+                    if matches!(symbol.kind, crate::SymbolKind::Function) {
+                        if let Some(&decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
+                            if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id).cloned() {
+                                let mut instance_subst = Vec::new();
+                                for (sym, ty) in subst.map {
+                                    let sub_ty = self.substitute(ty);
+                                    instance_subst.push((sym, sub_ty));
+                                }
+                                instance_subst.sort_by_key(|k| k.0);
+                                let instance = MonoInstance {
+                                    decl_id,
+                                    subst: instance_subst,
+                                    closure_id: None,
+                                };
+                                self.current_mono_calls.insert(*expr_id, instance.clone());
+                                if !self.instantiated.contains_key(&instance) {
+                                    self.worklist.push(instance);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // Leaf variants with no children to traverse
-            Expr::Literal(_, _) | Expr::Identifier { .. } | Expr::Sizeof { .. } | Expr::Alignof { .. } | Expr::MacroCall { .. } => {}
+            Expr::Literal(_, _) | Expr::Sizeof { .. } | Expr::Alignof { .. } | Expr::MacroCall { .. } => {}
         }
     }
 }

@@ -59,6 +59,9 @@ impl<'a> MvirGenerator<'a> {
         for instance in &self.ctx.instantiated_functions {
             self.generate_mono_instance(instance);
         }
+        for glue_identity in &self.ctx.drop_glue_instances {
+            self.generate_drop_glue(glue_identity);
+        }
         (self.module, self.diagnostics)
     }
 
@@ -99,6 +102,36 @@ impl<'a> MvirGenerator<'a> {
             }
         }
         self.ctx.tables.pat_types.get(pat_id).copied()
+    }
+
+    fn get_expr_type(&self, expr_id: &luna_ast::ExprId) -> luna_semantic::SemanticTypeId {
+        if let Some(inst_ptr) = self.current_instance {
+            let inst = unsafe { &*inst_ptr };
+            if let Some(&mono_ty) = inst.expr_types.get(expr_id) {
+                return mono_ty;
+            }
+        }
+        self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(luna_semantic::SemanticTypeId(0))
+    }
+
+    /// Resolve the canonical monomorphized name for a function call at `expr_id`.
+    /// Returns the properly mangled name if the call has a mono substitution, otherwise None.
+    fn resolve_mono_call_name(&self, expr_id: &luna_ast::ExprId, base_name: &str) -> Option<String> {
+        let mono_instance = if let Some(inst_ptr) = self.current_instance {
+            let inst = unsafe { &*inst_ptr };
+            inst.mono_calls.get(expr_id).cloned()
+        } else {
+            self.ctx.instantiated_functions.iter()
+                .find_map(|f| f.mono_calls.get(expr_id).cloned())
+        };
+        if let Some(mi) = mono_instance {
+            let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                kind: luna_semantic::CanonicalInstanceKind::Decl(mi.decl_id),
+                subst: mi.subst.clone(),
+            };
+            return Some(canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, base_name));
+        }
+        None
     }
 
     fn resolve_ast_type(&self, type_id: &luna_ast::TypeId) -> luna_semantic::SemanticTypeId {
@@ -246,6 +279,197 @@ impl<'a> MvirGenerator<'a> {
                 }
             }
         }
+        for glue_identity in &self.ctx.drop_glue_instances {
+            self.generate_drop_glue(glue_identity);
+        }
+    }
+
+    fn get_drop_glue_global_id(&self, ty_id: luna_semantic::SemanticTypeId) -> Option<GlobalId> {
+        let ty_id = self.ctx.types.resolve(ty_id);
+        if !self.ctx.needs_drop(ty_id) {
+            return None;
+        }
+        match self.ctx.types.get(ty_id) {
+            luna_semantic::SemanticType::Struct(sym_id, ..) | luna_semantic::SemanticType::Enum(sym_id, ..) => {
+                let sym = *sym_id;
+                let nominal_name = if (sym.0 as usize) < self.ctx.symbol_table.symbols.len() {
+                    self.ctx.symbol_table.symbols[sym.0 as usize].name.clone()
+                } else {
+                    format!("type{}", sym.0)
+                };
+                let identity = luna_semantic::CanonicalInstanceIdentity {
+                    kind: luna_semantic::CanonicalInstanceKind::DropGlue {
+                        struct_sym: sym,
+                        concrete_ty: ty_id,
+                    },
+                    subst: Vec::new(),
+                };
+                let glue_name = identity.symbol_name(&self.ctx.types, &self.ctx.symbol_table, &nominal_name);
+                Some(GlobalId {
+                    name: glue_name,
+                    symbol_id: Some(sym),
+                })
+            }
+            luna_semantic::SemanticType::Tuple(_) => {
+                let sym = luna_common::ids::SymbolId(0);
+                let identity = luna_semantic::CanonicalInstanceIdentity {
+                    kind: luna_semantic::CanonicalInstanceKind::DropGlue {
+                        struct_sym: sym,
+                        concrete_ty: ty_id,
+                    },
+                    subst: Vec::new(),
+                };
+                let glue_name = identity.symbol_name(&self.ctx.types, &self.ctx.symbol_table, "tuple");
+                Some(GlobalId {
+                    name: glue_name,
+                    symbol_id: None,
+                })
+            }
+            _ => None,
+        }
+    }
+
+    fn generate_drop_glue(&mut self, identity: &luna_semantic::CanonicalInstanceIdentity) {
+        let (struct_sym, concrete_ty) = match identity.kind {
+            luna_semantic::CanonicalInstanceKind::DropGlue { struct_sym, concrete_ty } => (struct_sym, concrete_ty),
+            _ => return,
+        };
+        
+        let nominal_name = if struct_sym.0 == 0 {
+            "tuple".to_string()
+        } else if (struct_sym.0 as usize) < self.ctx.symbol_table.symbols.len() {
+            self.ctx.symbol_table.symbols[struct_sym.0 as usize].name.clone()
+        } else {
+            format!("type{}", struct_sym.0)
+        };
+        let glue_fn_name = identity.symbol_name(&self.ctx.types, &self.ctx.symbol_table, &nominal_name);
+        
+        if self.module.functions.iter().any(|f| f.name.name == glue_fn_name) {
+            return;
+        }
+        
+        let ptr_ty = self.find_pointer_type(concrete_ty);
+        
+        let global_id = GlobalId {
+            name: glue_fn_name.clone(),
+            symbol_id: if struct_sym.0 == 0 { None } else { Some(struct_sym) },
+        };
+        
+        let func = Function {
+            name: global_id,
+            is_extern: false,
+            is_async: false,
+            arg_count: 1,
+            link_name: None,
+            param_types: vec![ptr_ty],
+            ret_ty: luna_semantic::SemanticTypeId(0),
+            blocks: Vec::new(),
+            values: Vec::new(),
+        };
+        
+        self.current_function = Some(func);
+        self.current_block = None;
+        self.locals.clear();
+        self.lexical_scopes.clear();
+        self.loop_scopes.clear();
+        self.loop_break_targets.clear();
+        self.loop_continue_targets.clear();
+        self.push_scope();
+        self.next_label_id = 0;
+        
+        let entry_label = self.new_label("entry");
+        self.start_block(entry_label);
+        
+        let alloc_val = self.push_inst(Instruction::Alloca, ptr_ty);
+        let obj_ptr = self.push_inst(Instruction::Load { ptr: Operand::Value(alloc_val) }, ptr_ty);
+        
+        // Step 1: Call user Drop::drop if present
+        let drop_meth_sym_opt = self.ctx.tables.drop_impls.get(&struct_sym).copied().or_else(|| {
+            let drop_sym = self.ctx.lang_items.get(luna_semantic::lang_item::LangItem::Drop).or_else(|| {
+                self.ctx.symbol_table.symbols.iter().position(|s| s.name == "Drop").map(|idx| luna_common::ids::SymbolId(idx as u32))
+            })?;
+            let key = luna_semantic::semantic_tables::ImplKey {
+                trait_id: Some(drop_sym),
+                self_type_def: struct_sym.into(),
+            };
+            self.ctx.tables.impl_methods.get(&key).and_then(|m| m.first().copied())
+        });
+        if let Some(drop_meth_sym) = drop_meth_sym_opt {
+            let mut user_drop_fn_name = None;
+            for inst_fn in &self.ctx.instantiated_functions {
+                if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(&inst_fn.instance.decl_id) {
+                    if m_sym == drop_meth_sym && inst_fn.instance.subst == identity.subst {
+                        let fn_base_name = self.ctx.symbol_table.symbols[m_sym.0 as usize].name.clone();
+                        let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                            kind: luna_semantic::CanonicalInstanceKind::Decl(inst_fn.instance.decl_id),
+                            subst: inst_fn.instance.subst.clone(),
+                        };
+                        user_drop_fn_name = Some(canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &fn_base_name));
+                        break;
+                    }
+                }
+            }
+            if user_drop_fn_name.is_none() {
+                let fn_base_name = self.ctx.symbol_table.symbols[drop_meth_sym.0 as usize].name.clone();
+                let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                    kind: luna_semantic::CanonicalInstanceKind::Decl(self.ctx.tables.symbol_decls.get(&drop_meth_sym).copied().unwrap_or(luna_ast::DeclId(0))),
+                    subst: identity.subst.clone(),
+                };
+                user_drop_fn_name = Some(canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &fn_base_name));
+            }
+            
+            if let Some(fn_name) = user_drop_fn_name {
+                self.push_inst(Instruction::CallDirect {
+                    callee: GlobalId { name: fn_name, symbol_id: Some(drop_meth_sym) },
+                    args: vec![Operand::Value(obj_ptr)],
+                }, luna_semantic::SemanticTypeId(0));
+            }
+        }
+        
+        // Step 2: Drop owned fields in reverse declaration order (LIFO)
+        if let luna_semantic::SemanticType::Struct(_, _, ref fields) = self.ctx.types.get(concrete_ty).clone() {
+            for (idx, &field_ty) in fields.iter().enumerate().rev() {
+                if self.ctx.needs_drop(field_ty) {
+                    let field_ptr_ty = self.find_pointer_type(field_ty);
+                    let field_ptr = self.push_inst(Instruction::FieldPtr {
+                        base: Operand::Value(obj_ptr),
+                        field_idx: idx as u32,
+                    }, field_ptr_ty);
+                    
+                    let field_callee = self.get_drop_glue_global_id(field_ty);
+                    self.push_inst(Instruction::Drop {
+                        value: Operand::Value(field_ptr),
+                        ty: field_ty,
+                        callee: field_callee,
+                    }, field_ty);
+                }
+            }
+        } else if let luna_semantic::SemanticType::Tuple(ref elems) = self.ctx.types.get(concrete_ty).clone() {
+            for (idx, &elem_ty) in elems.iter().enumerate().rev() {
+                if self.ctx.needs_drop(elem_ty) {
+                    let elem_ptr_ty = self.find_pointer_type(elem_ty);
+                    let elem_ptr = self.push_inst(Instruction::FieldPtr {
+                        base: Operand::Value(obj_ptr),
+                        field_idx: idx as u32,
+                    }, elem_ptr_ty);
+                    
+                    let elem_callee = self.get_drop_glue_global_id(elem_ty);
+                    self.push_inst(Instruction::Drop {
+                        value: Operand::Value(elem_ptr),
+                        ty: elem_ty,
+                        callee: elem_callee,
+                    }, elem_ty);
+                }
+            }
+        }
+        
+        self.terminate_block(Terminator::Ret { value: None });
+        if let Some(block) = self.current_block.take() {
+            self.current_function.as_mut().unwrap().blocks.push(block);
+        }
+        if let Some(func) = self.current_function.take() {
+            self.module.functions.push(func);
+        }
     }
 
     pub fn current_module(&self) -> &Module {
@@ -318,17 +542,14 @@ impl<'a> MvirGenerator<'a> {
         for &sym in scope.iter().rev() {
             if Some(sym) == keep { continue; }
             if let Some(&val_id) = self.locals.get(&sym) {
-                let ty_id = self.get_symbol_type(&sym).unwrap_or(luna_semantic::SemanticTypeId(0));
+                let mut ty_id = self.get_symbol_type(&sym).unwrap_or(luna_semantic::SemanticTypeId(0));
+                if ty_id == luna_semantic::SemanticTypeId(0) {
+                    if let Some(func) = &self.current_function {
+                        ty_id = func.values[val_id.0 as usize].ty;
+                    }
+                }
                 if self.ctx.needs_drop(ty_id) {
-                    let callee = match self.ctx.types.get(ty_id) {
-                        luna_semantic::SemanticType::Struct(sym_id, ..) => {
-                            self.ctx.tables.drop_impls.get(sym_id).map(|&meth_sym| {
-                                let name = self.ctx.symbol_table.get_symbol(meth_sym).name.clone();
-                                GlobalId { name, symbol_id: Some(meth_sym) }
-                            })
-                        }
-                        _ => None,
-                    };
+                    let callee = self.get_drop_glue_global_id(ty_id);
                     self.push_inst(Instruction::Drop { value: Operand::Value(val_id), callee, ty: ty_id }, ty_id);
                 }
             }
@@ -494,11 +715,17 @@ impl<'a> MvirGenerator<'a> {
             }
             Expr::Member { object, member } => {
                 let mut base_op = self.generate_lvalue(object);
-                let obj_ty_id = self.ctx.tables.expr_types.get(object).copied()
-                    .or_else(|| self.ctx.tables.expr_symbols.get(object).and_then(|sym| self.get_symbol_type(sym)))
-                    .unwrap_or(luna_semantic::SemanticTypeId(0));
+                let mut obj_ty_id = self.get_expr_type(object);
+                if obj_ty_id == luna_semantic::SemanticTypeId(0) {
+                    if let Some(sym) = self.ctx.tables.expr_symbols.get(object) {
+                        if let Some(ty) = self.get_symbol_type(sym) {
+                            obj_ty_id = ty;
+                        }
+                    }
+                }
                 let mut struct_sym_opt = None;
                 let mut struct_field_tys_opt = None;
+                let mut is_slice = false;
                 match self.ctx.types.get(obj_ty_id) {
                     luna_semantic::SemanticType::Struct(sym_id, _, field_tys) => {
                         struct_sym_opt = Some(*sym_id);
@@ -508,6 +735,7 @@ impl<'a> MvirGenerator<'a> {
                         if let luna_semantic::SemanticType::Slice(_) = self.ctx.types.get(*inner) {
                             // Slices are fat pointers represented as structs stored directly in the local alloca.
                             // Do not load, so base_op remains a pointer to the fat pointer struct!
+                            is_slice = true;
                         } else {
                             let load_val = self.push_inst(Instruction::Load { ptr: base_op }, obj_ty_id);
                             base_op = Operand::Value(load_val);
@@ -516,6 +744,9 @@ impl<'a> MvirGenerator<'a> {
                                 struct_field_tys_opt = Some(field_tys.clone());
                             }
                         }
+                    }
+                    luna_semantic::SemanticType::Slice(_) => {
+                        is_slice = true;
                     }
                     _ => {}
                 }
@@ -535,11 +766,18 @@ impl<'a> MvirGenerator<'a> {
                             }
                         }
                     }
+                } else if is_slice {
+                    let member_name = self.get_span_text(*member);
+                    if member_name == "length" || member_name == "len" {
+                        field_idx = 1;
+                    } else if member_name == "ptr" || member_name == "data" {
+                        field_idx = 0;
+                    }
                 } else if let Some(&idx) = self.ctx.tables.expr_member_indices.get(expr_id) {
                     field_idx = idx;
                 }
                 
-                let mut field_ty = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                let mut field_ty = self.get_expr_type(expr_id);
                 if field_ty == luna_semantic::SemanticTypeId(0) {
                     if let Some(field_tys) = &struct_field_tys_opt {
                         if let Some(&fty) = field_tys.get(field_idx as usize) {
@@ -555,7 +793,7 @@ impl<'a> MvirGenerator<'a> {
             }
             Expr::TupleIndex { object, index } => {
                 let mut base_op = self.generate_lvalue(object);
-                let obj_ty_id = self.ctx.tables.expr_types.get(object).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                let obj_ty_id = self.get_expr_type(object);
                 let mut tuple_field_tys_opt = None;
                 match self.ctx.types.get(obj_ty_id) {
                     luna_semantic::SemanticType::Tuple(types) => {
@@ -570,7 +808,7 @@ impl<'a> MvirGenerator<'a> {
                     }
                     _ => {}
                 }
-                let mut field_ty = self.ctx.tables.expr_types.get(expr_id).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                let mut field_ty = self.get_expr_type(expr_id);
                 if field_ty == luna_semantic::SemanticTypeId(0) {
                     if let Some(types) = &tuple_field_tys_opt {
                         if let Some(&fty) = types.get(*index as usize) {
@@ -590,7 +828,7 @@ impl<'a> MvirGenerator<'a> {
             }
             Expr::Index { base, index } => {
                 let index_op = self.generate_expr(index);
-                let base_ty_id = self.ctx.tables.expr_types.get(base).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                let base_ty_id = self.get_expr_type(base);
                 let base_ty = self.ctx.types.get(base_ty_id).clone();
 
                 let mut peeled_base_ty = base_ty.clone();
@@ -685,7 +923,11 @@ impl<'a> MvirGenerator<'a> {
         if let Expr::Lambda { body, params, return_type: _, is_move: _ } = expr {
             let mut fn_name = format!("closure_{}", expr_id.0);
             if !instance.instance.subst.is_empty() {
-                fn_name = format!("{}_mono", fn_name);
+                let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                    kind: luna_semantic::CanonicalInstanceKind::Decl(instance.instance.decl_id),
+                    subst: instance.instance.subst.clone(),
+                };
+                fn_name = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &fn_name);
             }
             let global_id = GlobalId {
                 name: fn_name,
@@ -794,6 +1036,9 @@ impl<'a> MvirGenerator<'a> {
         // No GenericParam, InferenceVar, Error, or Unresolved Projection may enter MVIR lowering.
         for (&sym_id, &ty) in &instance.symbol_types {
             if !self.ctx.types.is_monomorphic(ty) {
+                if matches!(self.ctx.types.get(ty), luna_semantic::SemanticType::Function { .. }) {
+                    continue;
+                }
                 panic!("MVIR Monomorphization Barrier Violation: Symbol {:?} has non-monomorphic type {:?}", sym_id, self.ctx.types.get(ty));
             }
         }
@@ -893,11 +1138,11 @@ impl<'a> MvirGenerator<'a> {
                 }
             }
             
-            let mut suffix = String::new();
-            if !instance.instance.subst.is_empty() {
-                suffix = "_mono".to_string();
-            }
-            let name_str = format!("{}{}", fn_name, suffix);
+            let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                kind: luna_semantic::CanonicalInstanceKind::Decl(instance.instance.decl_id),
+                subst: instance.instance.subst.clone(),
+            };
+            let name_str = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &fn_name);
             let global_id = GlobalId {
                 name: name_str,
                 symbol_id: sym_id_opt,
@@ -1618,14 +1863,14 @@ impl<'a> MvirGenerator<'a> {
                 if let luna_ast::Expr::Member { object, .. } = callee_expr {
                     if let Some(&m_sym) = self.ctx.tables.expr_symbols.get(callee) {
                         let mut m_name = self.ctx.symbol_table.get_symbol(m_sym).name.clone();
-                        let is_mono = if let Some(inst_ptr) = self.current_instance {
-                            let inst = unsafe { &*inst_ptr };
-                            inst.mono_calls.get(expr_id).map_or(false, |m| !m.subst.is_empty())
-                        } else {
-                            self.ctx.instantiated_functions.iter().any(|f| f.mono_calls.get(expr_id).map_or(false, |m| !m.subst.is_empty()))
-                        };
-                        if is_mono && !m_name.ends_with("_mono") {
-                            m_name = format!("{}_mono", m_name);
+                        if let Some(canonical_name) = self.resolve_mono_call_name(expr_id, &m_name) {
+                            m_name = canonical_name;
+                        } else if let Some(decl_id) = self.ctx.symbol_table.get_symbol(m_sym).decl_id {
+                            let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                                kind: luna_semantic::CanonicalInstanceKind::Decl(decl_id),
+                                subst: Vec::new(),
+                            };
+                            m_name = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &m_name);
                         }
                         let obj_op = self.generate_expr(object);
                         let mut arg_ops = vec![obj_op];
@@ -1710,15 +1955,7 @@ impl<'a> MvirGenerator<'a> {
                             }
                             if let Some(elem_ty) = pointee_ty {
                                 if self.ctx.needs_drop(elem_ty) {
-                                    let callee = match self.ctx.types.get(elem_ty) {
-                                        luna_semantic::SemanticType::Struct(sym_id, ..) => {
-                                            self.ctx.tables.drop_impls.get(sym_id).map(|&meth_sym| {
-                                                let name = self.ctx.symbol_table.get_symbol(meth_sym).name.clone();
-                                                GlobalId { name, symbol_id: Some(meth_sym) }
-                                            })
-                                        }
-                                        _ => None,
-                                    };
+                                    let callee = self.get_drop_glue_global_id(elem_ty);
                                     self.push_inst(Instruction::Drop { value: arg_ops[0].clone(), callee, ty: elem_ty }, elem_ty);
                                 }
                             }
@@ -1731,14 +1968,16 @@ impl<'a> MvirGenerator<'a> {
                     } else {
                         match callee_op {
                             Operand::Global(mut id) => {
-                                let is_mono = if let Some(inst_ptr) = self.current_instance {
-                                    let inst = unsafe { &*inst_ptr };
-                                    inst.mono_calls.get(expr_id).map_or(false, |m| !m.subst.is_empty())
-                                } else {
-                                    self.ctx.instantiated_functions.iter().any(|f| f.mono_calls.get(expr_id).map_or(false, |m| !m.subst.is_empty()))
-                                };
-                                if is_mono && !id.name.ends_with("_mono") {
-                                    id.name = format!("{}_mono", id.name);
+                                if let Some(canonical_name) = self.resolve_mono_call_name(expr_id, &id.name) {
+                                    id.name = canonical_name;
+                                } else if let Some(sym_id) = id.symbol_id {
+                                    if let Some(decl_id) = self.ctx.symbol_table.get_symbol(sym_id).decl_id {
+                                        let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                                            kind: luna_semantic::CanonicalInstanceKind::Decl(decl_id),
+                                            subst: Vec::new(),
+                                        };
+                                        id.name = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &id.name);
+                                    }
                                 }
                                 Instruction::CallDirect { callee: id, args: arg_ops }
                             }
@@ -1801,11 +2040,28 @@ impl<'a> MvirGenerator<'a> {
                         return Operand::Value(load_val);
                     }
                     
-                    let sym_name = if (sym_id.0 as usize) < self.ctx.symbol_table.symbols.len() {
+                    let mut sym_name = if (sym_id.0 as usize) < self.ctx.symbol_table.symbols.len() {
                         self.ctx.symbol_table.symbols[sym_id.0 as usize].name.clone()
                     } else {
                         format!("global_{}", segments[0].start)
                     };
+                    if let Some(decl_id) = symbol.decl_id {
+                        if matches!(symbol.kind, luna_semantic::SymbolKind::Function) {
+                            let subst = if let Some(inst_ptr) = self.current_instance {
+                                let inst = unsafe { &*inst_ptr };
+                                inst.mono_calls.get(expr_id).map(|m| m.subst.clone()).unwrap_or_default()
+                            } else {
+                                self.ctx.instantiated_functions.iter()
+                                    .find_map(|f| f.mono_calls.get(expr_id).map(|m| m.subst.clone()))
+                                    .unwrap_or_default()
+                            };
+                            let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                                kind: luna_semantic::CanonicalInstanceKind::Decl(decl_id),
+                                subst,
+                            };
+                            sym_name = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &sym_name);
+                        }
+                    }
                     return Operand::Global(GlobalId {
                         name: sym_name,
                         symbol_id: Some(sym_id),
@@ -2034,14 +2290,14 @@ impl<'a> MvirGenerator<'a> {
 
                 if let Some(&m_sym) = self.ctx.tables.expr_symbols.get(expr_id) {
                     let mut m_name = self.ctx.symbol_table.get_symbol(m_sym).name.clone();
-                    let is_mono = if let Some(inst_ptr) = self.current_instance {
-                        let inst = unsafe { &*inst_ptr };
-                        inst.mono_calls.get(expr_id).map_or(false, |m| !m.subst.is_empty())
-                    } else {
-                        self.ctx.instantiated_functions.iter().any(|f| f.mono_calls.get(expr_id).map_or(false, |m| !m.subst.is_empty()))
-                    };
-                    if is_mono && !m_name.ends_with("_mono") {
-                        m_name = format!("{}_mono", m_name);
+                    if let Some(canonical_name) = self.resolve_mono_call_name(expr_id, &m_name) {
+                        m_name = canonical_name;
+                    } else if let Some(decl_id) = self.ctx.symbol_table.get_symbol(m_sym).decl_id {
+                        let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                            kind: luna_semantic::CanonicalInstanceKind::Decl(decl_id),
+                            subst: Vec::new(),
+                        };
+                        m_name = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &m_name);
                     }
                     let m_ty_opt = self.get_symbol_type(&m_sym);
                     let (is_ref_self, is_rw_self) = if let Some(m_ty) = m_ty_opt {
@@ -2190,9 +2446,14 @@ impl<'a> MvirGenerator<'a> {
                 }
                 
                 let mut fn_name = format!("closure_{}", expr_id.0);
-                if let Some(instance) = &self.current_function {
-                    if instance.name.name.ends_with("_mono") {
-                        fn_name = format!("{}_mono", fn_name);
+                if let Some(inst_ptr) = self.current_instance {
+                    let inst = unsafe { &*inst_ptr };
+                    if !inst.instance.subst.is_empty() {
+                        let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+                            kind: luna_semantic::CanonicalInstanceKind::Decl(inst.instance.decl_id),
+                            subst: inst.instance.subst.clone(),
+                        };
+                        fn_name = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &fn_name);
                     }
                 }
                 let func_id = GlobalId {
@@ -2227,10 +2488,17 @@ impl<'a> MvirGenerator<'a> {
                 };
                 
                 // Call `branch`
+                let branch_sym = self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap();
+                let branch_base_name = self.ctx.symbol_table.get_symbol(branch_sym).name.clone();
+                let canonical_branch_id = luna_semantic::CanonicalInstanceIdentity {
+                    kind: luna_semantic::CanonicalInstanceKind::Decl(branch_decl),
+                    subst: Vec::new(),
+                };
+                let branch_fn_name = canonical_branch_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &branch_base_name);
                 let flow_val = self.push_inst(Instruction::CallDirect {
                     callee: GlobalId {
-                        name: self.ctx.symbol_table.get_symbol(self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap()).name.clone(),
-                        symbol_id: Some(self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap()),
+                        name: branch_fn_name,
+                        symbol_id: Some(branch_sym),
                     },
                     args: vec![inner_op.clone()],
                     
@@ -2286,12 +2554,19 @@ impl<'a> MvirGenerator<'a> {
                 
                 // Call `FromResidual::from_residual`
                 let from_residual_decl = self.ctx.tables.try_from_residual_methods.get(expr_id).copied().unwrap();
+                let from_residual_sym = self.ctx.tables.decl_symbols.get(&from_residual_decl).copied().unwrap();
+                let from_residual_base_name = self.ctx.symbol_table.get_symbol(from_residual_sym).name.clone();
+                let canonical_fr_id = luna_semantic::CanonicalInstanceIdentity {
+                    kind: luna_semantic::CanonicalInstanceKind::Decl(from_residual_decl),
+                    subst: Vec::new(),
+                };
+                let from_residual_fn_name = canonical_fr_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &from_residual_base_name);
                 let expected_ret_ty = self.current_function.as_ref().unwrap().ret_ty;
                 
                 let ret_val = self.push_inst(Instruction::CallDirect {
                     callee: GlobalId {
-                        name: self.ctx.symbol_table.get_symbol(self.ctx.tables.decl_symbols.get(&from_residual_decl).copied().unwrap()).name.clone(),
-                        symbol_id: Some(self.ctx.tables.decl_symbols.get(&from_residual_decl).copied().unwrap()),
+                        name: from_residual_fn_name,
+                        symbol_id: Some(from_residual_sym),
                     },
                     args: vec![Operand::Value(residual_val)],
                     
@@ -2702,7 +2977,9 @@ impl<'a> MvirGenerator<'a> {
                     } else if symbol.name == "_" {
                         // Wildcard identifier "_" does not bind a local variable.
                     } else if let Operand::Value(val_id) = subject {
-                        let ty_id = self.get_symbol_type(&sym_id).unwrap_or(luna_semantic::SemanticTypeId(0));
+                        let ty_id = self.get_symbol_type(&sym_id)
+                            .or_else(|| self.get_pat_type(pat))
+                            .unwrap_or(luna_semantic::SemanticTypeId(0));
                         let alloca_val = self.push_inst(Instruction::Alloca, ty_id);
                         self.locals.insert(sym_id, alloca_val);
                         if let Some(scope) = self.lexical_scopes.last_mut() {
