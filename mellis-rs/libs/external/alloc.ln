@@ -6,7 +6,7 @@ export extern fn __mellis_realloc(ptr: *rw u8, old_size: u64, old_align: u64, ne
 
 module std {
     export struct Box<T> {
-        ptr: *rw T,
+        private ptr: *rw T,
     }
 
     export fn box_new<T>(val: T) -> Box<T> {
@@ -62,9 +62,9 @@ module std {
 export type Box<T> = std::Box<T>;
 
 export struct Vec<T> {
-    ptr: *rw T,
-    len: u64,
-    cap: u64,
+    private ptr: *rw T,
+    private len: u64,
+    private cap: u64,
 }
 
 export fn vec_new<T>() -> Vec<T> {
@@ -116,6 +116,13 @@ impl<T> Vec<T> {
     }
 
     export fn clear(self: &rw Self) {
+        dec rw i = self.len;
+        while i > (0 as u64) {
+            i = i - (1 as u64);
+            unsafe {
+                ptr::drop_in_place<T>(ptr::add_mut<T>(self.ptr, i));
+            }
+        }
         self.len = 0 as u64;
     }
 
@@ -125,6 +132,44 @@ impl<T> Vec<T> {
 
     export fn capacity(self: &Self) -> u64 {
         return self.cap;
+    }
+
+    export fn is_empty(self: &Self) -> bool {
+        return self.len == (0 as u64);
+    }
+
+    export fn last(self: &Self) -> Option<&T> life_from(self) {
+        if self.len == (0 as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec offset_ptr = ptr::add<T>(self.ptr as *T, self.len - (1 as u64));
+            return Option::Some(&*offset_ptr);
+        }
+    }
+
+    export fn last_mut(self: &rw Self) -> Option<&rw T> life_from(self) {
+        if self.len == (0 as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec offset_ptr = ptr::add_mut<T>(self.ptr, self.len - (1 as u64));
+            return Option::Some(&rw *offset_ptr);
+        }
+    }
+
+    export fn truncate(self: &rw Self, new_len: u64) {
+        if new_len >= self.len {
+            return;
+        }
+        dec rw i = self.len;
+        while i > new_len {
+            i = i - (1 as u64);
+            unsafe {
+                ptr::drop_in_place<T>(ptr::add_mut<T>(self.ptr, i));
+            }
+        }
+        self.len = new_len;
     }
 
     export fn get(self: &Self, index: u64) -> Option<&T> life_from(self) {
@@ -149,13 +194,13 @@ impl<T> Vec<T> {
 
     export fn as_slice(self: &Self) -> &[T] life_from(self) {
         unsafe {
-            return slice_from_raw_parts(self.ptr as *T, self.len);
+            return slice_from_raw_parts<T>(self.ptr as *T, self.len);
         }
     }
 
     export fn as_mut_slice(self: &rw Self) -> &rw [T] life_from(self) {
         unsafe {
-            return slice_from_raw_parts_mut(self.ptr, self.len);
+            return slice_from_raw_parts_mut<T>(self.ptr, self.len);
         }
     }
 
@@ -194,9 +239,961 @@ impl<T> Vec<T> {
 
 impl<T> Drop for Vec<T> {
     fn drop(self: &rw Self) {
+        dec rw i = self.len;
+        while i > (0 as u64) {
+            i = i - (1 as u64);
+            unsafe {
+                ptr::drop_in_place<T>(ptr::add_mut<T>(self.ptr, i));
+            }
+        }
         if self.cap > (0 as u64) {
             dec old_size = self.cap * (mem::size_of<T>() as u64);
             __mellis_dealloc(self.ptr as *rw u8, old_size, mem::align_of<T>() as u64);
         }
     }
 }
+
+module utf8 {
+    export fn validate(bytes: &[u8]) -> bool {
+        dec len = bytes.len as u64;
+        dec rw i: u64 = 0 as u64;
+        while i < len {
+            dec b0 = bytes[i];
+            if b0 <= (127 as u8) {
+                i = i + (1 as u64);
+            } else if (b0 >= (194 as u8)) && (b0 <= (223 as u8)) {
+                if (i + (1 as u64)) >= len {
+                    return false;
+                }
+                dec b1 = bytes[i + (1 as u64)];
+                if (b1 < (128 as u8)) || (b1 > (191 as u8)) {
+                    return false;
+                }
+                i = i + (2 as u64);
+            } else if (b0 >= (224 as u8)) && (b0 <= (239 as u8)) {
+                if (i + (2 as u64)) >= len {
+                    return false;
+                }
+                dec b1 = bytes[i + (1 as u64)];
+                dec b2 = bytes[i + (2 as u64)];
+                if b0 == (224 as u8) {
+                    if (b1 < (160 as u8)) || (b1 > (191 as u8)) {
+                        return false;
+                    }
+                } else if b0 == (237 as u8) {
+                    if (b1 < (128 as u8)) || (b1 > (159 as u8)) {
+                        return false;
+                    }
+                } else {
+                    if (b1 < (128 as u8)) || (b1 > (191 as u8)) {
+                        return false;
+                    }
+                }
+                if (b2 < (128 as u8)) || (b2 > (191 as u8)) {
+                    return false;
+                }
+                i = i + (3 as u64);
+            } else if (b0 >= (240 as u8)) && (b0 <= (244 as u8)) {
+                if (i + (3 as u64)) >= len {
+                    return false;
+                }
+                dec b1 = bytes[i + (1 as u64)];
+                dec b2 = bytes[i + (2 as u64)];
+                dec b3 = bytes[i + (3 as u64)];
+                if b0 == (240 as u8) {
+                    if (b1 < (144 as u8)) || (b1 > (191 as u8)) {
+                        return false;
+                    }
+                } else if b0 == (244 as u8) {
+                    if (b1 < (128 as u8)) || (b1 > (143 as u8)) {
+                        return false;
+                    }
+                } else {
+                    if (b1 < (128 as u8)) || (b1 > (191 as u8)) {
+                        return false;
+                    }
+                }
+                if (b2 < (128 as u8)) || (b2 > (191 as u8)) {
+                    return false;
+                }
+                if (b3 < (128 as u8)) || (b3 > (191 as u8)) {
+                    return false;
+                }
+                i = i + (4 as u64);
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    export fn is_char_boundary(bytes: &[u8], index: u64) -> bool {
+        dec len = bytes.len as u64;
+        if index == (0 as u64) || index == len {
+            return true;
+        }
+        if index > len {
+            return false;
+        }
+        dec b = bytes[index];
+        return (b & (192 as u8)) != (128 as u8);
+    }
+
+    export fn encode_char(ch: char, out_vec: &rw Vec<u8>) {
+        dec code = ch as u32;
+        if code <= (127 as u32) {
+            out_vec.push(code as u8);
+        } else if code <= (2047 as u32) {
+            out_vec.push(((192 as u32) | (code >> (6 as u32))) as u8);
+            out_vec.push(((128 as u32) | (code & (63 as u32))) as u8);
+        } else if code <= (65535 as u32) {
+            out_vec.push(((224 as u32) | (code >> (12 as u32))) as u8);
+            out_vec.push(((128 as u32) | ((code >> (6 as u32)) & (63 as u32))) as u8);
+            out_vec.push(((128 as u32) | (code & (63 as u32))) as u8);
+        } else {
+            out_vec.push(((240 as u32) | (code >> (18 as u32))) as u8);
+            out_vec.push(((128 as u32) | ((code >> (12 as u32)) & (63 as u32))) as u8);
+            out_vec.push(((128 as u32) | ((code >> (6 as u32)) & (63 as u32))) as u8);
+            out_vec.push(((128 as u32) | (code & (63 as u32))) as u8);
+        }
+    }
+}
+
+module std {
+    export struct String {
+        private vec: Vec<u8>,
+    }
+
+    export fn string_new() -> String {
+        return String {
+            vec: vec_new<u8>(),
+        };
+    }
+
+    export fn string_with_capacity(capacity: u64) -> String {
+        return String {
+            vec: vec_with_capacity<u8>(capacity),
+        };
+    }
+
+    export fn string_from_bytes(bytes: &[u8]) -> Option<String> {
+        if utf8::validate(bytes) == false {
+            return Option::None;
+        }
+        dec len = bytes.len as u64;
+        dec rw v = vec_with_capacity<u8>(len);
+        dec rw i: u64 = 0 as u64;
+        while i < len {
+            v.push(bytes[i]);
+            i = i + (1 as u64);
+        }
+        return Option::Some(String { vec: v });
+    }
+
+    export fn string_from_str(s: str) -> String {
+        dec s_ptr = s as *u8;
+        dec rw len: u64 = 0 as u64;
+        unsafe {
+            while (*(ptr::add<u8>(s_ptr, len))) != (0 as u8) {
+                len = len + (1 as u64);
+            }
+            dec slice = slice_from_raw_parts<u8>(s_ptr, len);
+            if utf8::validate(slice) == false {
+                __mellis_panic();
+            }
+            dec rw v = vec_with_capacity<u8>(len);
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                v.push(*(ptr::add<u8>(s_ptr, i)));
+                i = i + (1 as u64);
+            }
+            return String { vec: v };
+        }
+    }
+
+    impl String {
+        export fn len(self: &Self) -> u64 {
+            return self.vec.len();
+        }
+
+        export fn capacity(self: &Self) -> u64 {
+            return self.vec.capacity();
+        }
+
+        export fn is_empty(self: &Self) -> bool {
+            return self.vec.is_empty();
+        }
+
+        export fn as_bytes(self: &Self) -> &[u8] life_from(self) {
+            return self.vec.as_slice();
+        }
+
+        export fn as_ptr(self: &Self) -> *u8 {
+            return self.vec.ptr as *u8;
+        }
+
+        export fn push_char(self: &rw Self, ch: char) {
+            utf8::encode_char(ch, &rw self.vec);
+        }
+
+        export fn push_str(self: &rw Self, s: str) {
+            dec s_ptr = s as *u8;
+            dec rw len: u64 = 0 as u64;
+            unsafe {
+                while (*(ptr::add<u8>(s_ptr, len))) != (0 as u8) {
+                    len = len + (1 as u64);
+                }
+                dec slice = slice_from_raw_parts<u8>(s_ptr, len);
+                if utf8::validate(slice) == false {
+                    __mellis_panic();
+                }
+                dec rw i: u64 = 0 as u64;
+                while i < len {
+                    self.vec.push(*(ptr::add<u8>(s_ptr, i)));
+                    i = i + (1 as u64);
+                }
+            }
+        }
+
+        export fn clear(self: &rw Self) {
+            self.vec.clear();
+        }
+
+        export fn truncate(self: &rw Self, new_len: u64) {
+            if new_len >= self.vec.len() {
+                return;
+            }
+            if utf8::is_char_boundary(self.as_bytes(), new_len) == false {
+                __mellis_panic();
+            }
+            self.vec.truncate(new_len);
+        }
+
+        export fn clone(self: &Self) -> String {
+            dec bytes = self.as_bytes();
+            dec len = bytes.len as u64;
+            dec rw v = vec_with_capacity<u8>(len);
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                v.push(bytes[i]);
+                i = i + (1 as u64);
+            }
+            return String { vec: v };
+        }
+
+        export fn eq(self: &Self, other: &Self) -> bool {
+            if self.len() != other.len() {
+                return false;
+            }
+            dec b1 = self.as_bytes();
+            dec b2 = other.as_bytes();
+            dec len = b1.len as u64;
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                if b1[i] != b2[i] {
+                    return false;
+                }
+                i = i + (1 as u64);
+            }
+            return true;
+        }
+    }
+
+    // =========================================================================
+    // RawTable<K, V>: Internal Storage Engine for HashMap and HashSet
+    //
+    // Algorithm: Linear probing with first-tombstone reuse
+    // Invariants:
+    //   - Empty (0): Slot is vacant, terminates forward probe sequence.
+    //   - Occupied (1): Slot holds a live, initialized K and V pair.
+    //   - Deleted (2): Slot is a tombstone, probe sequence continues forward.
+    // NOTE: RawTable is an internal implementation detail of the collection
+    // abstractions (HashMap, HashSet) and is not a frozen user-facing API.
+    // =========================================================================
+    export enum ProbeResult {
+        Found(u64),
+        Vacant(u64),
+    }
+
+    export struct RawTable<K, V> {
+        private states: *rw u8,
+        private hashes: *rw u64,
+        private keys: *rw K,
+        private values: *rw V,
+        private cap: u64,
+        private len: u64,
+        private tombstones: u64,
+    }
+
+    export fn raw_table_new<K, V>() -> RawTable<K, V> {
+        return RawTable<K, V> {
+            states: 0 as u64 as *rw u8,
+            hashes: 0 as u64 as *rw u64,
+            keys: 0 as u64 as *rw K,
+            values: 0 as u64 as *rw V,
+            cap: 0 as u64,
+            len: 0 as u64,
+            tombstones: 0 as u64,
+        };
+    }
+
+    export fn raw_table_with_capacity<K, V>(capacity: u64) -> RawTable<K, V> {
+        if capacity == (0 as u64) {
+            return raw_table_new<K, V>();
+        }
+        dec rw cap: u64 = 8 as u64;
+        while cap < capacity {
+            cap = cap * (2 as u64);
+        }
+        dec k_size = cap * (mem::size_of<K>() as u64);
+        dec k_align = mem::align_of<K>() as u64;
+        dec v_size = cap * (mem::size_of<V>() as u64);
+        dec v_align = mem::align_of<V>() as u64;
+
+        dec states_ptr = __mellis_alloc(cap, 1 as u64);
+        dec hashes_ptr = __mellis_alloc(cap * (8 as u64), 8 as u64) as *rw u64;
+        dec keys_ptr = __mellis_alloc(k_size, k_align) as *rw K;
+        dec values_ptr = __mellis_alloc(v_size, v_align) as *rw V;
+
+        unsafe {
+            mem::zero(states_ptr, cap);
+        }
+
+        return RawTable<K, V> {
+            states: states_ptr,
+            hashes: hashes_ptr,
+            keys: keys_ptr,
+            values: values_ptr,
+            cap: cap,
+            len: 0 as u64,
+            tombstones: 0 as u64,
+        };
+    }
+
+    impl<K: Hash + Eq, V> RawTable<K, V> {
+        export fn len(self: &Self) -> u64 {
+            return self.len;
+        }
+
+        export fn capacity(self: &Self) -> u64 {
+            return self.cap;
+        }
+
+        export fn tombstones(self: &Self) -> u64 {
+            return self.tombstones;
+        }
+
+        export fn is_empty(self: &Self) -> bool {
+            return self.len == (0 as u64);
+        }
+
+        // Probing strategy: Linear probing with first-tombstone reuse.
+        // Search rule:
+        //   - Occupied: compare hash -> Eq
+        //   - Deleted: continue probing (never terminate search)
+        //   - Empty: terminate search
+        export fn find(self: &Self, key: &K, hash: u64) -> ProbeResult {
+            if self.cap == (0 as u64) {
+                return ProbeResult::Vacant(0 as u64);
+            }
+            dec mask = self.cap - (1 as u64);
+            dec rw idx = hash & mask;
+            dec rw first_tombstone: u64 = self.cap;
+            dec rw step: u64 = 0 as u64;
+
+            while step < self.cap {
+                dec rw state_val: u8 = 0 as u8;
+                unsafe {
+                    state_val = *ptr::add<u8>(self.states as *u8, idx);
+                }
+                if state_val == (0 as u8) {
+                    if first_tombstone < self.cap {
+                        return ProbeResult::Vacant(first_tombstone);
+                    } else {
+                        return ProbeResult::Vacant(idx);
+                    }
+                }
+                if state_val == (2 as u8) {
+                    if first_tombstone == self.cap {
+                        first_tombstone = idx;
+                    }
+                }
+                if state_val == (1 as u8) {
+                    dec rw stored_hash: u64 = 0 as u64;
+                    dec rw is_eq: bool = false;
+                    unsafe {
+                        stored_hash = *ptr::add<u64>(self.hashes as *u64, idx);
+                        if stored_hash == hash {
+                            dec stored_key_ptr = ptr::add<K>(self.keys as *K, idx);
+                            is_eq = key.eq(&*stored_key_ptr);
+                        }
+                    }
+                    if stored_hash == hash && is_eq {
+                        return ProbeResult::Found(idx);
+                    }
+                }
+                step = step + (1 as u64);
+                idx = (idx + (1 as u64)) & mask;
+            }
+
+            if first_tombstone < self.cap {
+                return ProbeResult::Vacant(first_tombstone);
+            }
+            return ProbeResult::Vacant(self.cap);
+        }
+
+        export fn insert(self: &rw Self, key: K, val: V) -> bool {
+            if self.cap == (0 as u64) || ((self.len + self.tombstones + (1 as u64)) * (4 as u64) >= self.cap * (3 as u64)) {
+                self.grow();
+            }
+            dec hash = key.hash();
+            dec probe = self.find(&key, hash);
+            match probe {
+                ProbeResult::Found(idx) -> {
+                    unsafe {
+                        dec val_dst = ptr::add_mut<V>(self.values, idx);
+                        ptr::drop_in_place<V>(val_dst);
+                        ptr::write<V>(val_dst, val);
+                    }
+                    return false;
+                },
+                ProbeResult::Vacant(idx) -> {
+                    unsafe {
+                        dec state_ptr = ptr::add_mut<u8>(self.states, idx);
+                        if *state_ptr == (2 as u8) {
+                            self.tombstones = self.tombstones - (1 as u64);
+                        }
+                        *state_ptr = 1 as u8;
+                        dec hash_ptr = ptr::add_mut<u64>(self.hashes, idx);
+                        *hash_ptr = hash;
+                        dec key_dst = ptr::add_mut<K>(self.keys, idx);
+                        ptr::write<K>(key_dst, key);
+                        dec val_dst = ptr::add_mut<V>(self.values, idx);
+                        ptr::write<V>(val_dst, val);
+                    }
+                    self.len = self.len + (1 as u64);
+                    return true;
+                },
+            }
+        }
+
+        export fn get(self: &Self, key: &K) -> Option<&V> life_from(self) {
+            if self.len == (0 as u64) {
+                return Option::None;
+            }
+            dec hash = key.hash();
+            dec probe = self.find(key, hash);
+            match probe {
+                ProbeResult::Found(idx) -> {
+                    unsafe {
+                        dec val_ptr = ptr::add<V>(self.values as *V, idx);
+                        return Option::Some(&*val_ptr);
+                    }
+                },
+                ProbeResult::Vacant(_) -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn get_mut(self: &rw Self, key: &K) -> Option<&rw V> life_from(self) {
+            if self.len == (0 as u64) {
+                return Option::None;
+            }
+            dec hash = key.hash();
+            dec probe = self.find(key, hash);
+            match probe {
+                ProbeResult::Found(idx) -> {
+                    unsafe {
+                        dec val_ptr = ptr::add_mut<V>(self.values, idx);
+                        return Option::Some(&rw *val_ptr);
+                    }
+                },
+                ProbeResult::Vacant(_) -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn contains_key(self: &Self, key: &K) -> bool {
+            if self.len == (0 as u64) {
+                return false;
+            }
+            dec hash = key.hash();
+            dec probe = self.find(key, hash);
+            match probe {
+                ProbeResult::Found(_) -> true,
+                ProbeResult::Vacant(_) -> false,
+            }
+        }
+
+        export fn remove(self: &rw Self, key: &K) -> bool {
+            if self.len == (0 as u64) {
+                return false;
+            }
+            dec hash = key.hash();
+            dec probe = self.find(key, hash);
+            match probe {
+                ProbeResult::Found(idx) -> {
+                    unsafe {
+                        dec key_ptr = ptr::add_mut<K>(self.keys, idx);
+                        ptr::drop_in_place<K>(key_ptr);
+                        dec val_ptr = ptr::add_mut<V>(self.values, idx);
+                        ptr::drop_in_place<V>(val_ptr);
+                        dec state_ptr = ptr::add_mut<u8>(self.states, idx);
+                        *state_ptr = 2 as u8;
+                    }
+                    self.len = self.len - (1 as u64);
+                    self.tombstones = self.tombstones + (1 as u64);
+                    return true;
+                },
+                ProbeResult::Vacant(_) -> {
+                    return false;
+                },
+            }
+        }
+
+        export fn clear(self: &rw Self) {
+            if self.len > (0 as u64) {
+                dec rw i: u64 = 0 as u64;
+                while i < self.cap {
+                    dec rw state_val: u8 = 0 as u8;
+                    unsafe {
+                        state_val = *ptr::add<u8>(self.states as *u8, i);
+                        if state_val == (1 as u8) {
+                            ptr::drop_in_place<K>(ptr::add_mut<K>(self.keys, i));
+                            ptr::drop_in_place<V>(ptr::add_mut<V>(self.values, i));
+                        }
+                    }
+                    i = i + (1 as u64);
+                }
+                unsafe {
+                    mem::zero(self.states, self.cap);
+                }
+                self.len = 0 as u64;
+                self.tombstones = 0 as u64;
+            }
+        }
+
+        fn grow(self: &rw Self) {
+            dec rw new_cap: u64 = 8 as u64;
+            if self.cap > (0 as u64) {
+                if self.len * (2 as u64) <= self.cap {
+                    new_cap = self.cap;
+                } else {
+                    new_cap = self.cap * (2 as u64);
+                }
+            }
+
+            dec k_size = new_cap * (mem::size_of<K>() as u64);
+            dec k_align = mem::align_of<K>() as u64;
+            dec v_size = new_cap * (mem::size_of<V>() as u64);
+            dec v_align = mem::align_of<V>() as u64;
+
+            dec new_states = __mellis_alloc(new_cap, 1 as u64);
+            dec new_hashes = __mellis_alloc(new_cap * (8 as u64), 8 as u64) as *rw u64;
+            dec new_keys = __mellis_alloc(k_size, k_align) as *rw K;
+            dec new_values = __mellis_alloc(v_size, v_align) as *rw V;
+
+            unsafe {
+                mem::zero(new_states, new_cap);
+            }
+
+            if self.cap > (0 as u64) {
+                dec new_mask = new_cap - (1 as u64);
+                dec rw i: u64 = 0 as u64;
+                while i < self.cap {
+                    dec rw state_val: u8 = 0 as u8;
+                    unsafe {
+                        state_val = *ptr::add<u8>(self.states as *u8, i);
+                    }
+                    if state_val == (1 as u8) {
+                        unsafe {
+                            dec cached_hash = *ptr::add<u64>(self.hashes as *u64, i);
+                            dec k = ptr::read<K>(ptr::add<K>(self.keys as *K, i));
+                            dec v = ptr::read<V>(ptr::add<V>(self.values as *V, i));
+
+                            dec rw new_idx = cached_hash & new_mask;
+                            while *ptr::add<u8>(new_states as *u8, new_idx) != (0 as u8) {
+                                new_idx = (new_idx + (1 as u64)) & new_mask;
+                            }
+
+                            *ptr::add_mut<u8>(new_states, new_idx) = 1 as u8;
+                            *ptr::add_mut<u64>(new_hashes, new_idx) = cached_hash;
+                            ptr::write<K>(ptr::add_mut<K>(new_keys, new_idx), k);
+                            ptr::write<V>(ptr::add_mut<V>(new_values, new_idx), v);
+                        }
+                    }
+                    i = i + (1 as u64);
+                }
+
+                dec old_k_size = self.cap * (mem::size_of<K>() as u64);
+                dec old_k_align = mem::align_of<K>() as u64;
+                dec old_v_size = self.cap * (mem::size_of<V>() as u64);
+                dec old_v_align = mem::align_of<V>() as u64;
+
+                unsafe {
+                    __mellis_dealloc(self.states, self.cap, 1 as u64);
+                    __mellis_dealloc(self.hashes as *rw u8, self.cap * (8 as u64), 8 as u64);
+                    __mellis_dealloc(self.keys as *rw u8, old_k_size, old_k_align);
+                    __mellis_dealloc(self.values as *rw u8, old_v_size, old_v_align);
+                }
+            }
+
+            self.states = new_states;
+            self.hashes = new_hashes;
+            self.keys = new_keys;
+            self.values = new_values;
+            self.cap = new_cap;
+            self.tombstones = 0 as u64;
+        }
+
+        export fn iter(self: &Self) -> RawTableIter<K, V> {
+            return RawTableIter<K, V> {
+                states: self.states as *u8,
+                keys: self.keys as *K,
+                values: self.values as *V,
+                idx: 0 as u64,
+                cap: self.cap,
+            };
+        }
+    }
+
+    impl<K, V> Drop for RawTable<K, V> {
+        fn drop(self: &rw Self) {
+            if (self.states as u64) != (0 as u64) && self.cap > (0 as u64) {
+                dec rw i: u64 = 0 as u64;
+                while i < self.cap {
+                    dec rw state_val: u8 = 0 as u8;
+                    unsafe {
+                        state_val = *ptr::add<u8>(self.states as *u8, i);
+                        if state_val == (1 as u8) {
+                            ptr::drop_in_place<K>(ptr::add_mut<K>(self.keys, i));
+                            ptr::drop_in_place<V>(ptr::add_mut<V>(self.values, i));
+                        }
+                    }
+                    i = i + (1 as u64);
+                }
+                dec k_size = self.cap * (mem::size_of<K>() as u64);
+                dec k_align = mem::align_of<K>() as u64;
+                dec v_size = self.cap * (mem::size_of<V>() as u64);
+                dec v_align = mem::align_of<V>() as u64;
+
+                unsafe {
+                    __mellis_dealloc(self.states, self.cap, 1 as u64);
+                    __mellis_dealloc(self.hashes as *rw u8, self.cap * (8 as u64), 8 as u64);
+                    __mellis_dealloc(self.keys as *rw u8, k_size, k_align);
+                    __mellis_dealloc(self.values as *rw u8, v_size, v_align);
+                }
+
+                self.states = 0 as u64 as *rw u8;
+                self.hashes = 0 as u64 as *rw u64;
+                self.keys = 0 as u64 as *rw K;
+                self.values = 0 as u64 as *rw V;
+                self.cap = 0 as u64;
+                self.len = 0 as u64;
+                self.tombstones = 0 as u64;
+            }
+        }
+    }
+
+    // =========================================================================
+    // Collection Iterators: RawTableIter, MapIter, Keys, Values
+    // =========================================================================
+    export struct RawTableIter<K, V> {
+        private states: *u8,
+        private keys: *K,
+        private values: *V,
+        private idx: u64,
+        private cap: u64,
+    }
+
+    impl<K, V> RawTableIter<K, V> {
+        export fn next_entry(self: &rw Self) -> Option<(&K, &V)> {
+            while self.idx < self.cap {
+                dec cur = self.idx;
+                self.idx = self.idx + (1 as u64);
+                unsafe {
+                    dec state_val = *ptr::add<u8>(self.states, cur);
+                    if state_val == (1 as u8) {
+                        dec k_ptr = ptr::add<K>(self.keys, cur);
+                        dec v_ptr = ptr::add<V>(self.values, cur);
+                        return Option::Some((&*k_ptr, &*v_ptr));
+                    }
+                }
+            }
+            return Option::None;
+        }
+
+        export fn next_key(self: &rw Self) -> Option<&K> {
+            while self.idx < self.cap {
+                dec cur = self.idx;
+                self.idx = self.idx + (1 as u64);
+                unsafe {
+                    dec state_val = *ptr::add<u8>(self.states, cur);
+                    if state_val == (1 as u8) {
+                        dec k_ptr = ptr::add<K>(self.keys, cur);
+                        return Option::Some(&*k_ptr);
+                    }
+                }
+            }
+            return Option::None;
+        }
+
+        export fn next_value(self: &rw Self) -> Option<&V> {
+            while self.idx < self.cap {
+                dec cur = self.idx;
+                self.idx = self.idx + (1 as u64);
+                unsafe {
+                    dec state_val = *ptr::add<u8>(self.states, cur);
+                    if state_val == (1 as u8) {
+                        dec v_ptr = ptr::add<V>(self.values, cur);
+                        return Option::Some(&*v_ptr);
+                    }
+                }
+            }
+            return Option::None;
+        }
+    }
+
+    export struct MapIter<K, V> {
+        private raw: RawTableIter<K, V>,
+    }
+
+    impl<K, V> MapIter<K, V> {
+        export fn next(self: &rw Self) -> Option<(&K, &V)> {
+            return self.raw.next_entry();
+        }
+    }
+
+    impl<K, V> Iterator<(&K, &V)> for MapIter<K, V> {
+        fn next(self: &rw Self) -> Option<(&K, &V)> {
+            return self.raw.next_entry();
+        }
+    }
+
+    export struct Keys<K, V> {
+        private raw: RawTableIter<K, V>,
+    }
+
+    impl<K, V> Keys<K, V> {
+        export fn next(self: &rw Self) -> Option<&K> {
+            return self.raw.next_key();
+        }
+    }
+
+    impl<K, V> Iterator<&K> for Keys<K, V> {
+        fn next(self: &rw Self) -> Option<&K> {
+            return self.raw.next_key();
+        }
+    }
+
+    export struct Values<K, V> {
+        private raw: RawTableIter<K, V>,
+    }
+
+    impl<K, V> Values<K, V> {
+        export fn next(self: &rw Self) -> Option<&V> {
+            return self.raw.next_value();
+        }
+    }
+
+    impl<K, V> Iterator<&V> for Values<K, V> {
+        fn next(self: &rw Self) -> Option<&V> {
+            return self.raw.next_value();
+        }
+    }
+
+    // =========================================================================
+    // HashMap<K, V>: Canonical Key-Value Hash Map Collection
+    //
+    // Thin semantic wrapper around RawTable<K, V>.
+    // =========================================================================
+    export struct HashMap<K, V> {
+        private table: RawTable<K, V>,
+    }
+
+    export fn hashmap_new<K, V>() -> HashMap<K, V> {
+        return HashMap<K, V> {
+            table: raw_table_new<K, V>(),
+        };
+    }
+
+    export fn hashmap_with_capacity<K, V>(capacity: u64) -> HashMap<K, V> {
+        return HashMap<K, V> {
+            table: raw_table_with_capacity<K, V>(capacity),
+        };
+    }
+
+    impl<K: Hash + Eq, V> HashMap<K, V> {
+        export fn len(self: &Self) -> u64 {
+            return self.table.len();
+        }
+
+        export fn capacity(self: &Self) -> u64 {
+            return self.table.capacity();
+        }
+
+        export fn is_empty(self: &Self) -> bool {
+            return self.table.is_empty();
+        }
+
+        export fn insert(self: &rw Self, key: K, val: V) -> bool {
+            return self.table.insert(key, val);
+        }
+
+        export fn get(self: &Self, key: &K) -> Option<&V> life_from(self) {
+            return self.table.get(key);
+        }
+
+        export fn get_mut(self: &rw Self, key: &K) -> Option<&rw V> life_from(self) {
+            return self.table.get_mut(key);
+        }
+
+        export fn contains_key(self: &Self, key: &K) -> bool {
+            return self.table.contains_key(key);
+        }
+
+        export fn remove(self: &rw Self, key: &K) -> bool {
+            return self.table.remove(key);
+        }
+
+        export fn clear(self: &rw Self) {
+            self.table.clear();
+        }
+
+        export fn iter(self: &Self) -> MapIter<K, V> {
+            return MapIter<K, V> {
+                raw: self.table.iter(),
+            };
+        }
+
+        export fn keys(self: &Self) -> Keys<K, V> {
+            return Keys<K, V> {
+                raw: self.table.iter(),
+            };
+        }
+
+        export fn values(self: &Self) -> Values<K, V> {
+            return Values<K, V> {
+                raw: self.table.iter(),
+            };
+        }
+    }
+
+    export struct SetIter<T> {
+        private keys: Keys<T, ()>,
+    }
+
+    impl<T> SetIter<T> {
+        export fn next(self: &rw Self) -> Option<&T> {
+            return self.keys.next();
+        }
+    }
+
+    impl<T> Iterator<&T> for SetIter<T> {
+        fn next(self: &rw Self) -> Option<&T> {
+            return self.keys.next();
+        }
+    }
+
+    export struct HashSet<T> {
+        private map: HashMap<T, ()>,
+    }
+
+    export fn hashset_new<T>() -> HashSet<T> {
+        return HashSet {
+            map: hashmap_new<T, ()>(),
+        };
+    }
+
+    export fn hashset_with_capacity<T>(capacity: u64) -> HashSet<T> {
+        return HashSet {
+            map: hashmap_with_capacity<T, ()>(capacity),
+        };
+    }
+
+    impl<T: Hash + Eq> HashSet<T> {
+        export fn len(self: &Self) -> u64 {
+            return self.map.len();
+        }
+
+        export fn capacity(self: &Self) -> u64 {
+            return self.map.capacity();
+        }
+
+        export fn is_empty(self: &Self) -> bool {
+            return self.map.is_empty();
+        }
+
+        export fn insert(self: &rw Self, value: T) -> bool {
+            return self.map.insert(value, ());
+        }
+
+        export fn contains(self: &Self, value: &T) -> bool {
+            return self.map.contains_key(value);
+        }
+
+        export fn remove(self: &rw Self, value: &T) -> bool {
+            return self.map.remove(value);
+        }
+
+        export fn clear(self: &rw Self) {
+            self.map.clear();
+        }
+
+        export fn iter(self: &Self) -> SetIter<T> {
+            return SetIter<T> {
+                keys: self.map.keys(),
+            };
+        }
+    }
+}
+
+export type String = std::String;
+export fn string_new() -> String {
+    return std::string_new();
+}
+export fn string_with_capacity(capacity: u64) -> String {
+    return std::string_with_capacity(capacity);
+}
+export fn string_from_str(s: str) -> String {
+    return std::string_from_str(s);
+}
+export fn string_from_bytes(bytes: &[u8]) -> Option<String> {
+    return std::string_from_bytes(bytes);
+}
+
+export type ProbeResult = std::ProbeResult;
+export type RawTable<K, V> = std::RawTable<K, V>;
+export fn raw_table_new<K, V>() -> RawTable<K, V> {
+    return std::raw_table_new<K, V>();
+}
+export fn raw_table_with_capacity<K, V>(capacity: u64) -> RawTable<K, V> {
+    return std::raw_table_with_capacity<K, V>(capacity);
+}
+
+export type RawTableIter<K, V> = std::RawTableIter<K, V>;
+export type MapIter<K, V> = std::MapIter<K, V>;
+export type Keys<K, V> = std::Keys<K, V>;
+export type Values<K, V> = std::Values<K, V>;
+export type SetIter<T> = std::SetIter<T>;
+
+export type HashMap<K, V> = std::HashMap<K, V>;
+export fn hashmap_new<K, V>() -> HashMap<K, V> {
+    return std::hashmap_new<K, V>();
+}
+export fn hashmap_with_capacity<K, V>(capacity: u64) -> HashMap<K, V> {
+    return std::hashmap_with_capacity<K, V>(capacity);
+}
+
+export type HashSet<T> = std::HashSet<T>;
+export fn hashset_new<T>() -> HashSet<T> {
+    return std::hashset_new<T>();
+}
+export fn hashset_with_capacity<T>(capacity: u64) -> HashSet<T> {
+    return std::hashset_with_capacity<T>(capacity);
+}
+
+
+
