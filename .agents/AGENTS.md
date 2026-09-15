@@ -44,3 +44,9 @@
 10. Ownership Abstraction Guard Rule (BOX-FROZEN):
    - **Generic Ownership Parity:** Any future ownership abstraction (e.g., `Rc<T>`, `Arc<T>`, custom smart pointers, allocator containers) must be expressible strictly through existing generic ownership, move, drop, borrow, lifetime, and memory primitives (`ptr`/`mem`/`HeapFree`).
    - **No Compiler Builtin Containers:** The compiler must never re-introduce specialized semantic types, dedicated borrowck branches, or distinguished MIR instructions for specific library ownership containers unless a new language-level semantic contract is explicitly justified and frozen.
+
+11. Stdlib–Compiler Boundary Rule (luna-stdlib-compiler-boundary):
+   - **Mandatory Separation:** The standard library is a consumer of the language, not an extension of the compiler's type system.
+   - **No Type-Specific Branches or Opcodes:** The compiler MUST NOT acquire type-specific semantic knowledge, IR opcodes, or backend lowering branches for stdlib containers (`Box`, `Vec`, `String`, `HashMap`, `HashSet`, etc.).
+   - **Capability-Gap Protocol:** Compiler fixes made during stdlib development must be generic language machinery fixes benefiting arbitrary user-defined types.
+   - **Mandatory Reporting:** Walkthroughs modifying compiler code during stdlib development must follow the mandatory reporting format defined in `luna-stdlib-compiler-boundary`.

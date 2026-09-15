@@ -266,6 +266,9 @@ Semantic interpretation:
 
 When implementing lifetime-aware stdlib APIs, the agent MUST use these relations. Do not rely on implicit lifetime assumptions merely because an API "looks like" a Rust equivalent.
 
+> [!NOTE]
+> **Lifetime Elision (LLE-v1)** is frozen. When `life_from` or `where outlives` can be unambiguously inferred from a single legal provenance candidate, the programmer may omit the annotation. See [LLE-v1 RFC](file:///d:/fdlang/.agents/skills/luna-semantic-compliance/references/lle_v1_rfc.md) for the complete inference rules and per-dimension suppression semantics.
+
 ---
 
 # 6. Provenance Is Semantic Contract, Not Borrowck Implementation Detail
