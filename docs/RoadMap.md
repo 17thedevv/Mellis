@@ -39,6 +39,12 @@ Phase 2 — Usable Language (Ecosystem)
 ░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 [ ] Standard Library (lib/std)
+    ├─ 05.4A Generic for-in                  ✅ FROZEN
+    ├─ C-GAP-COHERENCE                       ✅ FROZEN
+    ├─ 05.4B Vec IntoIterator                ✅ FROZEN
+    ├─ C-GAP-BORROWCK-REACHABILITY           ✅ FROZEN
+    ├─ 05.4C HashMap/HashSet Iterators       ✅ FROZEN
+    └─ 05.4D String IntoIterator             🔄 NEXT
 [ ] Core runtime (Async Executor)
 [x] Lambda / Closures implementation (Phase 12D ✅)
 [ ] Advanced Unsafe validation

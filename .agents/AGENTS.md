@@ -50,3 +50,13 @@
    - **No Type-Specific Branches or Opcodes:** The compiler MUST NOT acquire type-specific semantic knowledge, IR opcodes, or backend lowering branches for stdlib containers (`Box`, `Vec`, `String`, `HashMap`, `HashSet`, etc.).
    - **Capability-Gap Protocol:** Compiler fixes made during stdlib development must be generic language machinery fixes benefiting arbitrary user-defined types.
    - **Mandatory Reporting:** Walkthroughs modifying compiler code during stdlib development must follow the mandatory reporting format defined in `luna-stdlib-compiler-boundary`.
+
+12. Testing Strategy Boundary Rule (luna-testing-strategy):
+   - **Highest Public Abstraction Boundary:** Test at the highest abstraction boundary that can faithfully observe the claimed behavior.
+   - **Layer Separation:**
+     - Compiler Internals & Invariants (coherence, typechecker, borrowck, mono, MVIR, backend) -> Rust `cargo test`.
+     - Language & Standard Library Behavior -> standalone `.ln` fixtures executed through `luna` CLI.
+     - Source vs `.llib` Parity -> CLI E2E tests verifying identical public behavior.
+     - Freeze Regression -> CLI harness orchestration.
+   - **No Convenience Rust Stdlib Suites:** Do not create `crates/luna-driver/tests/stdlib_*` suites merely because internal Rust driver helpers are convenient. First determine whether the behavior can be expressed as a standalone `.ln` fixture executed through `luna`.
+   - **Compiler Gap Protocol:** When a compiler gap is encountered during stdlib development, stop stdlib work, isolate the bug with a user-defined reproducer in a dedicated `C-GAP-*` test, and freeze the generic compiler fix before resuming stdlib work.
