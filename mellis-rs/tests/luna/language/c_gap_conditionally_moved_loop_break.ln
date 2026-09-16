@@ -1,0 +1,61 @@
+import <core>;
+
+struct Dummy<T> {}
+
+trait MyIntoIterator<T> {
+    fn into_iter(self) -> DummyIter<T>;
+}
+
+impl<T> MyIntoIterator<T> for Dummy<T> {
+    fn into_iter(self) -> DummyIter<T> {
+        return DummyIter<T> {};
+    }
+}
+
+struct DummyIter<T> {}
+
+trait MyIterator<Item> {
+    fn next(self: &rw Self) -> Option<Item>;
+}
+
+impl<T> MyIterator<T> for DummyIter<T> {
+    fn next(self: &rw Self) -> Option<T> {
+        return Option::None<T>();
+    }
+}
+
+impl<T> Dummy<T> {
+    fn insert(self: &rw Self) {}
+}
+
+impl<T> Drop for Dummy<T> {
+    fn drop(self: &rw Self) {}
+}
+
+fn test_cgap() -> i32 {
+    dec rw set = Dummy<u64> {};
+    set.insert();
+    
+    dec rw iter = set.into_iter();
+    
+    dec rw count = 0;
+    while true {
+        dec opt = iter.next();
+        if opt.is_some() {
+            count = count + 1;
+            break;
+        } else {
+            break;
+        }
+    }
+
+    if count != 1 {
+        return 1;
+    }
+    return 0;
+}
+
+export fn main() -> i32 {
+    test_cgap();
+    return 0;
+}

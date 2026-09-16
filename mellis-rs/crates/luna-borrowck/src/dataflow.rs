@@ -1,4 +1,4 @@
-﻿use luna_mvir::{BasicBlock, Function};
+use luna_mvir::{BasicBlock, Function};
 use std::collections::HashMap;
 
 pub trait DataflowAnalysis<State> {
@@ -58,6 +58,11 @@ impl DataflowEngine {
             block_states.insert(entry.label.name.clone(), entry_state);
         }
 
+        let mut reachable: std::collections::HashSet<String> = std::collections::HashSet::new();
+        if let Some(entry) = func.blocks.first() {
+            reachable.insert(entry.label.name.clone());
+        }
+
         let mut changed = true;
         let mut iterations = 0;
         
@@ -66,6 +71,10 @@ impl DataflowEngine {
             iterations += 1;
 
             for block in &func.blocks {
+                if !reachable.contains(&block.label.name) {
+                    continue;
+                }
+
                 let mut current_state = block_states[&block.label.name].clone();
 
                 for &val_id in &block.insts {
@@ -90,6 +99,11 @@ impl DataflowEngine {
                     };
 
                     for succ in successors {
+                        if !reachable.contains(&succ) {
+                            reachable.insert(succ.clone());
+                            changed = true; // Need to process this new reachable block
+                        }
+                        
                         let dest_state = block_states.get_mut(&succ).unwrap();
                         if analysis.merge(dest_state, &current_state) {
                             changed = true;

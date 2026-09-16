@@ -126,7 +126,7 @@ fn test_case_04_unsized_function_return_rejected() {
             fn f(self: &Self) -> i32;
         }
         fn ret_dyn() -> dyn Foo {
-            loop {}
+            while true {}
         }
         fn main() -> i32 { return 0; }
     "#;

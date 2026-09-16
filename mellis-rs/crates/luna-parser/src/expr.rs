@@ -556,7 +556,7 @@ impl<'a> Parser<'a> {
                         member: member_tok.span,
                     });
                 }
-            } else if allow_struct_literal && self.check(TokenKind::LBrace) {
+            } else if allow_struct_literal && self.is_struct_literal_ahead() {
                 if let Expr::Identifier {
                     segments,
                     generic_args,
@@ -592,6 +592,30 @@ impl<'a> Parser<'a> {
             }
         }
         Ok(expr)
+    }
+
+    fn is_struct_literal_ahead(&self) -> bool {
+        if !self.check(TokenKind::LBrace) {
+            return false;
+        }
+        if self.pos + 1 < self.tokens.len() {
+            if self.tokens[self.pos + 1].kind == TokenKind::Identifier
+                && self.pos + 2 < self.tokens.len()
+                && self.tokens[self.pos + 2].kind == TokenKind::Colon
+            {
+                return true;
+            }
+            if self.tokens[self.pos + 1].kind == TokenKind::RBrace {
+                if self.pos + 2 < self.tokens.len() && self.tokens[self.pos + 2].kind == TokenKind::LBrace {
+                    return true;
+                }
+                let next_k = if self.pos + 2 < self.tokens.len() { self.tokens[self.pos + 2].kind } else { TokenKind::Eof };
+                if matches!(next_k, TokenKind::Semi | TokenKind::Comma | TokenKind::RParen | TokenKind::RBracket | TokenKind::Dot) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn parse_value_path(&mut self) -> Result<ExprId, ()> {
