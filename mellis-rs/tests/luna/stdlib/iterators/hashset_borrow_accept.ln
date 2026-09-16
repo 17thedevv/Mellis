@@ -1,0 +1,22 @@
+import <core>;
+import <alloc>;
+
+fn test_borrow_accept() -> i32 {
+    dec rw set = hashset_new<u64>();
+    set.insert(10 as u64);
+    
+    dec rw count = 0 as u64;
+    for k in &set {
+        count = count + (1 as u64);
+    }
+    
+    // Iterator has died since the loop finished, set should be mutable again
+    set.insert(20 as u64);
+
+    return 0;
+}
+
+export fn main() -> i32 {
+    test_borrow_accept();
+    return 0;
+}

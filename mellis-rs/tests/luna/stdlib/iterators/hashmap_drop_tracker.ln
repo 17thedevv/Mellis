@@ -1,0 +1,68 @@
+import <core>;
+import <alloc>;
+
+struct Tracker {
+    id: u64,
+    count_ptr: *rw u64,
+}
+
+impl Drop for Tracker {
+    fn drop(self: &rw Self) {
+        unsafe {
+            dec current = ptr::read(self.count_ptr as *u64);
+            ptr::write(self.count_ptr, current + (1 as u64));
+        }
+    }
+}
+
+impl Hash for Tracker {
+    fn hash(self: &Self) -> u64 {
+        return self.id;
+    }
+}
+
+impl Eq for Tracker {
+    fn eq(self: &Self, other: &Self) -> bool {
+        return self.id == other.id;
+    }
+}
+
+fn test_c7() -> i32 {
+    dec rw dropped_keys = 0 as u64;
+    dec rw dropped_vals = 0 as u64;
+    
+    dec k_ptr = &rw dropped_keys as *rw u64;
+    dec v_ptr = &rw dropped_vals as *rw u64;
+
+    dec rw map = hashmap_new<Tracker, Tracker>();
+    map.insert(
+        Tracker { id: 10 as u64, count_ptr: k_ptr },
+        Tracker { id: 100 as u64, count_ptr: v_ptr }
+    );
+    map.insert(
+        Tracker { id: 20 as u64, count_ptr: k_ptr },
+        Tracker { id: 200 as u64, count_ptr: v_ptr }
+    );
+    map.insert(
+        Tracker { id: 30 as u64, count_ptr: k_ptr },
+        Tracker { id: 300 as u64, count_ptr: v_ptr }
+    );
+
+    dec rw count = 0 as u64;
+    for (k, v) in map {
+        count = count + (1 as u64);
+        break;
+    }
+
+    if dropped_keys != (3 as u64) {
+        return 1;
+    }
+    if dropped_vals != (3 as u64) {
+        return 2;
+    }
+    return 0;
+}
+
+export fn main() -> i32 {
+    return test_c7();
+}

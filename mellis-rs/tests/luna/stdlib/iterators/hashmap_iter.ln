@@ -1,0 +1,8 @@
+import <alloc>;
+
+fn main() {
+    let map = alloc::hashmap_new<int, int>();
+    for (k, v) in map {
+        
+    }
+}

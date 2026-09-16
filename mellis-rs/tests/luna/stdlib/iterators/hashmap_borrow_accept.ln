@@ -1,0 +1,22 @@
+import <core>;
+import <alloc>;
+
+fn test_borrow_accept() -> i32 {
+    dec rw map = hashmap_new<u64, u64>();
+    map.insert(10 as u64, 100 as u64);
+    
+    dec rw count = 0 as u64;
+    for (k, v) in &map {
+        count = count + (1 as u64);
+    }
+    
+    // Iterator has died since the loop finished, map should be mutable again
+    map.insert(20 as u64, 200 as u64);
+
+    return 0;
+}
+
+export fn main() -> i32 {
+    test_borrow_accept();
+    return 0;
+}

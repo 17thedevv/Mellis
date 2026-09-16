@@ -92,6 +92,81 @@ export fn vec_with_capacity<T>(capacity: u64) -> Vec<T> {
 export type VecIter<T> = SliceIter<T>;
 export type VecIterMut<T> = SliceIterMut<T>;
 
+// =========================================================================
+// VecIntoIter: Owned, consuming iterator over Vec<T>
+// =========================================================================
+export struct VecIntoIter<T> {
+    private ptr: *rw T,
+    private len: u64,
+    private cap: u64,
+    private index: u64,
+}
+
+impl<T> Iterator<T> for VecIntoIter<T> {
+    fn next(self: &rw Self) -> Option<T> {
+        if self.index >= self.len {
+            return Option::None;
+        }
+        unsafe {
+            dec item_ptr = ptr::add_mut<T>(self.ptr, self.index);
+            dec val = ptr::read<T>(item_ptr as *T);
+            self.index = self.index + (1 as u64);
+            return Option::Some(val);
+        }
+    }
+}
+
+impl<T> Drop for VecIntoIter<T> {
+    fn drop(self: &rw Self) {
+        while self.index < self.len {
+            unsafe {
+                dec item_ptr = ptr::add_mut<T>(self.ptr, self.index);
+                ptr::drop_in_place<T>(item_ptr);
+            }
+            self.index = self.index + (1 as u64);
+        }
+        if self.cap > (0 as u64) {
+            dec size = self.cap * (mem::size_of<T>() as u64);
+            dec align = mem::align_of<T>() as u64;
+            unsafe {
+                __mellis_dealloc(self.ptr as *rw u8, size, align);
+            }
+            self.ptr = 0 as u64 as *rw T;
+            self.cap = 0 as u64;
+            self.len = 0 as u64;
+        }
+    }
+}
+
+// =========================================================================
+// IntoIterator implementations for Vec<T>
+// =========================================================================
+
+// Owned: consumes Vec
+impl<T> IntoIterator<T, VecIntoIter<T>> for Vec<T> {
+    fn into_iter(self: Self) -> VecIntoIter<T> {
+        dec rw result = VecIntoIter<T> {
+            ptr: self.ptr,
+            len: self.len,
+            cap: self.cap,
+            index: 0 as u64,
+        };
+        self.ptr = 0 as u64 as *rw T;
+        self.len = 0 as u64;
+        self.cap = 0 as u64;
+        return result;
+    }
+}
+
+// Borrowed: yields &T
+impl<T> IntoIterator<&T, SliceIter<T>> for &Vec<T> {
+    fn into_iter(self: Self) -> SliceIter<T> {
+        return slice_iter<T>(self.as_slice());
+    }
+}
+
+
+
 impl<T> Vec<T> {
     export fn push(self: &rw Self, item: T) {
         if self.len == self.cap {
@@ -898,8 +973,76 @@ module std {
     }
 
     // =========================================================================
-    // Collection Iterators: RawTableIter, MapIter, Keys, Values
+    // Collection Iterators: RawTableIter, MapIter, Keys, Values, RawTableIntoIter, MapIntoIter, SetIntoIter
     // =========================================================================
+
+    export struct RawTableIntoIter<K, V> {
+        private table: RawTable<K, V>,
+        private idx: u64,
+    }
+
+    impl<K, V> RawTableIntoIter<K, V> {
+        export fn next(self: &rw Self) -> Option<(K, V)> {
+            while self.idx < self.table.capacity() {
+                dec cur = self.idx;
+                self.idx = self.idx + (1 as u64);
+                unsafe {
+                    dec state_ptr = ptr::add_mut<u8>(self.table.states as *rw u8, cur);
+                    dec state_val = *state_ptr;
+                    if state_val == (1 as u8) {
+                        *state_ptr = 0 as u8;
+                        dec k_ptr = ptr::add<K>(self.table.keys as *K, cur);
+                        dec v_ptr = ptr::add<V>(self.table.values as *V, cur);
+                        dec k = ptr::read<K>(k_ptr);
+                        dec v = ptr::read<V>(v_ptr);
+                        return Option::Some((k, v));
+                    }
+                }
+            }
+            return Option::None;
+        }
+    }
+
+    export struct MapIntoIter<K, V> {
+        private raw: RawTableIntoIter<K, V>,
+    }
+
+    impl<K, V> MapIntoIter<K, V> {
+        export fn next(self: &rw Self) -> Option<(K, V)> {
+            return self.raw.next();
+        }
+    }
+
+    impl<K, V> Iterator<(K, V)> for MapIntoIter<K, V> {
+        fn next(self: &rw Self) -> Option<(K, V)> {
+            return self.raw.next();
+        }
+    }
+
+    export struct SetIntoIter<T> {
+        private map: MapIntoIter<T, ()>,
+    }
+
+    impl<T> SetIntoIter<T> {
+        export fn next(self: &rw Self) -> Option<T> {
+            dec opt = self.map.next();
+            match opt {
+                Option::Some(tup) -> {
+                    return Option::Some(tup.0);
+                }
+                Option::None -> {
+                    return Option::None;
+                }
+            }
+        }
+    }
+
+    impl<T> Iterator<T> for SetIntoIter<T> {
+        fn next(self: &rw Self) -> Option<T> {
+            return self.next();
+        }
+    }
+
     export struct RawTableIter<K, V> {
         private states: *u8,
         private keys: *K,
@@ -1068,6 +1211,15 @@ module std {
             };
         }
 
+        export fn into_iter(self: Self) -> MapIntoIter<K, V> {
+            return MapIntoIter<K, V> {
+                raw: RawTableIntoIter<K, V> {
+                    table: self.table,
+                    idx: 0 as u64,
+                }
+            };
+        }
+
         export fn keys(self: &Self) -> Keys<K, V> {
             return Keys<K, V> {
                 raw: self.table.iter(),
@@ -1147,6 +1299,12 @@ module std {
                 keys: self.map.keys(),
             };
         }
+
+        export fn into_iter(self: Self) -> SetIntoIter<T> {
+            return SetIntoIter<T> {
+                map: self.map.into_iter(),
+            };
+        }
     }
 }
 
@@ -1178,6 +1336,10 @@ export type MapIter<K, V> = std::MapIter<K, V>;
 export type Keys<K, V> = std::Keys<K, V>;
 export type Values<K, V> = std::Values<K, V>;
 export type SetIter<T> = std::SetIter<T>;
+export type RawTableIntoIter<K, V> = std::RawTableIntoIter<K, V>;
+export type MapIntoIter<K, V> = std::MapIntoIter<K, V>;
+export type SetIntoIter<T> = std::SetIntoIter<T>;
+
 
 export type HashMap<K, V> = std::HashMap<K, V>;
 export fn hashmap_new<K, V>() -> HashMap<K, V> {
@@ -1247,4 +1409,29 @@ export fn iter_collect_hashmap<I: Iterator<(K, V)>, K: Hash + Eq, V>(iter: I) ->
         }
     }
     return map;
+}
+
+
+impl<K, V> IntoIterator<(K, V), MapIntoIter<K, V>> for std::HashMap<K, V> {
+    fn into_iter(self: Self) -> MapIntoIter<K, V> {
+        return self.into_iter();
+    }
+}
+
+impl<K, V> IntoIterator<(&K, &V), MapIter<K, V>> for &std::HashMap<K, V> {
+    fn into_iter(self: Self) -> MapIter<K, V> {
+        return self.iter();
+    }
+}
+
+impl<T> IntoIterator<T, SetIntoIter<T>> for std::HashSet<T> {
+    fn into_iter(self: Self) -> SetIntoIter<T> {
+        return self.into_iter();
+    }
+}
+
+impl<T> IntoIterator<&T, SetIter<T>> for &std::HashSet<T> {
+    fn into_iter(self: Self) -> SetIter<T> {
+        return self.iter();
+    }
 }

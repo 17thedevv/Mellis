@@ -1,0 +1,26 @@
+import <core>;
+import <alloc>;
+
+fn test_hashset_for_in_break() -> i32 {
+    dec rw set = hashset_new<u64>();
+    set.insert(10 as u64);
+    set.insert(20 as u64);
+    set.insert(30 as u64);
+
+    dec rw count = 0 as u64;
+
+    for x in set {
+        count = count + (1 as u64);
+        break;
+    }
+
+    if count != (1 as u64) {
+        return 1;
+    }
+    return 0;
+}
+
+export fn main() -> i32 {
+    test_hashset_for_in_break();
+    return 0;
+}
