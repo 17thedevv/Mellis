@@ -1,0 +1,26 @@
+// SEM-TRAIT-01: valid user-defined generic trait bound and impl dispatch.
+trait Convert<T> {
+    fn convert(self: &Self) -> T;
+}
+
+struct Meter {
+    value: i32,
+}
+
+impl Convert<i32> for Meter {
+    fn convert(self: &Self) -> i32 {
+        return self.value;
+    }
+}
+
+fn read_as_i32<S: Convert<i32>>(source: &S) -> i32 {
+    return source.convert();
+}
+
+fn main() -> i32 {
+    dec meter = Meter { value: 42 };
+    if read_as_i32<Meter>(&meter) == 42 {
+        return 0;
+    }
+    return 1;
+}

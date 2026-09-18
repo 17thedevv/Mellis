@@ -1,0 +1,25 @@
+// SEM-GENERIC-01: valid nested user-defined generics and declaration-local names.
+struct BoxLike<T> {
+    value: T,
+}
+
+struct Pair<T, U> {
+    first: T,
+    second: U,
+}
+
+fn wrap<T>(value: T) -> BoxLike<T> {
+    return BoxLike<T> { value: value };
+}
+
+fn pair<T, U>(first: T, second: U) -> Pair<T, U> {
+    return Pair<T, U> { first: first, second: second };
+}
+
+fn main() -> i32 {
+    dec nested = pair<BoxLike<i32>, BoxLike<bool>>(wrap<i32>(41), wrap<bool>(true));
+    if nested.first.value == 41 && nested.second.value {
+        return 0;
+    }
+    return 1;
+}

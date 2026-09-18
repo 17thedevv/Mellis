@@ -1,0 +1,25 @@
+// SEM-ASSOC-01: valid same-provider associated-type binding and projection.
+trait Producer {
+    type Output;
+    fn produce(self: &Self) -> Self::Output;
+}
+
+struct Num {
+    value: i32,
+}
+
+impl Producer for Num {
+    type Output = i32;
+    fn produce(self: &Self) -> i32 {
+        return self.value;
+    }
+}
+
+fn output_of<T: Producer>(value: &T) -> T::Output {
+    return value.produce();
+}
+
+fn main() -> i32 {
+    dec num = Num { value: 42 };
+    return output_of<Num>(&num) - 42;
+}

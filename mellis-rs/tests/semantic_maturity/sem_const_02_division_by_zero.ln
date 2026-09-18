@@ -1,0 +1,8 @@
+// SEM-CONST-02: invalid comptime division by zero; no fallback value is permitted.
+const BAD: i32 = comptime {
+    10 / 0
+};
+
+fn main() -> i32 {
+    return BAD;
+}

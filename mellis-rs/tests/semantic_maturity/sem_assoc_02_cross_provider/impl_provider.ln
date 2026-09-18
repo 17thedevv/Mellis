@@ -1,0 +1,17 @@
+// SEM-ASSOC-02 provider B: owns the concrete type and impl for provider A's trait.
+import "trait_provider";
+
+export struct Num {
+    export value: i32,
+}
+
+impl Producer for Num {
+    type Output = i32;
+    fn produce(self: &Self) -> i32 {
+        return self.value;
+    }
+}
+
+export fn make_num(value: i32) -> Num {
+    return Num { value: value };
+}

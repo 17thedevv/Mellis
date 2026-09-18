@@ -1,0 +1,7 @@
+// SEM-PROVIDER-01: invalid duplicate root definition from distinct providers.
+import "prov_a";
+import "prov_b";
+
+fn main() -> i32 {
+    return duplicate_symbol();
+}
