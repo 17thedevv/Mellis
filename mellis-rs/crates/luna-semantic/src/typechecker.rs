@@ -4148,7 +4148,7 @@ impl<'a> TypeChecker<'a> {
                             let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
                             self.ctx.diagnostics.push(Diagnostic::error("`iter()` on slice takes no arguments").with_span(span));
                         }
-                        let slice_iter_sym = self.ctx.symbol_table.symbols.iter().find(|s| s.name == "SliceIter").map(|s| s.id);
+                        let slice_iter_sym = self.ctx.symbol_table.symbols.iter().find(|s| s.name == "SliceIter" && matches!(s.kind, crate::symbol::SymbolKind::Struct)).map(|s| s.id);
                         if let Some(sym_id) = slice_iter_sym {
                             let elem = match peeled_ty {
                                 SemanticType::Slice(el) => el,
@@ -4165,7 +4165,7 @@ impl<'a> TypeChecker<'a> {
                             let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
                             self.ctx.diagnostics.push(Diagnostic::error("`iter_mut()` on slice takes no arguments").with_span(span));
                         }
-                        let slice_iter_mut_sym = self.ctx.symbol_table.symbols.iter().find(|s| s.name == "SliceIterMut").map(|s| s.id);
+                        let slice_iter_mut_sym = self.ctx.symbol_table.symbols.iter().find(|s| s.name == "SliceIterMut" && matches!(s.kind, crate::symbol::SymbolKind::Struct)).map(|s| s.id);
                         if let Some(sym_id) = slice_iter_mut_sym {
                             let elem = match peeled_ty {
                                 SemanticType::Slice(el) => el,

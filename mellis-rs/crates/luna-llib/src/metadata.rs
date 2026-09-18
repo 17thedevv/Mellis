@@ -1,18 +1,19 @@
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use luna_semantic::ty::{BuiltinType, Mutability};
+use crate::format::{InterfaceFingerprint, Fingerprint};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticMetadata {
     pub metadata_version: u16,        // Always 1 for v1
     pub language_version: u16,        // Core language version compatibility
     pub target_triple: String,        // Target architecture
-    pub interface_hash: [u8; 32],     // Cryptographic fingerprint
+    pub interface_fingerprint: InterfaceFingerprint,
     pub interface: CanonicalInterface,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct StableSymbolId {
     pub provider_name: String,
     pub symbol_path: String,
@@ -49,9 +50,11 @@ pub enum CanonicalType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CanonicalInterface {
-    pub exported_symbols: HashMap<String, ExportedSymbol>,
+    /// Exported symbols - using BTreeMap for deterministic iteration order.
+    pub exported_symbols: BTreeMap<String, ExportedSymbol>,
     pub types: Vec<CanonicalType>, // Deduplicated type registry for this ABI
-    pub traits: HashMap<StableSymbolId, TraitDefinition>,
+    /// Trait definitions - using BTreeMap for deterministic iteration order.
+    pub traits: BTreeMap<StableSymbolId, TraitDefinition>,
     pub impl_headers: Vec<ImplHeader>,
 }
 
@@ -63,7 +66,7 @@ pub struct ExportedSymbol {
     pub generic_params: Vec<StableSymbolId>,
     pub symbol_id: StableSymbolId,
     #[serde(default)]
-    pub children: HashMap<String, ExportedSymbol>,
+    pub children: BTreeMap<String, ExportedSymbol>, // BTreeMap for deterministic ordering
     #[serde(default)]
     pub lifetime_contract: Option<luna_semantic::CanonicalLifetimeContract>,
     #[serde(default)]
@@ -73,7 +76,7 @@ pub struct ExportedSymbol {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraitDefinition {
     pub name: String,
-    pub methods: HashMap<String, u32>, // Method name -> Type index
+    pub methods: BTreeMap<String, u32>, // BTreeMap for deterministic ordering
     pub associated_types: Vec<StableSymbolId>,
 }
 
@@ -85,5 +88,5 @@ pub struct ImplHeader {
     pub generic_params: Vec<StableSymbolId>,
     #[serde(default)]
     pub trait_args: Vec<u32>,
-    pub methods: HashMap<String, u32>, // Method name -> Type index
+    pub methods: BTreeMap<String, u32>, // Method name -> Type index
 }

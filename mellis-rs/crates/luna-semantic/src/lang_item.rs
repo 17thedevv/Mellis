@@ -1,4 +1,4 @@
-﻿use luna_common::ids::SymbolId;
+use luna_common::ids::SymbolId;
 use luna_common::diagnostic::Diagnostic;
 use luna_common::Span;
 use std::collections::HashMap;
@@ -80,6 +80,11 @@ lang_item_table! {
     (ControlFlow, "control_flow", Enum);
     (ControlFlowContinue, "continue", EnumVariant);
     (ControlFlowBreak, "break", EnumVariant);
+    (Option, "option", Enum);
+    (OptionSome, "some", EnumVariant);
+    (OptionNone, "none", EnumVariant);
+    (Iterator, "iterator", Trait);
+    (IntoIterator, "into_iterator", Trait);
 }
 
 #[derive(Clone, Debug)]

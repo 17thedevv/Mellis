@@ -471,14 +471,28 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let llvm_val = self.generate_inst(val_id, val_data, func).map_err(|e| {
                     BackendError::InvariantViolation(format!("In function {} (val {:?}, inst {:?}): {:?}", func.name.name, val_id, val_data.inst, e))
                 })?;
-                self.value_map.insert(val_id, llvm_val);
-                
+
                 if is_entry && (val_id.0 as usize) < func.arg_count {
                     if let Some(param) = llvm_func.get_nth_param(val_id.0) {
-                        if llvm_val.is_pointer_value() {
-                            self.builder.build_store(llvm_val.into_pointer_value(), param).unwrap();
+                        let alloca_ptr = llvm_val.into_pointer_value();
+                        if param.is_pointer_value() {
+                            // For pointer-type parameters (references): store the param value
+                            // into the alloca slot, then map the alloca for subsequent uses.
+                            self.builder.build_store(alloca_ptr, param).unwrap();
+                            self.value_map.insert(val_id, llvm_val);
+                        } else {
+                            // For non-pointer parameters (structs, primitives):
+                            // Store the param value into the alloca, then map the alloca POINTER
+                            // (not the struct value) for subsequent uses. This is critical because
+                            // the Assign instruction (which runs before Load) also maps the alloca
+                            // key to the param value. We need to overwrite that with the alloca
+                            // pointer so that Load correctly reads from the stack slot.
+                            self.builder.build_store(alloca_ptr, param).unwrap();
+                            self.value_map.insert(val_id, alloca_ptr.into());
                         }
                     }
+                } else {
+                    self.value_map.insert(val_id, llvm_val);
                 }
             }
             is_entry = false;

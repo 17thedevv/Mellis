@@ -11,6 +11,58 @@ pub const MLIB_COMPILER_VERSION: u16 = LLIB_COMPILER_VERSION;
 pub const MLIB_MVIR_VERSION: u16 = LLIB_MVIR_VERSION;
 
 use serde::{Serialize, Deserialize};
+use sha2::{Sha256, Digest};
+
+// =============================================================================
+// Typed Fingerprint Wrappers
+// =============================================================================
+
+/// Typed wrapper for a SHA-256 fingerprint.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub struct Fingerprint(pub [u8; 32]);
+
+impl Fingerprint {
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        Self(bytes)
+    }
+
+    pub fn from_slice(bytes: &[u8]) -> Self {
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        Self(hasher.finalize().into())
+    }
+
+    pub fn combine(data: &[&[u8]]) -> Self {
+        let mut hasher = Sha256::new();
+        for chunk in data {
+            hasher.update(chunk);
+        }
+        Self(hasher.finalize().into())
+    }
+
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for Fingerprint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for byte in &self.0 {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
+    }
+}
+
+/// Source fingerprint: H(source bytes)
+pub type SourceFingerprint = Fingerprint;
+
+/// Interface fingerprint: H(canonical public interface)
+pub type InterfaceFingerprint = Fingerprint;
+
+/// Artifact fingerprint: H(interface + deps + target + config)
+/// This is the full build context fingerprint for staleness detection.
+pub type ArtifactFingerprint = Fingerprint;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
@@ -59,8 +111,16 @@ pub struct TargetContract {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DependencyTable {
-    pub mlib_deps: Vec<String>,
+    /// Direct dependencies with their interface fingerprints for staleness detection.
+    pub deps: Vec<DependencyEntry>,
     pub native_deps: Vec<String>,
+}
+
+/// A single dependency with its interface fingerprint.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DependencyEntry {
+    pub provider_name: String,
+    pub interface_fingerprint: InterfaceFingerprint,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,10 +132,10 @@ pub struct ObjectMetadata {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Provenance {
-    pub source_fingerprint: [u8; 32],
+    pub source_fingerprint: SourceFingerprint,
     pub compiler_version: String,
     pub codegen_options: String,
-    pub interface_hash: [u8; 32],
+    pub interface_fingerprint: InterfaceFingerprint,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

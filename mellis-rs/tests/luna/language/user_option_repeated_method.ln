@@ -1,0 +1,32 @@
+struct Source {
+    current: i32,
+    limit: i32,
+}
+
+impl Source {
+    fn take(self: &rw Self) -> Option<i32> {
+        if self.current < self.limit {
+            dec value = self.current;
+            self.current = self.current + 1;
+            return Option::Some(value);
+        }
+        return Option::None;
+    }
+}
+
+fn main() -> i32 {
+    dec rw source = Source { current: 4, limit: 6 };
+    match source.take() {
+        Option::Some(value) -> { if value != 4 { return 1; } },
+        Option::None -> { return 2; },
+    }
+    match source.take() {
+        Option::Some(value) -> { if value != 5 { return 3; } },
+        Option::None -> { return 4; },
+    }
+    match source.take() {
+        Option::Some(value) -> { return 5; },
+        Option::None -> {},
+    }
+    return 0;
+}

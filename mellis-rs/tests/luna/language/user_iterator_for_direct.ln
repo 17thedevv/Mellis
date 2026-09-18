@@ -1,0 +1,33 @@
+struct UserIter {
+    current: i32,
+    limit: i32,
+}
+
+impl Iterator<i32> for UserIter {
+    fn next(self: &rw Self) -> Option<i32> {
+        if self.current < self.limit {
+            dec value = self.current;
+            self.current = self.current + 1;
+            return Option::Some(value);
+        }
+        return Option::None;
+    }
+}
+
+impl IntoIterator<i32, UserIter> for UserIter {
+    fn into_iter(self: Self) -> UserIter {
+        return self;
+    }
+}
+
+fn main() -> i32 {
+    dec rw sum = 0;
+    dec iter = UserIter { current: 4, limit: 6 };
+    for item in iter {
+        sum = sum + item;
+    }
+    if sum != 9 {
+        return 1;
+    }
+    return 0;
+}

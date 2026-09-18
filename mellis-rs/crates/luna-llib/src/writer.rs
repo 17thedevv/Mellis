@@ -41,11 +41,18 @@ impl MlibWriter {
         use sha2::{Sha256, Digest};
         let mut source_hasher = Sha256::new();
         source_hasher.update(source.as_bytes());
-        manifest.provenance.source_fingerprint = source_hasher.finalize().into();
+        manifest.provenance.source_fingerprint = crate::format::Fingerprint(source_hasher.finalize().into());
 
         let mut interface_hasher = Sha256::new();
-        interface_hasher.update(&ast_payload);
-        manifest.provenance.interface_hash = interface_hasher.finalize().into();
+        if let Some(semantic) = semantic_metadata {
+            let mut semantic_payload = Vec::new();
+            bincode::serialize_into(&mut semantic_payload, &semantic.interface)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            interface_hasher.update(&semantic_payload);
+        } else {
+            interface_hasher.update(&ast_payload);
+        }
+        manifest.provenance.interface_fingerprint = crate::format::Fingerprint(interface_hasher.finalize().into());
 
         if let Some(obj) = obj_bytes {
             let mut obj_hasher = Sha256::new();

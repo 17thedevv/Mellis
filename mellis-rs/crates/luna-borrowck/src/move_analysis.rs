@@ -211,9 +211,83 @@ impl<'a> MoveAnalyzer<'a> {
                 }
                 
                 state.places.retain(|k, _| !k.is_descendant_of(&place));
-                state.places.insert(place, MoveState::Moved);
+                state.places.insert(place.clone(), MoveState::Moved);
+                self.collapse_fully_moved_ancestors(place, state);
             }
         }
+    }
+
+    fn collapse_fully_moved_ancestors(&self, mut place: Place, state: &mut MoveStateData) {
+        while !place.projections.is_empty() {
+            place.projections.pop();
+
+            let Some(field_types) = self.droppable_fields_for_place(&place) else {
+                break;
+            };
+            if field_types.is_empty() {
+                break;
+            }
+
+            let all_droppable_fields_moved = field_types.iter().all(|(field_idx, _)| {
+                let field_place = place
+                    .clone()
+                    .projected(crate::place::Projection::Field(*field_idx));
+                matches!(
+                    self.get_place_state(&field_place, state),
+                    MoveState::Moved | MoveState::Dropped | MoveState::Uninitialized
+                )
+            });
+
+            if !all_droppable_fields_moved {
+                break;
+            }
+
+            state.places.retain(|candidate, _| !candidate.is_descendant_of(&place));
+            state.places.insert(place.clone(), MoveState::Moved);
+        }
+    }
+
+    fn droppable_fields_for_place(
+        &self,
+        place: &Place,
+    ) -> Option<Vec<(usize, luna_semantic::SemanticTypeId)>> {
+        let ctx = self.semantic_ctx?;
+
+        for (value_id, candidate) in &self.values_to_places {
+            if candidate != place {
+                continue;
+            }
+
+            let mut ty_id = self.func.value(*value_id).ty;
+            loop {
+                match ctx.types.get(ty_id) {
+                    luna_semantic::SemanticType::Pointer(_, inner)
+                    | luna_semantic::SemanticType::Reference(_, _, inner) => ty_id = *inner,
+                    _ => break,
+                }
+            }
+
+            let field_types = match ctx.types.get(ty_id) {
+                luna_semantic::SemanticType::Struct(symbol, _, fields) => {
+                    if ctx.tables.drop_impls.contains_key(symbol) {
+                        return None;
+                    }
+                    fields.clone()
+                }
+                luna_semantic::SemanticType::Tuple(fields) => fields.clone(),
+                _ => continue,
+            };
+
+            return Some(
+                field_types
+                    .into_iter()
+                    .enumerate()
+                    .filter(|(_, field_ty)| ctx.needs_drop(*field_ty))
+                    .collect(),
+            );
+        }
+
+        None
     }
 
     fn mark_dropped(&mut self, op: &Operand, state: &mut MoveStateData) {

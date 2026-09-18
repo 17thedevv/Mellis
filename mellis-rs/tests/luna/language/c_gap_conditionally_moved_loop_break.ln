@@ -1,5 +1,3 @@
-import <core>;
-
 struct Dummy<T> {}
 
 trait MyIntoIterator<T> {

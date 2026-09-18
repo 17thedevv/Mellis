@@ -129,10 +129,16 @@ impl<'a> Parser<'a> {
         if self.match_token(TokenKind::LessThan) {
             kind = luna_ast::ImportKind::External;
             let name_tok = self.consume(TokenKind::Identifier, "Expected external module name")?;
-            name = name_tok.span;
+            let mut end_span = name_tok.span;
+            while self.match_token(TokenKind::Divide) {
+                let next_tok = self.consume(TokenKind::Identifier, "Expected identifier after '/' in provider path")?;
+                end_span = next_tok.span;
+            }
+            name = luna_common::Span::new(name_tok.span.file_id, name_tok.span.start, end_span.end);
+            
             if self.check(TokenKind::ColonColon) {
                 let span = self.peek().span;
-                self.error_at_current("Import path must be a single logical module name without '::'", span);
+                self.error_at_current("Import path must be a logical provider path without '::'", span);
                 return Err(());
             }
             self.consume(TokenKind::GreaterThan, "Expected '>' after external module name")?;

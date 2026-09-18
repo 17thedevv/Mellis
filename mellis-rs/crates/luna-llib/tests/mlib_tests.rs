@@ -46,10 +46,10 @@ fn test_golden_roundtrip() {
         dependencies: luna_llib::DependencyTable::default(),
         object_metadata: None,
         provenance: luna_llib::Provenance {
-            source_fingerprint: [0; 32],
+            source_fingerprint: luna_llib::Fingerprint([0; 32]),
             compiler_version: "".into(),
             codegen_options: "".into(),
-            interface_hash: [0; 32],
+            interface_fingerprint: luna_llib::Fingerprint([0; 32]),
         },
         export_table: Default::default(),
     };
@@ -99,10 +99,10 @@ fn test_corrupted_data() {
         dependencies: luna_llib::DependencyTable::default(),
         object_metadata: None,
         provenance: luna_llib::Provenance {
-            source_fingerprint: [0; 32],
+            source_fingerprint: luna_llib::Fingerprint([0; 32]),
             compiler_version: "".into(),
             codegen_options: "".into(),
-            interface_hash: [0; 32],
+            interface_fingerprint: luna_llib::Fingerprint([0; 32]),
         },
         export_table: Default::default(),
     };

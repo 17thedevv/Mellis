@@ -2288,7 +2288,38 @@ impl<'a> MvirGenerator<'a> {
                     return Operand::Value(call_val);
                 }
 
-                if let Some(&m_sym) = self.ctx.tables.expr_symbols.get(expr_id) {
+                let m_sym_opt = self.ctx.tables.expr_symbols.get(expr_id).copied().or_else(|| {
+                    let m_name_str = self.get_span_text(*method_name);
+                    let obj_ty_id = if let Some(inst_ptr) = self.current_instance {
+                        let inst = unsafe { &*inst_ptr };
+                        inst.expr_types.get(object).copied()
+                    } else {
+                        self.ctx.tables.expr_types.get(object).copied()
+                    }.unwrap_or(luna_semantic::SemanticTypeId(0));
+                    
+                    let peeled_obj = match self.ctx.types.get(obj_ty_id) {
+                        luna_semantic::SemanticType::Reference(_, _, inner) | luna_semantic::SemanticType::Pointer(_, inner) => *inner,
+                        _ => obj_ty_id,
+                    };
+                    let peeled_ty = self.ctx.types.get(peeled_obj);
+                    let target_key = match peeled_ty {
+                        luna_semantic::SemanticType::Struct(s, ..) | luna_semantic::SemanticType::Enum(s, ..) => {
+                            Some(luna_semantic::semantic_tables::ImplSelfTypeKey::Nominal(*s))
+                        }
+                        luna_semantic::SemanticType::Primitive(b) => {
+                            Some(luna_semantic::semantic_tables::ImplSelfTypeKey::Primitive(*b))
+                        }
+                        _ => None,
+                    };
+                    if let Some(self_key) = target_key {
+                        return self.ctx.tables
+                            .find_method_prefer_inherent(self_key, &m_name_str, &self.ctx.symbol_table)
+                            .map(|(method, _)| method);
+                    }
+                    self.ctx.symbol_table.symbols.iter().find(|s| s.name == m_name_str && matches!(s.kind, luna_semantic::symbol::SymbolKind::Function | luna_semantic::symbol::SymbolKind::TraitMethod)).map(|s| s.id)
+                });
+
+                if let Some(m_sym) = m_sym_opt {
                     let mut m_name = self.ctx.symbol_table.get_symbol(m_sym).name.clone();
                     if let Some(canonical_name) = self.resolve_mono_call_name(expr_id, &m_name) {
                         m_name = canonical_name;
@@ -2365,8 +2396,11 @@ impl<'a> MvirGenerator<'a> {
             Expr::Match { subject, arms, match_span: _ } => {
                 let subject_op = self.generate_expr(subject);
                 let match_ty_id = ty_id;
-                
-                let result_alloca = self.push_inst(Instruction::Alloca, match_ty_id);
+                let result_alloca = if match_ty_id == self.ctx.types.void_id() {
+                    None
+                } else {
+                    Some(self.push_inst(Instruction::Alloca, match_ty_id))
+                };
                 let end_label = self.new_label("match_end");
                 
                 let mut next_arm_label = self.new_label("match_arm");
@@ -2398,10 +2432,12 @@ impl<'a> MvirGenerator<'a> {
                     let body_op = self.generate_block_expr(&arm.body);
                     if self.current_block.is_some() {
                         any_arm_reached = true;
-                        self.push_inst(Instruction::Store {
-                            ptr: Operand::Value(result_alloca),
-                            value: body_op,
-                        }, match_ty_id);
+                        if let Some(result_alloca) = result_alloca {
+                            self.push_inst(Instruction::Store {
+                                ptr: Operand::Value(result_alloca),
+                                value: body_op,
+                            }, match_ty_id);
+                        }
                         
                         self.pop_scope_and_drop(None);
                         self.terminate_block(Terminator::Br { target: end_label.clone() });
@@ -2415,12 +2451,15 @@ impl<'a> MvirGenerator<'a> {
                 
                 if any_arm_reached {
                     self.start_block(end_label);
-                    
-                    let load_val = self.push_inst(Instruction::Load {
-                        ptr: Operand::Value(result_alloca),
-                    }, match_ty_id);
-                    
-                    Operand::Value(load_val)
+
+                    if let Some(result_alloca) = result_alloca {
+                        let load_val = self.push_inst(Instruction::Load {
+                            ptr: Operand::Value(result_alloca),
+                        }, match_ty_id);
+                        Operand::Value(load_val)
+                    } else {
+                        Operand::Number("0".to_string())
+                    }
                 } else {
                     Operand::Number("0".to_string())
                 }

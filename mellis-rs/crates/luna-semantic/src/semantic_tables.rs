@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ty::SemanticTypeId;
 use crate::ScopeId;
+use crate::symbol::SymbolTable;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CaptureMode {
@@ -181,6 +182,32 @@ pub struct SemanticTables {
 }
 
 impl SemanticTables {
+    /// Resolve a named method for a concrete receiver deterministically.
+    ///
+    /// Inherent methods take precedence over trait methods.  This is also used
+    /// by later pipeline stages when imported metadata does not carry an
+    /// expression-local method symbol, so it must not depend on HashMap order.
+    pub fn find_method_prefer_inherent(
+        &self,
+        self_type_def: ImplSelfTypeKey,
+        name: &str,
+        symbols: &SymbolTable,
+    ) -> Option<(SymbolId, ImplKey)> {
+        let mut candidates = Vec::new();
+        for (key, methods) in &self.impl_methods {
+            if key.self_type_def != self_type_def {
+                continue;
+            }
+            for &method in methods {
+                if symbols.get_symbol(method).name == name {
+                    candidates.push((method, key.clone()));
+                }
+            }
+        }
+        candidates.sort_by_key(|(_, key)| key.trait_id.is_some());
+        candidates.into_iter().next()
+    }
+
 
     pub fn expect_closure_capture_bindings(&self, id: ExprId) -> Vec<CaptureBinding> {
         self.closure_capture_bindings.get(&id).cloned().unwrap_or_else(|| {

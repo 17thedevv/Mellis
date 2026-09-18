@@ -1,0 +1,10 @@
+export struct MyType {}
+
+impl Iterator<MyType> for &MyType {
+    fn next(self: &rw Self) -> Option<MyType> {
+        return Option::None;
+    }
+}
+
+fn main() {
+}

@@ -18,6 +18,8 @@ impl SemanticContext {
         match self.types.get(ty_id) {
             SemanticType::Struct(s, _, _) => Some(*s),
             SemanticType::Enum(e, _, _) => Some(*e),
+            SemanticType::Reference(_, _, inner) => self.nominal_head(*inner),
+            SemanticType::Pointer(_, inner) => self.nominal_head(*inner),
             _ => None,
         }
     }

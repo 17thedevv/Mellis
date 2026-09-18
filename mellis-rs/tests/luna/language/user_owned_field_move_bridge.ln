@@ -1,0 +1,44 @@
+import <ptr>;
+
+struct Tracker {
+    drops: *rw u64,
+}
+
+impl Drop for Tracker {
+    fn drop(self: &rw Self) {
+        unsafe {
+            dec current = ptr::read(self.drops as *u64);
+            ptr::write(self.drops, current + (1 as u64));
+        }
+    }
+}
+
+struct Container {
+    private value: Tracker,
+}
+
+struct Wrapper {
+    private value: Tracker,
+}
+
+fn wrap(value: Tracker) -> Wrapper {
+    return Wrapper { value: value };
+}
+
+impl Container {
+    fn into_wrapper(self: Self) -> Wrapper {
+        return wrap(self.value);
+    }
+}
+
+fn main() -> i32 {
+    dec rw drops = 0 as u64;
+    {
+        dec container = Container { value: Tracker { drops: &rw drops as *rw u64 } };
+        dec wrapper = container.into_wrapper();
+    }
+    if drops != (1 as u64) {
+        return drops as i32;
+    }
+    return 0;
+}
