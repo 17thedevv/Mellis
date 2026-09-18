@@ -5,11 +5,9 @@ project(mellis-toolchain VERSION 1.0.0 LANGUAGES CXX C)
 # Root build system — Mellis Toolchain
 #
 # Subprojects:
-#   compiler/   → mellis.exe
 #   runtime/    → mellis-runtime.lib / .a
 # ==========================================
 
-add_subdirectory(compiler)
 add_subdirectory(runtime)
 
 # ── Output layout ─────────────────────────────────────────────────────────────

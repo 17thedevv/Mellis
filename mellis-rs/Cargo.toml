@@ -11,7 +11,5 @@ members = [
     "crates/luna-borrowck",
     "crates/luna-llib",
     "crates/luna-optimizer",
-    "crates/luna-spike-llvm",
-    "crates/luna-diff",
     "crates/luna-cli",
 ]

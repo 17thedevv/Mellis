@@ -1,8 +1,0 @@
-Test: D:\fdlang\tests\scratch\test_sum.ms
-
-Compiler:
-  C++  exit=0
-  Rust exit=0
-
-Classification:
-  CompilePhase / Executable Missing

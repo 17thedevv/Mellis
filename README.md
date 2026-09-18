@@ -1,82 +1,41 @@
-# Mellis Compiler - Version 1.0
+# Luna Compiler & Toolchain
 
-Mellis là một trình biên dịch (compiler) dành cho ngôn ngữ lập trình **Mellis**, được thiết kế hướng tới ngôn ngữ lập trình hệ thống (System Programming Language) hiện đại, hiệu năng cao, và an toàn. Trình biên dịch sử dụng kiến trúc phân tầng chuyên nghiệp, tạo ra mã trung gian (MVIR) riêng biệt và biên dịch ra mã máy (Native Machine Code) thông qua backend **LLVM**.
+**Luna** (trước đây có định danh lịch sử là *Mellis* / *fdlang*) là ngôn ngữ lập trình hệ thống hiện đại, hướng tới hiệu năng cao, an toàn bộ nhớ tĩnh và khả năng kiểm soát chặt chẽ tài nguyên. Trình biên dịch canonical của Luna được hiện thực hoàn toàn bằng **Rust** (nằm tại `mellis-rs/`), sinh mã trung gian MVIR và dịch sang mã máy native thông qua **LLVM**.
 
-## ✨ Tính năng nổi bật
+## ✨ Kiến trúc cốt lõi
 
-- **Kiến trúc Hiện đại (Modern Architecture)**:
-  - Phân tách rõ ràng các tầng Front-end (Lexer, Parser), Middle-end (Type Checker, Borrow Checker, MVIR), và Back-end (LLVM IR Generator).
-  - Tích hợp sẵn cơ chế kiểm tra toàn vẹn bộ nhớ cơ bản (Borrow Checking) và Liveness Analysis.
-- **Pattern Matching mạnh mẽ**: Hỗ trợ bóc tách cấu trúc dữ liệu, Enum Variant với các ràng buộc kiểu tĩnh chặt chẽ.
-- **Tail Expressions**: Hỗ trợ biểu thức khối lệnh ngầm định trả về (Implicit return) mà không cần từ khóa `return` hay dấu chấm phẩy `;`.
-- **Hệ thống Module (MLib)**: Hỗ trợ biên dịch nhị phân thành file `.mlib` (Mellis Library) giúp nạp và tăng tốc biên dịch các thư viện chuẩn (Standard Library) mà không cần biên dịch lại từ mã nguồn.
-- **Diagnostics thông minh (LSP Ready)**: Báo lỗi có màu sắc (ANSI ANSI colors), đánh dấu caret (`^`) chính xác vị trí lỗi, dễ dàng mở rộng sang chuẩn **Language Server Protocol (LSP)** cho các IDE như VSCode.
-- **Portable Toolchain**: Khả năng phân phối trình biên dịch và thư viện chuẩn theo cấu trúc `bin`/`lib` mà không bị phụ thuộc vào biến môi trường hệ thống. Tự động tương thích với bộ liên kết (linker) như LLD.
+- **Trình biên dịch Canonical (`luna`)**: Được tổ chức thành workspace modular bằng Rust tại `mellis-rs/crates/*` (`luna-lexer`, `luna-parser`, `luna-semantic`, `luna-mvir`, `luna-backend`, `luna-borrowck`, `luna-llib`, `luna-driver`, `luna-cli`).
+- **Thư viện chuẩn Component-level (STD-ARCH-01 FROZEN)**: Thay thế kiến trúc monolithic cũ bằng 25 provider module hóa độc lập (`alloc`, `core`, `io`, `lang`) nằm tại `mellis-rs/libs/external/`. Mỗi provider sở hữu bộ ba hoàn chỉnh: `.ln` (mã nguồn), `.llib` (metadata & MVIR), `.obj` (mã máy native).
+- **Nguyên lý Định danh Artifact ("Luna trusts identity, never existence")**: Hệ thống nhận diện artifact dựa trên typed fingerprint (source identity, interface identity, target contract) đảm bảo không có rò rỉ hay stale artifact fallback.
+- **Hệ thống Kiểm tra An toàn Bộ nhớ**: Tích hợp Borrow Checker, Liveness Analysis, Escape Analysis và quy tắc Lifetime rõ ràng (`where outlives`, `life_from`).
+- **Runtime ABI Frozen (`__mellis_*`)**: Runtime tối thiểu viết bằng C tại `runtime/` cung cấp các hàm nền tảng (`__mellis_alloc`, `__mellis_dealloc`, `__mellis_print`, `__mellis_println`, `__mellis_panic`) được bảo tồn có chủ đích theo hợp đồng ABI đã đóng băng.
 
-## 🚀 Cấu trúc dự án
+## 📁 Cấu trúc Dự án
 
-- `src/FrontEnd/`: Chứa Lexer, Parser để xây dựng Cây Cú Pháp Trừu Tượng (AST).
-- `src/MiddleEnd/`: Phân tích ngữ nghĩa (Semantic), kiểm tra kiểu (Type Checker), Borrow Checker, và mã trung gian MVIR.
-- `src/BackEnd/`: Dịch MVIR sang LLVM IR và gọi Linker để tạo file thực thi (`.exe`).
-- `src/MLib/`: Hệ thống nạp (Loader) và sinh (Generator) metadata thư viện.
-- `src/Support/`: Các tiện ích dùng chung (Diagnostic Engine, OSUtils, v.v.).
+- `mellis-rs/`: Toàn bộ mã nguồn Rust của trình biên dịch Luna và sysroot canonical.
+  - `crates/`: 12 crate thành viên của workspace Luna compiler.
+  - `libs/external/`: Thư viện chuẩn canonical 25 component-level providers (`sysroot.toml`).
+- `runtime/`: Thư viện native C runtime (`mellis-runtime.lib`) và các bài kiểm tra ABI conformance.
+- `docs/`: Tài liệu kiến trúc, ngôn ngữ tham chiếu và các báo cáo freeze (STD-ARCH-01).
+- `tests/`: Bộ test fixtures ngôn ngữ của Luna.
 
-## 📖 Tài liệu Tham khảo (Documentation)
+## 🛠️ Hướng dẫn Build & Test
 
-- [Language Reference](file:///d:/fdlang/docs/LanguageReference.md): Khái quát tất cả tính năng của ngôn ngữ Mellis (Primitive types, Control Flow, Structs, Enums & Pattern Matching, Traits & Generics, Borrowing, Closures, Macros...).
-- [Architecture](file:///d:/fdlang/docs/architecture.md): Cấu trúc kiến trúc nội bộ của Mellis Compiler.
-- [MVIR](file:///d:/fdlang/docs/MVIR.md): Đặc tả mã trung gian Mellis Virtual Intermediate Representation.
+Yêu cầu: Rust (Cargo 1.80+), LLVM và CMake (cho native runtime).
 
-## 🛠️ Hướng dẫn Build
-
-Mellis yêu cầu trình biên dịch C++20 và bộ thư viện **LLVM 18+** được cấu hình trên máy tính.
-
-1. Clone mã nguồn:
-   ```bash
-   git clone <repo-url> fdlang
-   cd fdlang
-   ```
-
-2. Tạo thư mục build và cấu hình CMake:
-   ```bash
-   cmake -B build -S .
-   ```
-
-3. Tiến hành Build dự án:
-   ```bash
-   cmake --build build --config Release
-   ```
-
-## 📦 Cách sử dụng (Portable Toolchain)
-
-Mellis được thiết kế để dễ dàng phân phối. Bạn có thể xây dựng cấu trúc công cụ hoàn chỉnh như sau:
-
-```text
-fdlang/
-├── bin/
-│   ├── mellis.exe         <-- Trình biên dịch Mellis
-│   └── lld-link.exe       <-- Linker của LLVM (tùy chọn để portable)
-└── lib/
-    ├── std.mlib           <-- Thư viện chuẩn (Standard Library)
-    └── ...
-```
-
-Để biên dịch một file mã nguồn FDLang (`.ms`), sử dụng lệnh:
-
+### 1. Build Trình biên dịch Luna (Rust)
 ```bash
-mellis main.ms
+cd mellis-rs
+cargo build -p luna-cli
 ```
 
-Để xem toàn bộ quá trình phân tích (Debug Logs):
-
+### 2. Chạy Kiểm thử Toàn bộ Workspace
 ```bash
-mellis main.ms --verbose
+cd mellis-rs
+cargo test --workspace
 ```
 
-Xem phiên bản Mellis:
-```bash
-mellis --version
-```
-
-## 📜 Giấy phép
-Dự án được phát triển nội bộ cho FDLang.
+## 📜 Ghi chú Lịch sử & Hợp đồng Tương thích
+- Tên gọi **Mellis** và **fdlang** là tên lịch sử của dự án trước khi chuyển sang **Luna**.
+- Các định danh ABI runtime dạng `__mellis_*` được cố ý giữ nguyên nhằm duy trì tính ổn định của ABI.
+- Khả năng đọc mã nguồn `.ms` và thư viện `.mlib` cũ được duy trì như một kênh tương thích ngược theo ma trận `COMPAT-*`.
