@@ -191,13 +191,12 @@ fn sem_method_01_sequential_mut_receivers_are_accepted() {
     assert_accepts("sem_method_01_sequential_mut_receivers.ln");
 }
 
-/// SEM-DIAG-01 / SEM-GAP-03
+/// SEM-DIAG-01 / SEM-GAP-03 Phase 1A regression
 /// Invariant: calling an undeclared method on a user-defined type is rejected.
 /// Invalid; expects an existing unresolved-method/type diagnostic and no lowering.
 #[test]
-#[ignore = "SEM-GAP-03: unknown user-defined method is silently accepted"]
 fn sem_diag_01_unknown_method_is_rejected() {
-    assert_rejects("sem_diag_01_unknown_method.ln", "method");
+    assert_rejects("sem_diag_01_unknown_method.ln", "not found for type");
 }
 
 /// SEM-DIAG-02 / SEM-GAP-04
@@ -252,14 +251,16 @@ fn sem_diag_05_private_access_uses_frozen_numeric_code() {
     assert_rejects("sem_vis_01_explicit_private_field/main.ln", "E1003");
 }
 
-/// SEM-COHERENCE-01 / SEM-GAP-06
+/// SEM-COHERENCE-01 / SEM-GAP-06 Phase 1A regression
 /// Invariant: a local type nested beneath a non-local fundamental/reference head
 /// does not satisfy the frozen nominal-head orphan rule for a foreign trait.
 /// Invalid; expects coherence rejection before monomorphization.
 #[test]
-#[ignore = "SEM-GAP-06: orphan impl with non-local reference head is accepted"]
 fn sem_coherence_01_reference_head_orphan_is_rejected() {
-    assert_rejects("sem_coherence_01_reference_head_orphan.ln", "orphan");
+    assert_rejects(
+        "sem_coherence_01_reference_head_orphan.ln",
+        "E_ORPHAN_IMPL",
+    );
 }
 
 /// SEM-ASSOC-02

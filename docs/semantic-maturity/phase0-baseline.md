@@ -1,5 +1,10 @@
 # SEM-MATURITY-01 Phase 0 — Semantic Coverage Audit & Conformance Baseline
 
+> Phase 1A update (2026-09-18): after rebasing onto hygiene-complete `main`
+> (`399b3666ef57db7be602db3aac721a655d63bf7c`), the unchanged Phase 0 corpus
+> reproduced all eight original gaps. SEM-GAP-03 and SEM-GAP-06 are now closed;
+> the original Phase 0 measurements remain identified as baseline values below.
+
 ## SEM-MATURITY-01 PHASE 0 PRECHECK
 
 ### Worktree baseline
@@ -200,7 +205,7 @@ the sole proof.
 | Generic traits | Frozen | C-GAP-04; SEM-TRAIT-01 | yes | PROVEN |
 | Generic trait impls | Frozen | P1A/P3 and source probes | yes | PROVEN |
 | Parameterized trait arguments | Frozen | C-GAP-04; SEM-TRAIT-01 | yes | PROVEN |
-| Nominal-head orphan/coherence rule | Frozen | P1A overlap cases; SEM-COHERENCE-01 | yes | COMPILER GAP |
+| Nominal-head orphan/coherence rule | Frozen | P1A reference/pointer controls; SEM-COHERENCE-01 | yes | PROVEN |
 | Receiver `self` | Frozen | P3 and ownership suites | yes | PROVEN |
 | Receiver `&self` | Frozen | generic dispatch/lifetime suites | yes | PROVEN |
 | Receiver `&rw self` | Frozen | iterator/method source cases | yes, simple calls only | PARTIAL |
@@ -304,7 +309,7 @@ the sole proof.
 | Function pointers | Frozen | C-GAP-05/06 | yes | PROVEN |
 | Indirect calls | Frozen | C-GAP-05 | yes | PROVEN |
 | Method calls generally | Frozen | trait/inherent suites | partial | PARTIAL |
-| Unknown-method rejection | Frozen | SEM-DIAG-01 | yes | COMPILER GAP |
+| Unknown-method rejection | Frozen | SEM-DIAG-01; semantic gate regression | yes | PROVEN |
 | Receiver mutability | Frozen | P3 plus SEM-METHOD-01 | partial | PARTIAL |
 | Extern calls where semantically relevant | Frozen | FFI/UI/backend cases | stdlib-heavy | PARTIAL |
 
@@ -341,14 +346,14 @@ the sole proof.
 
 | Semantic rule | Spec status | Existing evidence | User-defined proof | Result |
 |---|---|---|---|---|
-| Deterministic semantic rejection | Frozen | many negative suites, but SEM-DIAG-01 is accepted | yes | PARTIAL |
+| Deterministic semantic rejection | Frozen | negative suites including SEM-DIAG-01 | yes | PROVEN |
 | E1003 private-access identity | Frozen | SEM-DIAG-05 | yes | COMPILER GAP |
 | E3001 use-after-move identity | Frozen | SEM-DIAG-02 | yes | COMPILER GAP |
 | E3002 partial-move-under-Drop identity | Frozen | SEM-DIAG-03 | yes | COMPILER GAP |
 | E3003 borrow-conflict identity | Frozen | SEM-DIAG-04 | yes | COMPILER GAP |
 | No compiler panic in Phase 0 corpus | Frozen doctrine | active and gap corpus executions | yes | PROVEN |
 | No backend invariant failure in Phase 0 corpus | Frozen doctrine | active and gap corpus executions | yes | PROVEN |
-| No silent semantic fallback | Frozen doctrine | SEM-DIAG-01 lowers missing call to `0` | yes | PARTIAL |
+| No silent semantic fallback | Frozen doctrine | SEM-DIAG-01 plus MVIR E6001 invariant guard | yes | PROVEN |
 
 ### Explicit frozen-v1 unsupported boundaries
 
@@ -370,7 +375,7 @@ the sole proof.
 |---|---|---|
 | A. Core type system | PARTIAL | Alias proof is not yet a generic user-defined public-boundary case. |
 | B. Generic semantics | PROVEN | New generic fixtures close the user-defined proof gap. |
-| C. Traits / impls | PARTIAL | Frozen nominal-head coherence is violated. |
+| C. Traits / impls | PARTIAL | Coherence is proven; `&rw self` coverage remains partial. |
 | D. Associated constructs | PARTIAL | Projections are proven; associated-function coverage remains partial. |
 | E. Ownership / moves | PARTIAL | Move-through-match lacks a registered public-boundary proof. |
 | F. Borrowing | PARTIAL | Call-boundary loan termination is incorrect; loop proof is missing. |
@@ -378,10 +383,10 @@ the sole proof.
 | H. Drop semantics | PROVEN | P0B, Copy/Drop, and new source cases cover the frozen rules. |
 | I. Control flow | PARTIAL | Protocol-driven `for-in` is rejected. |
 | J. Iterator contracts | PARTIAL | Direct/manual protocol calls work; language lowering does not. |
-| K. Functions / calls | PARTIAL | Unknown methods silently lower; mutable call boundaries are wrong. |
+| K. Functions / calls | PARTIAL | Unknown methods reject; mutable call boundaries remain incorrect. |
 | L. Modules / providers | PROVEN | Public-default fields and explicit-private rejection match the corrected frozen contract. |
 | M. Const / comptime | PROVEN | Positive execution and explicit negative rejection are covered. |
-| N. Diagnostics | PARTIAL | Numeric registry is incomplete and one invalid call silently lowers. |
+| N. Diagnostics | PARTIAL | Silent fallback is closed; the frozen numeric registry remains incomplete. |
 
 ## Conformance cases
 
@@ -406,13 +411,13 @@ the harness enters through the public `luna check` command.
 | SEM-CONST-02 | invalid | Division by zero rejects without fallback | comptime | PASS (rejected) |
 | SEM-ITER-01 | valid | User-defined `for-in` through language contracts | MVIR | EXPECTED FAIL (SEM-GAP-01) |
 | SEM-METHOD-01 | valid | Sequential non-escaping `&rw self` calls | borrowck | EXPECTED FAIL (SEM-GAP-02) |
-| SEM-DIAG-01 | invalid | Unknown user-defined method rejects | typecheck/MVIR | EXPECTED FAIL (SEM-GAP-03) |
+| SEM-DIAG-01 | invalid | Unknown user-defined method rejects | typecheck/MVIR | PASS (SEM-GAP-03 closed) |
 | SEM-DIAG-02 | invalid | Use after move emits frozen E3001 | diagnostics | EXPECTED FAIL (SEM-GAP-04) |
 | SEM-DIAG-03 | invalid | Partial move emits frozen E3002 | diagnostics | EXPECTED FAIL (SEM-GAP-07) |
 | SEM-DIAG-04 | invalid | Borrow conflict emits frozen E3003 | diagnostics | EXPECTED FAIL (SEM-GAP-08) |
 | SEM-VIS-01 | invalid | Explicit-private field rejects externally | parser/resolver | PASS (rejected) |
 | SEM-DIAG-05 | invalid | Explicit-private access emits frozen E1003 | diagnostics | EXPECTED FAIL (SEM-GAP-09) |
-| SEM-COHERENCE-01 | invalid | Reference-head orphan impl rejects | coherence | EXPECTED FAIL (SEM-GAP-06) |
+| SEM-COHERENCE-01 | invalid | Reference-head orphan impl rejects | coherence | PASS (SEM-GAP-06 closed) |
 
 Why existing tests were insufficient:
 
@@ -543,7 +548,7 @@ Notes:
 ### SEM-GAP-03 — Unknown method silently lowers to zero
 
 Status:
-  OPEN
+  CLOSED — PHASE 1A
 
 Severity:
   P0
@@ -558,11 +563,11 @@ Minimal Luna reproduction:
 Expected:
   Type checking rejects `value.missing_method()`.
 
-Actual:
+Phase 0 actual:
   `luna check` succeeds. `luna build` emits an executable whose MVIR replaces the
   call/return with `ret 0`; the executable exits 0.
 
-Diagnostic:
+Phase 0 diagnostic:
   none
 
 Source-only reproduction:
@@ -578,6 +583,12 @@ Notes:
   The method-call typechecker falls through to a fresh inference variable without
   a diagnostic when lookup fails. MVIR then returns `Operand::Number("0")` when it
   has no method symbol. This is the one confirmed silent-fallback case.
+
+Phase 1A resolution:
+  Failed lookup now emits `Method ... not found for type ...` and returns the
+  semantic error type, so the driver gate stops before MVIR. MVIR also emits the
+  existing E6001 backend-invariant identity if an unresolved method ever reaches
+  lowering; its placeholder operand is never accepted or emitted by the driver.
 
 ### SEM-GAP-04 — Use-after-move rejection omits E3001
 
@@ -627,7 +638,7 @@ The missing E1003 identity is separately tracked as SEM-GAP-09.
 ### SEM-GAP-06 — Reference-head orphan impl is accepted
 
 Status:
-  OPEN
+  CLOSED — PHASE 1A
 
 Severity:
   P0
@@ -643,10 +654,10 @@ Minimal Luna reproduction:
 Expected:
   `impl Iterator<LocalItem> for &LocalItem` is rejected as an orphan impl.
 
-Actual:
+Phase 0 actual:
   `luna check` succeeds with no diagnostic.
 
-Diagnostic:
+Phase 0 diagnostic:
   none
 
 Source-only reproduction:
@@ -661,6 +672,13 @@ Root cause:
 Notes:
   `SemanticContext::nominal_head` recursively unwraps references and pointers,
   discovering the nested local type and treating the head as local.
+
+Phase 1A resolution:
+  `nominal_head` no longer unwraps `&T` or `*T`. Reference-head and pointer-head
+  foreign-trait impls now reject with E_ORPHAN_IMPL, while a local trait remains
+  legal on the same heads. The three stdlib impls that violated the frozen rule
+  (`IntoIterator for &Vec`, `&HashMap`, and `&HashSet`) were removed; their
+  explicit `.iter()` APIs and owned `IntoIterator` impls remain available.
 
 ### SEM-GAP-07 — Partial move under Drop emits a symbolic code instead of E3002
 
@@ -777,16 +795,18 @@ Notes:
 
 ### Severity summary
 
-- P0: SEM-GAP-03, SEM-GAP-06
-- P1: SEM-GAP-01, SEM-GAP-02
-- P2: SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, SEM-GAP-09
-- P3: none
+- Closed P0: SEM-GAP-03, SEM-GAP-06
+- Open P0: none
+- Open P1: SEM-GAP-01, SEM-GAP-02
+- Open P2: SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, SEM-GAP-09
+- Open P3: none
 
 ### Crashes and silent fallbacks
 
 - Compiler panics caused by Phase 0 Luna programs: **0**.
 - Backend invariant failures caused by Phase 0 Luna programs: **0**.
-- Silent fallback cases: **1** (SEM-GAP-03, missing method becomes `0`).
+- Phase 0 baseline silent fallback cases: **1** (SEM-GAP-03).
+- Current silent fallback cases in the corpus: **0**.
 - The whole-workspace test harness panic is a separate baseline fixture issue:
   required generated component `.llib` files are absent from this clean checkout.
 
@@ -811,9 +831,9 @@ Notes:
 | SEM-DROP-01 partial move | `E_PARTIAL_MOVE_UNDER_DROP` | wrong code; frozen E3002 |
 | SEM-PROVIDER-01 duplicate | E1002 | correct |
 | SEM-CONST-02 division by zero | no code; comptime evaluation error | rejection correct, registry incomplete |
-| SEM-DIAG-01 unknown method | none; accepted and lowered to 0 | incorrect / P0 |
+| SEM-DIAG-01 unknown method | uncoded `Method ... not found for type ...` | semantic rejection correct; GAP-03 closed |
 | SEM-VIS-01 explicit-private access | no code; `Field ... is private` | semantic rejection correct; E1003 gap |
-| SEM-COHERENCE-01 orphan impl | none; accepted | incorrect / P0 |
+| SEM-COHERENCE-01 orphan impl | E_ORPHAN_IMPL | correct; GAP-06 closed |
 
 No new diagnostic code was invented.
 
@@ -835,6 +855,27 @@ No new diagnostic code was invented.
 - New conformance tests: **22**
 - Unique valid Luna programs: **9**
 - Unique invalid Luna programs: **9**
+
+### Current metrics after Phase 1A
+
+- Frozen semantic rules inventoried: **119**
+- Rules PROVEN: **97**
+- Rules PARTIAL: **14**
+- Rules NOT TESTED: **2**
+- Rules in COMPILER GAP state: **6**
+- Unique open compiler gaps: **6**
+- Closed compiler gaps: **2**
+- Open P0: **0**
+- Open P1: **2**
+- Open P2: **4**
+- Open P3: **0**
+- Compiler panics in the conformance corpus: **0**
+- Silent fallback cases in the conformance corpus: **0**
+- User-defined generic coverage count: **7 cases**
+- Phase 0 conformance tests: **22**
+- Active conformance tests: **16**
+- Ignored open-gap reproductions: **6**
+- Phase 1A Rust regression tests added: **4**
 
 The test/program totals count different things. The corpus contains 18 unique
 program scenarios (9 valid + 9 invalid). Four invalid programs each have a
@@ -872,6 +913,31 @@ from the clean baseline checkout. It predates and is independent of the new
 source conformance corpus; Phase 0 did not generate, repair, or modify sysroot
 artifacts.
 
+### Phase 1A verification after the hygiene rebase
+
+The pre-implementation rerun on hygiene-complete `main` was unchanged:
+**14 passed / 8 ignored**, and the ignored command reproduced **8/8** Phase 0
+gaps. After closing SEM-GAP-03 and SEM-GAP-06:
+
+| Command | Result |
+|---|---|
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --test-threads=1` | 16 passed, 0 failed, 6 ignored |
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --ignored --test-threads=1` | 0 passed, 6 failed as the six remaining gap expectations; 16 filtered out |
+| `cargo test -p luna-semantic -- --test-threads=1` | 109 passed, 0 failed |
+| `cargo test -p luna-borrowck -- --test-threads=1` | 25 passed, 0 failed |
+| 16 current named relevant `luna-driver` binaries | 153 passed, 0 failed |
+| four affected stdlib iterator/collection binaries | 40 passed, 0 failed |
+| `cargo test --workspace -- --test-threads=1` | preceding binaries passed; failing binary: 6 passed, 1 generated-artifact failure |
+| `cargo test --workspace` | preceding binaries passed; failing binary: 6 passed, 1 generated-artifact failure |
+
+The hygiene cleanup removed the zero-test targets `module_merge_tests` and
+`hierarchical_provider_tests`; the Phase 1A targeted command therefore uses the
+16 remaining named binaries without changing semantic expectations. Both
+workspace commands were rerun with one build job, incremental compilation off,
+and debuginfo disabled after the first compile attempt exhausted the Windows
+build volume. Their semantic result is the same known missing-`.llib` baseline
+failure; no artifact was generated or repaired.
+
 Exact targeted driver command used for the correction pass:
 
 ```text
@@ -906,14 +972,14 @@ Initial infrastructure observations, not semantic evidence:
 
 ## Phase 1 proposal
 
-1. Fix P0 typechecker/MVIR invariant enforcement for unresolved method calls,
-   removing the zero fallback and adding a frozen existing diagnostic identity.
-2. Fix P0 nominal-head coherence so references/pointers do not expose nested
-   local types for orphan locality under the current frozen rule.
-3. Implement generic user-defined `for-in` lowering through language contracts
+1. **Completed in Phase 1A:** reject unresolved method calls in the typechecker
+   and retain an E6001 MVIR invariant guard; no zero fallback is accepted.
+2. **Completed in Phase 1A:** enforce nominal-head coherence for references and
+   pointers, with negative and local-trait control regressions.
+3. **Phase 1B next:** implement generic user-defined `for-in` lowering through language contracts
    in MVIR (P1), without Vec or provider special cases.
-4. Correct non-escaping receiver-loan termination in borrowck/call effects (P1).
-5. Implement the typed frozen diagnostic registry, then migrate the independent
+4. **Phase 1B next:** correct non-escaping receiver-loan termination in borrowck/call effects (P1).
+5. **Phase 1C:** implement the typed frozen diagnostic registry, then migrate the independent
    E1003/E3001/E3002/E3003 emitters without treating one fix as proof of the
    other contracts (P2).
 6. Add the two missing public-boundary proofs (move through match and borrow
@@ -933,6 +999,8 @@ Initial infrastructure observations, not semantic evidence:
 
 ## Scope and architecture compliance
 
+The following entries describe the completed Phase 0 baseline/correction pass:
+
 - Production compiler source modified: **NO**.
 - Stdlib semantic source modified: **NO**.
 - Runtime ABI modified: **NO**.
@@ -946,9 +1014,33 @@ Initial infrastructure observations, not semantic evidence:
 Only a new audit document, one isolated CLI conformance harness, and isolated
 source fixtures were added.
 
+Phase 1A scope:
+
+- Production compiler source modified: **YES**, limited to missing-method
+  rejection, the MVIR invariant guard, and nominal-head locality.
+- Stdlib semantic source modified: **YES**, limited to removal of three orphan
+  borrowed-`IntoIterator` impls made invalid by the frozen rule.
+- Runtime ABI modified: **NO**.
+- Artifact semantics modified: **NO**.
+- New syntax added: **NO**.
+- New semantic feature added: **NO**; two frozen rejection rules are enforced.
+- Provider-specific exception added: **NO**.
+- Hygiene work duplicated: **NO**.
+- Phase 1B/1C implementation started: **NO**.
+
 ## Correction-pass verdict
 
 The corrected semantic authority, matrix counts, case/program totals, gap IDs,
 and executable results reconcile. No Phase 1 implementation was started.
 
 **SEM-MATURITY-01 PHASE 0 BASELINE CORRECTED**
+
+## Phase 1A verdict
+
+The hygiene rebase preserved the full eight-gap baseline. SEM-GAP-03 and
+SEM-GAP-06 are closed without renumbering any gap ID; SEM-GAP-05 remains
+withdrawn and is not reused. The source corpus has no open P0, no panic, and no
+silent fallback. The only workspace failure is the unchanged generated-artifact
+prerequisite documented above.
+
+**SEM-MATURITY-01 PHASE 1A SEMANTIC SAFETY CLOSURE COMPLETE**

@@ -216,6 +216,24 @@ fn test_gate_unresolved_symbol() {
 }
 
 // =============================================================================
+// Gate 8b: Unknown method
+// An unresolved method must stop in semantic analysis. It must never reach the
+// MVIR invariant guard or be replaced with a numeric fallback value.
+// =============================================================================
+
+#[test]
+fn test_gate_unknown_method() {
+    let src = r#"
+        struct UserType { value: i32 }
+        fn main() -> i32 {
+            dec value = UserType { value: 7 };
+            return value.missing_method();
+        }
+    "#;
+    assert_semantic_gate_fires("gate_unknown_method", src, "not found for type");
+}
+
+// =============================================================================
 // Gate 9: Type mismatch (basic unification failure)
 // If this reached MVIR, a Store of wrong type would be emitted,
 // eventually crashing LLVM type verification.

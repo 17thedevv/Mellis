@@ -443,3 +443,63 @@ fn test_case_15_coherence_non_overlapping_generics_pass() {
     let (ctx, success) = run_semantic(source);
     assert!(success, "Expected pass for non-overlapping generic instantiations, got: {:?}", ctx.diagnostics);
 }
+
+// Case 16: A local type nested under a reference head does not confer locality.
+#[test]
+fn test_case_16_orphan_reference_head_fail() {
+    let source = r#"
+        struct LocalType {}
+        impl core::Clone for &LocalType {}
+    "#;
+    let (ctx, success) = run_semantic_with_setup(source, |ctx| {
+        setup_core_provider(ctx);
+    });
+    assert!(!success, "Expected failure for foreign trait on a reference head");
+    let has_orphan_err = ctx
+        .diagnostics
+        .iter()
+        .any(|d| d.message.contains("E_ORPHAN_IMPL"));
+    assert!(
+        has_orphan_err,
+        "Expected E_ORPHAN_IMPL diagnostic, got: {:?}",
+        ctx.diagnostics
+    );
+}
+
+// Case 17: A local type nested under a pointer head does not confer locality.
+#[test]
+fn test_case_17_orphan_pointer_head_fail() {
+    let source = r#"
+        struct LocalType {}
+        impl core::Clone for *LocalType {}
+    "#;
+    let (ctx, success) = run_semantic_with_setup(source, |ctx| {
+        setup_core_provider(ctx);
+    });
+    assert!(!success, "Expected failure for foreign trait on a pointer head");
+    let has_orphan_err = ctx
+        .diagnostics
+        .iter()
+        .any(|d| d.message.contains("E_ORPHAN_IMPL"));
+    assert!(
+        has_orphan_err,
+        "Expected E_ORPHAN_IMPL diagnostic, got: {:?}",
+        ctx.diagnostics
+    );
+}
+
+// Case 18: A local trait may still be implemented for a reference head.
+#[test]
+fn test_case_18_local_trait_reference_head_pass() {
+    let source = r#"
+        trait LocalTrait {}
+        struct LocalType {}
+        impl LocalTrait for &LocalType {}
+    "#;
+    let (ctx, success) = run_semantic(source);
+    assert!(
+        success,
+        "Expected local trait on a reference head to pass, got: {:?}",
+        ctx.diagnostics
+    );
+}

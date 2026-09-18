@@ -4441,7 +4441,17 @@ impl<'a> TypeChecker<'a> {
                     self.typecheck_expr(&arg.value);
                 }
 
-                self.ctx.types.new_inference_var()
+                if !matches!(obj_ty, SemanticType::Error) {
+                    self.ctx.diagnostics.push(
+                        Diagnostic::error(format!(
+                            "Method `{}` not found for type `{:?}`",
+                            member_name, obj_ty
+                        ))
+                        .with_span(*method_name),
+                    );
+                }
+
+                self.ctx.types.error_id()
             }
             Expr::Sizeof { target_type } => {
                 self.lower_type(*target_type);

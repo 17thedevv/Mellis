@@ -2373,6 +2373,14 @@ impl<'a> MvirGenerator<'a> {
                     }, ty_id);
                     return Operand::Value(call_val);
                 }
+                let method_text = self.get_span_text(*method_name);
+                self.diagnostics.push(
+                    luna_common::Diagnostic::error(format!(
+                        "E6001: MVIR invariant violated: unresolved method `{}` reached lowering",
+                        method_text
+                    ))
+                    .with_span(*method_name),
+                );
                 Operand::Number("0".to_string())
             }
             Expr::Index { .. } => {
