@@ -176,9 +176,9 @@ fn sem_const_02_division_by_zero_is_rejected() {
 /// Valid; expected acceptance by trait selection and MVIR lowering. Existing
 /// stdlib container tests cannot prove this generic language rule.
 #[test]
-#[ignore = "SEM-GAP-01: MVIR rejects non-range user-defined for-in"]
 fn sem_iter_01_user_defined_for_in_is_accepted() {
     assert_accepts("sem_iter_01_user_defined_for_in.ln");
+    assert_accepts("sem_iter_02_vec_owned_for_in.ln");
 }
 
 /// SEM-METHOD-01 / SEM-GAP-02
@@ -186,9 +186,16 @@ fn sem_iter_01_user_defined_for_in_is_accepted() {
 /// call boundary when the reference does not escape.
 /// Valid; expected acceptance by borrowck on a user-defined receiver.
 #[test]
-#[ignore = "SEM-GAP-02: sequential mutable receiver calls retain a stale borrow"]
 fn sem_method_01_sequential_mut_receivers_are_accepted() {
     assert_accepts("sem_method_01_sequential_mut_receivers.ln");
+    assert_rejects(
+        "sem_method_02_escaping_mut_receiver_borrow.ln",
+        "Cannot borrow",
+    );
+    assert_rejects(
+        "sem_method_03_shared_then_mut_receiver_overlap.ln",
+        "Cannot borrow",
+    );
 }
 
 /// SEM-DIAG-01 / SEM-GAP-03 Phase 1A regression

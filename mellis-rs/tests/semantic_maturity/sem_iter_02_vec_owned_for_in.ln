@@ -1,0 +1,13 @@
+// SEM-ITER-02: existing stdlib-owned IntoIterator remains protocol-compatible.
+import <vec>;
+
+fn main() -> i32 {
+    dec rw values = vec_new<i32>();
+    values.push(4);
+    values.push(5);
+    dec rw sum = 0;
+    for value in values {
+        sum = sum + value;
+    }
+    return sum - 9;
+}

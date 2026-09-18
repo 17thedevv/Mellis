@@ -242,7 +242,8 @@ pub fn check(file_name: &str, input: String, options: &CompilerOptions) -> Resul
         return Err(mvir_diags);
     }
     
-    let mut interproc = luna_borrowck::interprocedural::InterproceduralContext::new();
+    let mut interproc =
+        luna_borrowck::interprocedural::InterproceduralContext::with_context(&semantic_ctx);
     interproc.compute_summaries(&module);
     
     for function in module.functions {

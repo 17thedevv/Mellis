@@ -123,10 +123,20 @@ pub struct InstantiatedFunction {
     pub symbol_types: HashMap<SymbolId, SemanticTypeId>,
     pub pat_types: HashMap<luna_ast::PatId, SemanticTypeId>,
     pub mono_calls: HashMap<ExprId, MonoInstance>,
-    pub mono_for_loops: HashMap<StmtId, MonoInstance>,
+    pub mono_for_loops: HashMap<StmtId, MonoForLoop>,
     pub closure_capture_bindings: Vec<crate::semantic_tables::CaptureBinding>,
     pub closure_env_type: Option<SemanticTypeId>,
     pub closure_env_ptr_type: Option<SemanticTypeId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MonoForLoop {
+    pub into_iter: MonoInstance,
+    pub next: MonoInstance,
+    pub iterator_type: SemanticTypeId,
+    pub item_type: SemanticTypeId,
+    pub option_type: SemanticTypeId,
+    pub next_receiver_type: SemanticTypeId,
 }
 
 pub struct MonoCollector<'a> {
@@ -145,7 +155,7 @@ pub struct MonoCollector<'a> {
     current_symbol_types: HashMap<SymbolId, SemanticTypeId>,
     current_pat_types: HashMap<luna_ast::PatId, SemanticTypeId>,
     current_mono_calls: HashMap<ExprId, MonoInstance>,
-    current_mono_for_loops: HashMap<StmtId, MonoInstance>,
+    current_mono_for_loops: HashMap<StmtId, MonoForLoop>,
     current_subst: Substitution,
 }
 
@@ -1076,26 +1086,53 @@ impl<'a> MonoCollector<'a> {
                 if let Some(it) = iterable { self.visit_expr(it); }
                 if let Some(pat) = pattern { self.visit_pattern(pat); }
 
-                // Record for_loop next instantiation
-                if let Some(&next_sym) = self.ctx.tables.for_loop_next.get(stmt_id) {
-                    if let Some(&next_decl) = self.ctx.tables.symbol_decls.get(&next_sym) {
-                        if let Some(subst) = self.ctx.tables.for_loop_subst.get(stmt_id).cloned() {
-                            let mut instance_subst = Vec::new();
-                            for (sym, ty) in subst.map {
-                                let sub_ty = self.substitute(ty);
-                                instance_subst.push((sym, sub_ty));
-                            }
-                            instance_subst.sort_by_key(|k| k.0);
-                            let instance = MonoInstance {
-                                decl_id: next_decl,
-                                subst: instance_subst,
-                                closure_id: None,
-                            };
-                            self.current_mono_for_loops.insert(*stmt_id, instance.clone());
-                            if !self.instantiated.contains_key(&instance) {
-                                self.worklist.push(instance);
+                // Record the complete semantic protocol plan selected by the
+                // type checker. Both calls are synthetic, so they must be
+                // explicitly added to the monomorphization worklist.
+                if let Some(resolution) = self.ctx.tables.for_loop_resolutions.get(stmt_id).cloned() {
+                    let make_instance = |method_sym: SymbolId,
+                                         subst: crate::ty::Substitution,
+                                         this: &mut Self|
+                     -> Option<MonoInstance> {
+                        let decl_id = this.ctx.tables.symbol_decls.get(&method_sym).copied()?;
+                        let mut instance_subst = Vec::new();
+                        for (sym, ty) in subst.map {
+                            instance_subst.push((sym, this.substitute(ty)));
+                        }
+                        instance_subst.sort_by_key(|entry| entry.0);
+                        Some(MonoInstance {
+                            decl_id,
+                            subst: instance_subst,
+                            closure_id: None,
+                        })
+                    };
+
+                    if let (Some(into_iter), Some(next)) = (
+                        make_instance(
+                            resolution.into_iter_method,
+                            resolution.into_iter_subst,
+                            self,
+                        ),
+                        make_instance(
+                            resolution.next_method,
+                            resolution.next_subst,
+                            self,
+                        ),
+                    ) {
+                        for instance in [&into_iter, &next] {
+                            if !self.instantiated.contains_key(instance) {
+                                self.worklist.push(instance.clone());
                             }
                         }
+                        let mono_loop = MonoForLoop {
+                            into_iter,
+                            next,
+                            iterator_type: self.substitute(resolution.iterator_type),
+                            item_type: self.substitute(resolution.item_type),
+                            option_type: self.substitute(resolution.option_type),
+                            next_receiver_type: self.substitute(resolution.next_receiver_type),
+                        };
+                        self.current_mono_for_loops.insert(*stmt_id, mono_loop);
                     }
                 }
 

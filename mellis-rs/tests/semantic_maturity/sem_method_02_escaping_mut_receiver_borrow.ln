@@ -1,0 +1,21 @@
+// SEM-METHOD-02: a borrow returned from &rw self remains live when used later.
+struct Counter {
+    value: i32,
+}
+
+impl Counter {
+    fn value_mut(self: &rw Self) -> &rw i32 life_from(self) {
+        return &rw self.value;
+    }
+
+    fn advance(self: &rw Self) {
+        self.value = self.value + 1;
+    }
+}
+
+fn main() {
+    dec rw counter = Counter { value: 4 };
+    dec held = counter.value_mut();
+    counter.advance();
+    *held = 8;
+}

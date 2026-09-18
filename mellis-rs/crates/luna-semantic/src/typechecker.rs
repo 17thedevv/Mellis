@@ -2971,6 +2971,259 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
+    fn select_protocol_impl(
+        &mut self,
+        trait_id: luna_common::ids::SymbolId,
+        self_ty: SemanticTypeId,
+        span: luna_common::Span,
+    ) -> Option<(crate::semantic_tables::TraitImplEntry, crate::ty::Substitution)> {
+        let mut matches = Vec::new();
+        for entry in &self.ctx.tables.trait_impl_entries {
+            if entry.trait_id != trait_id {
+                continue;
+            }
+            let mut subst = crate::ty::Substitution::new();
+            if self.ctx.matches_impl_pattern(
+                entry.self_type,
+                self_ty,
+                &entry.generic_params,
+                &mut subst,
+            ) {
+                matches.push((entry.clone(), subst));
+            }
+        }
+
+        match matches.len() {
+            1 => matches.pop(),
+            0 => {
+                let trait_name = self.ctx.symbol_table.get_symbol(trait_id).name.clone();
+                self.ctx.diagnostics.push(
+                    Diagnostic::error(format!(
+                        "Type `{:?}` does not implement required language protocol `{}`",
+                        self.ctx.types.get(self_ty),
+                        trait_name,
+                    ))
+                    .with_span(span),
+                );
+                None
+            }
+            _ => {
+                let trait_name = self.ctx.symbol_table.get_symbol(trait_id).name.clone();
+                self.ctx.diagnostics.push(
+                    Diagnostic::error(format!(
+                        "Multiple implementations of language protocol `{}` match `{:?}`",
+                        trait_name,
+                        self.ctx.types.get(self_ty),
+                    ))
+                    .with_span(span),
+                );
+                None
+            }
+        }
+    }
+
+    fn protocol_impl_method(
+        &mut self,
+        trait_id: luna_common::ids::SymbolId,
+        entry: &crate::semantic_tables::TraitImplEntry,
+        span: luna_common::Span,
+    ) -> Option<luna_common::ids::SymbolId> {
+        let required_methods = self
+            .ctx
+            .tables
+            .trait_methods
+            .get(&trait_id)
+            .cloned()
+            .unwrap_or_default();
+        if required_methods.len() != 1 {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("Iterator language protocols must define exactly one required method")
+                    .with_span(span),
+            );
+            return None;
+        }
+        let required_name = self
+            .ctx
+            .symbol_table
+            .get_symbol(required_methods[0])
+            .name
+            .clone();
+
+        if let Some(impl_decl) = entry.decl_id {
+            if let Some(Decl::Impl { methods, .. }) = self.arena.decls.get(impl_decl.0 as usize) {
+                for method_decl in methods {
+                    if let Some(&method_sym) = self.ctx.tables.decl_symbols.get(method_decl) {
+                        if self.ctx.symbol_table.get_symbol(method_sym).name == required_name {
+                            return Some(method_sym);
+                        }
+                    }
+                }
+            }
+        }
+
+        let self_key = match self.ctx.types.get(entry.self_type) {
+            SemanticType::Struct(sym, ..) | SemanticType::Enum(sym, ..) => {
+                Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*sym))
+            }
+            SemanticType::Primitive(kind) => {
+                Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*kind))
+            }
+            _ => None,
+        };
+        if let Some(self_type_def) = self_key {
+            let key = crate::semantic_tables::ImplKey {
+                trait_id: Some(trait_id),
+                self_type_def,
+            };
+            if let Some(methods) = self.ctx.tables.impl_methods.get(&key) {
+                for &method_sym in methods {
+                    if self.ctx.symbol_table.get_symbol(method_sym).name == required_name {
+                        return Some(method_sym);
+                    }
+                }
+            }
+        }
+
+        self.ctx.diagnostics.push(
+            Diagnostic::error(format!(
+                "Implementation of language protocol method `{}` is missing",
+                required_name,
+            ))
+            .with_span(span),
+        );
+        None
+    }
+
+    fn resolve_for_each_protocol(
+        &mut self,
+        stmt_id: luna_ast::StmtId,
+        iterable_ty: SemanticTypeId,
+        pattern: luna_ast::PatId,
+        span: luna_common::Span,
+    ) {
+        use crate::lang_item::LangItem;
+
+        let Some(into_iterator_trait) = self.ctx.lang_items.get(LangItem::IntoIterator) else {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("language item `into_iterator` is required for `for-in`")
+                    .with_span(span),
+            );
+            return;
+        };
+        let Some(iterator_trait) = self.ctx.lang_items.get(LangItem::Iterator) else {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("language item `iterator` is required for `for-in`")
+                    .with_span(span),
+            );
+            return;
+        };
+        let Some(option_sym) = self.ctx.lang_items.get(LangItem::Option) else {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("language item `option` is required for `for-in`").with_span(span),
+            );
+            return;
+        };
+
+        let Some((into_entry, into_subst)) =
+            self.select_protocol_impl(into_iterator_trait, iterable_ty, span)
+        else {
+            return;
+        };
+        if into_entry.trait_args.len() != 2 {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("IntoIterator language protocol requires item and iterator type arguments")
+                    .with_span(span),
+            );
+            return;
+        }
+        let item_ty = self.ctx.types.subst(into_entry.trait_args[0], &into_subst);
+        let iterator_ty = self.ctx.types.subst(into_entry.trait_args[1], &into_subst);
+        let Some(into_iter_method) =
+            self.protocol_impl_method(into_iterator_trait, &into_entry, span)
+        else {
+            return;
+        };
+
+        let Some((iterator_entry, next_subst)) =
+            self.select_protocol_impl(iterator_trait, iterator_ty, span)
+        else {
+            return;
+        };
+        if iterator_entry.trait_args.len() != 1 {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("Iterator language protocol requires one item type argument")
+                    .with_span(span),
+            );
+            return;
+        }
+        let next_item_ty = self.ctx.types.subst(iterator_entry.trait_args[0], &next_subst);
+        if let Err(error) = self.unify(item_ty, next_item_ty) {
+            self.ctx.diagnostics.push(Diagnostic::error(error).with_span(span));
+            return;
+        }
+        let Some(next_method) = self.protocol_impl_method(iterator_trait, &iterator_entry, span)
+        else {
+            return;
+        };
+
+        let Some(&next_fn_ty) = self.ctx.tables.symbol_types.get(&next_method) else {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("Iterator protocol method has no semantic function type")
+                    .with_span(span),
+            );
+            return;
+        };
+        let (next_receiver_type, option_type) =
+            match self.ctx.types.get(next_fn_ty).clone() {
+                SemanticType::Function { params, return_type } if !params.is_empty() => (
+                    self.ctx.types.subst(params[0], &next_subst),
+                    self.ctx.types.subst(return_type, &next_subst),
+                ),
+                _ => {
+                    self.ctx.diagnostics.push(
+                        Diagnostic::error("Iterator protocol method must have a receiver")
+                            .with_span(span),
+                    );
+                    return;
+                }
+            };
+        match self.ctx.types.get(option_type).clone() {
+            SemanticType::Enum(sym, args, _) if sym == option_sym && args.len() == 1 => {
+                if let Err(error) = self.unify(item_ty, args[0]) {
+                    self.ctx.diagnostics.push(Diagnostic::error(error).with_span(span));
+                    return;
+                }
+            }
+            _ => {
+                self.ctx.diagnostics.push(
+                    Diagnostic::error("Iterator protocol method must return the Option language contract")
+                        .with_span(span),
+                );
+                return;
+            }
+        }
+
+        let item_ty = self.ctx.types.resolve(item_ty);
+        let iterator_ty = self.ctx.types.resolve(iterator_ty);
+        let option_type = self.ctx.types.resolve(option_type);
+        self.typecheck_pattern(&pattern, item_ty);
+        self.ctx.tables.for_loop_next.insert(stmt_id, next_method);
+        self.ctx.tables.for_loop_subst.insert(stmt_id, next_subst.clone());
+        self.ctx.tables.for_loop_resolutions.insert(
+            stmt_id,
+            crate::semantic_tables::ForLoopResolution {
+                into_iter_method,
+                into_iter_subst: into_subst,
+                next_method,
+                next_subst,
+                iterator_type: iterator_ty,
+                item_type: item_ty,
+                option_type,
+                next_receiver_type,
+            },
+        );
+    }
+
     fn typecheck_stmt(&mut self, stmt_id: &luna_ast::StmtId) {
         let stmt = &self.arena.stmts[stmt_id.0 as usize];
         match stmt {
@@ -3004,7 +3257,7 @@ impl<'a> TypeChecker<'a> {
                 self.typecheck_stmt(body);
                 self.loop_depth -= 1;
             }
-            Stmt::For { init, cond, step, body, iterable, .. } => {
+            Stmt::For { kind, init, cond, step, body, pattern, iterable, .. } => {
                 if let Some(item) = init { self.typecheck_item(item); }
                 if let Some(c) = cond { 
                     let cond_ty = self.typecheck_expr(c); 
@@ -3014,7 +3267,25 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
                 if let Some(s) = step { self.typecheck_expr(s); }
-                if let Some(iter) = iterable { self.typecheck_expr(iter); }
+                if let Some(iter) = iterable {
+                    let iterable_ty = self.typecheck_expr(iter);
+                    if matches!(kind, luna_ast::stmt::ForKind::ForEach)
+                        && !matches!(
+                            &self.arena.exprs[iter.0 as usize],
+                            Expr::Binary {
+                                op: luna_ast::expr::BinaryOp::Range | luna_ast::expr::BinaryOp::RangeInc,
+                                ..
+                            }
+                        )
+                    {
+                        if let Some(pattern) = pattern {
+                            let span = self
+                                .get_expr_span_for_diag(iter)
+                                .unwrap_or_else(luna_common::Span::default);
+                            self.resolve_for_each_protocol(*stmt_id, iterable_ty, *pattern, span);
+                        }
+                    }
+                }
                 self.loop_depth += 1;
                 self.typecheck_stmt(body);
                 self.loop_depth -= 1;

@@ -245,7 +245,7 @@ the sole proof.
 | Multiple shared borrows | Frozen | borrowck; SEM-BORROW-01 | yes | PROVEN |
 | Mutable after ended shared borrows | Frozen | SEM-BORROW-01 | yes | PROVEN |
 | Shared after ended mutable borrow | Frozen | NLL suites | partial | PARTIAL |
-| Non-escaping call receiver borrow ends at call boundary | Frozen | SEM-METHOD-01 | yes | COMPILER GAP |
+| Non-escaping call receiver borrow ends at call boundary | Frozen | SEM-METHOD-01 plus escaping/overlap controls | yes | PROVEN |
 | Borrow across branches | Frozen | NLL/CFG suites | partial | PARTIAL |
 | Borrow across loops | Frozen | dormant UI fixtures only | no registered public-boundary proof | NOT TESTED |
 | Borrow through aggregate fields | Frozen v1 whole-value domain | borrowck plus SEM-BORROW-01/02 | yes, conservative precision | PARTIAL |
@@ -283,7 +283,7 @@ the sole proof.
 | `loop` | Frozen | loop suites | yes | PROVEN |
 | `while` | Frozen | loop/drop suites | yes | PROVEN |
 | range `for` | Frozen | loop suites | yes | PROVEN |
-| protocol-driven `for-in` | Frozen | dormant source fixture; SEM-ITER-01 | yes | COMPILER GAP |
+| protocol-driven `for-in` | Frozen | SEM-ITER-01 plus owned Vec control | yes | PROVEN |
 | `break` | Frozen | loop suites | yes | PROVEN |
 | `continue` | Frozen | loop suites | yes | PROVEN |
 | `return` | Frozen | pervasive | yes | PROVEN |
@@ -296,9 +296,9 @@ the sole proof.
 |---|---|---|---|---|
 | User-defined `Iterator<T>` impl and direct `next` | Frozen | language source probes | yes | PROVEN |
 | User-defined `IntoIterator<T, I>` and manual call | Frozen | language source probes | yes | PROVEN |
-| `for-in` lowering through contracts | Frozen | SEM-ITER-01 | yes | PARTIAL |
-| Generic iterator implementation | Frozen | generic `DummyIter<T>` source probe | check-only | PARTIAL |
-| Arbitrary user-defined iterable, independent of Vec | Frozen | SEM-ITER-01 | yes | PARTIAL |
+| `for-in` lowering through contracts | Frozen | SEM-ITER-01 | yes | PROVEN |
+| Generic iterator implementation | Frozen | generic `CounterIter<T>` source proof | yes | PROVEN |
+| Arbitrary user-defined iterable, independent of Vec | Frozen | SEM-ITER-01 | yes | PROVEN |
 
 ### K. Functions and calls
 
@@ -310,7 +310,7 @@ the sole proof.
 | Indirect calls | Frozen | C-GAP-05 | yes | PROVEN |
 | Method calls generally | Frozen | trait/inherent suites | partial | PARTIAL |
 | Unknown-method rejection | Frozen | SEM-DIAG-01; semantic gate regression | yes | PROVEN |
-| Receiver mutability | Frozen | P3 plus SEM-METHOD-01 | partial | PARTIAL |
+| Receiver mutability | Frozen | P3 plus SEM-METHOD-01 and two negative controls | yes | PROVEN |
 | Extern calls where semantically relevant | Frozen | FFI/UI/backend cases | stdlib-heavy | PARTIAL |
 
 ### L. Modules and providers
@@ -409,8 +409,8 @@ the harness enters through the public `luna check` command.
 | SEM-PROVIDER-01 | invalid | Duplicate root export from two providers rejects | provider/resolver | PASS (E1002) |
 | SEM-CONST-01 | valid | Pure comptime local mutation produces const | comptime | PASS |
 | SEM-CONST-02 | invalid | Division by zero rejects without fallback | comptime | PASS (rejected) |
-| SEM-ITER-01 | valid | User-defined `for-in` through language contracts | MVIR | EXPECTED FAIL (SEM-GAP-01) |
-| SEM-METHOD-01 | valid | Sequential non-escaping `&rw self` calls | borrowck | EXPECTED FAIL (SEM-GAP-02) |
+| SEM-ITER-01 | valid | Generic user-defined `for-in` through language contracts | typecheck/mono/MVIR | PASS (SEM-GAP-01 closed) |
+| SEM-METHOD-01 | valid | Sequential non-escaping `&rw self` calls | effect inference/borrowck | PASS (SEM-GAP-02 closed) |
 | SEM-DIAG-01 | invalid | Unknown user-defined method rejects | typecheck/MVIR | PASS (SEM-GAP-03 closed) |
 | SEM-DIAG-02 | invalid | Use after move emits frozen E3001 | diagnostics | EXPECTED FAIL (SEM-GAP-04) |
 | SEM-DIAG-03 | invalid | Partial move emits frozen E3002 | diagnostics | EXPECTED FAIL (SEM-GAP-07) |
@@ -436,10 +436,10 @@ Why existing tests were insufficient:
 
 ### User-defined generic coverage
 
-Seven cases exercise strictly generic user-defined declarations rather than
+Eight cases exercise strictly generic user-defined declarations rather than
 stdlib container behavior: SEM-GENERIC-01, SEM-TRAIT-01, SEM-BORROW-01,
 SEM-BORROW-02, SEM-OWN-01, SEM-ASSOC-01, and SEM-ASSOC-02. SEM-ITER-01 adds an
-eighth user-defined protocol case (non-generic concrete iterator). No maturity
+eighth user-defined protocol case (`CounterIter<T>`). No maturity
 claim in those classes relies solely on Vec, String, HashMap, HashSet, Option,
 or Result.
 
@@ -473,7 +473,7 @@ or shifting later stable IDs.
 ### SEM-GAP-01 — User-defined `for-in` rejected by MVIR
 
 Status:
-  OPEN
+  CLOSED — PHASE 1B
 
 Severity:
   P1
@@ -488,7 +488,7 @@ Minimal Luna reproduction:
 Expected:
   Source passes semantic analysis and lowers to contract calls.
 
-Actual:
+Phase 0 actual:
   `luna check` rejects with `for-each over non-range iterables is not yet supported`.
 
 Diagnostic:
@@ -498,19 +498,31 @@ Source-only reproduction:
   YES
 
 Affected subsystem:
-  MVIR
+  typechecker / monomorphization / MVIR
 
 Root cause:
   PROVEN
 
 Notes:
-  `generator.rs` handles a range AST directly and emits the error for every other
-  `ForEach` iterable. Trait selection itself succeeds before lowering.
+  The typechecker previously checked only the iterable expression; it did not
+  select or record an `IntoIterator`/`Iterator` protocol plan. Monomorphization
+  therefore had no synthetic `into_iter`/`next` instances, and MVIR handled a
+  range AST directly while rejecting every other `ForEach`.
+
+Phase 1B resolution:
+  Typechecking now selects both language contracts by lang-item identity,
+  records their impl substitutions and concrete Item/IntoIter/Option types,
+  and rejects missing or ambiguous implementations before lowering.
+  Monomorphization queues both synthetic calls. MVIR invokes those selected
+  instances, branches on the Option::Some lang-item variant, and owns/drops the
+  iterator temporary at loop exit. The implementation contains no Vec, Slice,
+  provider, or concrete-container branch. The generic `CounterIter<T>` repro and
+  an owned Vec control both build successfully.
 
 ### SEM-GAP-02 — Non-escaping mutable receiver loan survives call boundary
 
 Status:
-  OPEN
+  CLOSED — PHASE 1B
 
 Severity:
   P1
@@ -525,7 +537,7 @@ Minimal Luna reproduction:
 Expected:
   Two sequential `counter.advance()` calls and a later read are accepted.
 
-Actual:
+Phase 0 actual:
   Borrowck reports that the second call is already borrowed as `&rw`, followed by
   an access-while-borrowed error.
 
@@ -539,11 +551,21 @@ Affected subsystem:
   borrowck / call-effect loan lifetime
 
 Root cause:
-  SUSPECTED
+  PROVEN
 
 Notes:
-  The method body and one-call form are valid. The retained loan appears at the
-  call-effect/NLL boundary; Phase 0 does not change it.
+  `compile` computed interprocedural effects with `SemanticContext`, while
+  `check` used context-free inference. Context-free inference conservatively
+  treated a primitive return value as borrow-carrying, so the receiver loan was
+  propagated through the call result and remained live.
+
+Phase 1B resolution:
+  `check` now uses semantic-context-aware effect inference, matching `compile`.
+  Semantic return types terminate provenance for values that cannot contain a
+  reference. Load propagation remains conservative so real loans carried by
+  aggregates, projections, and iterator-adapter chains are not shortened.
+  Sequential non-escaping calls pass; a returned `&rw self` loan and an
+  overlapping shared/mutable receiver loan remain rejected.
 
 ### SEM-GAP-03 — Unknown method silently lowers to zero
 
@@ -797,7 +819,8 @@ Notes:
 
 - Closed P0: SEM-GAP-03, SEM-GAP-06
 - Open P0: none
-- Open P1: SEM-GAP-01, SEM-GAP-02
+- Closed P1: SEM-GAP-01, SEM-GAP-02
+- Open P1: none
 - Open P2: SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, SEM-GAP-09
 - Open P3: none
 
@@ -877,6 +900,35 @@ No new diagnostic code was invented.
 - Ignored open-gap reproductions: **6**
 - Phase 1A Rust regression tests added: **4**
 
+### Current metrics after Phase 1B
+
+- Frozen semantic rules inventoried: **119**
+- Rules PROVEN: **103**
+- Rules PARTIAL: **10**
+- Rules NOT TESTED: **2**
+- Rules in COMPILER GAP state: **4**
+- Unique open compiler gaps: **4**
+- Closed compiler gaps: **4**
+- Open P0: **0**
+- Open P1: **0**
+- Open P2: **4**
+- Open P3: **0**
+- Compiler panics in the conformance corpus: **0**
+- Silent fallback cases in the conformance corpus: **0**
+- User-defined generic coverage count: **8 cases**
+- Phase 0 conformance tests: **22**
+- Active conformance tests: **18**
+- Ignored open-gap reproductions: **4**
+- Phase 1B source control fixtures added: **3**
+
+The Rust harness remains at 22 tests. Phase 1B converts the existing GAP-01 and
+GAP-02 reproductions from ignored expected failures into active passing tests.
+It adds three source scenarios inside those tests: owned Vec `for-in`, an
+escaping mutable-receiver borrow, and shared/mutable receiver overlap. The
+current source corpus therefore exercises 21 scenarios (10 valid + 11 invalid),
+while four invalid scenarios retain a second ignored assertion for their exact
+Phase 1C diagnostic identity.
+
 The test/program totals count different things. The corpus contains 18 unique
 program scenarios (9 valid + 9 invalid). Four invalid programs each have a
 second ignored assertion dedicated to exact diagnostic identity: E1003, E3001,
@@ -938,6 +990,32 @@ and debuginfo disabled after the first compile attempt exhausted the Windows
 build volume. Their semantic result is the same known missing-`.llib` baseline
 failure; no artifact was generated or repaired.
 
+### Phase 1B verification
+
+| Command / group | Result |
+|---|---|
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --test-threads=1` | 18 passed, 0 failed, 4 ignored |
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --ignored --test-threads=1` | 0 passed, 4 failed as the four remaining diagnostic gaps; 18 filtered out |
+| `luna build --lib` for generic `CounterIter<T>` and owned Vec fixtures | 2 built, 0 failed; protocol calls lowered through backend |
+| `cargo test -p luna-semantic -- --test-threads=1` | 109 passed, 0 failed |
+| `cargo test -p luna-borrowck -- --test-threads=1` | 25 passed, 0 failed |
+| nine targeted semantic/generic/lifetime/receiver driver binaries | 87 passed, 0 failed |
+| iterator adapters plus terminal/collect/slice/Vec suites | 69 passed, 0 failed |
+| collection iterator suite | 2 passed, 6 generated-artifact fingerprint failures |
+| `cargo test --workspace -- --test-threads=1` | preceding binaries passed; `core_provider_baseline_acceptance_tests`: 6 passed, 1 generated-artifact failure |
+| `cargo test --workspace` | same baseline stop: 6 passed, 1 generated-artifact failure in the failing binary |
+
+The four ignored tests are exactly SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, and
+SEM-GAP-09. Their actual outputs remain, respectively, uncoded use-after-move,
+symbolic `E_PARTIAL_MOVE_UNDER_DROP`, uncoded borrow conflict, and uncoded
+private-field rejection.
+
+The collection suite failures are also classified as **BASELINE ENVIRONMENT /
+GENERATED-ARTIFACT FAILURE**. Six HashMap/HashSet cases strict-reject a stale
+`hashmap.llib` whose source fingerprint no longer matches. No ad-hoc artifact
+copying or regeneration was performed. The source-only GAP-01 fixture, its
+owned-Vec control, and all 69 unaffected iterator/container cases pass.
+
 Exact targeted driver command used for the correction pass:
 
 ```text
@@ -976,9 +1054,10 @@ Initial infrastructure observations, not semantic evidence:
    and retain an E6001 MVIR invariant guard; no zero fallback is accepted.
 2. **Completed in Phase 1A:** enforce nominal-head coherence for references and
    pointers, with negative and local-trait control regressions.
-3. **Phase 1B next:** implement generic user-defined `for-in` lowering through language contracts
-   in MVIR (P1), without Vec or provider special cases.
-4. **Phase 1B next:** correct non-escaping receiver-loan termination in borrowck/call effects (P1).
+3. **Completed in Phase 1B:** implement generic user-defined `for-in` lowering through language
+   contracts across typecheck, monomorphization, and MVIR, without Vec or provider special cases.
+4. **Completed in Phase 1B:** terminate non-escaping receiver loans from semantic return types
+   while preserving conservative aggregate/adapter loan propagation.
 5. **Phase 1C:** implement the typed frozen diagnostic registry, then migrate the independent
    E1003/E3001/E3002/E3003 emitters without treating one fix as proof of the
    other contracts (P2).
@@ -1028,6 +1107,22 @@ Phase 1A scope:
 - Hygiene work duplicated: **NO**.
 - Phase 1B/1C implementation started: **NO**.
 
+Phase 1B scope:
+
+- Production compiler source modified: **YES**, limited to semantic protocol
+  selection/recording, synthetic iterator monomorphization/lowering, iterator
+  temporary drop scopes, and receiver call-effect provenance.
+- Stdlib semantic source modified: **NO**.
+- Runtime ABI modified: **NO**.
+- Artifact schema or semantics modified: **NO**.
+- New syntax added: **NO**.
+- New language semantic added: **NO**; two frozen valid-program rules are now
+  implemented.
+- Container- or provider-specific compiler branch added: **NO**.
+- Stdlib API changed: **NO**.
+- Hygiene work duplicated: **NO**.
+- Phase 1C implementation started: **NO**.
+
 ## Correction-pass verdict
 
 The corrected semantic authority, matrix counts, case/program totals, gap IDs,
@@ -1044,3 +1139,15 @@ silent fallback. The only workspace failure is the unchanged generated-artifact
 prerequisite documented above.
 
 **SEM-MATURITY-01 PHASE 1A SEMANTIC SAFETY CLOSURE COMPLETE**
+
+## Phase 1B verdict
+
+SEM-GAP-01 and SEM-GAP-02 are closed by their original source-only
+reproductions. The generic user-defined iterable and owned Vec control pass
+through backend lowering. Sequential non-escaping mutable receiver calls pass,
+while escaping and overlapping receiver-loan controls still reject. The Phase 0
+corpus is 18 passed / 4 ignored, with no panic or silent fallback introduced.
+Workspace and six collection-iterator failures remain isolated generated-LLIB
+baseline environment failures.
+
+**SEM-MATURITY-01 PHASE 1B VALID-PROGRAM COMPLETENESS COMPLETE**
