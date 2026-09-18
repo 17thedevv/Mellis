@@ -7,6 +7,7 @@ use std::collections::HashMap;
 pub struct InterfaceDecoder {
     provider_id: ProviderId,
     provider_name: String,
+    interface_fingerprint: luna_llib::format::Fingerprint,
     interface: CanonicalInterface,
     symbol_id_allocator: u32,
     stable_to_local_sym: HashMap<StableSymbolId, luna_common::ids::SymbolId>,
@@ -27,10 +28,12 @@ impl InterfaceDecoder {
         provider_name: String,
         metadata: SemanticMetadata,
         known_providers: HashMap<String, ProviderId>,
+        interface_fingerprint: luna_llib::format::Fingerprint,
     ) -> Self {
         Self {
             provider_id,
             provider_name,
+            interface_fingerprint,
             interface: metadata.interface,
             symbol_id_allocator: 1, // Start from 1
             stable_to_local_sym: HashMap::new(),
@@ -89,6 +92,7 @@ impl InterfaceDecoder {
         let mut impl_methods = HashMap::new();
         let mut impl_generic_params = HashMap::new();
         let mut impl_self_types = HashMap::new();
+        let mut method_impls = HashMap::new();
 
         for impl_header in self.interface.impl_headers.clone() {
             let trait_id = impl_header.trait_id.as_ref().map(|t| {
@@ -162,6 +166,7 @@ impl InterfaceDecoder {
                     provider_id: Some(self.provider_id),
                 });
                 self.impl_method_symbols.push(ext_sym);
+                method_impls.insert(m_canon.clone(), key.clone());
                 method_canons.push(m_canon);
             }
             impl_methods.entry(key.clone()).or_insert_with(Vec::new).extend(method_canons);
@@ -174,6 +179,7 @@ impl InterfaceDecoder {
         ProviderInterface {
             id: self.provider_id,
             name: self.provider_name,
+            interface_fingerprint: self.interface_fingerprint,
             exported_symbols,
             symbol_types,
             types: self.types,
@@ -182,7 +188,7 @@ impl InterfaceDecoder {
             trait_impls: HashMap::new(),
             trait_impl_entries,
             impl_methods,
-            method_impls: HashMap::new(),
+            method_impls,
             impl_method_symbols: self.impl_method_symbols,
             symbol_canonicals: self.canonical_syms,
             trait_associated_types: HashMap::new(),
@@ -317,11 +323,17 @@ impl InterfaceDecoder {
 
     fn allocate_sym(&mut self, stable: &StableSymbolId) -> luna_common::ids::SymbolId {
         if let Some(&id) = self.stable_to_local_sym.get(stable) {
+            if stable.symbol_path == "T" {
+                eprintln!("[METADATA DECODER] allocate_sym (cached): {:?} -> {:?}", stable, id);
+            }
             return id;
         }
         let id = luna_common::ids::SymbolId(self.symbol_id_allocator);
         self.symbol_id_allocator += 1;
         self.stable_to_local_sym.insert(stable.clone(), id);
+        if stable.symbol_path == "T" {
+            eprintln!("[METADATA DECODER] allocate_sym (new): {:?} -> {:?}", stable, id);
+        }
         
         let pid = if stable.provider_name == self.provider_name {
             self.provider_id

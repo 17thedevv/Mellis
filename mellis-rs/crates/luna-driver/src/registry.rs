@@ -87,6 +87,7 @@ pub struct ExternalAssocTypeBound {
 pub struct ProviderInterface {
     pub id: ProviderId,
     pub name: String,
+    pub interface_fingerprint: luna_llib::format::Fingerprint,
     pub exported_symbols: HashMap<String, ExternalSymbol>,
     pub symbol_types: HashMap<luna_common::ids::SymbolId, luna_semantic::ty::SemanticTypeId>,
     pub types: luna_semantic::ty::TypeContext,
@@ -140,10 +141,16 @@ impl ModuleRegistry {
         current_provider_id: luna_semantic::symbol::ProviderId,
     ) -> CanonicalSymbolId {
         let sym = ctx.symbol_table.get_symbol(sym_id);
+        let name = if ctx.tables.method_impls.contains_key(&sym_id) || sym.kind == luna_semantic::symbol::SymbolKind::TraitMethod {
+            sym.name.clone()
+        } else {
+            let path = ctx.symbol_table.get_full_logical_path(sym_id);
+            path.join("::")
+        };
         CanonicalSymbolId {
             provider_id: sym.provider_id.unwrap_or(current_provider_id),
             decl_id: sym.decl_id,
-            name: sym.name.clone(),
+            name,
         }
     }
 
@@ -235,8 +242,27 @@ impl ModuleRegistry {
                     luna_semantic::symbol::ScopeKind::Module,
                     Some(global_scope),
                 );
+                
+                // Determine auto-visible symbols for this provider
+                let mut auto_visible = HashSet::new();
+                for entry in crate::lang_contracts::LangContractManifest::canonical().contracts {
+                    if entry.provider_id == prov_name {
+                        for sym_name in entry.auto_visible_symbols {
+                            auto_visible.insert(sym_name.to_string());
+                        }
+                    }
+                }
+
                 for root in prov_interface.exported_symbols.values() {
+                    // Inject into provider scope for `import <name>;`
                     Self::inject_symbol(root, prov_scope, ctx, &mut provider_symbol_maps);
+
+                    // Inject into global scope if auto-visible
+                    // We only check root symbol name here. Methods like Option::unwrap are members,
+                    // so injecting Option handles them properly through member lookup on Option.
+                    if auto_visible.contains(&root.sym.name) {
+                        Self::inject_symbol(root, global_scope, ctx, &mut provider_symbol_maps);
+                    }
                 }
                 ctx.provider_scopes.insert(pid, prov_scope);
                 ctx.provider_lookup.insert(prov_name.clone(), pid);
@@ -314,23 +340,43 @@ impl ModuleRegistry {
                 .provider_id
                 .unwrap_or(luna_semantic::symbol::ProviderId(0));
             if sym.decl_id.is_some() {
+                let path = ctx.symbol_table.get_full_logical_path(luna_common::ids::SymbolId(sym_id as u32));
                 let canonical = CanonicalSymbolId {
+                    provider_id: pid,
+                    decl_id: sym.decl_id,
+                    name: path.join("::"),
+                };
+                canonical_map.insert(canonical.clone(), luna_common::ids::SymbolId(sym_id as u32));
+                let short_canonical = CanonicalSymbolId {
                     provider_id: pid,
                     decl_id: sym.decl_id,
                     name: sym.name.clone(),
                 };
-                canonical_map.insert(canonical, luna_common::ids::SymbolId(sym_id as u32));
+                canonical_map.insert(short_canonical, luna_common::ids::SymbolId(sym_id as u32));
             }
             if !matches!(sym.kind, SymbolKind::TypeParam | SymbolKind::Variable | SymbolKind::EnumVariant(_)) {
-                by_name_map.insert((pid, sym.name.clone()), luna_common::ids::SymbolId(sym_id as u32));
+                let path = ctx.symbol_table.get_full_logical_path(luna_common::ids::SymbolId(sym_id as u32));
+                by_name_map.insert((pid, path.join("::")), luna_common::ids::SymbolId(sym_id as u32));
             }
         }
 
         let resolve_canonical =
             |canonical: &CanonicalSymbolId| -> Option<luna_common::ids::SymbolId> {
-                canonical_map.get(canonical).copied().or_else(|| {
-                    by_name_map.get(&(canonical.provider_id, canonical.name.clone())).copied()
-                })
+                if let Some(&sym_id) = canonical_map.get(canonical) {
+                    return Some(sym_id);
+                }
+                if let Some(decl_id) = canonical.decl_id {
+                    let short_name = canonical.name.rsplit("::").next().unwrap_or(&canonical.name);
+                    let alt_canonical = CanonicalSymbolId {
+                        provider_id: canonical.provider_id,
+                        decl_id: Some(decl_id),
+                        name: short_name.to_string(),
+                    };
+                    if let Some(&sym_id) = canonical_map.get(&alt_canonical) {
+                        return Some(sym_id);
+                    }
+                }
+                by_name_map.get(&(canonical.provider_id, canonical.name.clone())).copied()
             };
 
         // Now inject types
@@ -544,7 +590,7 @@ impl ModuleRegistry {
                             }
                         }
                     }
-                    ctx.tables.impl_methods.insert(new_impl_key, new_sym_ids);
+                    ctx.tables.impl_methods.entry(new_impl_key).or_default().extend(new_sym_ids);
                 }
             }
 
@@ -661,6 +707,20 @@ impl ModuleRegistry {
                 let new_sym_id = lookup_sym(old_sym_id);
                 ctx.tables.pat_symbols.insert(pat_id, new_sym_id);
             }
+            
+            // Inject generic parameter symbols map
+            for (struct_canon, param_canons) in &interface.generic_param_symbols {
+                if let Some(new_sym_id) = resolve_canonical(struct_canon) {
+                    if let Some(&decl_id) = ctx.tables.symbol_decls.get(&new_sym_id) {
+                        for (idx, gp_canon) in param_canons.iter().enumerate() {
+                            if let Some(new_gp_sym) = resolve_canonical(gp_canon) {
+                                ctx.tables.generic_param_symbols.insert((decl_id, idx), new_gp_sym);
+                            }
+                        }
+                    }
+                }
+            }
+
             for (&pat_id, &old_ty_id) in &interface.pat_types {
                 let new_ty_id = ctx.types.clone_type_from(old_ty_id, &interface.types, &lookup_sym);
                 ctx.tables.pat_types.insert(pat_id, new_ty_id);
@@ -780,16 +840,25 @@ impl ModuleRegistry {
             }
         }
     }
+}
 
+pub struct ArenaRanges {
+    pub exprs: std::ops::Range<u32>,
+    pub decls: std::ops::Range<u32>,
+    pub pats: std::ops::Range<u32>,
+}
+
+impl ModuleRegistry {
     pub fn extract_interface_from_ctx(
         provider_name: String,
         provider_id: ProviderId,
         ctx: &luna_semantic::SemanticContext,
+        ranges: &ArenaRanges,
     ) -> ProviderInterface {
-        let mut exported_symbols = HashMap::new();
-        let global_scope = luna_semantic::symbol::ScopeId(0);
-        let mut visited = HashSet::new();
-        let mut symbol_types = HashMap::new();
+            let mut exported_symbols = HashMap::new();
+            let global_scope = luna_semantic::symbol::ScopeId(0);
+            let mut visited = HashSet::new();
+            let mut symbol_types = HashMap::new();
 
         Self::extract_scope(
             &mut exported_symbols,
@@ -864,19 +933,17 @@ impl ModuleRegistry {
 
         let mut impl_methods = HashMap::new();
         for (k, v) in &ctx.tables.impl_methods {
-            let ext_key = Self::to_external_impl_key(k, ctx, provider_id);
-            if ext_key
+            let new_impl_key = Self::to_external_impl_key(k, ctx, provider_id);
+            if new_impl_key
                 .trait_id
                 .as_ref()
                 .map_or(false, |t| t.provider_id == provider_id)
-                || ext_key.self_type_def.provider_id() == Some(provider_id)
+                || new_impl_key.self_type_def.provider_id() == Some(provider_id)
             {
-                impl_methods.insert(
-                    ext_key,
-                    v.iter()
-                        .map(|&id| Self::get_canonical(id, ctx, provider_id))
-                        .collect(),
-                );
+                let methods: Vec<_> = v.iter()
+                    .map(|&id| Self::get_canonical(id, ctx, provider_id))
+                    .collect();
+                impl_methods.insert(new_impl_key, methods);
             }
         }
 
@@ -1019,18 +1086,61 @@ impl ModuleRegistry {
         for (&sym_id, &ty_id) in &ctx.tables.symbol_types {
             symbol_types.insert(sym_id, ty_id);
         }
-        let decl_symbols = ctx.tables.decl_symbols.clone();
-        let expr_symbols = ctx.tables.expr_symbols.clone();
-        let pat_symbols = ctx.tables.pat_symbols.clone();
-        let pat_types = ctx.tables.pat_types.clone();
-        let expr_types = ctx.tables.expr_types.clone();
-        let expr_struct_init_indices = ctx.tables.expr_struct_init_indices.clone();
-        let expr_member_indices = ctx.tables.expr_member_indices.clone();
-        let raw_generic_param_symbols = ctx.tables.generic_param_symbols.clone();
+        let mut decl_symbols = HashMap::new();
+        for (&id, &sym) in &ctx.tables.decl_symbols {
+            if ranges.decls.contains(&id.0) {
+                decl_symbols.insert(id, sym);
+            }
+        }
+        let mut expr_symbols = HashMap::new();
+        for (&id, &sym) in &ctx.tables.expr_symbols {
+            if ranges.exprs.contains(&id.0) {
+                expr_symbols.insert(id, sym);
+            }
+        }
+        let mut pat_symbols = HashMap::new();
+        for (&id, &sym) in &ctx.tables.pat_symbols {
+            if ranges.pats.contains(&id.0) {
+                pat_symbols.insert(id, sym);
+            }
+        }
+        let mut pat_types = HashMap::new();
+        for (&id, &ty) in &ctx.tables.pat_types {
+            if ranges.pats.contains(&id.0) {
+                pat_types.insert(id, ty);
+            }
+        }
+        let mut expr_types = HashMap::new();
+        for (&id, &ty) in &ctx.tables.expr_types {
+            if ranges.exprs.contains(&id.0) {
+                expr_types.insert(id, ty);
+            }
+        }
+        let mut expr_struct_init_indices = HashMap::new();
+        for (&id, idxs) in &ctx.tables.expr_struct_init_indices {
+            if ranges.exprs.contains(&id.0) {
+                expr_struct_init_indices.insert(id, idxs.clone());
+            }
+        }
+        let mut expr_member_indices = HashMap::new();
+        for (&id, &idx) in &ctx.tables.expr_member_indices {
+            if ranges.exprs.contains(&id.0) {
+                expr_member_indices.insert(id, idx);
+            }
+        }
         let mut expr_substs = HashMap::new();
-        for (&eid, subst) in &ctx.tables.expr_substs {
-            let list: Vec<_> = subst.map.iter().map(|(&s, &t)| (s, t)).collect();
-            expr_substs.insert(eid, list);
+        for (&id, subst) in &ctx.tables.expr_substs {
+            if ranges.exprs.contains(&id.0) {
+                let list: Vec<_> = subst.map.iter().map(|(&s, &t)| (s, t)).collect();
+                expr_substs.insert(id, list);
+            }
+        }
+
+        let mut raw_generic_param_symbols = HashMap::new();
+        for (&(decl_id, idx), &gp_sym) in &ctx.tables.generic_param_symbols {
+            if ranges.decls.contains(&decl_id.0) {
+                raw_generic_param_symbols.insert((decl_id, idx), gp_sym);
+            }
         }
 
         let mut trait_bounds = HashMap::new();
@@ -1069,6 +1179,7 @@ impl ModuleRegistry {
         ProviderInterface {
             id: provider_id,
             name: provider_name,
+            interface_fingerprint: luna_llib::format::Fingerprint::default(),
             exported_symbols,
             symbol_types,
             types: ctx.types.clone(),

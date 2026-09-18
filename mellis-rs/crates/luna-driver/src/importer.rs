@@ -7,18 +7,15 @@ use luna_lexer::Lexer;
 use luna_parser::Parser;
 use luna_semantic::{SemanticContext, Resolver, TypeChecker};
 
-pub fn resolve_imports(
+pub fn get_imports(
     items: &[Item],
-    arena: &mut AstArena,
-    
-    session: &mut DriverSession,
-) -> Result<(), Vec<Diagnostic>> {
-    let mut diagnostics = Vec::new();
-
-    // Collect imports from the current items
+    arena: &AstArena,
+    session: &DriverSession,
+) -> Vec<(String, luna_common::ids::Span, ImportKind)> {
     let mut imports = Vec::new();
     for item in items {
         if let Item::Decl(decl_id) = item {
+
             if let Decl::Import { annotations: _, name: name_span, kind, visibility: _ } = &arena.decls[decl_id.0 as usize] {
                 let file_info = session.compiler_session.source_manager.get_file(name_span.file_id).unwrap();
                 let mut name_str = &file_info.source[name_span.start as usize .. name_span.end as usize];
@@ -29,18 +26,27 @@ pub fn resolve_imports(
             }
         }
     }
+    imports
+}
+
+pub fn resolve_collected_imports(
+    imports: Vec<(String, luna_common::ids::Span, ImportKind)>,
+    arena: &mut AstArena,
+    session: &mut DriverSession,
+    context: crate::resolution_context::ProviderResolutionContext,
+) -> Result<(), Vec<Diagnostic>> {
+    let mut diagnostics = Vec::new();
+
+
 
     for (name, span, kind) in imports {
         if kind == ImportKind::External {
             // External package import: import <pkg>; -> delegates to session.load_package
-            if session.registry.external_providers.contains(&name) {
-                continue;
-            }
             if session.registry.is_loading(&name) {
                 diagnostics.push(Diagnostic::error(format!("Cyclic module dependency detected involving '{}'", name)).with_span(span));
                 continue;
             }
-            match session.load_package(&name, arena) {
+            match session.load_package(&name, arena, context) {
                 Ok(_) => continue,
                 Err(err) => {
                     for d in err.into_diagnostics() {
@@ -50,7 +56,7 @@ pub fn resolve_imports(
                 }
             }
         } else {
-            // Local module import: import "module"; -> searches in session.search_paths ONLY
+            // Local module import: import "module"; -> searches relative to the importing file directory
             if session.registry.local_providers.contains(&name) {
                 continue;
             }
@@ -59,32 +65,31 @@ pub fn resolve_imports(
                 continue;
             }
 
-            // Try to find .llib, .mlib, .ln, or .ms in search paths per Rule 6
             let mut found_path = None;
             let mut is_binary = false;
-            for sp in &session.search_paths {
-                let llib_path = Path::new(sp).join(format!("{}.llib", name));
-                let mlib_path = Path::new(sp).join(format!("{}.mlib", name));
-                let ln_path = Path::new(sp).join(format!("{}.ln", name));
-                let ms_path = Path::new(sp).join(format!("{}.ms", name));
-                if llib_path.exists() {
-                    found_path = Some(llib_path);
-                    is_binary = true;
-                    break;
-                }
-                if mlib_path.exists() {
-                    found_path = Some(mlib_path);
-                    is_binary = true;
-                    break;
-                }
-                if ln_path.exists() {
-                    found_path = Some(ln_path);
-                    break;
-                }
-                if ms_path.exists() {
-                    found_path = Some(ms_path);
-                    break;
-                }
+            
+            // Get the directory of the current file
+            if let Some(file_info) = session.compiler_session.source_manager.get_file(span.file_id) {
+                let file_path = Path::new(&file_info.name);
+                if let Some(parent_dir) = file_path.parent() {
+                        let base_dir = parent_dir;
+                        let llib_path = base_dir.join(format!("{}.llib", name));
+                        let mlib_path = base_dir.join(format!("{}.mlib", name));
+                        let ln_path = base_dir.join(format!("{}.ln", name));
+                        let ms_path = base_dir.join(format!("{}.ms", name));
+                        
+                        if llib_path.exists() {
+                            found_path = Some(llib_path);
+                            is_binary = true;
+                        } else if mlib_path.exists() {
+                            found_path = Some(mlib_path);
+                            is_binary = true;
+                        } else if ln_path.exists() {
+                            found_path = Some(ln_path);
+                        } else if ms_path.exists() {
+                            found_path = Some(ms_path);
+                        }
+                    }
             }
 
             if let Some(path) = found_path {
@@ -113,9 +118,18 @@ pub fn resolve_imports(
             }
         }
     }
-    if diagnostics.is_empty() {
-        Ok(())
-    } else {
-        Err(diagnostics)
+    if !diagnostics.is_empty() {
+        return Err(diagnostics);
     }
+    Ok(())
+}
+
+pub fn resolve_imports(
+    items: &[Item],
+    arena: &mut AstArena,
+    session: &mut DriverSession,
+    context: crate::resolution_context::ProviderResolutionContext,
+) -> Result<(), Vec<Diagnostic>> {
+    let imports = get_imports(items, arena, session);
+    resolve_collected_imports(imports, arena, session, context)
 }

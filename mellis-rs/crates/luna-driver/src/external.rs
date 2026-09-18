@@ -18,8 +18,52 @@ impl ExternalComponentLoader {
         let mut file = std::fs::File::open(&descriptor.entry_file).map_err(|e| {
             ExternalComponentError::ReadFailed {
                 path: descriptor.entry_file.clone(),
-                error: e.to_string(),
+                error: format!("Failed to open file: {}", e),
             }
+        })?;
+
+        let manifest = luna_llib::reader::MlibReader::read_manifest(&mut file).map_err(|e| {
+            ExternalComponentError::ReadFailed {
+                path: descriptor.entry_file.clone(),
+                error: format!("Failed to read manifest: {:?}", e),
+            }
+        })?;
+
+        let mut expected_source_fingerprint = None;
+        let source_path = descriptor.entry_file.with_extension("ln");
+        if source_path.exists() {
+            if let Ok(source_bytes) = std::fs::read(&source_path) {
+                use sha2::{Sha256, Digest};
+                let mut hasher = Sha256::new();
+                hasher.update(&source_bytes);
+                expected_source_fingerprint = Some(luna_llib::format::Fingerprint(hasher.finalize().into()));
+            }
+        }
+
+        let mut expected_dependencies = std::collections::HashMap::new();
+        for interface in driver_session.registry.interfaces.values() {
+            expected_dependencies.insert(interface.name.clone(), interface.interface_fingerprint);
+        }
+
+        let validation_ctx = luna_llib::ValidationContext {
+            expected_compiler_version: "0.1.0".to_string(),
+            expected_target: luna_backend::TargetConfig::default().triple,
+            expected_source_fingerprint,
+            expected_dependencies,
+        };
+
+        if let Err(reason) = luna_llib::validate_artifact(&manifest, &validation_ctx) {
+            return Err(ExternalComponentError::InvalidArtifact {
+                name: descriptor.name.clone(),
+                path: descriptor.entry_file.clone(),
+                reason,
+            });
+        }
+
+        use std::io::Seek;
+        file.rewind().map_err(|e| ExternalComponentError::ReadFailed {
+            path: descriptor.entry_file.clone(),
+            error: format!("Failed to rewind file: {}", e),
         })?;
 
         // If AstInterface section is present in the binary library (.llib / .mlib),
@@ -49,23 +93,32 @@ impl ExternalComponentLoader {
             }
             driver_session.registry.start_loading(&descriptor.name);
 
-            // Recursively resolve imports for the component
-            if let Err(inner_diags) = crate::importer::resolve_imports(
-                &mut provider_items,
-                &mut provider_arena,
+            let imports = crate::importer::get_imports(
+                &provider_items,
+                &provider_arena,
                 driver_session,
+            );
+            if let Err(inner_diags) = crate::importer::resolve_collected_imports(
+                imports,
+                global_arena,
+                driver_session,
+                crate::resolution_context::ProviderResolutionContext::SysrootDependency,
             ) {
                 driver_session.registry.finish_loading();
                 return Err(ExternalComponentError::ImportFailed(inner_diags));
             }
 
+            let expr_start = global_arena.exprs.len() as u32;
+            let decl_start = global_arena.decls.len() as u32;
+            let pat_start = global_arena.pats.len() as u32;
+            
             // Relocate AST to global arena
             let relocator = luna_ast::relocator::AstRelocator::new(
-                global_arena.exprs.len() as u32,
+                expr_start,
                 global_arena.stmts.len() as u32,
-                global_arena.decls.len() as u32,
+                decl_start,
                 global_arena.types.len() as u32,
-                global_arena.pats.len() as u32,
+                pat_start,
                 file_id,
             );
 
@@ -120,10 +173,16 @@ impl ExternalComponentLoader {
                 return Err(ExternalComponentError::SemanticFailed(semantic_ctx.diagnostics));
             }
 
+            let ranges = crate::registry::ArenaRanges {
+                exprs: expr_start..(global_arena.exprs.len() as u32),
+                decls: decl_start..(global_arena.decls.len() as u32),
+                pats: pat_start..(global_arena.pats.len() as u32),
+            };
             let interface = ModuleRegistry::extract_interface_from_ctx(
                 descriptor.name.clone(),
                 provider_id,
                 &semantic_ctx,
+                &ranges,
             );
             driver_session.registry.register_external(descriptor.name.clone(), interface);
             driver_session.registry.finish_loading();
@@ -149,7 +208,7 @@ impl ExternalComponentLoader {
         }
 
         // Fallback for libraries without AstInterface: decode SemanticMetadata
-        use std::io::Seek;
+        // Making sure it is positioned at the start for AstRelocator
         let _ = file.seek(std::io::SeekFrom::Start(0));
 
         let (_, _, _, semantic_metadata) = luna_llib::reader::MlibReader::read_module(&mut file).map_err(|e| {
@@ -174,6 +233,7 @@ impl ExternalComponentLoader {
             descriptor.name.clone(),
             semantic,
             driver_session.registry.providers.clone(),
+            manifest.provenance.interface_fingerprint,
         );
         let mut provider_interface = decoder.decode();
         provider_interface.name = descriptor.name.clone();
@@ -273,10 +333,16 @@ impl ExternalComponentLoader {
         };
 
         // Recursively resolve imports for the component using the unified driver session
-        if let Err(inner_diags) = crate::importer::resolve_imports(
-            &mut provider_items,
-            &mut provider_arena,
+        let imports = crate::importer::get_imports(
+            &provider_items,
+            &provider_arena,
             driver_session,
+        );
+        if let Err(inner_diags) = crate::importer::resolve_collected_imports(
+            imports,
+            global_arena,
+            driver_session,
+            crate::resolution_context::ProviderResolutionContext::SysrootDependency,
         ) {
             driver_session.registry.finish_loading();
             return Err(ExternalComponentError::ImportFailed(inner_diags));
@@ -293,17 +359,17 @@ impl ExternalComponentLoader {
             }
         };
 
-        // Relocate AST to global arena
-        
+        let expr_start = global_arena.exprs.len() as u32;
+        let decl_start = global_arena.decls.len() as u32;
+        let pat_start = global_arena.pats.len() as u32;
 
         let relocator = luna_ast::relocator::AstRelocator::new(
-            global_arena.exprs.len() as u32,
+            expr_start,
             global_arena.stmts.len() as u32,
-            global_arena.decls.len() as u32,
+            decl_start,
             global_arena.types.len() as u32,
-            global_arena.pats.len() as u32,
+            pat_start,
             file_id,
-            
         );
 
         relocator.relocate_arena(&mut provider_arena);
@@ -350,10 +416,16 @@ impl ExternalComponentLoader {
             return Err(ExternalComponentError::SemanticFailed(semantic_ctx.diagnostics));
         }
 
+        let ranges = crate::registry::ArenaRanges {
+            exprs: expr_start..(global_arena.exprs.len() as u32),
+            decls: decl_start..(global_arena.decls.len() as u32),
+            pats: pat_start..(global_arena.pats.len() as u32),
+        };
         let interface = ModuleRegistry::extract_interface_from_ctx(
             descriptor.name.clone(),
             provider_id,
             &semantic_ctx,
+            &ranges,
         );
         driver_session.registry.register_external(descriptor.name.clone(), interface);
         driver_session.registry.finish_loading();

@@ -1,14 +1,17 @@
 use std::path::{Path, PathBuf};
 use crate::error::SysrootError;
+use std::sync::Arc;
+use crate::sysroot_manifest::SysrootManifest;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Sysroot {
     root: PathBuf,
     external_dir: PathBuf,
+    manifest: Arc<SysrootManifest>,
 }
 
 impl Sysroot {
-    pub fn from_root(root: PathBuf) -> Self {
+    pub fn from_root(root: PathBuf) -> Result<Self, SysrootError> {
         let external_dir = if root.join("libs").join("external").exists() {
             root.join("libs").join("external")
         } else if root.ends_with("external") {
@@ -16,15 +19,32 @@ impl Sysroot {
         } else {
             root.join("libs").join("external")
         };
-        Self { root, external_dir }
+        
+        let manifest_path = external_dir.join("sysroot.toml");
+        let manifest = SysrootManifest::load_and_validate(&manifest_path).map_err(|e| {
+            SysrootError::ManifestLoadFailed {
+                path: manifest_path,
+                error: e,
+            }
+        })?;
+
+        Ok(Self {
+            root,
+            external_dir,
+            manifest: Arc::new(manifest),
+        })
     }
 
-    pub fn new(root: PathBuf, external_dir: PathBuf) -> Self {
-        Self { root, external_dir }
+    pub fn new(root: PathBuf, external_dir: PathBuf, manifest: Arc<SysrootManifest>) -> Self {
+        Self { root, external_dir, manifest }
     }
 
     pub fn root(&self) -> &Path {
         &self.root
+    }
+
+    pub fn manifest(&self) -> &SysrootManifest {
+        &self.manifest
     }
 
     pub fn external_dir(&self) -> &Path {
@@ -51,7 +71,7 @@ impl Sysroot {
             if !root.exists() {
                 return Err(SysrootError::SpecifiedPathNotFound(root));
             }
-            return Ok(Self::from_root(root));
+            return Self::from_root(root);
         }
 
         // 2. Environment variable
@@ -61,7 +81,7 @@ impl Sysroot {
                 if !root.exists() {
                     return Err(SysrootError::EnvVarPathNotFound(root));
                 }
-                return Ok(Self::from_root(root));
+                return Self::from_root(root);
             }
         }
 
@@ -71,21 +91,21 @@ impl Sysroot {
             exe.pop();
             searched_candidates.push(exe.clone());
             if exe.join("libs").join("external").exists() {
-                return Ok(Self::from_root(exe));
+                return Self::from_root(exe);
             }
 
             // e.g., <install_root>/bin -> <install_root>
             if exe.pop() {
                 searched_candidates.push(exe.clone());
                 if exe.join("libs").join("external").exists() {
-                    return Ok(Self::from_root(exe));
+                    return Self::from_root(exe);
                 }
 
                 // e.g., <repo_root>/target/debug -> <repo_root>
                 if exe.pop() {
                     searched_candidates.push(exe.clone());
                     if exe.join("libs").join("external").exists() {
-                        return Ok(Self::from_root(exe));
+                        return Self::from_root(exe);
                     }
                 }
             }
@@ -108,7 +128,9 @@ impl Sysroot {
             for _ in 0..6 {
                 let ext = cwd.join("libs").join("external");
                 if ext.exists() {
-                    return Ok(Self::from_root(cwd));
+                    if let Ok(sysroot) = Self::from_root(cwd.clone()) {
+                        return Ok(sysroot);
+                    }
                 }
                 if !cwd.pop() {
                     break;

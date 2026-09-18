@@ -1,4 +1,4 @@
-﻿use std::path::PathBuf;
+use std::path::PathBuf;
 use luna_common::Diagnostic;
 
 #[derive(Debug)]
@@ -7,6 +7,7 @@ pub enum SysrootError {
     EnvVarPathNotFound(PathBuf),
     DiscoveryFailed { searched: Vec<PathBuf> },
     ExternalRootMissing(PathBuf),
+    ManifestLoadFailed { path: PathBuf, error: String },
 }
 
 impl SysrootError {
@@ -32,6 +33,9 @@ impl SysrootError {
             SysrootError::ExternalRootMissing(p) => {
                 format!("sysroot external directory `{}` does not exist", p.display())
             }
+            SysrootError::ManifestLoadFailed { path, error } => {
+                format!("failed to load sysroot manifest `{}`: {}", path.display(), error)
+            }
         };
         vec![Diagnostic::error(msg)]
     }
@@ -46,6 +50,7 @@ pub enum ExternalComponentError {
     SemanticFailed(Vec<Diagnostic>),
     UnsupportedFormat { format: String, path: PathBuf },
     InvalidLibraryInterface { name: String, path: PathBuf, reason: String },
+    InvalidArtifact { name: String, path: PathBuf, reason: String },
 }
 
 impl ExternalComponentError {
@@ -74,6 +79,7 @@ impl ExternalComponentError {
                 path.display()
             ))],
             ExternalComponentError::InvalidLibraryInterface { name, path, reason } => vec![Diagnostic::error(format!("Invalid binary library interface for '{}' at `{}`: {}", name, path.display(), reason))],
+            ExternalComponentError::InvalidArtifact { name, path, reason } => vec![Diagnostic::error(format!("Strict Rejection: Invalid artifact for '{}' at `{}`: {}", name, path.display(), reason))],
         }
     }
 }

@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 use crate::error::ExternalComponentError;
+use crate::sysroot_manifest::{SysrootManifest, ProviderVisibility};
+use crate::resolution_context::ProviderResolutionContext;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ComponentFormat {
@@ -20,9 +22,23 @@ pub struct ExternalComponentDescriptor {
 pub struct ExternalComponentDiscovery;
 
 impl ExternalComponentDiscovery {
-    pub fn discover(external_dir: &Path, name: &str) -> Result<ExternalComponentDescriptor, ExternalComponentError> {
-        // 1. Check for canonical precompiled library: <external_dir>/<name>.llib (per Rule 6)
-        let llib_path = external_dir.join(format!("{}.llib", name));
+    pub fn discover(
+        external_dir: &Path,
+        name: &str,
+        manifest: &SysrootManifest,
+        context: ProviderResolutionContext,
+    ) -> Result<ExternalComponentDescriptor, ExternalComponentError> {
+        let provider = manifest.find_provider(name).ok_or_else(|| {
+            ExternalComponentError::NotFound { name: name.to_string(), searched_dir: external_dir.to_path_buf() }
+        })?;
+
+        if provider.visibility == ProviderVisibility::Internal && !context.can_access_internal() {
+            return Err(ExternalComponentError::NotFound { name: name.to_string(), searched_dir: external_dir.to_path_buf() });
+        }
+
+        let path_str = provider.path.as_str();
+
+        let llib_path = external_dir.join(format!("{}.llib", path_str));
         if llib_path.exists() {
             return Ok(ExternalComponentDescriptor {
                 name: name.to_string(),
@@ -32,8 +48,7 @@ impl ExternalComponentDiscovery {
             });
         }
 
-        // 2. Check for canonical single source file: <external_dir>/<name>.ln
-        let ln_path = external_dir.join(format!("{}.ln", name));
+        let ln_path = external_dir.join(format!("{}.ln", path_str));
         if ln_path.exists() {
             return Ok(ExternalComponentDescriptor {
                 name: name.to_string(),
@@ -43,8 +58,7 @@ impl ExternalComponentDiscovery {
             });
         }
 
-        // 3. Check for canonical package directory: <external_dir>/<name>/package.ln
-        let pkg_root = external_dir.join(name);
+        let pkg_root = external_dir.join(path_str);
         let pkg_ln_entry = pkg_root.join("package.ln");
         if pkg_ln_entry.exists() {
             return Ok(ExternalComponentDescriptor {
@@ -55,8 +69,7 @@ impl ExternalComponentDiscovery {
             });
         }
 
-        // 4. Check for legacy precompiled library: <external_dir>/<name>.mlib
-        let mlib_path = external_dir.join(format!("{}.mlib", name));
+        let mlib_path = external_dir.join(format!("{}.mlib", path_str));
         if mlib_path.exists() {
             return Ok(ExternalComponentDescriptor {
                 name: name.to_string(),
@@ -66,8 +79,7 @@ impl ExternalComponentDiscovery {
             });
         }
 
-        // 5. Check for legacy single source file: <external_dir>/<name>.ms
-        let ms_path = external_dir.join(format!("{}.ms", name));
+        let ms_path = external_dir.join(format!("{}.ms", path_str));
         if ms_path.exists() {
             return Ok(ExternalComponentDescriptor {
                 name: name.to_string(),
@@ -77,7 +89,6 @@ impl ExternalComponentDiscovery {
             });
         }
 
-        // 6. Check for legacy package directory: <external_dir>/<name>/package.ms
         let pkg_ms_entry = pkg_root.join("package.ms");
         if pkg_ms_entry.exists() {
             return Ok(ExternalComponentDescriptor {

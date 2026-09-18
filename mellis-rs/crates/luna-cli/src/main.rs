@@ -143,6 +143,7 @@ fn main() {
                 no_link: *lib,
                 comptime_steps: cli.comptime_steps,
                 comptime_depth: cli.comptime_depth,
+                is_sysroot_build: false,
             };
 
             if let Err(rendered_diagnostics) = luna_driver::compile_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {
@@ -167,6 +168,7 @@ fn main() {
                 no_link: false,
                 comptime_steps: cli.comptime_steps,
                 comptime_depth: cli.comptime_depth,
+                is_sysroot_build: false,
             };
 
             if let Err(rendered_diagnostics) = luna_driver::check_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {
@@ -191,6 +193,7 @@ fn main() {
                 no_link: false,
                 comptime_steps: cli.comptime_steps,
                 comptime_depth: cli.comptime_depth,
+                is_sysroot_build: false,
             };
 
             if let Err(rendered_diagnostics) = luna_driver::compile_and_render(file.to_string_lossy().as_ref(), source.clone(), &options) {

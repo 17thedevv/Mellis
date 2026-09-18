@@ -3,11 +3,15 @@ pub mod registry;
 pub mod async_lowering;
 pub mod sysroot;
 pub mod external;
+pub mod sysroot_builder;
 pub mod error;
 pub mod session;
 pub mod discovery;
 pub mod metadata_builder;
 pub mod metadata_decoder;
+pub mod lang_contracts;
+pub mod sysroot_manifest;
+pub mod resolution_context;
 
 pub use session::DriverSession;
 
@@ -31,6 +35,7 @@ pub struct CompilerOptions {
     pub no_link: bool,
     pub comptime_steps: Option<usize>,
     pub comptime_depth: Option<usize>,
+    pub is_sysroot_build: bool,
 }
 
 fn verify_items_lifetime(
@@ -80,17 +85,22 @@ pub fn check_semantic_only(file_name: &str, input: String, options: &CompilerOpt
     let sysroot = search_paths_buf
         .iter()
         .find(|p| p.join("libs").join("external").exists())
-        .map(|p| crate::sysroot::Sysroot::from_root(p.clone()))
+        .and_then(|p| crate::sysroot::Sysroot::from_root(p.clone()).ok())
         .or_else(|| crate::sysroot::Sysroot::discover(None).ok())
         .or_else(|| crate::sysroot::Sysroot::discover_for_test().ok())
-        .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))));
+        .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))).expect("Failed to initialize sysroot"));
     let mut driver_session = crate::session::DriverSession::new(sysroot, &mut session, options.search_paths.as_slice());
 
-    if let Err(e) = driver_session.bootstrap_core(&mut arena) {
+    if let Err(e) = driver_session.bootstrap_lang_contracts(&mut arena) {
         return Err(e.into_diagnostics());
     }
 
-    crate::importer::resolve_imports(&mut items, &mut arena, &mut driver_session).map_err(|e| e)?;
+    let context = if options.is_sysroot_build {
+        crate::resolution_context::ProviderResolutionContext::SysrootDependency
+    } else {
+        crate::resolution_context::ProviderResolutionContext::UserImport
+    };
+    crate::importer::resolve_imports(&mut items, &mut arena, &mut driver_session, context).map_err(|e| e)?;
     let registry = std::mem::take(&mut driver_session.registry);
     drop(driver_session);
 
@@ -121,7 +131,7 @@ pub fn check_semantic_only(file_name: &str, input: String, options: &CompilerOpt
     };
     TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &session.source_manager, &comptime_engine).typecheck_items(&items);
 
-    let mut mono = luna_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
+    let mut mono = luna_semantic::MonoCollector::new_with_source(&mut semantic_ctx, &arena, Some(&session.source_manager));
     mono.run(&items);
     let drop_glues = mono.drop_glues;
     let instantiated_functions = mono.instantiated.into_values().collect();
@@ -156,25 +166,30 @@ pub fn check(file_name: &str, input: String, options: &CompilerOptions) -> Resul
     let sysroot = search_paths_buf
         .iter()
         .find(|p| p.join("libs").join("external").exists())
-        .map(|p| crate::sysroot::Sysroot::from_root(p.clone()))
+        .and_then(|p| crate::sysroot::Sysroot::from_root(p.clone()).ok())
         .or_else(|| crate::sysroot::Sysroot::discover(None).ok())
         .or_else(|| crate::sysroot::Sysroot::discover_for_test().ok())
-        .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))));
+        .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))).expect("Failed to initialize sysroot"));
     let mut driver_session = crate::session::DriverSession::new(sysroot, &mut session, options.search_paths.as_slice());
     
     let base_name = std::path::Path::new(file_name)
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("");
-    if base_name != "core" {
-        if let Err(e) = driver_session.bootstrap_core(&mut arena) {
+    if !options.is_sysroot_build && base_name != "core" {
+        if let Err(e) = driver_session.bootstrap_lang_contracts(&mut arena) {
             return Err(e.into_diagnostics());
         }
     } else {
         semantic_ctx.allow_internal_lang_items = true;
     }
     
-    crate::importer::resolve_imports(&mut items, &mut arena, &mut driver_session).map_err(|e| e)?;
+    let context = if options.is_sysroot_build {
+        crate::resolution_context::ProviderResolutionContext::SysrootDependency
+    } else {
+        crate::resolution_context::ProviderResolutionContext::UserImport
+    };
+    crate::importer::resolve_imports(&mut items, &mut arena, &mut driver_session, context).map_err(|e| e)?;
     let registry = std::mem::take(&mut driver_session.registry);
     drop(driver_session);
     
@@ -205,7 +220,7 @@ pub fn check(file_name: &str, input: String, options: &CompilerOptions) -> Resul
     };
     TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &session.source_manager, &comptime_engine).typecheck_items(&items);
     
-    let mut mono = luna_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
+    let mut mono = luna_semantic::MonoCollector::new_with_source(&mut semantic_ctx, &arena, Some(&session.source_manager));
     mono.run(&items);
     let drop_glues = mono.drop_glues;
     let instantiated_functions = mono.instantiated.into_values().collect();
@@ -286,10 +301,12 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
                 println!("AstArena Stmts count: {}", arena.stmts.len());
                 println!("AstArena Decls count: {}", arena.decls.len());
             }
-            
             // Semantic phase
             let mut semantic_ctx = SemanticContext::new();
             
+            let main_expr_end = arena.exprs.len() as u32;
+            let main_decl_end = arena.decls.len() as u32;
+            let main_pat_end = arena.pats.len() as u32;
             
             let mut items_mut = items.clone();
             
@@ -297,25 +314,30 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
             let sysroot = search_paths_buf
                 .iter()
                 .find(|p| p.join("libs").join("external").exists())
-                .map(|p| crate::sysroot::Sysroot::from_root(p.clone()))
+                .and_then(|p| crate::sysroot::Sysroot::from_root(p.clone()).ok())
                 .or_else(|| crate::sysroot::Sysroot::discover(None).ok())
                 .or_else(|| crate::sysroot::Sysroot::discover_for_test().ok())
-                .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))));
+                .unwrap_or_else(|| crate::sysroot::Sysroot::from_root(search_paths_buf.first().cloned().unwrap_or_else(|| std::path::PathBuf::from("."))).expect("Failed to initialize sysroot"));
             let mut driver_session = crate::session::DriverSession::new(sysroot, session, options.search_paths.as_slice());
             
             let base_name = std::path::Path::new(file_name)
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
-            if base_name != "core" {
-                if let Err(e) = driver_session.bootstrap_core(&mut arena) {
+            if !options.is_sysroot_build && base_name != "core" {
+                if let Err(e) = driver_session.bootstrap_lang_contracts(&mut arena) {
                     return Err(e.into_diagnostics());
                 }
             } else {
                 semantic_ctx.allow_internal_lang_items = true;
             }
             
-            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut driver_session) {
+            let context = if options.is_sysroot_build {
+                crate::resolution_context::ProviderResolutionContext::SysrootDependency
+            } else {
+                crate::resolution_context::ProviderResolutionContext::UserImport
+            };
+            if let Err(e) = crate::importer::resolve_imports(&mut items_mut, &mut arena, &mut driver_session, context) {
                 return Err(e);
             }
             
@@ -353,7 +375,7 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
             let mut typechecker = TypeChecker::new_with_engine(&mut semantic_ctx, &arena, &session.source_manager, &comptime_engine);
             typechecker.typecheck_items(&items_mut);
             
-            let mut mono = luna_semantic::MonoCollector::new(&mut semantic_ctx, &arena);
+            let mut mono = luna_semantic::MonoCollector::new_with_source(&mut semantic_ctx, &arena, Some(&session.source_manager));
             mono.run(&items_mut);
             let drop_glues = mono.drop_glues;
             let instantiated_functions = mono.instantiated.into_values().collect();
@@ -535,9 +557,21 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
             let config = TargetConfig::default();
             if !options.quiet { println!("Target Triple: '{}'", config.triple); }
             
-            if let Err(e) = backend.emit_object(path_obj, &config) {
+            // Emit .obj atomically using sibling temp + rename pattern
+            let emit_obj_res = (|| -> Result<(), String> {
+                let (tmp_file, tmp_obj_path, mut guard) = create_sibling_temp(path_obj, "obj")
+                    .map_err(|e| format!("Failed to create temp .obj: {}", e))?;
+                drop(tmp_file); // LLVM backend opens file path directly
+                backend.emit_object(&tmp_obj_path, &config)
+                    .map_err(|e| format!("Emit Object Error: {}", e))?;
+                std::fs::rename(&tmp_obj_path, path_obj)
+                    .map_err(|e| format!("Failed to finalize .obj: {}", e))?;
+                guard.disarm();
+                Ok(())
+            })();
+            if let Err(e) = emit_obj_res {
                 if !options.quiet { println!("Failed to emit .obj: {}", e); }
-                return Err(vec![Diagnostic::error(format!("Emit Object Error: {}", e))]);
+                return Err(vec![Diagnostic::error(e)]);
             } else {
                 if !options.quiet { println!("Successfully wrote {}", obj_file); }
             }
@@ -560,7 +594,21 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
                 } else {
                     format!("{}.mlib", base_name)
                 };
-                let mut mlib_buffer = std::fs::File::create(&mlib_file).expect("Failed to create library file");
+
+                // Write to memory buffer first, then atomically publish
+                // This prevents readers from observing partial/half-written artifacts
+                let mut mlib_buffer = Vec::new();
+                let mut deps = vec![];
+                for (id, interface) in &registry.interfaces {
+                    if interface.name != base_name {
+                        let dep_entry = luna_llib::format::DependencyEntry {
+                            provider_name: interface.name.clone(),
+                            interface_fingerprint: interface.interface_fingerprint,
+                        };
+                        deps.push(dep_entry);
+                    }
+                }
+
                 let manifest = luna_llib::Manifest {
                     identity: luna_llib::ArtifactIdentity {
                         package_id: "".to_string(),
@@ -569,28 +617,33 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
                         artifact_id: "".to_string(),
                     },
                     target: luna_llib::TargetContract {
-                        target_triple: "".to_string(),
+                        target_triple: config.triple.clone(),
                         object_format: "ELF".to_string(),
                         abi: "".to_string(),
                         pointer_width: 64,
                         endianness: "".to_string(),
                     },
-                    dependencies: luna_llib::DependencyTable {
-                        mlib_deps: vec![],
+                    dependencies: luna_llib::format::DependencyTable {
+                        deps,
                         native_deps: vec![],
                     },
                     object_metadata: None,
-                    provenance: luna_llib::Provenance {
-                        source_fingerprint: [0; 32],
+                    provenance: luna_llib::format::Provenance {
+                        source_fingerprint: luna_llib::format::Fingerprint([0; 32]),
                         compiler_version: "0.1.0".to_string(),
                         codegen_options: "".to_string(),
-                        interface_hash: [0; 32],
+                        interface_fingerprint: luna_llib::format::Fingerprint([0; 32]),
                     },
                     export_table: None,
                 };
-                
+
                 let main_provider_id = luna_semantic::symbol::ProviderId(0);
-                let interface = crate::registry::ModuleRegistry::extract_interface_from_ctx(base_name.to_string(), main_provider_id, &semantic_ctx);
+                let ranges = crate::registry::ArenaRanges {
+                    exprs: 0..main_expr_end,
+                    decls: 0..main_decl_end,
+                    pats: 0..main_pat_end,
+                };
+                let interface = crate::registry::ModuleRegistry::extract_interface_from_ctx(base_name.to_string(), main_provider_id, &semantic_ctx, &ranges);
                 let builder = crate::metadata_builder::MetadataBuilder::new(&registry, &interface);
                 let semantic_metadata = Some(builder.build());
 
@@ -598,10 +651,37 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
 
                 match luna_llib::MlibWriter::write_module(&module, &arena, &items, &input, manifest, semantic_metadata.as_ref(), obj_bytes.as_deref(), &mut mlib_buffer) {
                     Ok(_) => {
-                        if !options.quiet { println!("Successfully wrote {}", mlib_file); }
+                        // Atomically publish the complete artifact
+                        // Use sibling temp file + rename pattern with RAII cleanup
+                        let canonical_path = std::path::Path::new(&mlib_file);
+                        let ext_suffix = if options.emit_llib { "llib" } else { "mlib" };
+                        match create_sibling_temp(canonical_path, ext_suffix) {
+                            Ok((mut tmp_file, tmp_path, mut guard)) => {
+                                use std::io::Write;
+                                if let Err(e) = tmp_file.write_all(&mlib_buffer) {
+                                    if !options.quiet { println!("Failed to write temp artifact: {}", e); }
+                                } else if let Err(e) = tmp_file.flush() {
+                                    if !options.quiet { println!("Failed to flush temp artifact: {}", e); }
+                                } else {
+                                    drop(tmp_file); // Close handle before rename on Windows
+                                    match std::fs::rename(&tmp_path, canonical_path) {
+                                        Ok(_) => {
+                                            guard.disarm();
+                                            if !options.quiet { println!("Successfully wrote {}", mlib_file); }
+                                        }
+                                        Err(e) => {
+                                            if !options.quiet { println!("Failed to publish artifact: {}", e); }
+                                        }
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                if !options.quiet { println!("Failed to create temp artifact: {}", e); }
+                            }
+                        }
                     }
                     Err(e) => {
-                        if !options.quiet { println!("Failed to write library: {}", e); }
+                        if !options.quiet { println!("Failed to serialize library: {}", e); }
                     }
                 }
                 if !options.quiet {
@@ -642,5 +722,151 @@ pub fn compile_with_session(session: &mut CompilerSession, file_name: &str, inpu
         Err(all_diagnostics)
     }
 }
+
+static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// RAII guard for temporary artifacts.
+/// Ensures the temp file is removed on scope exit unless explicitly disarmed after successful publication.
+pub(crate) struct TempArtifactGuard {
+    path: std::path::PathBuf,
+    armed: bool,
+}
+
+impl TempArtifactGuard {
+    pub(crate) fn new(path: std::path::PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    pub(crate) fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for TempArtifactGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+}
+
+/// Create a unique sibling temporary file in the same parent directory as `canonical_path`.
+/// Guaranteed collision-free via `create_new(true)` and PID + atomic counter.
+/// The temp file does NOT have the canonical artifact extension (e.g. `.llib` or `.obj`),
+/// preventing resolver discovery from accidentally picking it up.
+pub(crate) fn create_sibling_temp(
+    canonical_path: &std::path::Path,
+    ext_suffix: &str,
+) -> Result<(std::fs::File, std::path::PathBuf, TempArtifactGuard), std::io::Error> {
+    let parent = canonical_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let stem = canonical_path.file_stem().and_then(|s| s.to_str()).unwrap_or("artifact");
+    let pid = std::process::id();
+    loop {
+        let counter = TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let tmp_name = format!("{}.{}.tmp.{}.{}", stem, ext_suffix, pid, counter);
+        let tmp_path = parent.join(tmp_name);
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp_path)
+        {
+            Ok(file) => {
+                let guard = TempArtifactGuard::new(tmp_path.clone());
+                return Ok((file, tmp_path, guard));
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e),
+        }
+    }
+}
+
+#[cfg(test)]
+mod publication_tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_atomic_publication_successful_replacement() {
+        let temp_dir = std::env::temp_dir().join("luna_pub_test_success");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let canonical = temp_dir.join("box.llib");
+        // Write initial complete content
+        std::fs::write(&canonical, b"OLD COMPLETE BYTES").unwrap();
+
+        // Perform publication using create_sibling_temp + rename
+        let (mut tmp_file, tmp_path, mut guard) = create_sibling_temp(&canonical, "llib").unwrap();
+        assert!(tmp_path.exists());
+        assert!(!tmp_path.to_string_lossy().ends_with(".llib"));
+
+        tmp_file.write_all(b"NEW COMPLETE BYTES").unwrap();
+        tmp_file.flush().unwrap();
+        drop(tmp_file); // Close handle on Windows before rename
+
+        std::fs::rename(&tmp_path, &canonical).unwrap();
+        guard.disarm();
+
+        // Canonical has new content
+        let content = std::fs::read(&canonical).unwrap();
+        assert_eq!(content, b"NEW COMPLETE BYTES");
+
+        // Temp is gone
+        assert!(!tmp_path.exists());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_atomic_publication_failure_cleans_temp_and_preserves_old() {
+        let temp_dir = std::env::temp_dir().join("luna_pub_test_fail");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let canonical = temp_dir.join("vec.llib");
+        std::fs::write(&canonical, b"ORIGINAL PRESERVED CONTENT").unwrap();
+
+        let tmp_path_copy;
+        {
+            let (mut tmp_file, tmp_path, _guard) = create_sibling_temp(&canonical, "llib").unwrap();
+            tmp_path_copy = tmp_path.clone();
+            assert!(tmp_path.exists());
+
+            tmp_file.write_all(b"PARTIAL").unwrap();
+            // Simulate error/abort before rename: _guard drops while armed
+        }
+
+        // After guard drops on error, temp must be automatically deleted
+        assert!(!tmp_path_copy.exists(), "Temp artifact must be removed on failure");
+
+        // Canonical remains unchanged
+        let content = std::fs::read(&canonical).unwrap();
+        assert_eq!(content, b"ORIGINAL PRESERVED CONTENT");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_sibling_temp_discovery_isolation() {
+        let temp_dir = std::env::temp_dir().join("luna_pub_test_isolation");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let canonical = temp_dir.join("hashmap.llib");
+        let (_file, tmp_path, mut guard) = create_sibling_temp(&canonical, "llib").unwrap();
+
+        // 1. Same parent directory
+        assert_eq!(tmp_path.parent(), canonical.parent());
+
+        // 2. Extension is NOT .llib
+        let ext = tmp_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        assert_ne!(ext, "llib", "Temp file must not end in .llib extension");
+
+        guard.disarm();
+        let _ = std::fs::remove_file(&tmp_path);
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+}
+
 
 

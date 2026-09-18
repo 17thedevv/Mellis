@@ -1,69 +1,128 @@
-﻿use std::fs;
-use std::path::PathBuf;
-use luna_driver::discovery::{ExternalComponentDiscovery, ComponentFormat};
+use luna_driver::discovery::{ComponentFormat, ExternalComponentDiscovery};
+use luna_driver::resolution_context::ProviderResolutionContext;
+use luna_driver::sysroot_manifest::SysrootManifest;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 fn create_temp_dir(test_name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join("luna_precedence_tests").join(test_name);
+    let dir = std::env::temp_dir()
+        .join("luna_manifest_resolution_tests")
+        .join(test_name);
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("Failed to create test temp dir");
     dir
 }
 
-#[test]
-fn test_canonical_ln_over_legacy_ms() {
-    let ext_dir = create_temp_dir("ln_over_ms");
-
-    fs::write(ext_dir.join("foo.ln"), "module foo {}").unwrap();
-    fs::write(ext_dir.join("foo.ms"), "module foo_legacy {}").unwrap();
-
-    let desc = ExternalComponentDiscovery::discover(&ext_dir, "foo").expect("should discover foo");
-    assert_eq!(desc.format, ComponentFormat::Source);
-    assert_eq!(desc.entry_file, ext_dir.join("foo.ln"));
+fn manifest_for(dir: &Path, name: &str, path: &str, visibility: &str) -> SysrootManifest {
+    let manifest_path = dir.join("sysroot.toml");
+    fs::write(
+        &manifest_path,
+        format!(
+            "[[provider]]\nname = \"{name}\"\npath = \"{path}\"\nvisibility = \"{visibility}\"\n"
+        ),
+    )
+    .unwrap();
+    SysrootManifest::load_and_validate(&manifest_path).unwrap()
 }
 
 #[test]
-fn test_canonical_llib_over_legacy_mlib() {
-    let ext_dir = create_temp_dir("llib_over_mlib");
+fn manifest_maps_logical_identity_to_physical_source() {
+    let ext_dir = create_temp_dir("logical_to_physical");
+    fs::create_dir_all(ext_dir.join("core")).unwrap();
+    fs::write(ext_dir.join("core/result.ln"), "module std {}").unwrap();
+    let manifest = manifest_for(&ext_dir, "result", "core/result", "public");
 
-    fs::write(ext_dir.join("bar.llib"), b"LLIB").unwrap();
-    fs::write(ext_dir.join("bar.mlib"), b"MLIB").unwrap();
+    let desc = ExternalComponentDiscovery::discover(
+        &ext_dir,
+        "result",
+        &manifest,
+        ProviderResolutionContext::UserImport,
+    )
+    .expect("registered logical provider must resolve");
 
-    let desc = ExternalComponentDiscovery::discover(&ext_dir, "bar").expect("should discover bar");
+    assert_eq!(desc.format, ComponentFormat::Source);
+    assert_eq!(desc.entry_file, ext_dir.join("core/result.ln"));
+}
+
+#[test]
+fn llib_candidate_precedes_source_for_registered_provider() {
+    let ext_dir = create_temp_dir("llib_over_source");
+    fs::create_dir_all(ext_dir.join("alloc")).unwrap();
+    fs::write(ext_dir.join("alloc/vec.ln"), "struct Vec {}").unwrap();
+    fs::write(ext_dir.join("alloc/vec.llib"), b"candidate").unwrap();
+    let manifest = manifest_for(&ext_dir, "vec", "alloc/vec", "public");
+
+    let desc = ExternalComponentDiscovery::discover(
+        &ext_dir,
+        "vec",
+        &manifest,
+        ProviderResolutionContext::UserImport,
+    )
+    .expect("registered provider must produce its artifact candidate");
+
     assert_eq!(desc.format, ComponentFormat::Llib);
-    assert_eq!(desc.entry_file, ext_dir.join("bar.llib"));
+    assert_eq!(desc.entry_file, ext_dir.join("alloc/vec.llib"));
 }
 
 #[test]
-fn test_canonical_source_over_legacy_mlib() {
-    let ext_dir = create_temp_dir("source_over_mlib");
+fn source_is_selected_only_when_artifact_is_absent() {
+    let ext_dir = create_temp_dir("source_when_artifact_absent");
+    fs::create_dir_all(ext_dir.join("alloc")).unwrap();
+    fs::write(ext_dir.join("alloc/string.ln"), "module std {}").unwrap();
+    let manifest = manifest_for(&ext_dir, "string", "alloc/string", "public");
 
-    // Canonical source .ln must win over legacy compiled .mlib (no legacy shadowing)
-    fs::write(ext_dir.join("baz.ln"), "module baz {}").unwrap();
-    fs::write(ext_dir.join("baz.mlib"), b"MLIB").unwrap();
+    let desc = ExternalComponentDiscovery::discover(
+        &ext_dir,
+        "string",
+        &manifest,
+        ProviderResolutionContext::UserImport,
+    )
+    .expect("source must resolve when no artifact exists");
 
-    let desc = ExternalComponentDiscovery::discover(&ext_dir, "baz").expect("should discover baz");
     assert_eq!(desc.format, ComponentFormat::Source);
-    assert_eq!(desc.entry_file, ext_dir.join("baz.ln"));
+    assert_eq!(desc.entry_file, ext_dir.join("alloc/string.ln"));
 }
 
 #[test]
-fn test_legacy_ms_fallback_when_canonical_absent() {
-    let ext_dir = create_temp_dir("legacy_ms_fallback");
+fn unregistered_physical_path_is_not_a_logical_alias() {
+    let ext_dir = create_temp_dir("physical_path_not_alias");
+    fs::create_dir_all(ext_dir.join("alloc")).unwrap();
+    fs::write(ext_dir.join("alloc/vec.ln"), "struct Vec {}").unwrap();
+    let manifest = manifest_for(&ext_dir, "vec", "alloc/vec", "public");
 
-    fs::write(ext_dir.join("legacy_mod.ms"), "module legacy_mod {}").unwrap();
-
-    let desc = ExternalComponentDiscovery::discover(&ext_dir, "legacy_mod").expect("should discover legacy_mod");
-    assert_eq!(desc.format, ComponentFormat::Source);
-    assert_eq!(desc.entry_file, ext_dir.join("legacy_mod.ms"));
+    let err = ExternalComponentDiscovery::discover(
+        &ext_dir,
+        "alloc/vec",
+        &manifest,
+        ProviderResolutionContext::UserImport,
+    )
+    .expect_err("physical path must not become a logical provider identity");
+    assert!(format!("{err:?}").contains("NotFound"));
 }
 
 #[test]
-fn test_legacy_mlib_fallback_when_canonical_absent() {
-    let ext_dir = create_temp_dir("legacy_mlib_fallback");
+fn internal_visibility_depends_on_requester_provenance() {
+    let ext_dir = create_temp_dir("internal_provenance");
+    fs::create_dir_all(ext_dir.join("alloc")).unwrap();
+    fs::write(ext_dir.join("alloc/raw_table.ln"), "struct RawTable {}").unwrap();
+    let manifest = manifest_for(&ext_dir, "__raw_table", "alloc/raw_table", "internal");
 
-    fs::write(ext_dir.join("legacy_lib.mlib"), b"MLIB").unwrap();
-
-    let desc = ExternalComponentDiscovery::discover(&ext_dir, "legacy_lib").expect("should discover legacy_lib");
-    assert_eq!(desc.format, ComponentFormat::Llib);
-    assert_eq!(desc.entry_file, ext_dir.join("legacy_lib.mlib"));
+    assert!(
+        ExternalComponentDiscovery::discover(
+            &ext_dir,
+            "__raw_table",
+            &manifest,
+            ProviderResolutionContext::UserImport,
+        )
+        .is_err()
+    );
+    assert!(
+        ExternalComponentDiscovery::discover(
+            &ext_dir,
+            "__raw_table",
+            &manifest,
+            ProviderResolutionContext::SysrootDependency,
+        )
+        .is_ok()
+    );
 }
