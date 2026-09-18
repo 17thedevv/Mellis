@@ -28,8 +28,20 @@ fn test_vd1_vec_box_scope_exit() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn run_vec_boxes() {
     dec rw v = vec_new<std::Box<i32>>();
@@ -64,8 +76,20 @@ fn test_vd2_vec_droptracker_count() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct DropTracker {
     id: i32,
@@ -119,8 +143,20 @@ fn test_vd3_vec_clear_drops_elements() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct DropTracker {
     counter: *rw i32,
@@ -176,8 +212,20 @@ fn test_vd4_vec_truncate_drops_truncated_elements() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct DropTracker {
     id: i32,
@@ -239,8 +287,20 @@ fn test_vd5_vec_box_droptracker_multi_grow_identity() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct DropTracker {
     id: i32,
@@ -304,8 +364,20 @@ fn test_vd6_vec_primitive_drop() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn run_primitives() {
     dec rw v = vec_new<i32>();
@@ -346,8 +418,20 @@ fn test_vd7_vec_is_empty() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw v = vec_new<i32>();
@@ -390,8 +474,20 @@ fn test_vd8_vec_last_and_last_mut() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw v = vec_new<i32>();
@@ -462,8 +558,20 @@ fn test_vd8b_vec_last_borrow_conflict_rejected() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw v = vec_new<i32>();
@@ -499,8 +607,20 @@ fn test_vd9_vec_drop_source_and_llib_parity() {
 
     // alloc.llib already synced in sysroot
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct Tracker {
     counter: *rw i32,

@@ -32,7 +32,14 @@ fn run_compiler(name: &str, src: &str) -> (bool, Vec<luna_common::Diagnostic>) {
 #[test]
 fn test_mutual_exclusivity_copy_drop() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct MyStruct {
             x: i32,
         }
@@ -58,7 +65,14 @@ fn test_mutual_exclusivity_copy_drop() {
 #[test]
 fn test_transitive_copy_drop_conflict() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Inner {
             x: i32,
         }
@@ -89,7 +103,14 @@ fn test_transitive_copy_drop_conflict() {
 #[test]
 fn test_valid_copy() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct ValidStruct {
             x: i32,
         }
@@ -106,7 +127,14 @@ fn test_valid_copy() {
 #[test]
 fn test_derive_copy_drop_conflict() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Resource {
             x: i32,
         }
@@ -135,7 +163,14 @@ fn test_derive_copy_drop_conflict() {
 #[test]
 fn test_generic_instantiation_copy_drop() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Resource {
             x: i32,
         }

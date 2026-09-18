@@ -21,8 +21,9 @@ fn locate_canonical_alloc_ln() -> PathBuf {
         .unwrap()
         .join("libs")
         .join("external")
-        .join("alloc.ln");
-    assert!(alloc_path.exists(), "libs/external/alloc.ln must exist");
+        .join("alloc")
+        .join("box.ln");
+    assert!(alloc_path.exists(), "libs/external/alloc/box.ln must exist");
     alloc_path
 }
 
@@ -35,8 +36,8 @@ fn locate_canonical_alloc_llib() -> PathBuf {
         .unwrap()
         .join("libs")
         .join("external")
-        .join("alloc.llib");
-    assert!(llib_path.exists(), "libs/external/alloc.llib must exist");
+        .join("alloc")
+        .join("box.llib");
     llib_path
 }
 
@@ -48,7 +49,12 @@ fn test_b1_box_new_allocation_and_init() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct Point {
             x: i32,
@@ -90,7 +96,12 @@ fn test_b2_box_payload_drop_glue() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct ManagedItem {
             value: i32,
@@ -135,7 +146,12 @@ fn test_b3_box_into_inner_consuming_move() {
     let dir = create_temp_dir("b3_box_into_inner");
 
     let valid_src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec b = std::box_new<i32>(100);
@@ -164,7 +180,12 @@ fn test_b4_box_lifecycle_order() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct Resource {
             active: bool,
@@ -205,7 +226,12 @@ fn test_b5_box_use_after_move_rejected() {
     let dir = create_temp_dir("b5_use_after_move");
 
     let move_src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec b = std::box_new<i32>(100);
@@ -245,7 +271,12 @@ fn test_b6_box_borrow_conflict_rejection() {
     let dir = create_temp_dir("b6_borrow_conflict");
 
     let conflict_src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw b = std::box_new<i32>(50);
@@ -278,7 +309,12 @@ fn test_b7_disarmed_sentinel_vs_live() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec b = std::box_new<i32>(42);
@@ -308,7 +344,12 @@ fn test_b8_box_zero_sized_type() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct Unit {}
 
@@ -338,7 +379,12 @@ fn test_b9_box_dealloc_not_in_public_std() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec b = std::box_new<i32>(10);
@@ -370,19 +416,20 @@ fn test_b10_box_struct_defined_in_module_std() {
     let alloc_path = locate_canonical_alloc_ln();
     let alloc_src = fs::read_to_string(&alloc_path).expect("Failed to read alloc.ln");
 
-    let out_llib = dir.join("alloc.llib");
+    let out_llib = dir.join("box.llib");
     let compile_opts = CompilerOptions {
         output_path: Some(out_llib.to_string_lossy().to_string()),
         emit_mlib: true,
         no_link: true,
         quiet: true,
         search_paths: vec![sysroot.root().to_string_lossy().to_string()],
+        is_sysroot_build: true,
         ..Default::default()
     };
 
     let res = compile(alloc_path.to_str().unwrap(), alloc_src, &compile_opts);
-    assert!(res.is_ok(), "Compiling alloc.ln with std::Box must succeed: {:?}", res.err());
-    assert!(out_llib.exists(), "alloc.llib must exist");
+    assert!(res.is_ok(), "Compiling box.ln with std::Box must succeed: {:?}", res.err());
+    assert!(out_llib.exists(), "box.llib must exist");
 }
 
 /// B11: Downstream consumer importing `<alloc>` accesses `std::Box<T>` and `std::box_new<T>`.
@@ -393,7 +440,12 @@ fn test_b11_consumer_import_alloc_accesses_std_box() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec b: std::Box<i32> = std::box_new<i32>(123);
@@ -419,7 +471,12 @@ fn test_b12_rule_7_provider_vs_namespace() {
     let dir = create_temp_dir("b12_rule7");
 
     let bad_src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec b = alloc::box_new<i32>(42);
@@ -451,25 +508,31 @@ fn test_b13_source_vs_llib_parity() {
     let alloc_path = locate_canonical_alloc_ln();
     let alloc_src = fs::read_to_string(&alloc_path).expect("Failed to read alloc.ln");
 
-    let out_llib = dir.join("alloc.llib");
+    let out_llib = dir.join("box.llib");
     let compile_opts = CompilerOptions {
         output_path: Some(out_llib.to_string_lossy().to_string()),
         emit_mlib: true,
         no_link: true,
         quiet: true,
         search_paths: vec![sysroot.root().to_string_lossy().to_string()],
+        is_sysroot_build: true,
         ..Default::default()
     };
 
     let res_compile = compile(alloc_path.to_str().unwrap(), alloc_src, &compile_opts);
-    assert!(res_compile.is_ok(), "Compiling alloc.ln to alloc.llib must succeed");
+    assert!(res_compile.is_ok(), "Compiling box.ln to box.llib must succeed: {:?}", res_compile.err());
 
-    // Sync canonical alloc.llib
+    // Sync canonical box.llib
     let canonical_llib = locate_canonical_alloc_llib();
     let _ = fs::copy(&out_llib, &canonical_llib);
 
     let consumer_src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw b = std::box_new<i32>(77);
@@ -514,7 +577,12 @@ fn test_b15_generic_monomorphization_multiple_types() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct Data {
             a: i32,
@@ -557,7 +625,12 @@ fn test_b16_nested_box_ownership() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec b1 = std::box_new<i32>(42);
@@ -592,7 +665,12 @@ fn test_b17_box_where_t_implements_drop() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct ManagedResource {
             id: i32,
@@ -635,7 +713,12 @@ fn test_b18_nested_box_scope_destruction() {
     let main_path = dir.join("main.ln");
 
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct TrackedItem {
             val: i32,

@@ -1,4 +1,5 @@
-import <core>;
+import <result>;
+import <try>;
 
 fn generic_try<T, E>(x: Result<T, E>) -> Result<T, E> {
     dec val = x?;

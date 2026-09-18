@@ -1,4 +1,4 @@
-﻿use luna_driver::{check, CompilerOptions};
+use luna_driver::{check, CompilerOptions};
 use luna_driver::sysroot::Sysroot;
 use std::fs;
 use std::path::PathBuf;
@@ -253,13 +253,20 @@ fn test_case_08_branching_await_points_local_borrow_fail() {
 #[test]
 fn test_case_09_suspended_future_drop_generation() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Resource {
             id: i32,
         }
 
-        impl core::Drop for Resource {
+        impl Drop for Resource {
             fn drop(self: &rw Self) {}
         }
 

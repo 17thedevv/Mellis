@@ -28,8 +28,20 @@ fn test_vec_as_slice_len_and_is_empty() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn test_slice_props() -> bool {
     dec rw v = vec_new<i32>();
@@ -66,8 +78,20 @@ fn test_vec_as_slice_mutation_conflict_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn conflict() {
     dec rw v = vec_new<i32>();
@@ -92,8 +116,20 @@ fn test_vec_as_slice_mutation_after_drop_allowed() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn nll_ok() {
     dec rw v = vec_new<i32>();
@@ -123,8 +159,20 @@ fn test_vec_as_mut_slice_exclusive() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn conflict_mut() {
     dec rw v = vec_new<i32>();
@@ -149,7 +197,14 @@ fn test_slice_local_escape_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn escape() -> &[i32] {
     dec arr = [1, 2, 3];
@@ -177,8 +232,20 @@ fn test_vec_slice_source_and_llib_parity() {
     let consumer_path = dir.join("consumer.ln");
 
     let lib_src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 module my_provider {
     export fn inspect_vec(v: &Vec<i32>) -> usize {
@@ -201,8 +268,20 @@ module my_provider {
     assert!(res_compile.is_ok(), "Compiling my_provider.ln to .llib MUST succeed: {:?}", res_compile.err());
 
     let consumer_src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 import "my_provider";
 
 fn main() {
@@ -239,7 +318,14 @@ fn test_slice_from_raw_parts_rejects_unprovenanced_raw_ptr_escape() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn escape_raw(p: *i32) -> &[i32] life_from(p) {
     unsafe {

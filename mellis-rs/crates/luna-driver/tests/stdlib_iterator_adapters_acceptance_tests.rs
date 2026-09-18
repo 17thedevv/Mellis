@@ -77,7 +77,14 @@ fn test_iter_map_basic() {
     let dir = create_temp_dir("map_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         // ITER-9: Map over borrowed slice receives &T, must deref for value
         fn square(x: &i32) -> i32 {
@@ -133,7 +140,14 @@ fn test_iter_filter_basic() {
     let dir = create_temp_dir("filter_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn is_even(x: &i32) -> bool {
             return (*x % 2) == 0;
@@ -188,7 +202,14 @@ fn test_iter_enumerate_basic() {
     let dir = create_temp_dir("enumerate_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn main() -> i32 {
             dec arr: [i32; 3] = [10, 20, 30];
@@ -245,7 +266,14 @@ fn test_iter_take_exact_count() {
     let dir = create_temp_dir("take_exact");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn main() -> i32 {
             dec arr: [i32; 5] = [10, 20, 30, 40, 50];
@@ -303,7 +331,14 @@ fn test_iter_skip_exact_count() {
     let dir = create_temp_dir("skip_exact");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn main() -> i32 {
             dec arr: [i32; 5] = [10, 20, 30, 40, 50];
@@ -354,7 +389,14 @@ fn test_iter_zip_unequal_lengths() {
     let dir = create_temp_dir("zip_unequal");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn main() -> i32 {
             dec a: [i32; 4] = [1, 2, 3, 4];
@@ -412,7 +454,14 @@ fn test_iter_adapter_pipeline_chaining() {
     let dir = create_temp_dir("pipeline_chaining");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn is_even(x: &i32) -> bool {
             return (*x % 2) == 0;
@@ -473,7 +522,14 @@ fn test_adapter_source_vs_llib_parity() {
     let dir = create_temp_dir("adapter_parity");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn add_ten(x: &i32) -> i32 {
             return (*x) + 10;
@@ -522,8 +578,20 @@ fn test_iter_filter_droptracker() {
     let dir = create_temp_dir("filter_droptracker");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct DropCounter {
             private created: u64,
@@ -622,8 +690,20 @@ fn test_iter_zip_droptracker() {
     let dir = create_temp_dir("zip_droptracker");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct DropCounter {
             private created: u64,
@@ -722,8 +802,20 @@ fn test_iter_deep_lifetime_chain_locks_collection() {
     let dir = create_temp_dir("deep_lifetime_chain");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn pred(pair: (&i32, &i32)) -> bool {
             return true;

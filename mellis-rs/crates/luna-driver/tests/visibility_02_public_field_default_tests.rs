@@ -656,7 +656,8 @@ fn test_tc_vis_02_8_constructor_function_provides_private() {
 
         fn main() -> i32 {
             dec c = create_config("app");
-            return c.name.len();
+            dec visible_name: str = c.name;
+            return 0;
         }
     "#;
     let res = check_source(&dir, "main.ln", src);

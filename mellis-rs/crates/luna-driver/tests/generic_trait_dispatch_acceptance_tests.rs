@@ -56,7 +56,16 @@ fn test_generic_trait_dispatch_hash_primitives() {
     let dir = create_temp_dir("hash_primitives");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <hash>;
+        import <cmp>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn hash_val<T: Hash>(x: T) -> u64 {
             return x.hash();
@@ -105,7 +114,16 @@ fn test_generic_trait_dispatch_hash_custom_struct() {
     let dir = create_temp_dir("hash_custom_struct");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <hash>;
+        import <cmp>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Point {
             x: u64,
@@ -151,7 +169,16 @@ fn test_generic_trait_dispatch_eq() {
     let dir = create_temp_dir("eq_dispatch");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <hash>;
+        import <cmp>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Color {
             r: u8,
@@ -212,7 +239,16 @@ fn test_generic_trait_dispatch_clone() {
     let dir = create_temp_dir("clone_dispatch");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <hash>;
+        import <cmp>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Vector2 {
             x: i32,
@@ -263,7 +299,16 @@ fn test_generic_trait_dispatch_negative_unhashable_rejected() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <hash>;
+        import <cmp>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Unhashable {
             val: i32,
@@ -295,7 +340,16 @@ fn test_generic_trait_dispatch_negative_f64_not_eq() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <hash>;
+        import <cmp>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn check_eq<T: Eq>(a: &T, b: &T) -> bool {
             return a.eq(b);
@@ -323,7 +377,16 @@ fn test_generic_trait_dispatch_distinct_monomorphization() {
     let dir = create_temp_dir("distinct_mono");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <hash>;
+        import <cmp>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn hash_val<T: Hash>(x: T) -> u64 {
             return x.hash();

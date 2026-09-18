@@ -28,7 +28,15 @@ fn test_opt_as_ref_valid_read() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn read_opt(opt: &Option<i32>) -> i32 {
     dec ref_opt = opt.as_ref();
@@ -60,7 +68,15 @@ fn test_opt_as_ref_mutation_conflict_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn main() {
     dec rw opt = Option::Some(10);
@@ -92,7 +108,15 @@ fn test_opt_as_ref_mutation_after_drop_allowed() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn main() {
     dec rw opt = Option::Some(10);
@@ -124,7 +148,15 @@ fn test_opt_as_mut_valid_write() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn modify_opt(opt: &rw Option<i32>) {
     dec rw mut_opt = opt.as_mut();
@@ -157,7 +189,15 @@ fn test_opt_as_mut_exclusive_borrow_conflict_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn main() {
     dec rw opt = Option::Some(10);
@@ -193,7 +233,15 @@ fn test_res_as_ref_and_as_mut_contract() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn check_ok(res: &Result<i32, i32>) -> bool {
     dec r = res.as_ref();
@@ -238,7 +286,15 @@ fn test_opt_res_local_escape_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn escape_opt() -> Option<&i32> {
     dec local_opt = Option::Some(42);
@@ -265,7 +321,15 @@ fn test_opt_res_nested_generic_projection() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn inspect_nested<T>(outer: &Option<Option<T>>) -> bool {
     dec o = outer.as_ref();
@@ -299,7 +363,15 @@ fn test_opt_res_source_and_llib_parity() {
     let consumer_path = dir.join("consumer.ln");
 
     let lib_src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 module my_provider {
     const DUMMY: i32 = 0;
@@ -327,7 +399,15 @@ module my_provider {
     assert!(res_compile.is_ok(), "Compiling my_provider.ln to .llib MUST succeed: {:?}", res_compile.err());
 
     let consumer_src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 import "my_provider";
 
 fn main() {

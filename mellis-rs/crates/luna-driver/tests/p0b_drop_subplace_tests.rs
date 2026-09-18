@@ -33,7 +33,14 @@ fn run_compiler(name: &str, src: &str) -> (bool, Vec<luna_common::Diagnostic>) {
 #[test]
 fn test_p0b_whole_place_move() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct HasDrop { val: i32 }
         impl Drop for HasDrop {
             fn drop(self: &rw Self) {}
@@ -52,7 +59,14 @@ fn test_p0b_whole_place_move() {
 #[test]
 fn test_p0b_subplace_borrow() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct HasDrop { val: i32 }
         impl Drop for HasDrop {
             fn drop(self: &rw Self) {}
@@ -72,7 +86,14 @@ fn test_p0b_subplace_borrow() {
 #[test]
 fn test_p0b_proper_subplace_move_field() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Inner { v: i32 }
         struct HasDrop { val: Inner }
         impl Drop for HasDrop {
@@ -93,7 +114,14 @@ fn test_p0b_proper_subplace_move_field() {
 #[test]
 fn test_p0b_proper_subplace_move_nested_field() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Bottom { v: i32 }
         struct Middle { b: Bottom }
         struct TopDrop { m: Middle }
@@ -115,7 +143,14 @@ fn test_p0b_proper_subplace_move_nested_field() {
 #[test]
 fn test_p0b_proper_subplace_move_tuple_field() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Inner { v: i32 }
         struct TupleDrop { t: (Inner, i32) }
         impl Drop for TupleDrop {
@@ -136,7 +171,14 @@ fn test_p0b_proper_subplace_move_tuple_field() {
 #[test]
 fn test_p0b_proper_subplace_move_enum_payload() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Inner { v: i32 }
         enum DropEnum {
             A(Inner),
@@ -163,7 +205,14 @@ fn test_p0b_proper_subplace_move_enum_payload() {
 #[test]
 fn test_p0b_proper_subplace_move_pattern_matching() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Inner { v: i32 }
         struct HasDrop { val: Inner }
         impl Drop for HasDrop {
@@ -191,7 +240,14 @@ fn test_p0b_proper_subplace_move_pattern_matching() {
 #[test]
 fn test_p0b_proper_subplace_move_function_argument() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Inner { v: i32 }
         struct HasDrop { val: Inner }
         impl Drop for HasDrop {
@@ -213,7 +269,14 @@ fn test_p0b_proper_subplace_move_function_argument() {
 #[test]
 fn test_p0b_generic_instantiated_drop_type() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Inner { v: i32 }
         struct Wrapper<T> { val: T }
         impl<T> Drop for Wrapper<T> {
@@ -234,7 +297,14 @@ fn test_p0b_generic_instantiated_drop_type() {
 #[test]
 fn test_p0b_field_reassignment() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         struct Inner { v: i32 }
         struct HasDrop { val: Inner }
         impl Drop for HasDrop {

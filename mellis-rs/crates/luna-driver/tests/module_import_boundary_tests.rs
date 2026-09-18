@@ -4,7 +4,9 @@ use std::fs;
 use std::path::PathBuf;
 
 fn create_temp_dir(test_name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join("mellis_module_import_boundary_tests").join(test_name);
+    let dir = std::env::temp_dir()
+        .join("mellis_module_import_boundary_tests")
+        .join(test_name);
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("Failed to create test temp dir");
     dir
@@ -28,11 +30,18 @@ fn test_m1_local_rejects_external() {
         ..Default::default()
     };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_err(), "import \"core\" must NOT resolve external core sysroot package");
+    assert!(
+        res.is_err(),
+        "import \"core\" must NOT resolve external core sysroot package"
+    );
     let errs = res.unwrap_err();
     assert!(
-        errs.iter().any(|d| d.message.contains("Could not resolve module provider 'core'") || d.message.contains("not found")),
-        "Expected error resolving module provider 'core', got: {:?}", errs
+        errs.iter().any(|d| d
+            .message
+            .contains("Could not resolve module provider 'core'")
+            || d.message.contains("not found")),
+        "Expected error resolving module provider 'core', got: {:?}",
+        errs
     );
 }
 
@@ -40,7 +49,11 @@ fn test_m1_local_rejects_external() {
 fn test_m1_external_rejects_local() {
     let dir = create_temp_dir("m1_ext_rejects_loc");
     let loc_path = dir.join("local_only.ln");
-    fs::write(&loc_path, "module local_only { export fn helper() -> i32 { return 42; } }").unwrap();
+    fs::write(
+        &loc_path,
+        "module local_only { export fn helper() -> i32 { return 42; } }",
+    )
+    .unwrap();
 
     let main_path = dir.join("main.ln");
     let src = r#"
@@ -54,11 +67,16 @@ fn test_m1_external_rejects_local() {
         ..Default::default()
     };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_err(), "import <local_only> must NOT resolve local search paths");
+    assert!(
+        res.is_err(),
+        "import <local_only> must NOT resolve local search paths"
+    );
     let errs = res.unwrap_err();
     assert!(
-        errs.iter().any(|d| d.message.contains("external component") && d.message.contains("not found")),
-        "Expected external component not found, got: {:?}", errs
+        errs.iter()
+            .any(|d| d.message.contains("external component") && d.message.contains("not found")),
+        "Expected external component not found, got: {:?}",
+        errs
     );
 }
 
@@ -66,7 +84,11 @@ fn test_m1_external_rejects_local() {
 fn test_m1_local_accepts_local() {
     let dir = create_temp_dir("m1_loc_accepts_loc");
     let loc_path = dir.join("mylocal.ln");
-    fs::write(&loc_path, "module mylocal { export fn answer() -> i32 { return 42; } }").unwrap();
+    fs::write(
+        &loc_path,
+        "module mylocal { export fn answer() -> i32 { return 42; } }",
+    )
+    .unwrap();
 
     let main_path = dir.join("main.ln");
     let src = r#"
@@ -82,7 +104,11 @@ fn test_m1_local_accepts_local() {
         ..Default::default()
     };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "import \"mylocal\" must succeed: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "import \"mylocal\" must succeed: {:?}",
+        res.err()
+    );
 }
 
 #[test]
@@ -91,7 +117,14 @@ fn test_m1_external_accepts_external() {
     let dir = create_temp_dir("m1_ext_accepts_ext");
     let main_path = dir.join("main.ln");
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         fn main() {}
     "#;
     fs::write(&main_path, src).unwrap();
@@ -101,7 +134,11 @@ fn test_m1_external_accepts_external() {
         ..Default::default()
     };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "import <core> must succeed: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "canonical component imports must succeed: {:?}",
+        res.err()
+    );
 }
 
 // ----------------------------------------------------
@@ -123,7 +160,10 @@ fn test_m2_module_fn_traversal() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
     assert!(res.is_ok(), "module fn must be checked: {:?}", res.err());
 }
@@ -143,9 +183,16 @@ fn test_m2_nested_module_fn_traversal() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "nested module fn must be checked: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "nested module fn must be checked: {:?}",
+        res.err()
+    );
 }
 
 #[test]
@@ -164,9 +211,16 @@ fn test_m2_module_generic_fn() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "module generic fn monomorphization must succeed: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "module generic fn monomorphization must succeed: {:?}",
+        res.err()
+    );
 }
 
 #[test]
@@ -194,9 +248,16 @@ fn test_m2_module_struct_and_impl() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "module struct, trait, and impl must succeed: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "module struct, trait, and impl must succeed: {:?}",
+        res.err()
+    );
 }
 
 #[test]
@@ -212,7 +273,10 @@ fn test_m2_module_const() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
     assert!(res.is_ok(), "module const must succeed: {:?}", res.err());
 }
@@ -225,10 +289,18 @@ fn test_m2_module_const() {
 fn test_m3_multi_provider_aggregation() {
     let dir = create_temp_dir("m3_multi_provider");
     let p_a = dir.join("prov_a.ln");
-    fs::write(&p_a, "module mymath { export fn add(a: i32, b: i32) -> i32 { return a + b; } }").unwrap();
+    fs::write(
+        &p_a,
+        "module mymath { export fn add(a: i32, b: i32) -> i32 { return a + b; } }",
+    )
+    .unwrap();
 
     let p_b = dir.join("prov_b.ln");
-    fs::write(&p_b, "module mymath { export fn sub(a: i32, b: i32) -> i32 { return a - b; } }").unwrap();
+    fs::write(
+        &p_b,
+        "module mymath { export fn sub(a: i32, b: i32) -> i32 { return a - b; } }",
+    )
+    .unwrap();
 
     let main_path = dir.join("main.ln");
     let src = r#"
@@ -246,7 +318,11 @@ fn test_m3_multi_provider_aggregation() {
         ..Default::default()
     };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "multi-provider namespace aggregation must succeed: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "multi-provider namespace aggregation must succeed: {:?}",
+        res.err()
+    );
 }
 
 // ----------------------------------------------------
@@ -266,11 +342,21 @@ fn test_m4_private_fn_rejected() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_err(), "private function must be rejected from outside");
+    assert!(
+        res.is_err(),
+        "private function must be rejected from outside"
+    );
     let errs = res.unwrap_err();
-    assert!(errs.iter().any(|d| d.message.contains("private")), "Expected 'private' error, got: {:?}", errs);
+    assert!(
+        errs.iter().any(|d| d.message.contains("private")),
+        "Expected 'private' error, got: {:?}",
+        errs
+    );
 }
 
 #[test]
@@ -289,9 +375,16 @@ fn test_m4_same_module_private_fn_accepted() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "private function inside same module must be accessible: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "private function inside same module must be accessible: {:?}",
+        res.err()
+    );
 }
 
 #[test]
@@ -309,11 +402,18 @@ fn test_m4_private_struct_rejected() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
     assert!(res.is_err(), "private struct must be rejected from outside");
     let errs = res.unwrap_err();
-    assert!(errs.iter().any(|d| d.message.contains("private")), "Expected 'private' error, got: {:?}", errs);
+    assert!(
+        errs.iter().any(|d| d.message.contains("private")),
+        "Expected 'private' error, got: {:?}",
+        errs
+    );
 }
 
 #[test]
@@ -336,23 +436,34 @@ fn test_m4_private_method_rejected() {
         }
     "#;
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
     assert!(res.is_err(), "private method must be rejected from outside");
     let errs = res.unwrap_err();
-    assert!(errs.iter().any(|d| d.message.contains("private")), "Expected 'private' error, got: {:?}", errs);
+    assert!(
+        errs.iter().any(|d| d.message.contains("private")),
+        "Expected 'private' error, got: {:?}",
+        errs
+    );
 }
 
 #[test]
 fn test_m4_cross_provider_private_rejected() {
     let dir = create_temp_dir("m4_cross_provider_priv");
     let p_sec = dir.join("prov_secret.ln");
-    fs::write(&p_sec, r#"
+    fs::write(
+        &p_sec,
+        r#"
         module secmod {
             fn internal_key() -> i32 { return 999; }
             export fn get_key() -> i32 { return internal_key(); }
         }
-    "#).unwrap();
+    "#,
+    )
+    .unwrap();
 
     let main_path = dir.join("main.ln");
     let src = r#"
@@ -368,11 +479,16 @@ fn test_m4_cross_provider_private_rejected() {
         ..Default::default()
     };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_err(), "cross-provider private symbol must not be accessible");
+    assert!(
+        res.is_err(),
+        "cross-provider private symbol must not be accessible"
+    );
     let errs = res.unwrap_err();
     assert!(
-        errs.iter().any(|d| d.message.contains("not found") || d.message.contains("private")),
-        "Expected not found or private error, got: {:?}", errs
+        errs.iter()
+            .any(|d| d.message.contains("not found") || d.message.contains("private")),
+        "Expected not found or private error, got: {:?}",
+        errs
     );
 }
 
@@ -384,15 +500,23 @@ fn test_m4_cross_provider_private_rejected() {
 fn test_m5_export_import_rejected() {
     let dir = create_temp_dir("m5_export_import");
     let main_path = dir.join("main.ln");
+    // Intentionally keep the removed legacy provider name: parsing must reject
+    // `export import` before provider resolution can make it a positive dependency.
     let src = "export import <core>;\nfn main() {}";
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
     assert!(res.is_err(), "export import must be rejected");
     let errs = res.unwrap_err();
     assert!(
-        errs.iter().any(|d| d.message.contains("import` declarations cannot be exported")),
-        "Expected export import diagnostic, got: {:?}", errs
+        errs.iter().any(|d| d
+            .message
+            .contains("import` declarations cannot be exported")),
+        "Expected export import diagnostic, got: {:?}",
+        errs
     );
 }
 
@@ -402,13 +526,18 @@ fn test_m5_export_using_rejected() {
     let main_path = dir.join("main.ln");
     let src = "export using core as c;\nfn main() {}";
     fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions { quiet: true, ..Default::default() };
+    let opts = CompilerOptions {
+        quiet: true,
+        ..Default::default()
+    };
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
     assert!(res.is_err(), "export using must be rejected");
     let errs = res.unwrap_err();
     assert!(
-        errs.iter().any(|d| d.message.contains("using` aliases cannot be exported")),
-        "Expected export using diagnostic, got: {:?}", errs
+        errs.iter()
+            .any(|d| d.message.contains("using` aliases cannot be exported")),
+        "Expected export using diagnostic, got: {:?}",
+        errs
     );
 }
 
@@ -434,7 +563,16 @@ fn test_negative_invariant_no_artifact_on_error() {
     };
     let res = compile(main_path.to_str().unwrap(), src.to_string(), &opts);
     assert!(res.is_err(), "Compilation with unresolved module must fail");
-    assert!(!out_exe.exists(), "Executable artifact must NOT exist upon diagnostic error");
-    assert!(!out_obj.exists(), "Object artifact must NOT exist upon diagnostic error");
-    assert!(!out_mlib.exists(), "Mlib artifact must NOT exist upon diagnostic error");
+    assert!(
+        !out_exe.exists(),
+        "Executable artifact must NOT exist upon diagnostic error"
+    );
+    assert!(
+        !out_obj.exists(),
+        "Object artifact must NOT exist upon diagnostic error"
+    );
+    assert!(
+        !out_mlib.exists(),
+        "Mlib artifact must NOT exist upon diagnostic error"
+    );
 }

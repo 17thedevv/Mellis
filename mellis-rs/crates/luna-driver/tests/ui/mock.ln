@@ -1,4 +1,4 @@
-import <core>;
+import <try>;
 
 export enum MyResult<T, E> {
     MyOk(T),

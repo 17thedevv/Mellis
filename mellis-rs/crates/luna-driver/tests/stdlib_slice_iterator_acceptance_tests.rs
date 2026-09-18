@@ -32,8 +32,8 @@ fn test_slice_iterator_read() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 fn main() -> i32 {
     dec rw v = vec_new<i32>();
@@ -92,8 +92,8 @@ fn test_slice_iterator_trait_next() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 fn main() -> i32 {
     dec rw v = vec_new<i32>();
@@ -144,8 +144,8 @@ fn test_slice_iterator_mut_write() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 fn main() -> i32 {
     dec rw v = vec_new<i32>();
@@ -199,8 +199,8 @@ fn test_slice_iterator_borrow_conflict() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 fn main() {
     dec rw v = vec_new<i32>();
@@ -231,8 +231,8 @@ fn test_slice_iterator_borrow_after_drop_allowed() {
     let src_path = dir.join("main.ln");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 fn main() {
     dec rw v = vec_new<i32>();
@@ -268,7 +268,7 @@ fn test_slice_iterator_source_and_llib_parity() {
     let consumer_path = dir.join("consumer.ln");
 
     let lib_src = r#"
-import <core>;
+import <slice>;
 
 export fn count_positive(s: &[i32]) -> u64 {
     dec rw it = s.iter();
@@ -302,8 +302,8 @@ export fn count_positive(s: &[i32]) -> u64 {
     assert!(res_compile.is_ok(), "Compiling iter_helper.ln to .llib MUST succeed: {:?}", res_compile.err());
 
     let consumer_src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 import "iter_helper";
 
 fn main() {
@@ -340,8 +340,8 @@ fn test_iter_9_slice_iter_item_is_ref() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 fn inspect_ref(r: &i32) -> i32 {
     return *r;
@@ -391,8 +391,8 @@ fn test_iter_10_slice_iter_never_drops_backing_elements() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 struct DropCounter {
     private created: u64,
@@ -486,8 +486,8 @@ fn test_iter_11_droptracker_lifecycle() {
     let bin_path = dir.join("main.exe");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 struct DropCounter {
     private created: u64,
@@ -584,8 +584,8 @@ fn test_iter_12_reference_provenance_reject_and_allow() {
 
     // Subcase 1: While r is alive, xs.push() MUST be rejected by borrowck
     let reject_src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 fn main() {
     dec rw xs = vec_new<i32>();
@@ -619,8 +619,8 @@ fn main() {
 
     // Subcase 2: When scope of r ends (r dies), xs.push() MUST be allowed
     let allow_src = r#"
-import <core>;
-import <alloc>;
+import <slice>;
+import <vec>;
 
 fn main() -> i32 {
     dec rw xs = vec_new<i32>();

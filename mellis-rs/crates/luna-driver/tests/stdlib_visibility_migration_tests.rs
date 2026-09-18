@@ -78,8 +78,20 @@ fn compile_and_run_with_sysroot(dir: &PathBuf, test_name: &str, src: &str) -> (i
 fn test_real_alloc_vec_cannot_read_ptr() {
     let dir = create_temp_dir("real_vec_read_ptr");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn test_access(v: &Vec<i32>) {
             dec p = v.ptr;
@@ -102,8 +114,20 @@ fn test_real_alloc_vec_cannot_read_ptr() {
 fn test_real_alloc_vec_cannot_read_len_or_cap() {
     let dir = create_temp_dir("real_vec_read_len");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn test_access(v: &Vec<i32>) -> u64 {
             return v.len;
@@ -126,8 +150,20 @@ fn test_real_alloc_vec_cannot_read_len_or_cap() {
 fn test_real_alloc_vec_cannot_mutate_fields() {
     let dir = create_temp_dir("real_vec_mutate");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn test_mutate(v: &rw Vec<i32>) {
             v.cap = 100 as u64;
@@ -150,8 +186,20 @@ fn test_real_alloc_vec_cannot_mutate_fields() {
 fn test_real_alloc_vec_cannot_construct_directly() {
     let dir = create_temp_dir("real_vec_construct");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn construct() -> Vec<i32> {
             return Vec<i32> {
@@ -182,8 +230,20 @@ fn test_real_alloc_vec_cannot_construct_directly() {
 fn test_real_alloc_box_cannot_read_ptr() {
     let dir = create_temp_dir("real_box_read_ptr");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn test_access(b: &std::Box<i32>) {
             dec p = b.ptr;
@@ -206,8 +266,20 @@ fn test_real_alloc_box_cannot_read_ptr() {
 fn test_real_alloc_box_cannot_mutate_ptr() {
     let dir = create_temp_dir("real_box_mutate_ptr");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn test_mutate(b: &rw std::Box<i32>) {
             b.ptr = 0 as u64 as *rw i32;
@@ -230,8 +302,20 @@ fn test_real_alloc_box_cannot_mutate_ptr() {
 fn test_real_alloc_box_cannot_construct_directly() {
     let dir = create_temp_dir("real_box_construct");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn construct() -> std::Box<i32> {
             return std::Box<i32> {
@@ -260,8 +344,20 @@ fn test_real_alloc_box_cannot_construct_directly() {
 fn test_real_alloc_string_cannot_access_vec() {
     let dir = create_temp_dir("real_string_read_vec");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn test_access(s: &std::String) {
             dec v = s.vec;
@@ -284,8 +380,20 @@ fn test_real_alloc_string_cannot_access_vec() {
 fn test_real_alloc_string_cannot_construct_directly() {
     let dir = create_temp_dir("real_string_construct");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn construct() -> std::String {
             return std::String {
@@ -307,34 +415,24 @@ fn test_real_alloc_string_cannot_construct_directly() {
 }
 
 // =============================================================================
-// SECTION 4: Real <alloc> RawTable<K, V> Storage Encapsulation
+// SECTION 4: Internal RawTable provider is not a user-facing API
 // =============================================================================
 
 #[test]
-fn test_real_alloc_raw_table_cannot_access_storage_fields() {
-    let dir = create_temp_dir("real_raw_table_fields");
-    let fields = ["states", "hashes", "keys", "values", "cap", "len", "tombstones"];
-    for field in fields {
-        let src = format!(r#"
-            import <core>;
-            import <alloc>;
-
-            fn test_access(t: &std::RawTable<i32, i32>) {{
-                dec f = t.{};
-            }}
-
-            fn main() -> i32 {{
-                return 0;
-            }}
-        "#, field);
-        let res = check_with_sysroot(&dir, &format!("test_{}.ln", field), &src);
-        assert!(res.is_err(), "External access to RawTable.{} must be rejected", field);
-        let diags = res.err().unwrap();
-        assert!(
-            diags.iter().any(|d| d.message.to_lowercase().contains("private") && d.message.contains(field)),
-            "Expected private field diagnostic for {}, got: {:?}", field, diags
-        );
-    }
+fn test_raw_table_provider_rejects_direct_user_import() {
+    let dir = create_temp_dir("internal_raw_table_provider");
+    let src = r#"
+        import <__raw_table>;
+        fn main() {}
+    "#;
+    let res = check_with_sysroot(&dir, "main.ln", src);
+    assert!(res.is_err(), "the internal __raw_table provider must reject UserImport provenance");
+    let diags = res.err().unwrap();
+    assert!(
+        diags.iter().any(|d| d.message.contains("__raw_table")),
+        "expected the rejected logical identity in the diagnostic, got: {:?}",
+        diags
+    );
 }
 
 // =============================================================================
@@ -345,7 +443,14 @@ fn test_real_alloc_raw_table_cannot_access_storage_fields() {
 fn test_real_core_slice_iter_cannot_access_ptr_or_end() {
     let dir = create_temp_dir("real_slice_iter_fields");
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn test_access(it: &SliceIter<i32>) {
             dec p = it.ptr;
@@ -368,7 +473,14 @@ fn test_real_core_slice_iter_cannot_access_ptr_or_end() {
 fn test_real_core_slice_iter_mut_cannot_access_ptr_or_end() {
     let dir = create_temp_dir("real_slice_iter_mut_fields");
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn test_access(it: &SliceIterMut<i32>) {
             dec e = it.end;
@@ -516,8 +628,20 @@ fn test_mixed_visibility_struct_encapsulation() {
 fn test_real_stdlib_public_apis_operate_cleanly() {
     let dir = create_temp_dir("real_stdlib_public_apis");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             // 1. Box public methods
@@ -544,8 +668,8 @@ fn test_real_stdlib_public_apis_operate_cleanly() {
                 return 4;
             }
 
-            // 4. RawTable public methods
-            dec rw t = std::raw_table_new<i32, i32>();
+            // 4. HashMap public methods (RawTable remains internal)
+            dec rw t = hashmap_new<i32, i32>();
             t.insert(1, 100);
             t.insert(2, 200);
             dec k1: i32 = 1;

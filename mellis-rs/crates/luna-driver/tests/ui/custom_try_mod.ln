@@ -1,4 +1,4 @@
-import <core>;
+import <try>;
 
 module custom_try_mod {
     export enum MyResult<T, E> {

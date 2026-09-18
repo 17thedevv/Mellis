@@ -1,5 +1,5 @@
 import "mock";
-import <core>;
+import <try>;
 
 fn test_drift() -> ControlFlow<i32, i32> {
     return ControlFlow::Continue(42);

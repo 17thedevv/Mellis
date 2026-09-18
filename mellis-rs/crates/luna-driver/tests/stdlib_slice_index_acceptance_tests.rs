@@ -35,8 +35,20 @@ fn test_slice_index_read() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn test_read() -> bool {
     dec rw v = vec_new<i32>();
@@ -84,8 +96,20 @@ fn test_slice_index_write() {
     let dir = create_temp_dir("index_write");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn test_write() -> bool {
     dec rw v = vec_new<i32>();
@@ -137,8 +161,20 @@ fn test_slice_index_borrow_conflict() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn bad_mutation() {
     dec rw v = vec_new<i32>();
@@ -174,8 +210,20 @@ fn test_slice_index_borrow_after_drop_allowed() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn allowed_seq() {
     dec rw v = vec_new<i32>();
@@ -208,8 +256,20 @@ fn test_slice_index_out_of_bounds_aborts() {
     let dir = create_temp_dir("index_oob");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw v = vec_new<i32>();
@@ -250,8 +310,20 @@ fn test_slice_index_source_and_llib_parity() {
     let consumer_path = dir.join("consumer.ln");
 
     let lib_src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 module indexer {
     export fn sum_first_two(s: &[i32]) -> i32 {
@@ -273,8 +345,20 @@ module indexer {
     assert!(res_compile.is_ok(), "Compiling indexer.ln to .llib MUST succeed: {:?}", res_compile.err());
 
     let consumer_src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 import "indexer";
 
 fn main() -> i32 {

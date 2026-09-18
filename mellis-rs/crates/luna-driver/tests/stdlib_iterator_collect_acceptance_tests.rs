@@ -52,6 +52,34 @@ fn run_binary_with_output(
     Ok((code, stdout, stderr))
 }
 
+fn locate_canonical_iter_collect_ln() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("iter_collect.ln");
+        if p.exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/iter_collect.ln");
+}
+
+fn locate_canonical_iter_collect_llib() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("iter_collect.llib");
+        if p.parent().unwrap().exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/iter_collect.llib");
+}
+
 /// C1: Basic iter_collect_vec from SliceIter with deref map
 #[test]
 fn test_c1_collect_vec_basic() {
@@ -59,8 +87,20 @@ fn test_c1_collect_vec_basic() {
     let dir = create_temp_dir("c1_vec_basic");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn deref_i32(x: &i32) -> i32 {
             return *x;
@@ -125,8 +165,20 @@ fn test_c2_collect_vec_empty() {
     let dir = create_temp_dir("c2_vec_empty");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn deref_i32(x: &i32) -> i32 {
             return *x;
@@ -164,8 +216,20 @@ fn test_c3_collect_vec_ownership_transfer() {
     let dir = create_temp_dir("c3_vec_ownership");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct Point {
             x: i32,
@@ -245,8 +309,20 @@ fn test_c4_collect_vec_droptracker() {
     let dir = create_temp_dir("c4_vec_droptracker");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct DropCounter {
             created: u64,
@@ -331,8 +407,20 @@ fn test_c5_collect_hashset_basic() {
     let dir = create_temp_dir("c5_set_basic");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn deref_i32(x: &i32) -> i32 {
             return *x;
@@ -383,8 +471,20 @@ fn test_c6_collect_hashset_dedup() {
     let dir = create_temp_dir("c6_set_dedup");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn deref_i32(x: &i32) -> i32 {
             return *x;
@@ -431,9 +531,23 @@ fn test_c7_collect_hashset_droptracker() {
     let dir = create_temp_dir("c7_set_droptracker");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
-
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+        import <vec>;
+        import <string>;
+        import <hashmap>;
+        import <hashset>;
+        import <iter_collect>;
+        
         struct DropCounter {
             created: u64,
             dropped: u64,
@@ -544,8 +658,20 @@ fn test_c8_collect_hashmap_basic() {
     let dir = create_temp_dir("c8_map_basic");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct PairGenerator {
             cur: i32,
@@ -619,8 +745,20 @@ fn test_c9_collect_hashmap_dedup_last_wins() {
     let dir = create_temp_dir("c9_map_last_wins");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct DupPairGenerator {
             step: i32,
@@ -689,9 +827,23 @@ fn test_c10_collect_hashmap_droptracker_identity() {
     let dir = create_temp_dir("c10_map_droptracker_identity");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
-
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+        import <vec>;
+        import <string>;
+        import <hashmap>;
+        import <hashset>;
+        import <iter_collect>;
+        
         struct Counter {
             created: u64,
             dropped: u64,
@@ -854,8 +1006,20 @@ fn test_c11_collect_pipeline_chain() {
     let dir = create_temp_dir("c11_pipeline_chain");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn is_even(x: &i32) -> bool {
             return (*x % 2) == 0;
@@ -905,19 +1069,49 @@ fn test_c11_collect_pipeline_chain() {
     assert_eq!(code, 0, "C11 pipeline chain failed (code: {}, stderr: {})", code, stderr);
 }
 
-/// C12: Source vs .llib Parity: run iter_collect_vec and iter_collect_hashmap against precompiled alloc.llib
+/// C12: Source vs .llib Parity: run iter_collect_vec and iter_collect_hashmap against precompiled iter_collect.llib
 #[test]
 fn test_c12_collect_source_vs_llib_parity() {
     let sysroot = Sysroot::discover_for_test().expect("sysroot required");
     let dir = create_temp_dir("c12_parity");
+    let iter_collect_ln = locate_canonical_iter_collect_ln();
+    let iter_collect_src = fs::read_to_string(&iter_collect_ln).expect("Failed to read iter_collect.ln");
 
-    let alloc_llib = sysroot.root().join("libs").join("external").join("alloc.llib");
-    assert!(alloc_llib.exists(), "alloc.llib must exist for parity test");
+    let out_llib = dir.join("iter_collect.llib");
+    let compile_opts = CompilerOptions {
+        output_path: Some(out_llib.to_string_lossy().to_string()),
+        emit_mlib: true,
+        no_link: true,
+        quiet: true,
+        search_paths: vec![sysroot.root().to_string_lossy().to_string()],
+        is_sysroot_build: true,
+        ..Default::default()
+    };
+
+    let res_compile = compile(iter_collect_ln.to_str().unwrap(), iter_collect_src, &compile_opts);
+    assert!(res_compile.is_ok(), "Compiling iter_collect.ln to iter_collect.llib must succeed: {:?}", res_compile.err());
+
+    let canonical_llib = locate_canonical_iter_collect_llib();
+    let _ = fs::copy(&out_llib, &canonical_llib);
 
     let src = r#"
-        import <core>;
-        import <alloc>;
-
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+        import <vec>;
+        import <string>;
+        import <hashmap>;
+        import <hashset>;
+        import <iter_collect>;
+        
         fn deref_i32(x: &i32) -> i32 {
             return *x;
         }
@@ -988,8 +1182,20 @@ fn test_c13_collect_borrowed_to_owned_via_map() {
     let dir = create_temp_dir("c13_borrow_to_owned");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn to_boxed_i32(x: &i32) -> Box<i32> {
             return std::box_new<i32>(*x);
@@ -1059,8 +1265,20 @@ fn test_c14_collect_borrowed_lifetime_lock() {
 
     // Part A: Borrowck must reject mutating source collection while live borrow exists
     let reject_src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw src = vec_with_capacity<i32>(4 as u64);
@@ -1108,8 +1326,20 @@ fn test_c14_collect_borrowed_lifetime_lock() {
 
     // Part B: Mutation after borrow has ended succeeds and runs cleanly!
     let run_src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn deref_i32(x: &i32) -> i32 {
             return *x;
@@ -1153,9 +1383,23 @@ fn test_c15_collect_hashset_duplicate_representative_semantics() {
     let dir = create_temp_dir("c15_set_representative");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
-
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+        import <vec>;
+        import <string>;
+        import <hashmap>;
+        import <hashset>;
+        import <iter_collect>;
+        
         struct ItemWithIdentity {
             id: i32,
             marker: i32,

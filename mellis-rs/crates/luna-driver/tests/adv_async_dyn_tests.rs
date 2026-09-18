@@ -1,4 +1,4 @@
-﻿use luna_driver::{check, compile, CompilerOptions};
+use luna_driver::{check, compile, CompilerOptions};
 use luna_driver::sysroot::Sysroot;
 use luna_borrowck::borrow_analysis::BorrowAnalyzer;
 use luna_mvir::{BasicBlock, Function, GlobalId, Instruction, LabelId, Operand, Terminator, ValueData, ValueId, ValueOrigin};
@@ -310,13 +310,20 @@ fn test_adv_07_async_fn_in_trait_object_safety_rejected() {
 #[test]
 fn test_adv_08_explicit_drop_method_call_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Resource {
             id: i32,
         }
 
-        impl core::Drop for Resource {
+        impl Drop for Resource {
             fn drop(self: &rw Self) {}
         }
 
@@ -336,7 +343,14 @@ fn test_adv_08_explicit_drop_method_call_rejected() {
 #[test]
 fn test_adv_09_explicit_drop_through_dyn_trait_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         trait CustomDrop {
             fn drop(self: &rw Self);
@@ -364,13 +378,20 @@ fn test_adv_09_explicit_drop_through_dyn_trait_rejected() {
     assert!(err.is_some(), "Expected 'Explicit calls to drop() are forbidden', got: {:?}", diags);
 }
 
-// ADV-10: dyn core::Drop must be rejected by object safety
+// ADV-10: dyn Drop must be rejected by object safety
 #[test]
 fn test_adv_10_dyn_core_drop_object_safety_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
-        fn consume(d: &rw dyn core::Drop) {
+        fn consume(d: &rw dyn Drop) {
         }
 
         fn main() -> i32 {
@@ -378,9 +399,9 @@ fn test_adv_10_dyn_core_drop_object_safety_rejected() {
         }
     "#;
     let (success, diags) = run_compiler("test_adv_10", src);
-    assert!(!success, "dyn core::Drop must be rejected by object safety");
+    assert!(!success, "dyn Drop must be rejected by object safety");
     let err = diags.iter().find(|d| d.message.contains("E_TRAIT_NOT_OBJECT_SAFE"));
-    assert!(err.is_some(), "Expected E_TRAIT_NOT_OBJECT_SAFE for core::Drop, got: {:?}", diags);
+    assert!(err.is_some(), "Expected E_TRAIT_NOT_OBJECT_SAFE for Drop, got: {:?}", diags);
 }
 
 // =============================================================================
@@ -450,13 +471,20 @@ fn test_adv_12_await_unsized_type_rejected() {
 #[test]
 fn test_adv_13_future_cancellation_at_state_0_with_active_dyn_trait() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Resource {
             id: i32,
         }
 
-        impl core::Drop for Resource {
+        impl Drop for Resource {
             fn drop(self: &rw Self) {}
         }
 
@@ -491,13 +519,20 @@ fn test_adv_13_future_cancellation_at_state_0_with_active_dyn_trait() {
 #[test]
 fn test_adv_14_future_cancellation_at_suspended_state_with_dyn_trait() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Resource {
             id: i32,
         }
 
-        impl core::Drop for Resource {
+        impl Drop for Resource {
             fn drop(self: &rw Self) {}
         }
 

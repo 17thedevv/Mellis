@@ -13,8 +13,8 @@ fn create_temp_dir(test_name: &str) -> PathBuf {
 }
 
 // =============================================================================
-// CONTRACT 1: import <core> exposes root bindings; no synthetic core module.
-// Option<i32> PASS, Result<i32, E> PASS, core::Option<i32> FAIL
+// CONTRACT 1: language contracts are auto-visible, ordinary providers are explicit,
+// and provider identities never synthesize source namespaces.
 // =============================================================================
 
 #[test]
@@ -23,7 +23,7 @@ fn test_acceptance_core_root_bindings_pass() {
     let dir = create_temp_dir("accept_core_root_bindings_pass");
     let main_path = dir.join("main.ln");
     let src = r#"
-        import <core>;
+        import <result>;
 
         fn test_opt(x: Option<i32>) -> Option<i32> {
             return x;
@@ -49,22 +49,22 @@ fn test_acceptance_core_root_bindings_pass() {
     let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
     assert!(
         res.is_ok(),
-        "Direct root Option<i32> and Result<i32, E> from <core> must succeed: {:?}",
+        "Auto-visible Option and explicitly imported Result root bindings must succeed: {:?}",
         res.err()
     );
 }
 
 #[test]
-fn test_acceptance_core_synthetic_namespace_fails() {
+fn test_acceptance_provider_synthetic_namespace_fails() {
     let sysroot = Sysroot::discover_for_test().expect("sysroot required");
     let dir = create_temp_dir("accept_core_synthetic_namespace_fails");
 
-    // core::Option<i32> must FAIL
+    // A logical provider identity does not create a source namespace.
     let main_opt = dir.join("main_opt.ln");
     let src_opt = r#"
-        import <core>;
+        import <result>;
         fn main() {
-            dec x: core::Option<i32>;
+            dec x: result::Result<i32, i32>;
         }
     "#;
     fs::write(&main_opt, src_opt).unwrap();
@@ -76,30 +76,30 @@ fn test_acceptance_core_synthetic_namespace_fails() {
     let res_opt = check(main_opt.to_str().unwrap(), src_opt.to_string(), &opts);
     assert!(
         res_opt.is_err(),
-        "core::Option<i32> must fail: provider 'core' is not a module namespace"
+        "result::Result must fail: provider 'result' is not a module namespace"
     );
     let errs_opt = res_opt.unwrap_err();
     assert!(
         errs_opt
             .iter()
-            .any(|d| d.message.contains("core") || d.message.contains("not found")),
-        "Expected error for core::Option, got: {:?}",
+            .any(|d| d.message.contains("result") || d.message.contains("not found")),
+        "Expected error for the synthetic result namespace, got: {:?}",
         errs_opt
     );
 
-    // core::Result<i32, i32> must FAIL
+    // Ordinary core APIs do not become implicitly visible merely because the
+    // compiler bootstraps language contracts.
     let main_res = dir.join("main_res.ln");
     let src_res = r#"
-        import <core>;
         fn main() {
-            dec r: core::Result<i32, i32>;
+            dec r: Result<i32, i32>;
         }
     "#;
     fs::write(&main_res, src_res).unwrap();
     let res_res = check(main_res.to_str().unwrap(), src_res.to_string(), &opts);
     assert!(
         res_res.is_err(),
-        "core::Result<i32, i32> must fail: provider 'core' is not a module namespace"
+        "Result<i32, i32> must fail without explicit import <result>"
     );
 }
 

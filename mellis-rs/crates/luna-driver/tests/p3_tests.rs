@@ -62,7 +62,14 @@ fn compile_to_obj(name: &str, src: &str) -> (bool, Vec<luna_common::Diagnostic>)
 #[test]
 fn test_case_01_unsized_dyn_trait_in_let_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo {
             fn f(self: &Self) -> i32;
         }
@@ -102,7 +109,14 @@ fn test_case_02_unsized_slice_in_let_rejected() {
 #[test]
 fn test_case_03_unsized_function_parameter_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo {
             fn f(self: &Self) -> i32;
         }
@@ -121,7 +135,14 @@ fn test_case_03_unsized_function_parameter_rejected() {
 #[test]
 fn test_case_04_unsized_function_return_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo {
             fn f(self: &Self) -> i32;
         }
@@ -140,7 +161,14 @@ fn test_case_04_unsized_function_return_rejected() {
 #[test]
 fn test_case_05_unsized_struct_field_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo {
             fn f(self: &Self) -> i32;
         }
@@ -163,7 +191,14 @@ fn test_case_05_unsized_struct_field_rejected() {
 #[test]
 fn test_case_06_ref_dyn_trait_creation_and_dispatch() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo {
             fn f(self: &Self) -> i32;
         }
@@ -192,7 +227,14 @@ fn test_case_06_ref_dyn_trait_creation_and_dispatch() {
 #[test]
 fn test_case_07_raw_pointer_dyn_trait_unsafe() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo {
             fn f(self: &Self) -> i32;
         }
@@ -342,7 +384,14 @@ fn test_case_13_supertrait_dyn_rejected() {
 #[test]
 fn test_case_14_box_unsized_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo {
             fn f(self: &Self) -> i32;
         }
@@ -428,7 +477,14 @@ fn test_case_17_array_to_slice_empty_array() {
 #[test]
 fn test_case_18_vtable_layout_drop_glue_concrete_called() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Action {
             fn act(self: &Self) -> i32;
         }
@@ -459,7 +515,14 @@ fn test_case_18_vtable_layout_drop_glue_concrete_called() {
 #[test]
 fn test_case_19_vtable_layout_drop_glue_null_noop() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Action {
             fn act(self: &Self) -> i32;
         }
@@ -485,7 +548,14 @@ fn test_case_19_vtable_layout_drop_glue_null_noop() {
 #[test]
 fn test_case_20_vtable_method_order_stability() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Multi {
             fn alpha(self: &Self) -> i32;
             fn beta(self: &Self) -> i32;
@@ -516,7 +586,14 @@ fn test_case_20_vtable_method_order_stability() {
 #[test]
 fn test_case_21_multi_concrete_types_dispatch() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Greeter {
             fn greet(self: &Self) -> i32;
         }
@@ -541,7 +618,14 @@ fn test_case_21_multi_concrete_types_dispatch() {
 #[test]
 fn test_case_22_ref_mut_dyn_trait_mutable_dispatch() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Counter {
             fn inc(self: &rw Self);
             fn get(self: &Self) -> i32;

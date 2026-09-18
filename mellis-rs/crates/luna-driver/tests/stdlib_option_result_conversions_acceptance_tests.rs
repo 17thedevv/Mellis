@@ -28,7 +28,15 @@ fn test_opt_ok_or_some() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn main() -> i32 {
     dec opt = Option::Some(42);
@@ -53,7 +61,15 @@ fn test_opt_ok_or_none() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn main() -> i32 {
     dec opt: Option<i32> = Option::None;
@@ -78,7 +94,15 @@ fn test_res_ok_from_ok_and_err() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn test_ok() -> i32 {
     dec r: Result<i32, i32> = Result::Ok(10);
@@ -116,7 +140,15 @@ fn test_res_err_from_err_and_ok() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn test_err() -> i32 {
     dec r: Result<i32, i32> = Result::Err(55);
@@ -154,7 +186,15 @@ fn test_opt_ok_identity() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 fn main() -> i32 {
     dec o = Option::Some(99);
@@ -179,7 +219,15 @@ fn test_consuming_move_invalidates_source() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct NoCopy { val: i32 }
 
@@ -209,7 +257,15 @@ fn test_result_ok_consuming_move_invalidates_source() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct NoCopy { val: i32 }
 
@@ -239,7 +295,15 @@ fn test_drop_payload_destruction_cleanliness() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct Droppable { id: i32 }
 impl Drop for Droppable {
@@ -278,7 +342,15 @@ fn test_generic_error_inference() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct CustomError { code: i32 }
 
@@ -308,7 +380,15 @@ fn test_source_and_llib_conversions_parity() {
     let consumer_path = dir.join("consumer.ln");
 
     let lib_src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 module conv_provider {
     export fn to_res(opt: Option<i32>, default_err: i32) -> Result<i32, i32> {
@@ -338,7 +418,15 @@ module conv_provider {
     assert!(res_compile.is_ok(), "Compiling conv_provider.ln to .llib MUST succeed: {:?}", res_compile.err());
 
     let consumer_src = r#"
-import <core>;
+import <core/panic>;
+import <result>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 import "conv_provider";
 
 fn main() -> i32 {

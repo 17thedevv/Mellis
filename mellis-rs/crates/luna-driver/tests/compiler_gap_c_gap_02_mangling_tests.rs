@@ -43,7 +43,14 @@ fn compile_and_run(test_name: &str, source: &str) -> (i32, String, String) {
 #[test]
 fn test_c_gap_02_delimiter_disambiguation() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 module foo {
     export struct i32_B {
@@ -88,7 +95,14 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_02_module_namespace_isolation() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 module foo {
     export fn process<T>(val: T) -> i32 {
@@ -119,7 +133,14 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_02_method_name_collision_resistance() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct TypeA<T> {
     val: T,
@@ -158,7 +179,14 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_02_same_name_struct_in_different_modules() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 module foo {
     export struct Box<T> {
@@ -197,7 +225,14 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_02_deeply_nested_generic_substitutions() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct Inner<T> {
     val: T,
@@ -238,7 +273,14 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_02_non_generic_module_disambiguation() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 module alpha {
     export fn compute() -> i32 {
@@ -269,8 +311,20 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_02_drop_glue_canonical_mangling() {
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 module mod_a {
     export struct TrackA {

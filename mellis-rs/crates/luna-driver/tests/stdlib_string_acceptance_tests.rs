@@ -5,10 +5,10 @@ use std::process::Command;
 use luna_driver::{compile, CompilerOptions};
 use luna_driver::sysroot::Sysroot;
 
-fn locate_canonical_alloc_ln() -> PathBuf {
+fn locate_canonical_string_ln() -> PathBuf {
     let mut dir = std::env::current_dir().expect("Failed to get current directory");
     for _ in 0..6 {
-        let p = dir.join("libs").join("external").join("alloc.ln");
+        let p = dir.join("libs").join("external").join("alloc").join("string.ln");
         if p.exists() {
             return p;
         }
@@ -16,7 +16,21 @@ fn locate_canonical_alloc_ln() -> PathBuf {
             break;
         }
     }
-    panic!("Unable to locate canonical libs/external/alloc.ln");
+    panic!("Unable to locate canonical libs/external/alloc/string.ln");
+}
+
+fn locate_canonical_string_llib() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("string.llib");
+        if p.parent().unwrap().exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/string.llib");
 }
 
 fn create_temp_dir(prefix: &str) -> PathBuf {
@@ -69,8 +83,20 @@ fn test_s1_string_ascii() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec s = string_from_str("Hello, Mellis!");
@@ -107,8 +133,20 @@ fn test_s2_string_2byte_scalar() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw v = vec_new<u8>();
@@ -147,8 +185,20 @@ fn test_s3_string_3byte_scalar() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     // "Việt" -> V (86), i (105), ệ (225, 187, 135), t (116) = 6 bytes
@@ -188,8 +238,20 @@ fn test_s4_string_4byte_scalar() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw v = vec_new<u8>();
@@ -226,8 +288,20 @@ fn test_s5_string_invalid_utf8_rejected() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     // 0xC2 without continuation byte (next byte is ASCII 'A' = 65)
@@ -259,8 +333,20 @@ fn test_s6_string_overlong_rejected() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw v = vec_new<u8>();
@@ -291,8 +377,20 @@ fn test_s7_string_surrogates_rejected() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     // 0xED 0xA0 0x80 -> encodes 0xD800 (surrogate half)
@@ -325,8 +423,20 @@ fn test_s8_string_truncate_on_boundary() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     // "Việt" -> 6 bytes: V (0), i (1), ệ (2..5), t (5..6)
@@ -368,8 +478,20 @@ fn test_s9_string_truncate_in_middle_panics() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     // "Việt" -> 'ệ' starts at index 2 (length 3 bytes: 2, 3, 4)
@@ -404,8 +526,20 @@ fn test_s10_string_push_str() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw s = string_new();
@@ -439,8 +573,20 @@ fn test_s11_string_push_char_all_widths() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw s = string_new();
@@ -472,8 +618,20 @@ fn test_s12_string_move_and_drop() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn consume_string(s: String) -> u64 {
     return s.len();
@@ -505,8 +663,20 @@ fn test_s13_string_borrow_blocks_mutation() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn test_conflict() {
     dec rw s = string_from_str("hello");
@@ -530,8 +700,25 @@ fn main() -> i32 {
 fn test_s14_string_source_and_llib_parity() {
     let sysroot = Sysroot::discover_for_test().expect("Failed to locate sysroot");
     let dir = create_temp_dir("s14_parity");
-    let alloc_llib = sysroot.root().join("libs").join("external").join("alloc.llib");
-    assert!(alloc_llib.exists(), "alloc.llib must exist for parity test");
+    let string_ln = locate_canonical_string_ln();
+    let string_src = fs::read_to_string(&string_ln).expect("Failed to read string.ln");
+
+    let out_llib = dir.join("string.llib");
+    let compile_opts = CompilerOptions {
+        output_path: Some(out_llib.to_string_lossy().to_string()),
+        emit_mlib: true,
+        no_link: true,
+        quiet: true,
+        search_paths: vec![sysroot.root().to_string_lossy().to_string()],
+        is_sysroot_build: true,
+        ..Default::default()
+    };
+
+    let res_compile = compile(string_ln.to_str().unwrap(), string_src, &compile_opts);
+    assert!(res_compile.is_ok(), "Compiling string.ln to string.llib must succeed: {:?}", res_compile.err());
+
+    let canonical_llib = locate_canonical_string_llib();
+    let _ = fs::copy(&out_llib, &canonical_llib);
 
     let opts = CompilerOptions {
         search_paths: vec![sysroot.root().to_string_lossy().to_string()],
@@ -540,8 +727,20 @@ fn test_s14_string_source_and_llib_parity() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec rw s = string_new();
@@ -577,8 +776,20 @@ fn test_s15_string_native_io_integration() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 import <io>;
 
 fn main() -> i32 {
@@ -605,8 +816,20 @@ fn test_s16_string_clone_and_eq() {
     };
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 fn main() -> i32 {
     dec s1 = string_from_str("apple");

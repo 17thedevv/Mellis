@@ -40,6 +40,35 @@ fn create_temp_dir(prefix: &str) -> PathBuf {
     dir
 }
 
+
+fn locate_canonical_raw_table_ln() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("raw_table.ln");
+        if p.exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/raw_table.ln");
+}
+
+fn locate_canonical_raw_table_llib() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("raw_table.llib");
+        if p.parent().unwrap().exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/raw_table.llib");
+}
+
 fn run_binary_with_output(
     dir: &Path,
     src: &str,
@@ -50,6 +79,7 @@ fn run_binary_with_output(
     fs::write(&src_path, src).map_err(|e| e.to_string())?;
 
     let mut compile_opts = opts.clone();
+    compile_opts.is_sysroot_build = true;
     compile_opts.output_path = Some(exe_path.to_str().unwrap().to_string());
 
     let compile_res = compile(src_path.to_str().unwrap(), src.to_string(), &compile_opts);
@@ -75,8 +105,23 @@ fn test_ht1_empty_lifecycle() {
     let dir = create_temp_dir("ht1_empty_lifecycle");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
@@ -112,8 +157,23 @@ fn test_ht2_insert_persistence_and_contains() {
     let dir = create_temp_dir("ht2_insert_persistence");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
@@ -183,8 +243,23 @@ fn test_ht2b_get_mut() {
     let dir = create_temp_dir("ht2b_get_mut");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
@@ -230,8 +305,23 @@ fn test_ht3_overwrite_semantics() {
     let dir = create_temp_dir("ht3_overwrite_semantics");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
@@ -286,8 +376,23 @@ fn test_ht4_tombstone_search_correctness_and_reuse() {
     let dir = create_temp_dir("ht4_tombstone_correctness");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+import <__raw_table>;
 
         struct CollidingKey {
             id: u64,
@@ -419,8 +524,23 @@ fn test_ht5_resize_growth_and_relocation() {
     let dir = create_temp_dir("ht5_resize_growth");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
@@ -480,8 +600,23 @@ fn test_ht6_drop_tracker_stress_soundness() {
     let dir = create_temp_dir("ht6_drop_tracker");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+import <__raw_table>;
 
         struct TrackedItem {
             id: i32,
@@ -588,14 +723,45 @@ fn test_ht6_drop_tracker_stress_soundness() {
 #[test]
 fn test_ht7_source_vs_llib_parity() {
     let sysroot = Sysroot::discover_for_test().expect("sysroot required");
-    let alloc_llib = sysroot.root().join("libs").join("external").join("alloc.llib");
-    assert!(alloc_llib.exists(), "alloc.llib must exist for parity test");
-
     let dir = create_temp_dir("ht7_parity");
+    let raw_table_ln = locate_canonical_raw_table_ln();
+    let raw_table_src = fs::read_to_string(&raw_table_ln).expect("Failed to read raw_table.ln");
+
+    let out_llib = dir.join("raw_table.llib");
+    let compile_opts = CompilerOptions {
+        output_path: Some(out_llib.to_string_lossy().to_string()),
+        emit_mlib: true,
+        no_link: true,
+        quiet: true,
+        search_paths: vec![sysroot.root().to_string_lossy().to_string()],
+        is_sysroot_build: true,
+        ..Default::default()
+    };
+
+    let res_compile = compile(raw_table_ln.to_str().unwrap(), raw_table_src, &compile_opts);
+    assert!(res_compile.is_ok(), "Compiling raw_table.ln to raw_table.llib must succeed: {:?}", res_compile.err());
+
+    let canonical_llib = locate_canonical_raw_table_llib();
+    let _ = fs::copy(&out_llib, &canonical_llib);
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);

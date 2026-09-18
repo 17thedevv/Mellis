@@ -28,7 +28,14 @@ fn test_v1_dyn_call_preserves_provenance() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct Data {
     val: i32,
@@ -74,7 +81,14 @@ fn test_v2_mutation_rejected_while_alive_passed_after_dead() {
 
     // Part 2a: Reject mutation while returned reference is alive
     let src_bad = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct Data {
     val: i32,
@@ -109,7 +123,14 @@ fn bad() -> i32 {
 
     // Part 2b: Pass mutation after returned reference is dead
     let src_good = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct Data {
     val: i32,
@@ -178,7 +199,14 @@ module source_lib {
 "#;
 
     let consumer_bad_src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 import "source_lib";
 
 fn bad() -> i32 {
@@ -191,7 +219,14 @@ fn bad() -> i32 {
 "#;
 
     let consumer_good_src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 import "source_lib";
 
 fn good() -> i32 {
@@ -268,7 +303,14 @@ fn test_v4_impl_omits_trait_lifetime_contract_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct Data {
     val: i32,
@@ -309,7 +351,14 @@ fn test_v5_callvirt_enforces_outlives() {
 
     // Bad call: shorter does not outlive longer
     let src_bad = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 trait Transformer {
     fn transform(self: &Self, longer: &i32, shorter: &i32) -> void where outlives(longer, shorter);
@@ -341,7 +390,14 @@ fn test_bad(t: &dyn Transformer) {
 
     // Good call: longer outlives shorter
     let src_good = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 trait Transformer {
     fn transform(self: &Self, longer: &i32, shorter: &i32) -> void where outlives(longer, shorter);
@@ -373,7 +429,14 @@ fn test_v6_weaker_provenance_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 trait Selector {
     fn pick(self: &Self, a: &i32, b: &i32) -> &i32 life_from(a);
@@ -407,7 +470,14 @@ fn test_v7_stronger_provenance_accepted() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 trait Selector {
     fn pick(self: &Self, a: &i32, b: &i32) -> &i32 life_from(a | b);

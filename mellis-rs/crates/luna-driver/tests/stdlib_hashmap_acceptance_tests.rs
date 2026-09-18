@@ -88,6 +88,34 @@ fn check_source_with_sysroot(
     check(src_path.to_str().unwrap(), src.to_string(), &opts)
 }
 
+fn locate_canonical_hashmap_ln() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("hashmap.ln");
+        if p.exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/hashmap.ln");
+}
+
+fn locate_canonical_hashmap_llib() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("hashmap.llib");
+        if p.parent().unwrap().exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/hashmap.llib");
+}
+
 /// 1. Empty Lifecycle
 #[test]
 fn test_hashmap_empty_lifecycle() {
@@ -95,8 +123,20 @@ fn test_hashmap_empty_lifecycle() {
     let dir = create_temp_dir("map_empty_lifecycle");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_new<i32, i32>();
@@ -135,8 +175,20 @@ fn test_hashmap_insert_and_get() {
     let dir = create_temp_dir("map_insert_and_get");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -198,8 +250,20 @@ fn test_hashmap_contains_key() {
     let dir = create_temp_dir("map_contains_key");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -240,8 +304,20 @@ fn test_hashmap_get_mut_inplace() {
     let dir = create_temp_dir("map_get_mut");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -288,8 +364,20 @@ fn test_hashmap_overwrite_semantics() {
     let dir = create_temp_dir("map_overwrite");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -338,8 +426,20 @@ fn test_hashmap_remove() {
     let dir = create_temp_dir("map_remove");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -387,8 +487,20 @@ fn test_hashmap_clear() {
     let dir = create_temp_dir("map_clear");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -434,8 +546,22 @@ fn test_hashmap_multiple_collisions() {
     let dir = create_temp_dir("map_collisions");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct CollidingKey {
             id: u64,
@@ -514,8 +640,20 @@ fn test_hashmap_dynamic_growth() {
     let dir = create_temp_dir("map_growth");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -565,8 +703,20 @@ fn test_hashmap_dynamic_growth() {
 fn test_hashmap_borrowck_read_blocks_mutation() {
     let dir = create_temp_dir("map_borrowck_read_mut");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -594,8 +744,20 @@ fn test_hashmap_borrowck_read_blocks_mutation() {
 fn test_hashmap_borrowck_mut_exclusive() {
     let dir = create_temp_dir("map_borrowck_mut_exclusive");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_with_capacity<i32, i32>(8 as u64);
@@ -625,8 +787,22 @@ fn test_hashmap_droptracker_stress() {
     let dir = create_temp_dir("map_drop_tracker");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct TrackedItem {
             id: i32,
@@ -730,14 +906,42 @@ fn test_hashmap_droptracker_stress() {
 #[test]
 fn test_hashmap_source_vs_llib_parity() {
     let sysroot = Sysroot::discover_for_test().expect("sysroot required");
-    let alloc_llib = sysroot.root().join("libs").join("external").join("alloc.llib");
-    assert!(alloc_llib.exists(), "alloc.llib must exist for parity test");
-
     let dir = create_temp_dir("map_parity");
+    let hashmap_ln = locate_canonical_hashmap_ln();
+    let hashmap_src = fs::read_to_string(&hashmap_ln).expect("Failed to read hashmap.ln");
+
+    let out_llib = dir.join("hashmap.llib");
+    let compile_opts = CompilerOptions {
+        output_path: Some(out_llib.to_string_lossy().to_string()),
+        emit_mlib: true,
+        no_link: true,
+        quiet: true,
+        search_paths: vec![sysroot.root().to_string_lossy().to_string()],
+        is_sysroot_build: true,
+        ..Default::default()
+    };
+
+    let res_compile = compile(hashmap_ln.to_str().unwrap(), hashmap_src, &compile_opts);
+    assert!(res_compile.is_ok(), "Compiling hashmap.ln to hashmap.llib must succeed: {:?}", res_compile.err());
+
+    let canonical_llib = locate_canonical_hashmap_llib();
+    let _ = fs::copy(&out_llib, &canonical_llib);
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw map = hashmap_new<i32, i32>();

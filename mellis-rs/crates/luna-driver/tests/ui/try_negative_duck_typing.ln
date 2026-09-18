@@ -1,6 +1,6 @@
 
 
-import <core>;
+import <try>;
 
 struct Fake<T> {
     value: T,

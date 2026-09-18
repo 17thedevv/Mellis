@@ -40,7 +40,14 @@ fn run_compiler(name: &str, src: &str) -> (bool, Vec<luna_common::Diagnostic>) {
 #[test]
 fn test_case_01_unawaited_future_dropped_at_state_0() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Resource {
             id: i32,
@@ -280,7 +287,14 @@ fn test_case_05_future_i32_still_gets_a_destructor() {
 #[test]
 fn test_case_06_multiple_await_points_with_state_specific_cleanup() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct ResourceA { id: i32 }
         impl Drop for ResourceA { fn drop(self: &rw Self) {} }
@@ -311,7 +325,14 @@ fn test_case_06_multiple_await_points_with_state_specific_cleanup() {
 #[test]
 fn test_case_07_drop_type_parameters_cleaned_when_cancelled_early() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Resource { id: i32 }
         impl Drop for Resource { fn drop(self: &rw Self) {} }
@@ -337,7 +358,14 @@ fn test_case_07_drop_type_parameters_cleaned_when_cancelled_early() {
 #[test]
 fn test_case_08_moved_resource_is_not_double_dropped_on_cancellation() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Resource { id: i32 }
         impl Drop for Resource { fn drop(self: &rw Self) {} }
@@ -380,7 +408,14 @@ fn test_case_09_future_moved_has_exactly_one_owner() {
 #[test]
 fn test_case_10_branching_awaits_distinct_cleanup_sets() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct LeftRes { id: i32 }
         impl Drop for LeftRes { fn drop(self: &rw Self) {} }
@@ -439,7 +474,14 @@ fn test_case_11_loop_await_cancellation() {
 #[test]
 fn test_case_12_partial_initialization_dropped_correctly() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Resource { id: i32 }
         impl Drop for Resource { fn drop(self: &rw Self) {} }

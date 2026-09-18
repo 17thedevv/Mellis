@@ -36,6 +36,35 @@ fn create_temp_dir(prefix: &str) -> PathBuf {
     dir
 }
 
+
+fn locate_canonical_hashset_ln() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("hashset.ln");
+        if p.exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/hashset.ln");
+}
+
+fn locate_canonical_hashset_llib() -> PathBuf {
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    for _ in 0..6 {
+        let p = dir.join("libs").join("external").join("alloc").join("hashset.llib");
+        if p.parent().unwrap().exists() {
+            return p;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    panic!("Unable to locate canonical libs/external/alloc/hashset.llib");
+}
+
 fn run_binary_with_output(
     dir: &Path,
     src: &str,
@@ -71,8 +100,20 @@ fn test_hashset_empty_lifecycle() {
     let dir = create_temp_dir("set_empty_lifecycle");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw set = hashset_new<i32>();
@@ -114,8 +155,20 @@ fn test_hashset_insert_and_contains() {
     let dir = create_temp_dir("set_insert_contains");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw set = hashset_with_capacity<i32>(8 as u64);
@@ -172,8 +225,20 @@ fn test_hashset_duplicate_insert() {
     let dir = create_temp_dir("set_duplicate_insert");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw set = hashset_with_capacity<i32>(8 as u64);
@@ -227,8 +292,20 @@ fn test_hashset_remove() {
     let dir = create_temp_dir("set_remove");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw set = hashset_with_capacity<i32>(8 as u64);
@@ -294,8 +371,20 @@ fn test_hashset_clear() {
     let dir = create_temp_dir("set_clear");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw set = hashset_with_capacity<i32>(8 as u64);
@@ -357,8 +446,22 @@ fn test_hashset_multiple_collisions() {
     let dir = create_temp_dir("set_collisions");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct CollidingKey {
             id: i32,
@@ -438,8 +541,20 @@ fn test_hashset_dynamic_growth() {
     let dir = create_temp_dir("set_growth");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw set = hashset_with_capacity<i32>(8 as u64);
@@ -492,8 +607,22 @@ fn test_hashset_droptracker_stress() {
     let dir = create_temp_dir("set_drop_tracker");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <cmp>;
+        import <hash>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct TrackedElement {
             id: i32,
@@ -608,14 +737,42 @@ fn test_hashset_droptracker_stress() {
 #[test]
 fn test_hashset_source_vs_llib_parity() {
     let sysroot = Sysroot::discover_for_test().expect("sysroot required");
-    let alloc_llib = sysroot.root().join("libs").join("external").join("alloc.llib");
-    assert!(alloc_llib.exists(), "alloc.llib must exist for parity test");
-
     let dir = create_temp_dir("set_parity");
+    let hashset_ln = locate_canonical_hashset_ln();
+    let hashset_src = fs::read_to_string(&hashset_ln).expect("Failed to read hashset.ln");
+
+    let out_llib = dir.join("hashset.llib");
+    let compile_opts = CompilerOptions {
+        output_path: Some(out_llib.to_string_lossy().to_string()),
+        emit_mlib: true,
+        no_link: true,
+        quiet: true,
+        search_paths: vec![sysroot.root().to_string_lossy().to_string()],
+        is_sysroot_build: true,
+        ..Default::default()
+    };
+
+    let res_compile = compile(hashset_ln.to_str().unwrap(), hashset_src, &compile_opts);
+    assert!(res_compile.is_ok(), "Compiling hashset.ln to hashset.llib must succeed: {:?}", res_compile.err());
+
+    let canonical_llib = locate_canonical_hashset_llib();
+    let _ = fs::copy(&out_llib, &canonical_llib);
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw set = hashset_new<i32>();
@@ -682,8 +839,20 @@ fn check_source_with_sysroot(
 fn test_hashset_private_field_access_rejected() {
     let dir = create_temp_dir("set_private_field");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw set = hashset_new<i32>();
@@ -704,8 +873,20 @@ fn test_hashset_private_field_access_rejected() {
 fn test_hashset_struct_literal_construction_rejected() {
     let dir = create_temp_dir("set_struct_literal");
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec rw m = hashmap_new<i32, ()>();

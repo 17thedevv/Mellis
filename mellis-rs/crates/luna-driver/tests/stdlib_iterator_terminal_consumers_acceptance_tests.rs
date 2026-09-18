@@ -56,7 +56,14 @@ fn test_iter_fold_basic() {
     let dir = create_temp_dir("fold_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn add(acc: i32, x: &i32) -> i32 {
             return acc + (*x);
@@ -102,7 +109,14 @@ fn test_iter_count_basic() {
     let dir = create_temp_dir("count_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn is_even(x: &i32) -> bool {
             return (*x % 2) == 0;
@@ -143,7 +157,14 @@ fn test_iter_for_each_basic() {
     let dir = create_temp_dir("for_each_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct Context {
             total: i32,
@@ -203,7 +224,14 @@ fn test_iter_any_basic() {
     let dir = create_temp_dir("any_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn is_gt_hundred(x: &i32) -> bool {
             return (*x) > 100;
@@ -247,7 +275,14 @@ fn test_iter_all_basic() {
     let dir = create_temp_dir("all_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn is_positive(x: &i32) -> bool {
             return (*x) > 0;
@@ -292,7 +327,14 @@ fn test_iter_find_basic() {
     let dir = create_temp_dir("find_basic");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn is_target(x: &i32) -> bool {
             return (*x) == 42;
@@ -346,7 +388,14 @@ fn test_iter_terminal_pipeline_chaining() {
     let dir = create_temp_dir("pipeline_terminal");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn is_even(x: &i32) -> bool {
             return (*x % 2) == 0;
@@ -391,8 +440,20 @@ fn test_iter_any_early_exit_droptracker() {
     let dir = create_temp_dir("any_early_drop");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct DropCounter {
             private created: u64,
@@ -469,8 +530,20 @@ fn test_iter_all_early_exit_droptracker() {
     let dir = create_temp_dir("all_early_drop");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct DropCounter {
             private created: u64,
@@ -548,8 +621,20 @@ fn test_iter_find_early_exit_droptracker() {
     let dir = create_temp_dir("find_early_drop");
 
     let src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct DropCounter {
             private created: u64,
@@ -631,7 +716,14 @@ fn test_terminal_consumers_source_vs_llib_parity() {
     let dir = create_temp_dir("terminal_parity");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         fn add(acc: i32, x: &i32) -> i32 {
             return acc + (*x);
@@ -679,7 +771,14 @@ fn test_iter_find_owned_droptracker() {
     // Part A: Proves that for non-Copy items, passing Item by value to pred consumes it,
     // so returning Option::Some(x) is safely and strictly rejected by the borrow checker!
     let reject_src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct DropCounter {
             private created: u64,
@@ -747,7 +846,14 @@ fn test_iter_find_owned_droptracker() {
 
     // Part B: For owned Copy items, iter_find transfers ownership of the found item and early exits!
     let run_src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
         extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
@@ -826,7 +932,14 @@ fn test_iter_any_owned_droptracker() {
     let dir = create_temp_dir("any_owned_drop");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct DropCounter {
             private created: u64,
@@ -945,7 +1058,14 @@ fn test_iter_all_owned_droptracker() {
     let dir = create_temp_dir("all_owned_drop");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct DropCounter {
             private created: u64,
@@ -1063,7 +1183,14 @@ fn test_iter_fold_droptracker_accumulator() {
     let dir = create_temp_dir("fold_acc_drop");
 
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
 
         struct DropCounter {
             private created: u64,

@@ -44,7 +44,14 @@ fn compile_and_run(test_name: &str, source: &str) -> (i32, String, String) {
 #[test]
 fn test_c_gap_01_direct_scoped_generic_drop() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct Wrapper<T> {
     val: T,
@@ -86,7 +93,14 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_01_custom_drop_plus_owned_field_composition() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct DropTracker {
     id: i32,
@@ -177,7 +191,14 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_01_nested_generic_owned_fields() {
     let src = r#"
-import <core>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
 
 struct DropTracker {
     order_seq: *rw i32,
@@ -289,8 +310,20 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_01_vec_box_drop_tracker_multi_grow() {
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct DropTracker {
     id: i32,
@@ -330,8 +363,20 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_01_nested_box_box_drop_tracker() {
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct DropTracker {
     id: i32,
@@ -368,8 +413,20 @@ fn main() -> i32 {
 #[test]
 fn test_c_gap_01_non_drop_type_no_destructor() {
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct PlainData<T> {
     val: T,
@@ -391,16 +448,28 @@ fn main() -> i32 {
     assert_eq!(code, 0, "Non-Drop types must compile cleanly and produce zero destructor calls (code: {}, stderr: {})", code, stderr);
 }
 
-/// 7. Source vs .llib Parity: Vec<Box<DropTracker>> against source <alloc> and precompiled alloc.llib.
+/// 7. Source vs .llib Parity: Vec<Box<DropTracker>> against alloc components.
 #[test]
 fn test_c_gap_01_source_llib_parity() {
     let sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
-    let alloc_llib = sysroot.root().join("libs").join("external").join("alloc.llib");
-    assert!(alloc_llib.exists(), "alloc.llib must exist for parity test");
+    let vec_ln = sysroot.root().join("libs").join("external").join("alloc").join("vec.ln");
+    assert!(vec_ln.exists(), "alloc/vec.ln must exist for parity test");
 
     let src = r#"
-import <core>;
-import <alloc>;
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
 struct DropTracker {
     id: i32,

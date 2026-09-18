@@ -10,18 +10,17 @@ fn create_temp_dir(test_name: &str) -> PathBuf {
     dir
 }
 
-/// IMPORT-3: Provider name NEVER automatically creates a module namespace.
-/// `import <core>; core::Option` must be REJECTED.
-/// Bare `Option` must SUCCEED.
+/// IMPORT-3: Provider names never automatically create module namespaces.
+/// `import <result>; result::Result` must be rejected while bare `Result` succeeds.
 #[test]
 fn test_import_3_no_synthetic_modules() {
     let sysroot = Sysroot::discover_for_test().expect("sysroot required");
     let dir = create_temp_dir("import_3_no_synthetic");
     let main_fail = dir.join("main_fail.ln");
     let src_fail = r#"
-        import <core>;
+        import <result>;
         fn main() {
-            dec opt: core::Option<i32> = core::Option::None;
+            dec value: result::Result<i32, i32> = result::Result::Ok(1);
         }
     "#;
     fs::write(&main_fail, src_fail).unwrap();
@@ -31,24 +30,24 @@ fn test_import_3_no_synthetic_modules() {
         ..Default::default()
     };
     let res_fail = check(main_fail.to_str().unwrap(), src_fail.to_string(), &opts);
-    assert!(res_fail.is_err(), "core::Option must be rejected as core is a provider, not a module namespace");
+    assert!(res_fail.is_err(), "result::Result must be rejected because a provider is not a namespace");
     let errs = res_fail.unwrap_err();
     assert!(
         errs.iter().any(|d| d.message.contains("core") || d.message.contains("not found") || d.message.contains("unresolved")),
-        "Expected error mentioning unresolved namespace or symbol core, got: {:?}", errs
+        "Expected an unresolved synthetic provider namespace, got: {:?}", errs
     );
 
-    // Verify that bare Option succeeds
+    // Verify that the provider's exported root binding succeeds.
     let main_ok = dir.join("main_ok.ln");
     let src_ok = r#"
-        import <core>;
+        import <result>;
         fn main() {
-            dec opt: Option<i32> = Option::None;
+            dec value: Result<i32, i32> = Result::Ok(1);
         }
     "#;
     fs::write(&main_ok, src_ok).unwrap();
     let res_ok = check(main_ok.to_str().unwrap(), src_ok.to_string(), &opts);
-    assert!(res_ok.is_ok(), "Bare Option<i32> must succeed: {:?}", res_ok.err());
+    assert!(res_ok.is_ok(), "Bare Result<i32, i32> must succeed: {:?}", res_ok.err());
 }
 
 /// IMPORT-2 & IMPORT-7: Explicit module namespaces are preserved.
@@ -147,11 +146,42 @@ fn test_import_4_idempotent_reimport() {
     let dir = create_temp_dir("import_4_idempotent");
     let main_path = dir.join("main.ln");
     let src = r#"
-        import <core>;
-        import <core>;
-        import <core>;
-        import <alloc>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
         fn main() {
             dec opt: Option<i32> = Option::None;
             dec rw v: Vec<i32> = vec_new<i32>();

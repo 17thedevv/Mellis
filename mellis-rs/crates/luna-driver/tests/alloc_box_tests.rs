@@ -63,7 +63,8 @@ fn test_allocator_ln_is_valid() {
 /// can be checked in isolation.
 #[test]
 fn test_box_ln_is_valid() {
-    let (_sysroot, options) = test_sysroot_options();
+    let (_sysroot, mut options) = test_sysroot_options();
+    options.is_sysroot_build = true;
     let lib_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
         .join("lib")
@@ -96,7 +97,12 @@ fn test_box_type_recognized_in_function_signature() {
     let temp = create_temp_dir("box_type_sig");
     let main_path = temp.join("main.ln");
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn box_identity(b: std::Box<i32>) -> std::Box<i32> {
             return b;
@@ -122,7 +128,12 @@ fn test_box_nested_generic_type() {
     let temp = create_temp_dir("box_nested_generic");
     let main_path = temp.join("main.ln");
     let src = r#"
-        import <alloc>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         struct Pair {
             a: i32,

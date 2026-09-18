@@ -365,7 +365,14 @@ fn test_c_gap_03_custom_drop_and_provider_state() {
     let main_path = dir.join("main.ln");
     let main_exe = dir.join("main.exe");
     let main_src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         import "tracker";
 
         fn main() -> i32 {
@@ -407,8 +414,20 @@ fn test_c_gap_03_core_alloc_sysroot_binary_e2e() {
     let main_path = dir.join("main.ln");
     let main_exe = dir.join("main.exe");
     let main_src = r#"
-        import <core>;
-        import <alloc>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
+        import <box>;
+import <vec>;
+import <string>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
 
         fn main() -> i32 {
             dec b = std::box_new(42);

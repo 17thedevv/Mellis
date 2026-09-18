@@ -1,4 +1,4 @@
-﻿use luna_driver::{check, compile, CompilerOptions};
+use luna_driver::{check, compile, CompilerOptions};
 use luna_driver::sysroot::Sysroot;
 use std::fs;
 use std::path::PathBuf;
@@ -60,7 +60,14 @@ fn compile_to_ll(name: &str, src: &str) -> (bool, Vec<luna_common::Diagnostic>, 
 #[test]
 fn test_adv_01_unsized_pointer_arithmetic_dyn_trait_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Calc {
             fn value(self: &Self) -> i32;
         }
@@ -89,7 +96,14 @@ fn test_adv_01_unsized_pointer_arithmetic_dyn_trait_rejected() {
 #[test]
 fn test_adv_02_unsized_pointer_arithmetic_slice_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         fn main() -> i32 {
             dec arr: [i32; 3] = [1, 2, 3];
             dec s: &[i32] = &arr;
@@ -110,7 +124,14 @@ fn test_adv_02_unsized_pointer_arithmetic_slice_rejected() {
 #[test]
 fn test_adv_03_unsized_pointer_subtraction_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
         struct S { x: i32, }
         impl Foo for S {
@@ -143,7 +164,14 @@ fn test_adv_03_unsized_pointer_subtraction_rejected() {
 #[test]
 fn test_adv_04_fat_pointer_integrity_across_copy_move_and_calls() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Calc {
             fn value(self: &Self) -> i32;
         }
@@ -169,7 +197,14 @@ fn test_adv_04_fat_pointer_integrity_across_copy_move_and_calls() {
 #[test]
 fn test_adv_05_slice_fat_pointer_len_preservation() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         fn sum(s: &[i32]) -> i32 {
             return s[0] + s[1] + s[2];
         }
@@ -192,7 +227,14 @@ fn test_adv_05_slice_fat_pointer_len_preservation() {
 #[test]
 fn test_adv_06_dyn_trait_dispatch_correctness() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Calc {
             fn value(self: &Self) -> i32;
         }
@@ -220,7 +262,14 @@ fn test_adv_06_dyn_trait_dispatch_correctness() {
 #[test]
 fn test_adv_08_cast_thin_to_fat_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
         fn main() -> i32 {
             dec rw x: i32 = 42;
@@ -240,7 +289,14 @@ fn test_adv_08_cast_thin_to_fat_rejected() {
 #[test]
 fn test_adv_09_cast_fat_to_thin_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
         struct S { x: i32, }
         impl Foo for S {
@@ -263,7 +319,14 @@ fn test_adv_09_cast_fat_to_thin_rejected() {
 #[test]
 fn test_adv_10_cast_to_unsized_value_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
         struct S { x: i32, }
         impl Foo for S {
@@ -290,7 +353,14 @@ fn test_adv_10_cast_to_unsized_value_rejected() {
 #[test]
 fn test_adv_11_immutable_raw_dyn_trait_write_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
         struct S { x: i32, }
         impl Foo for S {
@@ -316,7 +386,14 @@ fn test_adv_11_immutable_raw_dyn_trait_write_rejected() {
 #[test]
 fn test_adv_12_immutable_dyn_trait_mutable_method_rejected() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Counter {
             fn inc(self: &rw Self);
             fn get(self: &Self) -> i32;
@@ -345,7 +422,14 @@ fn test_adv_12_immutable_dyn_trait_mutable_method_rejected() {
 #[test]
 fn test_adv_13_mutable_dyn_trait_mutable_method_allowed() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Counter {
             fn inc(self: &rw Self);
             fn get(self: &Self) -> i32;
@@ -380,7 +464,14 @@ fn test_adv_13_mutable_dyn_trait_mutable_method_allowed() {
 #[test]
 fn test_adv_14_non_inbounds_gep_structural_llvm_ir_verification() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         unsafe fn advance(p: *i32, n: i32) -> *i32 {
             return p + n;
         }
@@ -426,7 +517,14 @@ fn test_adv_14_non_inbounds_gep_structural_llvm_ir_verification() {
 #[test]
 fn test_adv_15_end_to_end_runtime_adversarial_pipeline() {
     let src = r#"
-        import <core>;
+        import <core/panic>;
+        import <mem>;
+        import <slice>;
+        import <copy>;
+        import <clone>;
+        import <ptr>;
+        import <iter_adapters>;
+        import <iter_consumers>;
         trait Shape {
             fn area(self: &Self) -> i32;
         }

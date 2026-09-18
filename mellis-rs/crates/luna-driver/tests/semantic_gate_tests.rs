@@ -155,7 +155,7 @@ fn test_gate_invalid_main_signature() {
 fn test_gate_explicit_drop_call() {
     let src = r#"
         struct Foo { x: i32 }
-        impl core::Drop for Foo {
+        impl Drop for Foo {
             fn drop(self: &rw Self) {}
         }
         fn main() {
@@ -428,11 +428,10 @@ fn test_adversarial_negative_corpus() {
         ("comptime_div_zero", "const X: i32 = comptime { 10 / 0 }; fn main() {}", "attempt to divide by zero"),
         ("type_mismatch_var", "fn main() { dec x: i32 = true; }", "type mismatch"),
         ("unresolved_sym", "fn main() { missing_fn_call(); }", "not found"),
-        ("copy_drop_conflict", "import <core>; struct S { x: i32 } impl Copy for S {} impl Drop for S { fn drop(self: &rw Self) {} } fn main() {}", "E_COPY_DROP_CONFLICT"),
+        ("copy_drop_conflict", "import <copy>; struct S { x: i32 } impl Copy for S {} impl Drop for S { fn drop(self: &rw Self) {} } fn main() {}", "E_COPY_DROP_CONFLICT"),
     ];
 
     for (name, src, expected_err) in corpus {
         assert_semantic_gate_fires(&format!("corpus_{}", name), src, expected_err);
     }
 }
-
