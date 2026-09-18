@@ -1,4 +1,5 @@
 use luna_driver::{check, CompilerOptions};
+use luna_common::DiagnosticCode;
 use std::fs;
 use std::path::PathBuf;
 
@@ -94,7 +95,9 @@ fn test_path_1_field_read() {
     assert!(fail_res.is_err(), "Expected reading private field to fail");
     let diags = fail_res.err().unwrap();
     assert!(
-        diags.iter().any(|d| d.message.contains("Field `password` of struct `User` is private")),
+        diags
+            .iter()
+            .any(|d| d.code == Some(DiagnosticCode::PrivateSymbolAccess)),
         "Expected private field diagnostic, got: {:?}", diags
     );
 }

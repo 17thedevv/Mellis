@@ -1,6 +1,6 @@
 use crate::dataflow::DataflowAnalysis;
 use crate::place::Place;
-use luna_common::Diagnostic;
+use luna_common::{Diagnostic, DiagnosticCode};
 use luna_mvir::{Function, Instruction, Operand, Terminator};
 use std::collections::{HashMap, HashSet};
 
@@ -107,14 +107,14 @@ impl<'a> MoveAnalyzer<'a> {
         if loc_state == MoveState::Moved {
             let msg = format!("Use of moved value '{}'", formatted_name);
             if !self.diagnostics.iter().any(|d| d.message == msg) {
-                let mut diag = Diagnostic::error(msg);
+                let mut diag = Diagnostic::error(msg).with_code(DiagnosticCode::UseAfterMove);
                 diag.span = span.clone();
                 self.diagnostics.push(diag);
             }
         } else if loc_state == MoveState::ConditionallyMoved {
             let msg = format!("Use of conditionally moved value '{}'", formatted_name);
             if !self.diagnostics.iter().any(|d| d.message == msg) {
-                let mut diag = Diagnostic::error(msg);
+                let mut diag = Diagnostic::error(msg).with_code(DiagnosticCode::UseAfterMove);
                 diag.span = span.clone();
                 self.diagnostics.push(diag);
             }
@@ -135,7 +135,7 @@ impl<'a> MoveAnalyzer<'a> {
         } else if loc_state == MoveState::PartialMoved {
             let msg = format!("Use of partially moved value '{}'", formatted_name);
             if !self.diagnostics.iter().any(|d| d.message == msg) {
-                let mut diag = Diagnostic::error(msg);
+                let mut diag = Diagnostic::error(msg).with_code(DiagnosticCode::UseAfterMove);
                 diag.span = span.clone();
                 self.diagnostics.push(diag);
             }
@@ -197,9 +197,10 @@ impl<'a> MoveAnalyzer<'a> {
                                     _ => false,
                                 };
                                 if has_drop {
-                                    let msg = "Cannot move out of a subplace of a type that implements Drop [E_PARTIAL_MOVE_UNDER_DROP]".to_string();
+                                    let msg = "Cannot move out of a subplace of a type that implements Drop".to_string();
                                     if !self.diagnostics.iter().any(|d| d.message == msg) {
-                                        let mut diag = Diagnostic::error(msg);
+                                        let mut diag = Diagnostic::error(msg)
+                                            .with_code(DiagnosticCode::PartialMoveUnderDrop);
                                         diag.span = self.func.values[val.0 as usize].span.clone();
                                         self.diagnostics.push(diag);
                                     }
@@ -517,9 +518,10 @@ impl<'a> DataflowAnalysis<MoveStateData> for MoveAnalyzer<'a> {
                                             _ => false,
                                         };
                                         if has_drop {
-                                            let msg = "Cannot move out of a subplace of a type that implements Drop [E_PARTIAL_MOVE_UNDER_DROP]".to_string();
+                                            let msg = "Cannot move out of a subplace of a type that implements Drop".to_string();
                                             if !self.diagnostics.iter().any(|d| d.message == msg) {
-                                                let mut diag = Diagnostic::error(msg);
+                                                let mut diag = Diagnostic::error(msg)
+                                                    .with_code(DiagnosticCode::PartialMoveUnderDrop);
                                                 diag.span = self.func.values[val_id.0 as usize].span.clone();
                                                 self.diagnostics.push(diag);
                                             }

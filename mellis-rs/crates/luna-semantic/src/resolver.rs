@@ -22,7 +22,7 @@ impl<'a> ModuleNamespaceProvider<'a> for ModuleNamespaceMap {
 use crate::{ScopeId, SemanticContext, SymbolKind};
 use luna_ast::{AstArena, Decl, Expr, Item, Pattern, Stmt, Visibility};
 use luna_common::ids::Span;
-use luna_common::Diagnostic;
+use luna_common::DiagnosticCode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeclarationContext {
@@ -1541,6 +1541,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                         "Symbol '{}' is private and cannot be accessed from this scope",
                                         seg_name
                                     ))
+                                    .with_code(DiagnosticCode::PrivateSymbolAccess)
                                     .with_span(*seg),
                                 );
                                 resolved_sym = None;
@@ -1567,6 +1568,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 "Symbol '{}' is private and cannot be accessed from this scope",
                                 full_name
                             ))
+                            .with_code(DiagnosticCode::PrivateSymbolAccess)
                             .with_span(span),
                         );
                     } else {
@@ -1638,6 +1640,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                             "Symbol '{}' is private and cannot be accessed from this scope",
                                             seg_name
                                         ))
+                                        .with_code(DiagnosticCode::PrivateSymbolAccess)
                                         .with_span(*seg),
                                     );
                                     resolved_sym = None;
@@ -1678,6 +1681,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                     "Symbol '{}' is private and cannot be accessed from this scope",
                                     name_str
                                 ))
+                                .with_code(DiagnosticCode::PrivateSymbolAccess)
                                 .with_span(span),
                             );
                             return;

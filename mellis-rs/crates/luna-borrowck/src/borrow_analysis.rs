@@ -1,6 +1,6 @@
 use crate::dataflow::{DataflowAnalysis, DataflowEngine};
 use crate::effect::{CallEffectSummary, EscapeKind, ReturnEffect};
-use luna_common::Diagnostic;
+use luna_common::{Diagnostic, DiagnosticCode};
 use luna_mvir::{Function, GlobalId, Instruction, Operand, Terminator, ValueId, ValueOrigin};
 use luna_semantic::{SemanticContext, SemanticType};
 use std::collections::{HashMap, HashSet};
@@ -477,7 +477,8 @@ impl<'a> BorrowAnalyzer<'a> {
                     let mut diag = Diagnostic::error(format!(
                         "Cannot access '{}' because it is borrowed as &rw",
                         place_name
-                    ));
+                    ))
+                    .with_code(DiagnosticCode::BorrowConflict);
                     diag.span = self.func.values[val_id.0 as usize].span.clone();
                     if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
                         self.diagnostics.push(diag);
@@ -486,7 +487,8 @@ impl<'a> BorrowAnalyzer<'a> {
                     let mut diag = Diagnostic::error(format!(
                         "Cannot write to '{}' because it is borrowed as &",
                         place_name
-                    ));
+                    ))
+                    .with_code(DiagnosticCode::BorrowConflict);
                     diag.span = self.func.values[val_id.0 as usize].span.clone();
                     if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
                         self.diagnostics.push(diag);
@@ -513,7 +515,8 @@ impl<'a> BorrowAnalyzer<'a> {
                             "Cannot borrow '{}' as {} because it is already borrowed as &rw",
                             place_name,
                             if is_rw { "&rw" } else { "&" }
-                        ));
+                        ))
+                        .with_code(DiagnosticCode::BorrowConflict);
                         diag.span = self.func.values[val_id.0 as usize].span.clone();
                         if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
                             self.diagnostics.push(diag);
@@ -522,7 +525,8 @@ impl<'a> BorrowAnalyzer<'a> {
                         let mut diag = Diagnostic::error(format!(
                             "Cannot borrow '{}' as &rw because it is already borrowed as &",
                             place_name
-                        ));
+                        ))
+                        .with_code(DiagnosticCode::BorrowConflict);
                         diag.span = self.func.values[val_id.0 as usize].span.clone();
                         if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
                             self.diagnostics.push(diag);

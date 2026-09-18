@@ -1,7 +1,7 @@
 use crate::{SemanticContext, ty::{SemanticTypeId, SemanticType, BuiltinType}};
 use luna_ast::{AstArena, Item, Stmt, Expr, Decl};
 use luna_lexer::{BuiltinKind, TokenKind};
-use luna_common::diagnostic::Diagnostic;
+use luna_common::diagnostic::{Diagnostic, DiagnosticCode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssociatedTypeEqObligation {
@@ -2243,7 +2243,7 @@ impl<'a> TypeChecker<'a> {
                             };
                             if let Some(id) = sym_id {
                                 if i > 0 && !self.ctx.symbol_table.is_accessible(id, self.current_scope, self.ctx.current_provider) {
-                                    self.ctx.diagnostics.push(Diagnostic::error(format!("Type `{}` is private and cannot be accessed from this scope", seg_name)).with_span(*seg));
+                                    self.ctx.diagnostics.push(Diagnostic::error(format!("Type `{}` is private and cannot be accessed from this scope", seg_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*seg));
                                     return None;
                                 }
                                 res = Some(id);
@@ -2265,7 +2265,7 @@ impl<'a> TypeChecker<'a> {
                     if !self.ctx.symbol_table.is_accessible(sym, self.current_scope, self.ctx.current_provider) {
                         let name_str = segments.iter().map(|s| self.get_span_text(*s)).collect::<Vec<_>>().join("::");
                         let span = segments.last().copied().unwrap_or(luna_common::Span::default());
-                        self.ctx.diagnostics.push(Diagnostic::error(format!("Type `{}` is private and cannot be accessed from this scope", name_str)).with_span(span));
+                        self.ctx.diagnostics.push(Diagnostic::error(format!("Type `{}` is private and cannot be accessed from this scope", name_str)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(span));
                         return self.ctx.types.intern(SemanticType::Error);
                     }
                     let sym_kind = self.ctx.symbol_table.get_symbol(sym).kind.clone();
@@ -3953,7 +3953,7 @@ impl<'a> TypeChecker<'a> {
                                                             self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
                                                         };
                                                         if !is_accessible {
-                                                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_span(*member));
+                                                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*member));
                                                             return self.ctx.types.intern(SemanticType::Error);
                                                         }
                                                         if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
@@ -3983,7 +3983,7 @@ impl<'a> TypeChecker<'a> {
                                         self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
                                     };
                                     if !is_accessible {
-                                        self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_span(*member));
+                                        self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*member));
                                         return self.ctx.types.intern(SemanticType::Error);
                                     }
                                     if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
@@ -4107,7 +4107,7 @@ impl<'a> TypeChecker<'a> {
                         };
                         if let Some(id) = sym_id {
                             if i > 0 && !self.ctx.symbol_table.is_accessible(id, self.current_scope, self.ctx.current_provider) {
-                                self.ctx.diagnostics.push(Diagnostic::error(format!("Struct `{}` is private and cannot be accessed from this scope", seg_name)).with_span(*seg));
+                                self.ctx.diagnostics.push(Diagnostic::error(format!("Struct `{}` is private and cannot be accessed from this scope", seg_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*seg));
                                 return self.ctx.types.new_inference_var();
                             }
                             res = Some(id);
@@ -4131,7 +4131,7 @@ impl<'a> TypeChecker<'a> {
                 };
 
                 if !self.ctx.symbol_table.is_accessible(symbol, self.current_scope, self.ctx.current_provider) {
-                    self.ctx.diagnostics.push(Diagnostic::error(format!("Struct '{}' is private and cannot be accessed from this scope", full_name)).with_span(span));
+                    self.ctx.diagnostics.push(Diagnostic::error(format!("Struct '{}' is private and cannot be accessed from this scope", full_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(span));
                     return self.ctx.types.new_inference_var();
                 }
 
@@ -4570,7 +4570,7 @@ impl<'a> TypeChecker<'a> {
                             self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
                         };
                         if !is_accessible {
-                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_span(*method_name));
+                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*method_name));
                             return self.ctx.types.intern(SemanticType::Error);
                         }
                         self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
@@ -5338,6 +5338,7 @@ impl<'a> TypeChecker<'a> {
                     "Field `{}` of struct `{}` is private and cannot be accessed from this scope",
                     field_name, struct_sym.name
                 ))
+                .with_code(DiagnosticCode::PrivateSymbolAccess)
                 .with_span(span),
             );
             false

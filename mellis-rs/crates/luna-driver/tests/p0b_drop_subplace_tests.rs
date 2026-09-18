@@ -1,5 +1,6 @@
 use luna_driver::{check, CompilerOptions};
 use luna_driver::sysroot::Sysroot;
+use luna_common::DiagnosticCode;
 use std::fs;
 use std::path::PathBuf;
 
@@ -27,6 +28,12 @@ fn run_compiler(name: &str, src: &str) -> (bool, Vec<luna_common::Diagnostic>) {
         Ok(_) => (true, vec![]),
         Err(diags) => (false, diags),
     }
+}
+
+fn has_partial_move_under_drop(diagnostics: &[luna_common::Diagnostic]) -> bool {
+    diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == Some(DiagnosticCode::PartialMoveUnderDrop))
 }
 
 // 1. Whole place move (Allowed)
@@ -106,8 +113,7 @@ fn test_p0b_proper_subplace_move_field() {
         }
     "#;
     let (success, diagnostics) = run_compiler("test_p0b_proper_subplace_move_field", src);
-    let has_error = diagnostics.iter().any(|d| d.message.contains("E_PARTIAL_MOVE_UNDER_DROP"));
-    assert!(has_error, "Expected E_PARTIAL_MOVE_UNDER_DROP error, found: {:?}", diagnostics);
+    assert!(has_partial_move_under_drop(&diagnostics), "Expected E3002 error, found: {:?}", diagnostics);
 }
 
 // 4. Proper subplace move: c.nested.field (Forbidden)
@@ -135,8 +141,7 @@ fn test_p0b_proper_subplace_move_nested_field() {
         }
     "#;
     let (success, diagnostics) = run_compiler("test_p0b_proper_subplace_move_nested_field", src);
-    let has_error = diagnostics.iter().any(|d| d.message.contains("E_PARTIAL_MOVE_UNDER_DROP"));
-    assert!(has_error, "Expected E_PARTIAL_MOVE_UNDER_DROP error, found: {:?}", diagnostics);
+    assert!(has_partial_move_under_drop(&diagnostics), "Expected E3002 error, found: {:?}", diagnostics);
 }
 
 // 5. Proper subplace move: Tuple field (Forbidden)
@@ -163,8 +168,7 @@ fn test_p0b_proper_subplace_move_tuple_field() {
         }
     "#;
     let (success, diagnostics) = run_compiler("test_p0b_proper_subplace_move_tuple_field", src);
-    let has_error = diagnostics.iter().any(|d| d.message.contains("E_PARTIAL_MOVE_UNDER_DROP"));
-    assert!(has_error, "Expected E_PARTIAL_MOVE_UNDER_DROP error, found: {:?}", diagnostics);
+    assert!(has_partial_move_under_drop(&diagnostics), "Expected E3002 error, found: {:?}", diagnostics);
 }
 
 // 6. Enum payload pattern matching (Forbidden)
@@ -197,8 +201,7 @@ fn test_p0b_proper_subplace_move_enum_payload() {
         }
     "#;
     let (success, diagnostics) = run_compiler("test_p0b_proper_subplace_move_enum_payload", src);
-    let has_error = diagnostics.iter().any(|d| d.message.contains("E_PARTIAL_MOVE_UNDER_DROP"));
-    assert!(has_error, "Expected E_PARTIAL_MOVE_UNDER_DROP error, found: {:?}", diagnostics);
+    assert!(has_partial_move_under_drop(&diagnostics), "Expected E3002 error, found: {:?}", diagnostics);
 }
 
 // 7. Pattern matching by-value (Forbidden)
@@ -232,8 +235,7 @@ fn test_p0b_proper_subplace_move_pattern_matching() {
         }
     "#;
     let (success, diagnostics) = run_compiler("test_p0b_proper_subplace_move_pattern_matching", src);
-    let has_error = diagnostics.iter().any(|d| d.message.contains("E_PARTIAL_MOVE_UNDER_DROP"));
-    assert!(has_error, "Expected E_PARTIAL_MOVE_UNDER_DROP error, found: {:?}", diagnostics);
+    assert!(has_partial_move_under_drop(&diagnostics), "Expected E3002 error, found: {:?}", diagnostics);
 }
 
 // 8. Function argument by-value (Forbidden)
@@ -261,8 +263,7 @@ fn test_p0b_proper_subplace_move_function_argument() {
         }
     "#;
     let (success, diagnostics) = run_compiler("test_p0b_proper_subplace_move_function_argument", src);
-    let has_error = diagnostics.iter().any(|d| d.message.contains("E_PARTIAL_MOVE_UNDER_DROP"));
-    assert!(has_error, "Expected E_PARTIAL_MOVE_UNDER_DROP error, found: {:?}", diagnostics);
+    assert!(has_partial_move_under_drop(&diagnostics), "Expected E3002 error, found: {:?}", diagnostics);
 }
 
 // 9. Generic instantiated Drop type (Forbidden)
@@ -289,8 +290,7 @@ fn test_p0b_generic_instantiated_drop_type() {
         }
     "#;
     let (success, diagnostics) = run_compiler("test_p0b_generic_instantiated_drop_type", src);
-    let has_error = diagnostics.iter().any(|d| d.message.contains("E_PARTIAL_MOVE_UNDER_DROP"));
-    assert!(has_error, "Expected E_PARTIAL_MOVE_UNDER_DROP error, found: {:?}", diagnostics);
+    assert!(has_partial_move_under_drop(&diagnostics), "Expected E3002 error, found: {:?}", diagnostics);
 }
 
 // 10. Field reassignment (Allowed)

@@ -1,5 +1,6 @@
 ﻿use luna_driver::{check, CompilerOptions};
 use luna_driver::sysroot::Sysroot;
+use luna_common::DiagnosticCode;
 use std::fs;
 use std::path::PathBuf;
 
@@ -224,7 +225,9 @@ fn test_case_11_borrowck_still_active_inside_unsafe() {
     "#;
     let (success, diags) = run_compiler("test_11", src);
     assert!(!success, "Borrowck conflicts inside unsafe block must still be rejected");
-    let borrow_err = diags.iter().find(|d| d.message.contains("already borrowed as &rw") || d.message.contains("Cannot borrow"));
+    let borrow_err = diags
+        .iter()
+        .find(|d| d.code == Some(DiagnosticCode::BorrowConflict));
     assert!(borrow_err.is_some(), "Expected borrowck error inside unsafe block, got: {:?}", diags);
 }
 
@@ -247,7 +250,9 @@ fn test_case_12_move_analysis_still_active_inside_unsafe() {
     "#;
     let (success, diags) = run_compiler("test_12", src);
     assert!(!success, "Use of moved value inside unsafe block must still be rejected");
-    let move_err = diags.iter().find(|d| d.message.contains("E_USE_OF_MOVED_VALUE") || d.message.to_lowercase().contains("use of moved value"));
+    let move_err = diags
+        .iter()
+        .find(|d| d.code == Some(DiagnosticCode::UseAfterMove));
     assert!(move_err.is_some(), "Expected use of moved value error inside unsafe block, got: {:?}", diags);
 }
 

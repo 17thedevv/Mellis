@@ -1,9 +1,8 @@
 //! SEM-MATURITY-01 Phase 0 source conformance corpus.
 //!
 //! Every case enters through the public `luna check` command and compiles a
-//! standalone `.ln` fixture. Ignored cases are frozen-semantics expectations
-//! with a currently reproduced compiler gap; run them explicitly with
-//! `--ignored` when auditing the gap backlog.
+//! standalone `.ln` fixture. Cases that originally reproduced compiler gaps
+//! remain active as closure regressions once the frozen behavior is restored.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -132,7 +131,7 @@ fn sem_own_01_use_after_move_is_rejected() {
 fn sem_drop_01_partial_move_under_drop_is_rejected() {
     assert_rejects(
         "sem_drop_01_partial_move_under_drop.ln",
-        "E_PARTIAL_MOVE_UNDER_DROP",
+        "E3002",
     );
 }
 
@@ -211,7 +210,6 @@ fn sem_diag_01_unknown_method_is_rejected() {
 /// Invalid; semantic rejection is separately proven by SEM-OWN-01, while this
 /// assertion isolates the missing registry identity.
 #[test]
-#[ignore = "SEM-GAP-04: use-after-move rejection omits frozen code E3001"]
 fn sem_diag_02_use_after_move_uses_frozen_numeric_code() {
     assert_rejects("sem_own_01_use_after_move.ln", "E3001");
 }
@@ -221,7 +219,6 @@ fn sem_diag_02_use_after_move_uses_frozen_numeric_code() {
 /// not an internal symbolic label. Invalid; semantic rejection is separately
 /// proven by SEM-DROP-01.
 #[test]
-#[ignore = "SEM-GAP-07: partial-move rejection emits E_PARTIAL_MOVE_UNDER_DROP, not E3002"]
 fn sem_diag_03_partial_move_uses_frozen_numeric_code() {
     assert_rejects("sem_drop_01_partial_move_under_drop.ln", "E3002");
 }
@@ -231,9 +228,9 @@ fn sem_diag_03_partial_move_uses_frozen_numeric_code() {
 /// Invalid; semantic rejection is separately proven by SEM-BORROW-02, while
 /// this assertion isolates the missing registry identity.
 #[test]
-#[ignore = "SEM-GAP-08: borrow-conflict rejection omits frozen code E3003"]
 fn sem_diag_04_borrow_conflict_uses_frozen_numeric_code() {
     assert_rejects("sem_borrow_02_conflicting_field_borrow.ln", "E3003");
+    assert_rejects("sem_borrow_03_mutable_mutable_conflict.ln", "E3003");
 }
 
 /// SEM-VIS-01
@@ -253,7 +250,6 @@ fn sem_vis_01_explicit_private_field_is_rejected_externally() {
 /// reported using the frozen E1003 code. Invalid; semantic rejection is
 /// separately proven by SEM-VIS-01.
 #[test]
-#[ignore = "SEM-GAP-09: private-field rejection omits frozen code E1003"]
 fn sem_diag_05_private_access_uses_frozen_numeric_code() {
     assert_rejects("sem_vis_01_explicit_private_field/main.ln", "E1003");
 }

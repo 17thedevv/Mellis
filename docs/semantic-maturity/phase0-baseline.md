@@ -4,6 +4,11 @@
 > (`399b3666ef57db7be602db3aac721a655d63bf7c`), the unchanged Phase 0 corpus
 > reproduced all eight original gaps. SEM-GAP-03 and SEM-GAP-06 are now closed;
 > the original Phase 0 measurements remain identified as baseline values below.
+>
+> Phase 1C update (2026-09-18): the four independent P2 diagnostic contracts
+> are closed through a structured frozen-code field and origin-site mappings.
+> The Phase 0 corpus is now 22 passed / 0 ignored; PARTIAL and NOT TESTED
+> inventory rows remain future coverage work rather than known open gaps.
 
 ## SEM-MATURITY-01 PHASE 0 PRECHECK
 
@@ -151,12 +156,16 @@
 ### Current diagnostic code registry
 
 - Frozen registry authority: `docs/diagnostics/diagnostics-v1.md`, numeric ranges `E0001`–`E6003`.
-- Current production source does **not** implement the frozen typed `DiagnosticCode` registry. `luna-common/src/diagnostic.rs` stores only `{ level, span, message }` and permits spanless ad-hoc strings.
-- Numeric codes currently found on the audited production paths include `E1002`,
-  `E2016`, and `E3005`; the four isolated cases for E1003 and E3001–E3003 do not
-  emit their frozen identities.
-- Current source also emits many symbolic string identifiers such as `E_COPY_DROP_CONFLICT`, `E_PARTIAL_MOVE_UNDER_DROP`, `E_USE_OF_MOVED_VALUE`, `E_BORROW_CONFLICT`-equivalent text, `E_ASSOC_TYPE_CYCLE`, and `E_UNRESOLVED_PROJECTION` instead of the frozen numeric identities.
-- Phase 0 will not invent codes or retrofit the registry. Negative conformance cases will assert only identities already emitted by current source and will record missing/wrong code identity as a compiler-maturity gap.
+- Phase 0 found that `Diagnostic` had only `{ level, span, message }`; frozen
+  identities were embedded inconsistently in message strings.
+- Phase 1C adds the frozen `DiagnosticCode` registry and an optional structured
+  code field. Rendering emits `error[E####]` from that identity without parsing
+  or rewriting diagnostic messages.
+- E1003, E3001, E3002, and E3003 are now assigned at their structured semantic
+  or borrow-analysis origin sites. Existing E1002, E2016, E3005, and E6001
+  control behavior remains distinct and unchanged.
+- Migration of unrelated symbolic diagnostics is outside Phase 1C; no new
+  numeric code was invented and no semantic acceptance rule changed.
 
 ## Semantic inventory and coverage matrix
 
@@ -176,7 +185,7 @@ the sole proof.
 | Structs | Frozen | broad semantic/driver suites | yes | PROVEN |
 | Type aliases | Frozen | canonical serialization and resolver suites | partial | PARTIAL |
 | Shared reference `&T` | Frozen | borrowck/lifetime suites | yes | PROVEN |
-| Mutable reference `&rw T` | Frozen | borrowck suites | yes, with call-boundary gap | PARTIAL |
+| Mutable reference `&rw T` | Frozen | borrowck plus receiver call controls | yes; broader public-boundary coverage remains partial | PARTIAL |
 | Function types | Frozen | C-GAP-05/06 suites | yes | PROVEN |
 | Generic type applications | Frozen | struct-generics plus SEM-GENERIC-01 | yes | PROVEN |
 
@@ -208,7 +217,7 @@ the sole proof.
 | Nominal-head orphan/coherence rule | Frozen | P1A reference/pointer controls; SEM-COHERENCE-01 | yes | PROVEN |
 | Receiver `self` | Frozen | P3 and ownership suites | yes | PROVEN |
 | Receiver `&self` | Frozen | generic dispatch/lifetime suites | yes | PROVEN |
-| Receiver `&rw self` | Frozen | iterator/method source cases | yes, simple calls only | PARTIAL |
+| Receiver `&rw self` | Frozen | SEM-METHOD-01 plus escape/overlap controls | yes; broader receiver-form coverage remains partial | PARTIAL |
 
 ### D. Associated constructs
 
@@ -347,10 +356,10 @@ the sole proof.
 | Semantic rule | Spec status | Existing evidence | User-defined proof | Result |
 |---|---|---|---|---|
 | Deterministic semantic rejection | Frozen | negative suites including SEM-DIAG-01 | yes | PROVEN |
-| E1003 private-access identity | Frozen | SEM-DIAG-05 | yes | COMPILER GAP |
-| E3001 use-after-move identity | Frozen | SEM-DIAG-02 | yes | COMPILER GAP |
-| E3002 partial-move-under-Drop identity | Frozen | SEM-DIAG-03 | yes | COMPILER GAP |
-| E3003 borrow-conflict identity | Frozen | SEM-DIAG-04 | yes | COMPILER GAP |
+| E1003 private-access identity | Frozen | SEM-DIAG-05 | yes | PROVEN |
+| E3001 use-after-move identity | Frozen | SEM-DIAG-02 | yes | PROVEN |
+| E3002 partial-move-under-Drop identity | Frozen | SEM-DIAG-03 | yes | PROVEN |
+| E3003 borrow-conflict identity | Frozen | SEM-DIAG-04 plus mutable/mutable control | yes | PROVEN |
 | No compiler panic in Phase 0 corpus | Frozen doctrine | active and gap corpus executions | yes | PROVEN |
 | No backend invariant failure in Phase 0 corpus | Frozen doctrine | active and gap corpus executions | yes | PROVEN |
 | No silent semantic fallback | Frozen doctrine | SEM-DIAG-01 plus MVIR E6001 invariant guard | yes | PROVEN |
@@ -378,15 +387,15 @@ the sole proof.
 | C. Traits / impls | PARTIAL | Coherence is proven; `&rw self` coverage remains partial. |
 | D. Associated constructs | PARTIAL | Projections are proven; associated-function coverage remains partial. |
 | E. Ownership / moves | PARTIAL | Move-through-match lacks a registered public-boundary proof. |
-| F. Borrowing | PARTIAL | Call-boundary loan termination is incorrect; loop proof is missing. |
+| F. Borrowing | PARTIAL | Call-boundary loan termination is proven; loop proof and several broader NLL shapes remain partial. |
 | G. Lifetime semantics | PROVEN | Valid, invalid, union, receiver, outlives, and provider cases pass. |
 | H. Drop semantics | PROVEN | P0B, Copy/Drop, and new source cases cover the frozen rules. |
-| I. Control flow | PARTIAL | Protocol-driven `for-in` is rejected. |
-| J. Iterator contracts | PARTIAL | Direct/manual protocol calls work; language lowering does not. |
-| K. Functions / calls | PARTIAL | Unknown methods reject; mutable call boundaries remain incorrect. |
+| I. Control flow | PROVEN | Protocol-driven user-defined `for-in` and its control cases now pass. |
+| J. Iterator contracts | PROVEN | Direct calls and generic user-defined language lowering are proven without container special cases. |
+| K. Functions / calls | PARTIAL | Unknown methods and mutable call boundaries are proven; broad method/extern coverage remains partial. |
 | L. Modules / providers | PROVEN | Public-default fields and explicit-private rejection match the corrected frozen contract. |
 | M. Const / comptime | PROVEN | Positive execution and explicit negative rejection are covered. |
-| N. Diagnostics | PARTIAL | Silent fallback is closed; the frozen numeric registry remains incomplete. |
+| N. Diagnostics | PARTIAL | The four isolated Phase 1C identities are proven; E1004/E2001 remain partial and E6001 is an invariant control rather than a user-source target. |
 
 ## Conformance cases
 
@@ -402,8 +411,8 @@ the harness enters through the public `luna check` command.
 | SEM-BORROW-02 | invalid | Shared/mutable field conflict rejects | borrowck | PASS (rejected) |
 | SEM-LIFETIME-01 | valid | `life_from(a \| b)` accepts either input | lifetime/MVIR | PASS |
 | SEM-LIFETIME-02 | invalid | Local reference escape rejects | lifetime | PASS (E3005) |
-| SEM-OWN-01 | invalid | Use after moving generic owner rejects | move analysis | PASS (rejected) |
-| SEM-DROP-01 | invalid | Partial move under Drop rejects | move/drop analysis | PASS (symbolic code) |
+| SEM-OWN-01 | invalid | Use after moving generic owner rejects | move analysis | PASS (E3001) |
+| SEM-DROP-01 | invalid | Partial move under Drop rejects | move/drop analysis | PASS (E3002) |
 | SEM-ASSOC-01 | valid | Same-provider associated projection | typecheck/mono | PASS |
 | SEM-ASSOC-02 | valid | A owns trait/type/impl; B publicly exposes `T::Output`; C consumes B | provider/typecheck/mono | PASS |
 | SEM-PROVIDER-01 | invalid | Duplicate root export from two providers rejects | provider/resolver | PASS (E1002) |
@@ -412,11 +421,11 @@ the harness enters through the public `luna check` command.
 | SEM-ITER-01 | valid | Generic user-defined `for-in` through language contracts | typecheck/mono/MVIR | PASS (SEM-GAP-01 closed) |
 | SEM-METHOD-01 | valid | Sequential non-escaping `&rw self` calls | effect inference/borrowck | PASS (SEM-GAP-02 closed) |
 | SEM-DIAG-01 | invalid | Unknown user-defined method rejects | typecheck/MVIR | PASS (SEM-GAP-03 closed) |
-| SEM-DIAG-02 | invalid | Use after move emits frozen E3001 | diagnostics | EXPECTED FAIL (SEM-GAP-04) |
-| SEM-DIAG-03 | invalid | Partial move emits frozen E3002 | diagnostics | EXPECTED FAIL (SEM-GAP-07) |
-| SEM-DIAG-04 | invalid | Borrow conflict emits frozen E3003 | diagnostics | EXPECTED FAIL (SEM-GAP-08) |
-| SEM-VIS-01 | invalid | Explicit-private field rejects externally | parser/resolver | PASS (rejected) |
-| SEM-DIAG-05 | invalid | Explicit-private access emits frozen E1003 | diagnostics | EXPECTED FAIL (SEM-GAP-09) |
+| SEM-DIAG-02 | invalid | Use after move emits frozen E3001 | diagnostics | PASS (SEM-GAP-04 closed) |
+| SEM-DIAG-03 | invalid | Partial move emits frozen E3002 | diagnostics | PASS (SEM-GAP-07 closed) |
+| SEM-DIAG-04 | invalid | Shared/mutable and mutable/mutable conflicts emit frozen E3003 | diagnostics | PASS (SEM-GAP-08 closed) |
+| SEM-VIS-01 | invalid | Explicit-private field rejects externally | parser/resolver | PASS (E1003) |
+| SEM-DIAG-05 | invalid | Explicit-private access emits frozen E1003 | diagnostics | PASS (SEM-GAP-09 closed) |
 | SEM-COHERENCE-01 | invalid | Reference-head orphan impl rejects | coherence | PASS (SEM-GAP-06 closed) |
 
 Why existing tests were insufficient:
@@ -448,25 +457,23 @@ or Result.
 | Code | Frozen contract | Current evidence | Baseline classification |
 |---|---|---|---|
 | E1002 | Duplicate definition | SEM-PROVIDER-01 emits E1002 | CONFORMANT |
-| E1003 | Private access | SEM-VIS-01 rejects, but omits E1003 | COMPILER GAP (SEM-GAP-09) |
+| E1003 | Private access | SEM-VIS-01 emits structured E1003 | CONFORMANT (SEM-GAP-09 closed) |
 | E1004 | Unresolved provider | importer rejects with `Could not resolve module provider`; no isolated Phase 0 code assertion | PARTIAL / NOT ISOLATED |
 | E2001 | Type mismatch | semantic-gate test rejects by message; no isolated Phase 0 code assertion | PARTIAL / NOT ISOLATED |
 | E2016 | Lifetime violation | lifetime suites emit E2016 | CONFORMANT |
-| E3001 | Use after move | SEM-OWN-01 rejects, but omits E3001 | COMPILER GAP (SEM-GAP-04) |
-| E3002 | Partial move under Drop | emits `E_PARTIAL_MOVE_UNDER_DROP` | COMPILER GAP (SEM-GAP-07) |
-| E3003 | Borrow conflict | SEM-BORROW-02 rejects, but omits E3003 | COMPILER GAP (SEM-GAP-08) |
+| E3001 | Use after move | SEM-OWN-01 emits structured E3001 | CONFORMANT (SEM-GAP-04 closed) |
+| E3002 | Partial move under Drop | SEM-DROP-01 emits structured E3002 | CONFORMANT (SEM-GAP-07 closed) |
+| E3003 | Borrow conflict | shared/mutable and mutable/mutable controls emit structured E3003 | CONFORMANT (SEM-GAP-08 closed) |
 | E3005 | Local borrow escape | SEM-LIFETIME-02 emits E3005 | CONFORMANT |
 | E6001 | Backend invariant | registry contract exists; no user-source case should intentionally reach this invariant | NOT EXERCISED |
 
-The diagnostic representation is a shared enabling deficiency: production
-`Diagnostic` has no typed code field. The observed violations are nevertheless
-**multiple independent conformance gaps**, because E1003, E3001, E3002, and
-E3003 have distinct frozen meanings, triggering programs, emitters, and owning
-subsystems. Fixing one emitter would not satisfy the others. The old broad
-SEM-GAP-04 was therefore decomposed as follows: SEM-GAP-04 now means E3001;
-E3002 moved to SEM-GAP-07; E3003 moved to SEM-GAP-08. SEM-GAP-09 records the
-newly verified E1003 identity failure. SEM-GAP-05 is withdrawn without reusing
-or shifting later stable IDs.
+The Phase 0 representation deficiency was shared, but the observed violations
+were **multiple independent conformance gaps**: E1003, E3001, E3002, and E3003
+have distinct frozen meanings, triggering programs, emitters, and owning
+subsystems. Phase 1C introduces one structured carrier, then maps each identity
+at its own origin site. The historical decomposition remains: SEM-GAP-04 means
+E3001; SEM-GAP-07 means E3002; SEM-GAP-08 means E3003; SEM-GAP-09 means E1003.
+SEM-GAP-05 remains withdrawn without reusing or shifting later stable IDs.
 
 ## Compiler gaps
 
@@ -615,7 +622,7 @@ Phase 1A resolution:
 ### SEM-GAP-04 — Use-after-move rejection omits E3001
 
 Status:
-  OPEN
+  CLOSED — PHASE 1C
 
 Severity:
   P2
@@ -630,10 +637,10 @@ Minimal Luna reproduction:
 Expected:
   Rejection identified as E3001.
 
-Actual:
-  Correct rejection category, but the message is only `Use of moved value`.
+Phase 0 actual:
+  Correct rejection category, but the message was only `Use of moved value`.
 
-Diagnostic:
+Phase 0 diagnostic:
   missing identity (expected existing E3001)
 
 Source-only reproduction:
@@ -649,6 +656,12 @@ Notes:
   The missing code originates in the use-after-move emitter. Production
   `Diagnostic` also lacks a typed code field, but that shared structural weakness
   does not collapse this independently testable E3001 contract into other gaps.
+
+Phase 1C resolution:
+  `MoveAnalyzer::check_place` assigns structured E3001 to moved,
+  conditionally-moved, and partially-moved uses. Dropped and uninitialized
+  diagnostics remain separate. The original source-only fixture now renders
+  `error[E3001]` without changing move-state acceptance.
 
 ### Withdrawn ID: SEM-GAP-05
 
@@ -705,7 +718,7 @@ Phase 1A resolution:
 ### SEM-GAP-07 — Partial move under Drop emits a symbolic code instead of E3002
 
 Status:
-  OPEN
+  CLOSED — PHASE 1C
 
 Severity:
   P2
@@ -719,11 +732,11 @@ Minimal Luna reproduction:
 Expected:
   Rejection identified as E3002.
 
-Actual:
-  Correct rejection category, but the message contains
+Phase 0 actual:
+  Correct rejection category, but the message contained
   `E_PARTIAL_MOVE_UNDER_DROP`.
 
-Diagnostic:
+Phase 0 diagnostic:
   wrong identity (`E_PARTIAL_MOVE_UNDER_DROP`, expected existing E3002)
 
 Source-only reproduction:
@@ -739,10 +752,15 @@ Notes:
   This is a distinct emitter and frozen contract from E3001 even though both are
   affected by the common untyped diagnostic representation.
 
+Phase 1C resolution:
+  Both move-analysis paths that prohibit moving a subplace of a Drop type now
+  assign structured E3002. The internal semantic category remains distinct;
+  the symbolic token is no longer exposed as the public diagnostic identity.
+
 ### SEM-GAP-08 — Borrow-conflict rejection omits E3003
 
 Status:
-  OPEN
+  CLOSED — PHASE 1C
 
 Severity:
   P2
@@ -756,11 +774,11 @@ Minimal Luna reproduction:
 Expected:
   Rejection identified as E3003.
 
-Actual:
+Phase 0 actual:
   Correct rejection category, but the message is an uncoded `Cannot borrow ...`
   diagnostic.
 
-Diagnostic:
+Phase 0 diagnostic:
   missing identity (expected existing E3003)
 
 Source-only reproduction:
@@ -776,10 +794,16 @@ Notes:
   The E3003 contract is independently asserted because this diagnostic comes
   from borrow analysis, not either move-analysis emitter.
 
+Phase 1C resolution:
+  The four structured alias-conflict emitters in borrow analysis now assign
+  E3003. Source-only controls prove both shared-versus-mutable and
+  mutable-versus-mutable conflicts. Local-borrow escape remains E3005 and is
+  not collapsed into the alias-conflict class.
+
 ### SEM-GAP-09 — Explicit-private access rejection omits E1003
 
 Status:
-  OPEN
+  CLOSED — PHASE 1C
 
 Severity:
   P2
@@ -794,11 +818,11 @@ Minimal Luna reproduction:
 Expected:
   External `secret.value` access rejects with E1003.
 
-Actual:
+Phase 0 actual:
   Access is correctly rejected as private, but the diagnostic has no numeric
   identity.
 
-Diagnostic:
+Phase 0 diagnostic:
   missing identity (expected existing E1003)
 
 Source-only reproduction:
@@ -815,13 +839,19 @@ Notes:
   its private-by-default premise was wrong; SEM-GAP-09 covers only the frozen
   diagnostic identity.
 
+Phase 1C resolution:
+  Resolver, typechecker, and macro-engine private-access emitters now assign
+  structured E1003. Public-by-default and redundant-`export` controls remain
+  accepted; only already-illegal explicit-private access is tagged.
+
 ### Severity summary
 
 - Closed P0: SEM-GAP-03, SEM-GAP-06
 - Open P0: none
 - Closed P1: SEM-GAP-01, SEM-GAP-02
 - Open P1: none
-- Open P2: SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, SEM-GAP-09
+- Closed P2: SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, SEM-GAP-09
+- Open P2: none
 - Open P3: none
 
 ### Crashes and silent fallbacks
@@ -848,17 +878,19 @@ Notes:
 
 | Negative case | Actual identity/output | Conformance |
 |---|---|---|
-| SEM-BORROW-02 conflict | no code; `Cannot borrow ... as &rw because ... borrowed as &` | rejection correct, registry incomplete |
+| SEM-BORROW-02 shared/mutable conflict | E3003 | correct |
+| SEM-BORROW-03 mutable/mutable conflict | E3003 | correct |
 | SEM-LIFETIME-02 local escape | E3005 | correct |
-| SEM-OWN-01 use after move | no code; `Use of moved value` | rejection correct, registry incomplete |
-| SEM-DROP-01 partial move | `E_PARTIAL_MOVE_UNDER_DROP` | wrong code; frozen E3002 |
+| SEM-OWN-01 use after move | E3001 | correct |
+| SEM-DROP-01 partial move | E3002 | correct |
 | SEM-PROVIDER-01 duplicate | E1002 | correct |
 | SEM-CONST-02 division by zero | no code; comptime evaluation error | rejection correct, registry incomplete |
 | SEM-DIAG-01 unknown method | uncoded `Method ... not found for type ...` | semantic rejection correct; GAP-03 closed |
-| SEM-VIS-01 explicit-private access | no code; `Field ... is private` | semantic rejection correct; E1003 gap |
+| SEM-VIS-01 explicit-private access | E1003 | correct |
 | SEM-COHERENCE-01 orphan impl | E_ORPHAN_IMPL | correct; GAP-06 closed |
 
-No new diagnostic code was invented.
+No new diagnostic code was invented. Phase 1C uses only identities already
+frozen in `docs/diagnostics/diagnostics-v1.md`.
 
 ## Baseline metrics
 
@@ -929,12 +961,41 @@ current source corpus therefore exercises 21 scenarios (10 valid + 11 invalid),
 while four invalid scenarios retain a second ignored assertion for their exact
 Phase 1C diagnostic identity.
 
-The test/program totals count different things. The corpus contains 18 unique
-program scenarios (9 valid + 9 invalid). Four invalid programs each have a
-second ignored assertion dedicated to exact diagnostic identity: E1003, E3001,
-E3002, and E3003. Thus **18 + 4 = 22 tests**. In the original baseline, only the
-E3002 identity assertion was duplicated, which explains its previously
-unreconciled **19th test**.
+The original Phase 0 test/program totals count different things. That corpus
+contained 18 unique program scenarios (9 valid + 9 invalid). Four invalid
+programs each had a second ignored assertion dedicated to exact diagnostic
+identity: E1003, E3001, E3002, and E3003. Thus **18 + 4 = 22 tests**. In the
+earliest baseline, only the E3002 identity assertion was duplicated, which
+explains its previously unreconciled **19th test**.
+
+### Current metrics after Phase 1C
+
+- Frozen semantic rules inventoried: **119**
+- Rules PROVEN: **107**
+- Rules PARTIAL: **10**
+- Rules NOT TESTED: **2**
+- Rules in COMPILER GAP state: **0**
+- Unique open compiler gaps: **0**
+- Closed compiler gaps: **8**
+- Retracted gap IDs: **1** (SEM-GAP-05; never reused)
+- Open P0: **0**
+- Open P1: **0**
+- Open P2: **0**
+- Open P3: **0**
+- Compiler panics in the conformance corpus: **0**
+- Silent fallback cases in the conformance corpus: **0**
+- User-defined generic coverage count: **8 cases**
+- Phase 0 conformance tests: **22**
+- Active conformance tests: **22**
+- Ignored open-gap reproductions: **0**
+- Phase 1C source control fixtures added: **1**
+
+The harness still contains 22 Rust tests, now all active. Phase 1C adds one
+invalid source scenario for the second E3003 shape, so the current corpus
+exercises 22 unique source programs: **10 valid + 12 invalid**. Several Rust
+tests intentionally exercise multiple programs, while the four diagnostic
+identity tests reuse their semantic-rejection fixtures; equality of the two
+totals is therefore coincidental rather than one-test-per-program accounting.
 
 ## Test execution baseline
 
@@ -1005,10 +1066,10 @@ failure; no artifact was generated or repaired.
 | `cargo test --workspace -- --test-threads=1` | preceding binaries passed; `core_provider_baseline_acceptance_tests`: 6 passed, 1 generated-artifact failure |
 | `cargo test --workspace` | same baseline stop: 6 passed, 1 generated-artifact failure in the failing binary |
 
-The four ignored tests are exactly SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, and
-SEM-GAP-09. Their actual outputs remain, respectively, uncoded use-after-move,
-symbolic `E_PARTIAL_MOVE_UNDER_DROP`, uncoded borrow conflict, and uncoded
-private-field rejection.
+At the Phase 1B freeze, the four ignored tests were exactly SEM-GAP-04,
+SEM-GAP-07, SEM-GAP-08, and SEM-GAP-09. Their outputs at that point were,
+respectively, uncoded use-after-move, symbolic `E_PARTIAL_MOVE_UNDER_DROP`,
+uncoded borrow conflict, and uncoded private-field rejection.
 
 The collection suite failures are also classified as **BASELINE ENVIRONMENT /
 GENERATED-ARTIFACT FAILURE**. Six HashMap/HashSet cases strict-reject a stale
@@ -1048,6 +1109,35 @@ Initial infrastructure observations, not semantic evidence:
   `STATUS_DLL_NOT_FOUND`; adding the installed LLVM development `bin` directory
   resolved it.
 
+### Phase 1C verification
+
+| Command / group | Result |
+|---|---|
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --test-threads=1` | 22 passed, 0 failed, 0 ignored |
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --ignored --test-threads=1` | 0 tests run; 22 filtered out; no ignored gap remains |
+| direct `luna check` on E1003/E3001/E3002/E3003 fixtures | all four reject with the required `error[E####]` identity; both E3003 conflict shapes covered |
+| direct `luna check` on local-borrow escape control | rejects with E3005, distinct from E3003 |
+| `cargo test -p luna-common -- --test-threads=1` | 3 passed, 0 failed |
+| `cargo test -p luna-semantic -- --test-threads=1` | 109 passed, 0 failed |
+| `cargo test -p luna-borrowck -- --test-threads=1` | 25 passed, 0 failed |
+| eight targeted driver diagnostic/provider/visibility/lifetime binaries | 111 passed, 0 failed |
+| `cargo test --workspace -- --test-threads=1` | preceding binaries passed; `core_provider_baseline_acceptance_tests`: 6 passed, 1 missing generated `.llib` failure |
+| `cargo test --workspace` | same baseline stop: 6 passed, 1 missing generated `.llib` failure in the failing binary |
+
+The targeted driver group comprises `p2b_tests`, `p0b_drop_subplace_tests`,
+`struct_field_visibility_acceptance_tests`, `semantic_gate_tests`,
+`provider_module_contract_acceptance_tests`,
+`visibility_02_public_field_default_tests`,
+`lifetime_def_site_acceptance_tests`, and
+`lifetime_outlives_acceptance_tests`. No zero-test target is counted as
+evidence. Workspace results are recorded after the final serial and parallel
+run. Both workspace failures are the existing **BASELINE ENVIRONMENT /
+GENERATED-ARTIFACT FAILURE**: the serial run first reported missing
+`libs/external/lang/iterator.llib`, while the parallel run first reported
+missing `libs/external/core/copy.llib`. The previously recorded stale
+`hashmap.llib` fingerprint remains a generated-artifact issue. No ad-hoc copy,
+rebuild, or artifact mutation was performed.
+
 ## Phase 1 proposal
 
 1. **Completed in Phase 1A:** reject unresolved method calls in the typechecker
@@ -1058,11 +1148,12 @@ Initial infrastructure observations, not semantic evidence:
    contracts across typecheck, monomorphization, and MVIR, without Vec or provider special cases.
 4. **Completed in Phase 1B:** terminate non-escaping receiver loans from semantic return types
    while preserving conservative aggregate/adapter loan propagation.
-5. **Phase 1C:** implement the typed frozen diagnostic registry, then migrate the independent
-   E1003/E3001/E3002/E3003 emitters without treating one fix as proof of the
-   other contracts (P2).
-6. Add the two missing public-boundary proofs (move through match and borrow
-   across loops), then upgrade remaining PARTIAL rows by subsystem.
+5. **Completed in Phase 1C:** implement the typed frozen diagnostic registry,
+   then migrate the independent E1003/E3001/E3002/E3003 emitters without
+   treating one fix as proof of the other contracts (P2).
+6. **Phase 2 coverage closure:** add the two missing public-boundary proofs
+   (move through match and borrow across loops), then upgrade the ten remaining
+   PARTIAL rows by subsystem. Phase 2 has not started.
 
 ## Proposed maturity gate
 
@@ -1123,6 +1214,20 @@ Phase 1B scope:
 - Hygiene work duplicated: **NO**.
 - Phase 1C implementation started: **NO**.
 
+Phase 1C scope:
+
+- Production compiler source modified: **YES**, limited to structured
+  diagnostic identity plumbing and the four frozen origin-site mappings.
+- Stdlib semantic source modified: **NO**.
+- Runtime ABI modified: **NO**.
+- Artifact schema or semantics modified: **NO**.
+- New syntax added: **NO**.
+- New language semantic added: **NO**.
+- Acceptance or rejection behavior changed: **NO**.
+- Borrow or visibility rules changed: **NO**.
+- New diagnostic code invented: **NO**.
+- Phase 2 started: **NO**.
+
 ## Correction-pass verdict
 
 The corrected semantic authority, matrix counts, case/program totals, gap IDs,
@@ -1151,3 +1256,15 @@ Workspace and six collection-iterator failures remain isolated generated-LLIB
 baseline environment failures.
 
 **SEM-MATURITY-01 PHASE 1B VALID-PROGRAM COMPLETENESS COMPLETE**
+
+## Phase 1C verdict
+
+SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, and SEM-GAP-09 are closed by structured
+diagnostic identities assigned at their semantic origin sites. The original
+source-only reproductions now emit E3001, E3002, E3003, and E1003; the second
+E3003 conflict shape also passes, and the E3005 local-escape control remains
+distinct. The Phase 0 corpus is 22 passed / 0 ignored with zero open known gaps,
+zero panic, and zero silent fallback. Ten PARTIAL and two NOT TESTED inventory
+rules remain; this result does not claim full compiler maturity or begin Phase 2.
+
+**SEM-MATURITY-01 PHASE 1C DIAGNOSTIC CONTRACT CLOSURE COMPLETE**

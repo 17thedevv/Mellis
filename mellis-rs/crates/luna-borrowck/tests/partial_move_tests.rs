@@ -1,5 +1,6 @@
 use luna_borrowck::borrow_check_function;
 use luna_common::ids::{Span, SymbolId, SyntaxContext};
+use luna_common::DiagnosticCode;
 use luna_ast::Visibility;
 use luna_mvir::*;
 use luna_semantic::{
@@ -79,7 +80,9 @@ fn test_reject_partial_move_under_user_drop() {
     let (diagnostics, _) = borrow_check_function(&func, &ctx, &HashMap::new());
 
     assert!(
-        diagnostics.iter().any(|d| d.message.contains("Cannot move out of a subplace") || d.message.contains("E_PARTIAL_MOVE_UNDER_DROP")),
+        diagnostics
+            .iter()
+            .any(|d| d.code == Some(DiagnosticCode::PartialMoveUnderDrop)),
         "Expected PartialMoveUnderDrop for type implementing Drop, but got: {:?}",
         diagnostics
     );
@@ -152,7 +155,9 @@ fn test_allow_partial_move_without_user_drop() {
     let (diagnostics, _) = borrow_check_function(&func, &ctx, &HashMap::new());
 
     assert!(
-        !diagnostics.iter().any(|d| d.message.contains("Cannot move out of a subplace") || d.message.contains("E_PARTIAL_MOVE_UNDER_DROP")),
+        !diagnostics
+            .iter()
+            .any(|d| d.code == Some(DiagnosticCode::PartialMoveUnderDrop)),
         "Did not expect PartialMoveUnderDrop for struct without Drop impl, but got: {:?}",
         diagnostics
     );
