@@ -201,23 +201,55 @@ fn sem_diag_01_unknown_method_is_rejected() {
 }
 
 /// SEM-DIAG-02 / SEM-GAP-04
-/// Invariant: partial move under Drop is reported using the frozen E3002 code,
-/// not an internal symbolic label. Invalid; the behavior is rejected correctly,
-/// but current diagnostic identity is not registry-conformant.
+/// Invariant: use after move is reported using the frozen E3001 code.
+/// Invalid; semantic rejection is separately proven by SEM-OWN-01, while this
+/// assertion isolates the missing registry identity.
 #[test]
-#[ignore = "SEM-GAP-04: frozen numeric diagnostic registry is only partially implemented"]
-fn sem_diag_02_partial_move_uses_frozen_numeric_code() {
+#[ignore = "SEM-GAP-04: use-after-move rejection omits frozen code E3001"]
+fn sem_diag_02_use_after_move_uses_frozen_numeric_code() {
+    assert_rejects("sem_own_01_use_after_move.ln", "E3001");
+}
+
+/// SEM-DIAG-03 / SEM-GAP-07
+/// Invariant: partial move under Drop is reported using the frozen E3002 code,
+/// not an internal symbolic label. Invalid; semantic rejection is separately
+/// proven by SEM-DROP-01.
+#[test]
+#[ignore = "SEM-GAP-07: partial-move rejection emits E_PARTIAL_MOVE_UNDER_DROP, not E3002"]
+fn sem_diag_03_partial_move_uses_frozen_numeric_code() {
     assert_rejects("sem_drop_01_partial_move_under_drop.ln", "E3002");
 }
 
-/// SEM-VIS-01 / SEM-GAP-05
-/// Invariant: under frozen VIS-STRUCT, an unmodified field is private and cannot
-/// be read from an importing provider. Invalid; expects private-access rejection
-/// after the containing exported type has been resolved.
+/// SEM-DIAG-04 / SEM-GAP-08
+/// Invariant: a borrow conflict is reported using the frozen E3003 code.
+/// Invalid; semantic rejection is separately proven by SEM-BORROW-02, while
+/// this assertion isolates the missing registry identity.
 #[test]
-#[ignore = "SEM-GAP-05: implementation follows an unfrozen public-default RFC"]
-fn sem_vis_01_default_private_field_is_rejected_externally() {
-    assert_rejects("sem_vis_01_default_private_field/main.ln", "E1003");
+#[ignore = "SEM-GAP-08: borrow-conflict rejection omits frozen code E3003"]
+fn sem_diag_04_borrow_conflict_uses_frozen_numeric_code() {
+    assert_rejects("sem_borrow_02_conflicting_field_borrow.ln", "E3003");
+}
+
+/// SEM-VIS-01
+/// Invariant: fields are public by default, while an explicitly `private`
+/// field cannot be read from an importing provider. Invalid; semantic rejection
+/// must occur after the containing exported type is resolved.
+#[test]
+fn sem_vis_01_explicit_private_field_is_rejected_externally() {
+    assert_rejects(
+        "sem_vis_01_explicit_private_field/main.ln",
+        "Field `value` of struct `Secret` is private",
+    );
+}
+
+/// SEM-DIAG-05 / SEM-GAP-09
+/// Invariant: illegal external access to an explicitly private field is
+/// reported using the frozen E1003 code. Invalid; semantic rejection is
+/// separately proven by SEM-VIS-01.
+#[test]
+#[ignore = "SEM-GAP-09: private-field rejection omits frozen code E1003"]
+fn sem_diag_05_private_access_uses_frozen_numeric_code() {
+    assert_rejects("sem_vis_01_explicit_private_field/main.ln", "E1003");
 }
 
 /// SEM-COHERENCE-01 / SEM-GAP-06
@@ -231,10 +263,10 @@ fn sem_coherence_01_reference_head_orphan_is_rejected() {
 }
 
 /// SEM-ASSOC-02
-/// Invariant: a generic consumer may project an associated type whose trait and
-/// concrete impl were imported from another source provider.
-/// Valid; expected acceptance by provider injection, trait selection, and type
-/// projection. The same-provider control above isolates provider crossing.
+/// Invariant: provider B may publicly expose a projection of an associated type
+/// owned by provider A, and consumer C may instantiate and consume B's API.
+/// Valid; source-only A -> B -> C coverage exercises provider injection, public
+/// signature reconstruction, trait selection, and projection normalization.
 #[test]
 fn sem_assoc_02_cross_provider_projection_is_accepted() {
     assert_accepts("sem_assoc_02_cross_provider/main.ln");

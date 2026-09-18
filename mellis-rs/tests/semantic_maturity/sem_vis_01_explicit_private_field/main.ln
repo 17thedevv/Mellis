@@ -1,4 +1,4 @@
-// SEM-VIS-01: invalid external read of a default-private field.
+// SEM-VIS-01: invalid external read of an explicitly private field.
 import "secret_provider";
 
 fn main() -> i32 {

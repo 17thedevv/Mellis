@@ -1,0 +1,6 @@
+// SEM-ASSOC-02 provider B: publicly exposes A's associated-type projection.
+import "provider_a";
+
+export fn project_output<T: Producer>(value: &T) -> T::Output {
+    return value.produce();
+}

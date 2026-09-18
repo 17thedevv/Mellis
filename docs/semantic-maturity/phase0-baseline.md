@@ -35,7 +35,10 @@
 ### Authority reconciliation
 
 - The canonical grammar skill and `grammar.ebnf` supersede obsolete `mod`, `use`, `mut`, semicolon-field, prefix-`await`, and `@<...>` examples in historical documents.
-- `visibility-02-public-field-default-rfc.md` is `APPROVED WITH AMENDMENTS` but explicitly not frozen; the frozen VIS-STRUCT v1 rules in the semantic-compliance skill remain authoritative for this baseline.
+- The frozen visibility contract is public-by-default for struct fields. `export`
+  is redundant-public compatibility syntax, while `private` is the explicit
+  private modifier. This correction supersedes the stale private-by-default
+  wording in the semantic-compliance skill and the original Phase 0 report.
 - STD-ARCH-01 final acceptance supersedes older physical `.ms` / `.mlib` examples while preserving the semantic distinction between providers and namespaces.
 - Historical “complete” implementation claims are evidence only and are rechecked against current production source and executable tests.
 
@@ -144,13 +147,15 @@
 
 - Frozen registry authority: `docs/diagnostics/diagnostics-v1.md`, numeric ranges `E0001`–`E6003`.
 - Current production source does **not** implement the frozen typed `DiagnosticCode` registry. `luna-common/src/diagnostic.rs` stores only `{ level, span, message }` and permits spanless ad-hoc strings.
-- Numeric codes currently found in production/test Rust source: `E0203`, `E0204`, `E1002`, `E2016`, `E3005`.
+- Numeric codes currently found on the audited production paths include `E1002`,
+  `E2016`, and `E3005`; the four isolated cases for E1003 and E3001–E3003 do not
+  emit their frozen identities.
 - Current source also emits many symbolic string identifiers such as `E_COPY_DROP_CONFLICT`, `E_PARTIAL_MOVE_UNDER_DROP`, `E_USE_OF_MOVED_VALUE`, `E_BORROW_CONFLICT`-equivalent text, `E_ASSOC_TYPE_CYCLE`, and `E_UNRESOLVED_PROJECTION` instead of the frozen numeric identities.
 - Phase 0 will not invent codes or retrofit the registry. Negative conformance cases will assert only identities already emitted by current source and will record missing/wrong code identity as a compiler-maturity gap.
 
 ## Semantic inventory and coverage matrix
 
-The inventory below counts **116 frozen semantic rules**. Nine explicitly
+The inventory below counts **119 frozen semantic rules**. Nine explicitly
 unsupported v1 boundaries are listed separately and are not included in the
 frozen-rule denominator. `PROVEN` requires executable evidence for a generic
 user-defined shape where that distinction matters; a stdlib-only path is never
@@ -207,7 +212,7 @@ the sole proof.
 | Associated type declaration | Frozen | semantic P0C; SEM-ASSOC-01 | yes | PROVEN |
 | Associated type binding | Frozen | semantic P0C; SEM-ASSOC-01 | yes | PROVEN |
 | Same-provider projection | Frozen | artifact control; SEM-ASSOC-01 | yes | PROVEN |
-| Cross-provider projection | Frozen | SEM-ASSOC-02 with trait/impl in distinct providers | yes | PROVEN |
+| Cross-provider public projection A → B → C | Frozen | SEM-ASSOC-02: A owns trait/type/impl, B exposes `T::Output`, C consumes | yes | PROVEN |
 | Associated functions | Frozen | P3 no-receiver trait cases | partial | PARTIAL |
 
 ### E. Ownership and moves
@@ -315,7 +320,7 @@ the sole proof.
 | `using ... as ...` | Frozen | resolver/UI tests | yes | PROVEN |
 | Multiple providers contributing to explicit module | Frozen | module merge/boundary suites | yes | PROVEN |
 | Duplicate definitions | Frozen | provider acceptance; SEM-PROVIDER-01 | yes | PROVEN |
-| Frozen default-private field access | Frozen VIS-STRUCT v1 | SEM-VIS-01 | yes | COMPILER GAP |
+| Explicit-private field access rejection | Frozen public-default contract | SEM-VIS-01 | yes | PROVEN |
 | Unresolved provider | Frozen | import invariant suites | yes | PROVEN |
 
 ### M. Const and comptime
@@ -337,7 +342,10 @@ the sole proof.
 | Semantic rule | Spec status | Existing evidence | User-defined proof | Result |
 |---|---|---|---|---|
 | Deterministic semantic rejection | Frozen | many negative suites, but SEM-DIAG-01 is accepted | yes | PARTIAL |
-| Frozen numeric code registry | Frozen | `diagnostics-v1.md`; SEM-DIAG-02 | yes | COMPILER GAP |
+| E1003 private-access identity | Frozen | SEM-DIAG-05 | yes | COMPILER GAP |
+| E3001 use-after-move identity | Frozen | SEM-DIAG-02 | yes | COMPILER GAP |
+| E3002 partial-move-under-Drop identity | Frozen | SEM-DIAG-03 | yes | COMPILER GAP |
+| E3003 borrow-conflict identity | Frozen | SEM-DIAG-04 | yes | COMPILER GAP |
 | No compiler panic in Phase 0 corpus | Frozen doctrine | active and gap corpus executions | yes | PROVEN |
 | No backend invariant failure in Phase 0 corpus | Frozen doctrine | active and gap corpus executions | yes | PROVEN |
 | No silent semantic fallback | Frozen doctrine | SEM-DIAG-01 lowers missing call to `0` | yes | PARTIAL |
@@ -371,7 +379,7 @@ the sole proof.
 | I. Control flow | PARTIAL | Protocol-driven `for-in` is rejected. |
 | J. Iterator contracts | PARTIAL | Direct/manual protocol calls work; language lowering does not. |
 | K. Functions / calls | PARTIAL | Unknown methods silently lower; mutable call boundaries are wrong. |
-| L. Modules / providers | PARTIAL | Provider/module rules pass except frozen field visibility. |
+| L. Modules / providers | PROVEN | Public-default fields and explicit-private rejection match the corrected frozen contract. |
 | M. Const / comptime | PROVEN | Positive execution and explicit negative rejection are covered. |
 | N. Diagnostics | PARTIAL | Numeric registry is incomplete and one invalid call silently lowers. |
 
@@ -392,15 +400,18 @@ the harness enters through the public `luna check` command.
 | SEM-OWN-01 | invalid | Use after moving generic owner rejects | move analysis | PASS (rejected) |
 | SEM-DROP-01 | invalid | Partial move under Drop rejects | move/drop analysis | PASS (symbolic code) |
 | SEM-ASSOC-01 | valid | Same-provider associated projection | typecheck/mono | PASS |
-| SEM-ASSOC-02 | valid | Trait and impl owned by distinct source providers | provider/typecheck/mono | PASS |
+| SEM-ASSOC-02 | valid | A owns trait/type/impl; B publicly exposes `T::Output`; C consumes B | provider/typecheck/mono | PASS |
 | SEM-PROVIDER-01 | invalid | Duplicate root export from two providers rejects | provider/resolver | PASS (E1002) |
 | SEM-CONST-01 | valid | Pure comptime local mutation produces const | comptime | PASS |
 | SEM-CONST-02 | invalid | Division by zero rejects without fallback | comptime | PASS (rejected) |
 | SEM-ITER-01 | valid | User-defined `for-in` through language contracts | MVIR | EXPECTED FAIL (SEM-GAP-01) |
 | SEM-METHOD-01 | valid | Sequential non-escaping `&rw self` calls | borrowck | EXPECTED FAIL (SEM-GAP-02) |
 | SEM-DIAG-01 | invalid | Unknown user-defined method rejects | typecheck/MVIR | EXPECTED FAIL (SEM-GAP-03) |
-| SEM-DIAG-02 | invalid | Partial move emits frozen E3002 | diagnostics | EXPECTED FAIL (SEM-GAP-04) |
-| SEM-VIS-01 | invalid | Default-private field rejects externally | parser/resolver | EXPECTED FAIL (SEM-GAP-05) |
+| SEM-DIAG-02 | invalid | Use after move emits frozen E3001 | diagnostics | EXPECTED FAIL (SEM-GAP-04) |
+| SEM-DIAG-03 | invalid | Partial move emits frozen E3002 | diagnostics | EXPECTED FAIL (SEM-GAP-07) |
+| SEM-DIAG-04 | invalid | Borrow conflict emits frozen E3003 | diagnostics | EXPECTED FAIL (SEM-GAP-08) |
+| SEM-VIS-01 | invalid | Explicit-private field rejects externally | parser/resolver | PASS (rejected) |
+| SEM-DIAG-05 | invalid | Explicit-private access emits frozen E1003 | diagnostics | EXPECTED FAIL (SEM-GAP-09) |
 | SEM-COHERENCE-01 | invalid | Reference-head orphan impl rejects | coherence | EXPECTED FAIL (SEM-GAP-06) |
 
 Why existing tests were insufficient:
@@ -412,9 +423,11 @@ Why existing tests were insufficient:
 - Existing receiver tests did not isolate sequential non-escaping mutable calls.
 - Existing negative tests frequently asserted message fragments or symbolic
   labels rather than the frozen numeric diagnostic identity.
-- Historical associated-type reports did not contain a minimal current-baseline
-  source-only reproducer. The new three-provider control shows the report is no
-  longer reproducible at this commit.
+- Historical associated-type reports described an externally owned impl but did
+  not contain a minimal transitive public-signature reproduction. The corrected
+  SEM-ASSOC-02 is source-only A → B → C: provider A owns the trait, concrete type,
+  and associated binding; provider B publicly returns A's `T::Output` projection;
+  provider C instantiates and consumes B's API. It passes at this commit.
 
 ### User-defined generic coverage
 
@@ -424,6 +437,31 @@ SEM-BORROW-02, SEM-OWN-01, SEM-ASSOC-01, and SEM-ASSOC-02. SEM-ITER-01 adds an
 eighth user-defined protocol case (non-generic concrete iterator). No maturity
 claim in those classes relies solely on Vec, String, HashMap, HashSet, Option,
 or Result.
+
+### Frozen diagnostic-contract audit
+
+| Code | Frozen contract | Current evidence | Baseline classification |
+|---|---|---|---|
+| E1002 | Duplicate definition | SEM-PROVIDER-01 emits E1002 | CONFORMANT |
+| E1003 | Private access | SEM-VIS-01 rejects, but omits E1003 | COMPILER GAP (SEM-GAP-09) |
+| E1004 | Unresolved provider | importer rejects with `Could not resolve module provider`; no isolated Phase 0 code assertion | PARTIAL / NOT ISOLATED |
+| E2001 | Type mismatch | semantic-gate test rejects by message; no isolated Phase 0 code assertion | PARTIAL / NOT ISOLATED |
+| E2016 | Lifetime violation | lifetime suites emit E2016 | CONFORMANT |
+| E3001 | Use after move | SEM-OWN-01 rejects, but omits E3001 | COMPILER GAP (SEM-GAP-04) |
+| E3002 | Partial move under Drop | emits `E_PARTIAL_MOVE_UNDER_DROP` | COMPILER GAP (SEM-GAP-07) |
+| E3003 | Borrow conflict | SEM-BORROW-02 rejects, but omits E3003 | COMPILER GAP (SEM-GAP-08) |
+| E3005 | Local borrow escape | SEM-LIFETIME-02 emits E3005 | CONFORMANT |
+| E6001 | Backend invariant | registry contract exists; no user-source case should intentionally reach this invariant | NOT EXERCISED |
+
+The diagnostic representation is a shared enabling deficiency: production
+`Diagnostic` has no typed code field. The observed violations are nevertheless
+**multiple independent conformance gaps**, because E1003, E3001, E3002, and
+E3003 have distinct frozen meanings, triggering programs, emitters, and owning
+subsystems. Fixing one emitter would not satisfy the others. The old broad
+SEM-GAP-04 was therefore decomposed as follows: SEM-GAP-04 now means E3001;
+E3002 moved to SEM-GAP-07; E3003 moved to SEM-GAP-08. SEM-GAP-09 records the
+newly verified E1003 identity failure. SEM-GAP-05 is withdrawn without reusing
+or shifting later stable IDs.
 
 ## Compiler gaps
 
@@ -541,7 +579,7 @@ Notes:
   a diagnostic when lookup fails. MVIR then returns `Operand::Number("0")` when it
   has no method symbol. This is the one confirmed silent-fallback case.
 
-### SEM-GAP-04 — Frozen numeric diagnostic registry is incomplete
+### SEM-GAP-04 — Use-after-move rejection omits E3001
 
 Status:
   OPEN
@@ -550,73 +588,41 @@ Severity:
   P2
 
 Frozen semantic:
-  Diagnostics carry stable numeric identities from
-  `docs/diagnostics/diagnostics-v1.md`; partial move under Drop is E3002.
+  Use after move rejects with the stable E3001 identity from
+  `docs/diagnostics/diagnostics-v1.md`.
 
 Minimal Luna reproduction:
-  `mellis-rs/tests/semantic_maturity/sem_drop_01_partial_move_under_drop.ln`
+  `mellis-rs/tests/semantic_maturity/sem_own_01_use_after_move.ln`
 
 Expected:
-  Rejection identified as E3002.
+  Rejection identified as E3001.
 
 Actual:
-  Correct rejection category, but the message contains the internal symbolic
-  label `E_PARTIAL_MOVE_UNDER_DROP`.
+  Correct rejection category, but the message is only `Use of moved value`.
 
 Diagnostic:
-  wrong identity (`E_PARTIAL_MOVE_UNDER_DROP`, expected existing E3002)
+  missing identity (expected existing E3001)
 
 Source-only reproduction:
   YES
 
 Affected subsystem:
-  common diagnostics / all emitting phases
+  borrowck move analysis / common diagnostics
 
 Root cause:
   PROVEN
 
 Notes:
-  Production `Diagnostic` has no typed code field and most phases emit ad-hoc
-  strings. E1002, E2016, E3005, and a few other numeric strings exist, but the
-  frozen registry is not structurally implemented.
+  The missing code originates in the use-after-move emitter. Production
+  `Diagnostic` also lacks a typed code field, but that shared structural weakness
+  does not collapse this independently testable E3001 contract into other gaps.
 
-### SEM-GAP-05 — Frozen default-private fields are treated as public
+### Withdrawn ID: SEM-GAP-05
 
-Status:
-  OPEN
-
-Severity:
-  P0
-
-Frozen semantic:
-  VIS-STRUCT v1 makes an unmodified field private; external provider access must
-  reject with E1003. The public-default RFC is approved but explicitly not frozen.
-
-Minimal Luna reproduction:
-  `mellis-rs/tests/semantic_maturity/sem_vis_01_default_private_field/`
-
-Expected:
-  Imported consumer access to `secret.value` is rejected.
-
-Actual:
-  `luna check` succeeds with no diagnostic.
-
-Diagnostic:
-  none
-
-Source-only reproduction:
-  YES
-
-Affected subsystem:
-  parser / resolver / typechecker visibility
-
-Root cause:
-  PROVEN
-
-Notes:
-  Parser source explicitly defaults fields to `Visibility::Public` for
-  Visibility-02, and resolver source explicitly removes VIS-STRUCT-2. Phase 0
-  follows the frozen authority rather than silently promoting that RFC.
+The original SEM-GAP-05 is withdrawn, not renumbered. It incorrectly expected
+unmodified fields to be private. Under the corrected frozen contract fields are
+public by default; SEM-VIS-01 proves that an explicit `private` field is rejected.
+The missing E1003 identity is separately tracked as SEM-GAP-09.
 
 ### SEM-GAP-06 — Reference-head orphan impl is accepted
 
@@ -656,11 +662,124 @@ Notes:
   `SemanticContext::nominal_head` recursively unwraps references and pointers,
   discovering the nested local type and treating the head as local.
 
+### SEM-GAP-07 — Partial move under Drop emits a symbolic code instead of E3002
+
+Status:
+  OPEN
+
+Severity:
+  P2
+
+Frozen semantic:
+  Partial move under Drop rejects with the stable E3002 identity.
+
+Minimal Luna reproduction:
+  `mellis-rs/tests/semantic_maturity/sem_drop_01_partial_move_under_drop.ln`
+
+Expected:
+  Rejection identified as E3002.
+
+Actual:
+  Correct rejection category, but the message contains
+  `E_PARTIAL_MOVE_UNDER_DROP`.
+
+Diagnostic:
+  wrong identity (`E_PARTIAL_MOVE_UNDER_DROP`, expected existing E3002)
+
+Source-only reproduction:
+  YES
+
+Affected subsystem:
+  borrowck move analysis / common diagnostics
+
+Root cause:
+  PROVEN
+
+Notes:
+  This is a distinct emitter and frozen contract from E3001 even though both are
+  affected by the common untyped diagnostic representation.
+
+### SEM-GAP-08 — Borrow-conflict rejection omits E3003
+
+Status:
+  OPEN
+
+Severity:
+  P2
+
+Frozen semantic:
+  A borrow aliasing conflict rejects with the stable E3003 identity.
+
+Minimal Luna reproduction:
+  `mellis-rs/tests/semantic_maturity/sem_borrow_02_conflicting_field_borrow.ln`
+
+Expected:
+  Rejection identified as E3003.
+
+Actual:
+  Correct rejection category, but the message is an uncoded `Cannot borrow ...`
+  diagnostic.
+
+Diagnostic:
+  missing identity (expected existing E3003)
+
+Source-only reproduction:
+  YES
+
+Affected subsystem:
+  borrowck borrow analysis / common diagnostics
+
+Root cause:
+  PROVEN
+
+Notes:
+  The E3003 contract is independently asserted because this diagnostic comes
+  from borrow analysis, not either move-analysis emitter.
+
+### SEM-GAP-09 — Explicit-private access rejection omits E1003
+
+Status:
+  OPEN
+
+Severity:
+  P2
+
+Frozen semantic:
+  Struct fields are public by default; an explicitly `private` field is
+  inaccessible across the provider boundary and rejection carries E1003.
+
+Minimal Luna reproduction:
+  `mellis-rs/tests/semantic_maturity/sem_vis_01_explicit_private_field/`
+
+Expected:
+  External `secret.value` access rejects with E1003.
+
+Actual:
+  Access is correctly rejected as private, but the diagnostic has no numeric
+  identity.
+
+Diagnostic:
+  missing identity (expected existing E1003)
+
+Source-only reproduction:
+  YES
+
+Affected subsystem:
+  resolver/typechecker field visibility / common diagnostics
+
+Root cause:
+  PROVEN
+
+Notes:
+  This is not a field-visibility semantic bug. SEM-GAP-05 was withdrawn because
+  its private-by-default premise was wrong; SEM-GAP-09 covers only the frozen
+  diagnostic identity.
+
 ### Severity summary
 
-- P0: SEM-GAP-03, SEM-GAP-05, SEM-GAP-06
+- P0: SEM-GAP-03, SEM-GAP-06
 - P1: SEM-GAP-01, SEM-GAP-02
-- P2: SEM-GAP-04
+- P2: SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, SEM-GAP-09
 - P3: none
 
 ### Crashes and silent fallbacks
@@ -674,7 +793,9 @@ Notes:
 ### Known associated-type result
 
 - Same-provider: **PASS** (SEM-ASSOC-01).
-- Cross-provider: **PASS** (SEM-ASSOC-02, trait and impl owned by distinct providers).
+- Cross-provider A → B → C: **PASS** (SEM-ASSOC-02: A owns the trait,
+  concrete type, and associated binding; B exposes `T::Output` in a public
+  generic API; C consumes it).
 - Source-only: **YES**.
 - Artifact involved: **NO**.
 - Historical limitation reproduced: **NO** on baseline
@@ -691,29 +812,36 @@ Notes:
 | SEM-PROVIDER-01 duplicate | E1002 | correct |
 | SEM-CONST-02 division by zero | no code; comptime evaluation error | rejection correct, registry incomplete |
 | SEM-DIAG-01 unknown method | none; accepted and lowered to 0 | incorrect / P0 |
-| SEM-VIS-01 private access | none; accepted | incorrect / P0 |
+| SEM-VIS-01 explicit-private access | no code; `Field ... is private` | semantic rejection correct; E1003 gap |
 | SEM-COHERENCE-01 orphan impl | none; accepted | incorrect / P0 |
 
 No new diagnostic code was invented.
 
 ## Baseline metrics
 
-- Frozen semantic rules inventoried: **116**
-- Rules PROVEN: **92**
+- Frozen semantic rules inventoried: **119**
+- Rules PROVEN: **93**
 - Rules PARTIAL: **16**
 - Rules NOT TESTED: **2**
-- Rules in COMPILER GAP state: **6**
-- Unique compiler gaps: **6**
-- P0: **3**
+- Rules in COMPILER GAP state: **8**
+- Unique compiler gaps: **8**
+- P0: **2**
 - P1: **2**
-- P2: **1**
+- P2: **4**
 - P3: **0**
 - Compiler panics: **0**
 - Silent fallback cases: **1**
 - User-defined generic coverage count: **7 cases**
-- New conformance tests: **19**
+- New conformance tests: **22**
 - Unique valid Luna programs: **9**
 - Unique invalid Luna programs: **9**
+
+The test/program totals count different things. The corpus contains 18 unique
+program scenarios (9 valid + 9 invalid). Four invalid programs each have a
+second ignored assertion dedicated to exact diagnostic identity: E1003, E3001,
+E3002, and E3003. Thus **18 + 4 = 22 tests**. In the original baseline, only the
+E3002 identity assertion was duplicated, which explains its previously
+unreconciled **19th test**.
 
 ## Test execution baseline
 
@@ -723,21 +851,51 @@ Commands use `C:/Users/84387/.cargo/bin/cargo.exe`; test processes prepend
 | Command | Result |
 |---|---|
 | `cargo test --workspace -- --list` | 812 tests discovered; 118 test binaries; 26 zero-test binaries |
-| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --test-threads=1` | 13 passed, 0 failed, 6 ignored |
-| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --ignored --test-threads=1` | 0 passed, 6 failed as the six documented gap expectations |
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --test-threads=1` | 14 passed, 0 failed, 8 ignored |
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --ignored --test-threads=1` | 0 passed, 8 failed as the eight documented gap expectations |
 | `cargo test -p luna-semantic -- --test-threads=1` | 106 passed, 0 failed |
 | `cargo test -p luna-borrowck -- --test-threads=1` | 25 passed, 0 failed |
-| 18 named relevant `luna-driver` binaries (semantic gate, generic, lifetime, Drop, control, provider, indirect call, comptime, reassignment) | 191 passed, 0 failed |
+| 18 named relevant `luna-driver` binaries (listed below) | 152 passed, 0 failed; 2 binaries discovered zero tests |
 | `cargo test --workspace -- --test-threads=1` | stopped at baseline artifact test: 157 passed, 1 failed, 6 ignored before stop |
 | `cargo test --workspace` | same baseline stop: 157 passed, 1 failed, 6 ignored before stop |
 
-The workspace failure is
+The two workspace rows are retained from the original Phase 0 baseline and were
+not rerun during this correction pass. Per scope, no generated `.llib` was built
+or repaired.
+
+The workspace failure is classified as a **BASELINE ENVIRONMENT /
+GENERATED-ARTIFACT FAILURE**, not a semantic compiler gap. It is
 `core_provider_baseline_acceptance_tests::component_artifacts_are_present_and_readable`.
 It panics because generated component artifacts such as
 `libs/external/lang/into_iterator.llib` / `libs/external/core/try.llib` are absent
 from the clean baseline checkout. It predates and is independent of the new
 source conformance corpus; Phase 0 did not generate, repair, or modify sysroot
 artifacts.
+
+Exact targeted driver command used for the correction pass:
+
+```text
+cargo test -p luna-driver \
+  --test semantic_gate_tests \
+  --test generic_trait_dispatch_acceptance_tests \
+  --test compiler_gap_c_gap_04_trait_bound_generic_args_tests \
+  --test lifetime_def_site_acceptance_tests \
+  --test lifetime_outlives_acceptance_tests \
+  --test lifetime_relation_abi_acceptance_tests \
+  --test lifetime_virtual_dispatch_acceptance_tests \
+  --test p0b_drop_subplace_tests \
+  --test p3_tests \
+  --test provider_module_contract_acceptance_tests \
+  --test module_merge_tests \
+  --test module_import_boundary_tests \
+  --test import_invariants_tests \
+  --test hierarchical_provider_tests \
+  --test compiler_gap_c_gap_05_indirect_call_tests \
+  --test compiler_gap_c_gap_06_function_pointer_mangling_tests \
+  --test adv_comptime_dyn_tests \
+  --test test_reassign_soundness \
+  -- --test-threads=1
+```
 
 Initial infrastructure observations, not semantic evidence:
 
@@ -750,17 +908,15 @@ Initial infrastructure observations, not semantic evidence:
 
 1. Fix P0 typechecker/MVIR invariant enforcement for unresolved method calls,
    removing the zero fallback and adding a frozen existing diagnostic identity.
-2. Reconcile frozen VIS-STRUCT v1 versus Visibility-02 before implementation;
-   if v1 remains frozen, restore its parser/resolver semantics. Do not silently
-   change the language from compiler source.
-3. Fix P0 nominal-head coherence so references/pointers do not expose nested
+2. Fix P0 nominal-head coherence so references/pointers do not expose nested
    local types for orphan locality under the current frozen rule.
-4. Implement generic user-defined `for-in` lowering through language contracts
+3. Implement generic user-defined `for-in` lowering through language contracts
    in MVIR (P1), without Vec or provider special cases.
-5. Correct non-escaping receiver-loan termination in borrowck/call effects (P1).
-6. Implement the typed frozen diagnostic registry and migrate ad-hoc/symbolic
-   emitters, beginning with semantic safety diagnostics (P2).
-7. Add the two missing public-boundary proofs (move through match and borrow
+4. Correct non-escaping receiver-loan termination in borrowck/call effects (P1).
+5. Implement the typed frozen diagnostic registry, then migrate the independent
+   E1003/E3001/E3002/E3003 emitters without treating one fix as proof of the
+   other contracts (P2).
+6. Add the two missing public-boundary proofs (move through match and borrow
    across loops), then upgrade remaining PARTIAL rows by subsystem.
 
 ## Proposed maturity gate
@@ -789,3 +945,10 @@ Initial infrastructure observations, not semantic evidence:
 
 Only a new audit document, one isolated CLI conformance harness, and isolated
 source fixtures were added.
+
+## Correction-pass verdict
+
+The corrected semantic authority, matrix counts, case/program totals, gap IDs,
+and executable results reconcile. No Phase 1 implementation was started.
+
+**SEM-MATURITY-01 PHASE 0 BASELINE CORRECTED**

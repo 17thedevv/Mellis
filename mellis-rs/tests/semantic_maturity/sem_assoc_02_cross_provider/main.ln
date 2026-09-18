@@ -1,12 +1,8 @@
-// SEM-ASSOC-02: valid projection when trait and impl come from distinct providers.
-import "trait_provider";
-import "impl_provider";
-
-fn output_of<T: Producer>(value: &T) -> T::Output {
-    return value.produce();
-}
+// SEM-ASSOC-02 provider C: consumes B's public projection of A's associated type.
+import "provider_a";
+import "provider_b";
 
 fn main() -> i32 {
     dec num = make_num(42);
-    return output_of<Num>(&num) - 42;
+    return project_output<Num>(&num) - 42;
 }

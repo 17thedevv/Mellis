@@ -1,5 +1,0 @@
-// SEM-ASSOC-02 provider A: owns the associated-type trait.
-export trait Producer {
-    type Output;
-    fn produce(self: &Self) -> Self::Output;
-}
