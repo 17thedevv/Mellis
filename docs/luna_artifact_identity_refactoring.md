@@ -7,6 +7,13 @@ The Luna compiler is unaware of package-management policy. Artifact validation i
 
 This will be accomplished in incremental phases, ensuring tests are added and behavior remains correct at every step.
 
+> **Canonical vs legacy (Phase 4G).** The canonical current artifact is `.llib`
+> (magic `LLIB`) and it must carry an `AstInterface` section — the required semantic
+> authority. `.mlib` (magic `MLIB`) is a **legacy read-compatible** format only, and
+> the `SemanticMetadata`-only reconstruction path exists for legacy `.mlib`
+> artifacts. Canonical tooling never writes `.mlib`. See
+> [std-arch-01-compatibility-matrix.md](./std-arch-01-compatibility-matrix.md).
+
 ## Proposed Changes
 
 We will execute this refactoring in the following phases.

@@ -17,7 +17,7 @@ impl SysrootError {
                 format!("specified sysroot path `{}` does not exist", p.display())
             }
             SysrootError::EnvVarPathNotFound(p) => {
-                format!("sysroot path specified by MELLIS_SYSROOT `{}` does not exist", p.display())
+                format!("sysroot path specified by LUNA_SYSROOT (or legacy MELLIS_SYSROOT) `{}` does not exist", p.display())
             }
             SysrootError::DiscoveryFailed { searched } => {
                 let searched_str = searched
@@ -26,7 +26,7 @@ impl SysrootError {
                     .collect::<Vec<_>>()
                     .join("\n");
                 format!(
-                    "cannot locate Mellis sysroot. Please set MELLIS_SYSROOT or specify --sysroot <DIR>.\nSearched candidate locations:\n{}",
+                    "cannot locate Luna sysroot. Please set LUNA_SYSROOT (or legacy MELLIS_SYSROOT) or specify --sysroot <DIR>.\nSearched candidate locations:\n{}",
                     searched_str
                 )
             }
@@ -48,7 +48,6 @@ pub enum ExternalComponentError {
     ParseFailed(Vec<Diagnostic>),
     ImportFailed(Vec<Diagnostic>),
     SemanticFailed(Vec<Diagnostic>),
-    UnsupportedFormat { format: String, path: PathBuf },
     InvalidLibraryInterface { name: String, path: PathBuf, reason: String },
     InvalidArtifact { name: String, path: PathBuf, reason: String },
 }
@@ -73,11 +72,6 @@ impl ExternalComponentError {
             ExternalComponentError::ParseFailed(diags) => diags,
             ExternalComponentError::ImportFailed(diags) => diags,
             ExternalComponentError::SemanticFailed(diags) => diags,
-            ExternalComponentError::UnsupportedFormat { format, path } => vec![Diagnostic::error(format!(
-                "Unsupported external component format '{}' at `{}`",
-                format,
-                path.display()
-            ))],
             ExternalComponentError::InvalidLibraryInterface { name, path, reason } => vec![Diagnostic::error(format!("Invalid binary library interface for '{}' at `{}`: {}", name, path.display(), reason))],
             ExternalComponentError::InvalidArtifact { name, path, reason } => vec![Diagnostic::error(format!("Strict Rejection: Invalid artifact for '{}' at `{}`: {}", name, path.display(), reason))],
         }
@@ -110,7 +104,7 @@ impl BootstrapError {
             BootstrapError::Component(err) => err.into_diagnostics(),
             BootstrapError::MissingRequiredComponent(name) => {
                 vec![Diagnostic::error(format!(
-                    "fatal error: required component `{}` could not be bootstrapped. Mellis requires `{}` for language primitives and runtime items.",
+                    "fatal error: required component `{}` could not be bootstrapped. Luna requires `{}` for language primitives and runtime items.",
                     name, name
                 ))]
             }

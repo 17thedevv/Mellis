@@ -21,7 +21,7 @@ fn main() {
     let file_path = match file_path {
         Some(path) => path,
         None => {
-            eprintln!("Usage: mellis-rs [--quiet] <file.ms>");
+            eprintln!("Usage: luna [--quiet] <file.ln>");
             process::exit(1);
         }
     };

@@ -329,15 +329,8 @@ impl ExternalComponentLoader {
             return Ok(existing_id);
         }
 
-        if descriptor.format == ComponentFormat::Llib || descriptor.format == ComponentFormat::Mlib {
+        if descriptor.format == ComponentFormat::Llib {
             return Self::load_binary_component(descriptor, global_arena, driver_session);
-        }
-
-        if descriptor.format == ComponentFormat::Mlib {
-            return Err(ExternalComponentError::UnsupportedFormat {
-                format: "mlib".to_string(),
-                path: descriptor.entry_file.clone(),
-            });
         }
 
         if driver_session.registry.is_loading(&descriptor.name) {

@@ -133,17 +133,3 @@ fn test_unknown_section() {
     // The reader errors because of Unknown section during reading the entry
     assert!(result.is_err());
 }
-
-#[test]
-fn test_load_core_mlib() {
-    use std::fs::File;
-    let path = "../../../lib/core.llib";
-    let fallback = "../../../lib/core.mlib";
-    let mut f = match File::open(path).or_else(|_| File::open(fallback)) {
-        Ok(f) => f,
-        Err(_) => return, // core library not yet built, skip test
-    };
-    let m = luna_llib::MlibReader::read_module(&mut f).map(|(m, _, _, _)| m);
-    println!("{:?}", m);
-    let _ = m.ok();
-}

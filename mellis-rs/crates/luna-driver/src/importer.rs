@@ -78,14 +78,17 @@ pub fn resolve_collected_imports(
                         let ln_path = base_dir.join(format!("{}.ln", name));
                         let ms_path = base_dir.join(format!("{}.ms", name));
                         
+                        // Canonical-first (COMPAT-PRECEDENCE-01): `.llib` > `.ln` >
+                        // legacy `.mlib` > legacy `.ms`. A legacy artifact must never
+                        // shadow canonical source. Mirrors the discovery precedence.
                         if llib_path.exists() {
                             found_path = Some(llib_path);
                             is_binary = true;
+                        } else if ln_path.exists() {
+                            found_path = Some(ln_path);
                         } else if mlib_path.exists() {
                             found_path = Some(mlib_path);
                             is_binary = true;
-                        } else if ln_path.exists() {
-                            found_path = Some(ln_path);
                         } else if ms_path.exists() {
                             found_path = Some(ms_path);
                         }

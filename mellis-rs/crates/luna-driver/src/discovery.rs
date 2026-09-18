@@ -5,7 +5,6 @@ use crate::resolution_context::ProviderResolutionContext;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ComponentFormat {
-    Mlib,
     Llib,
     Source,
     Package,
@@ -69,6 +68,7 @@ impl ExternalComponentDiscovery {
             });
         }
 
+        // Legacy read compatibility: `.mlib` artifacts predate the canonical `.llib`.
         let mlib_path = external_dir.join(format!("{}.mlib", path_str));
         if mlib_path.exists() {
             return Ok(ExternalComponentDescriptor {
@@ -79,6 +79,7 @@ impl ExternalComponentDiscovery {
             });
         }
 
+        // Legacy read compatibility: `.ms` is the historical Mellis source extension.
         let ms_path = external_dir.join(format!("{}.ms", path_str));
         if ms_path.exists() {
             return Ok(ExternalComponentDescriptor {

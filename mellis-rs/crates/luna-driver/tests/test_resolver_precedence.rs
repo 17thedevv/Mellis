@@ -126,3 +126,24 @@ fn internal_visibility_depends_on_requester_provenance() {
         .is_ok()
     );
 }
+
+/// COMPAT-PRECEDENCE-01: the canonical `.llib` must shadow a legacy `.mlib`.
+#[test]
+fn llib_candidate_precedes_mlib_for_registered_provider() {
+    let ext_dir = create_temp_dir("llib_over_mlib");
+    fs::create_dir_all(ext_dir.join("alloc")).unwrap();
+    fs::write(ext_dir.join("alloc/vec.mlib"), b"legacy").unwrap();
+    fs::write(ext_dir.join("alloc/vec.llib"), b"canonical").unwrap();
+    let manifest = manifest_for(&ext_dir, "vec", "alloc/vec", "public");
+
+    let desc = ExternalComponentDiscovery::discover(
+        &ext_dir,
+        "vec",
+        &manifest,
+        ProviderResolutionContext::UserImport,
+    )
+    .expect("registered provider must resolve");
+
+    assert_eq!(desc.format, ComponentFormat::Llib);
+    assert_eq!(desc.entry_file, ext_dir.join("alloc/vec.llib"));
+}

@@ -60,7 +60,7 @@ impl Sysroot {
 
     /// Production sysroot discovery:
     /// 1. Explicit argument (`--sysroot`)
-    /// 2. `MELLIS_SYSROOT` environment variable
+    /// 2. `LUNA_SYSROOT` environment variable (legacy `MELLIS_SYSROOT` also accepted)
     /// 3. Executable-relative path (`current_exe()` ancestor containing `libs/external`)
     pub fn discover(explicit: Option<&str>) -> Result<Self, SysrootError> {
         let mut searched_candidates = Vec::new();
