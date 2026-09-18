@@ -1,0 +1,44 @@
+module ptr {
+        export unsafe fn read<T>(src: *T) -> T {
+            return *src;
+        }
+    
+        export unsafe fn write<T>(dst: *rw T, val: T) {
+            *dst = val;
+        }
+    
+        export unsafe intrinsic fn drop_in_place<T>(p: *rw T);
+    
+        export unsafe fn add<T>(p: *T, count: u64) -> *T {
+            return (p as u64 + (count * (sizeof(T) as u64))) as *T;
+        }
+    
+        export unsafe fn add_mut<T>(p: *rw T, count: u64) -> *rw T {
+            return (p as u64 + (count * (sizeof(T) as u64))) as *rw T;
+        }
+    
+        export unsafe fn offset<T>(p: *T, count: i64) -> *T {
+            return (p as u64 + (count as u64 * (sizeof(T) as u64))) as *T;
+        }
+    
+        export unsafe fn offset_mut<T>(p: *rw T, count: i64) -> *rw T {
+            return (p as u64 + (count as u64 * (sizeof(T) as u64))) as *rw T;
+        }
+    
+        export unsafe fn diff<T>(a: *T, b: *T) -> i64 {
+            return ((a as i64) - (b as i64)) / (sizeof(T) as i64);
+        }
+    
+        export unsafe fn copy<T>(src: *T, dst: *rw T, count: u64) {
+            dec rw i: u64 = 0 as u64;
+            while i < count {
+                dec s = add<T>(src, i);
+                dec d = add_mut<T>(dst, i);
+                write<T>(d, read<T>(s));
+                i = i + (1 as u64);
+            }
+    }
+    
+}
+
+

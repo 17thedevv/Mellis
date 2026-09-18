@@ -1,0 +1,187 @@
+import <__lang_option>;
+import <__lang_iterator>;
+
+// =========================================================================
+// Iterator Adapters: Map, Filter, Enumerate, Take, Skip, Zip
+// =========================================================================
+
+export struct Map<I, Item, Out> {
+    private iter: I,
+    private f: fn(Item) -> Out,
+}
+
+impl<I: Iterator<Item>, Item, Out> Iterator<Out> for Map<I, Item, Out> {
+    fn next(self: &rw Self) -> Option<Out> {
+        dec opt = self.iter.next();
+        match opt {
+            Option::Some(x) -> {
+                dec f_ptr = self.f;
+                return Option::Some(f_ptr(x));
+            },
+            Option::None -> {
+                return Option::None;
+            },
+        }
+    }
+}
+
+export struct Filter<I, Item> {
+    private iter: I,
+    // Predicate takes Item directly (borrowed iterators: Item=&T, owned: Item=T)
+    private pred: fn(Item) -> bool,
+}
+
+impl<I: Iterator<Item>, Item> Iterator<Item> for Filter<I, Item> {
+    fn next(self: &rw Self) -> Option<Item> {
+        dec rw running = true;
+        while running {
+            dec opt = self.iter.next();
+            match opt {
+                Option::Some(x) -> {
+                    dec p_ptr = self.pred;
+                    if p_ptr(x) {
+                        return Option::Some(x);
+                    }
+                },
+                Option::None -> {
+                    running = false;
+                },
+            }
+        }
+        return Option::None;
+    }
+}
+
+export struct Enumerate<I, Item> {
+    private iter: I,
+    private count: u64,
+}
+
+impl<I: Iterator<Item>, Item> Iterator<(u64, Item)> for Enumerate<I, Item> {
+    fn next(self: &rw Self) -> Option<(u64, Item)> {
+        dec opt = self.iter.next();
+        match opt {
+            Option::Some(x) -> {
+                dec cur = self.count;
+                self.count = self.count + (1 as u64);
+                return Option::Some((cur, x));
+            },
+            Option::None -> {
+                return Option::None;
+            },
+        }
+    }
+}
+
+export struct Take<I, Item> {
+    private iter: I,
+    private remaining: u64,
+}
+
+impl<I: Iterator<Item>, Item> Iterator<Item> for Take<I, Item> {
+    fn next(self: &rw Self) -> Option<Item> {
+        if self.remaining == (0 as u64) {
+            return Option::None;
+        }
+        dec item_opt = self.iter.next();
+        match item_opt {
+            Option::Some(x) -> {
+                self.remaining = self.remaining - (1 as u64);
+                return Option::Some(x);
+            },
+            Option::None -> {
+                return Option::None;
+            },
+        }
+    }
+}
+
+export struct Skip<I, Item> {
+    private iter: I,
+    private to_skip: u64,
+}
+
+impl<I: Iterator<Item>, Item> Iterator<Item> for Skip<I, Item> {
+    fn next(self: &rw Self) -> Option<Item> {
+        while self.to_skip > (0 as u64) {
+            self.to_skip = self.to_skip - (1 as u64);
+            dec opt = self.iter.next();
+            match opt {
+                Option::Some(_) -> {},
+                Option::None -> {
+                    return Option::None;
+                },
+            }
+        }
+        return self.iter.next();
+    }
+}
+
+export struct Zip<A, B, ItemA, ItemB> {
+    private a: A,
+    private b: B,
+}
+
+impl<A: Iterator<ItemA>, B: Iterator<ItemB>, ItemA, ItemB> Iterator<(ItemA, ItemB)> for Zip<A, B, ItemA, ItemB> {
+    fn next(self: &rw Self) -> Option<(ItemA, ItemB)> {
+        dec opt_a = self.a.next();
+        match opt_a {
+            Option::Some(x) -> {
+                dec opt_b = self.b.next();
+                match opt_b {
+                    Option::Some(y) -> {
+                        return Option::Some((x, y));
+                    },
+                    Option::None -> {
+                        return Option::None;
+                    },
+                }
+            },
+            Option::None -> {
+                return Option::None;
+            },
+        }
+    }
+}
+
+export fn iter_map<I: Iterator<Item>, Item, Out>(iter: I, f: fn(Item) -> Out) -> Map<I, Item, Out> {
+    return Map<I, Item, Out> {
+        iter: iter,
+        f: f,
+    };
+}
+
+export fn iter_filter<I: Iterator<Item>, Item>(iter: I, pred: fn(Item) -> bool) -> Filter<I, Item> {
+    return Filter<I, Item> {
+        iter: iter,
+        pred: pred,
+    };
+}
+
+export fn iter_enumerate<I: Iterator<Item>, Item>(iter: I) -> Enumerate<I, Item> {
+    return Enumerate<I, Item> {
+        iter: iter,
+        count: 0 as u64,
+    };
+}
+
+export fn iter_take<I: Iterator<Item>, Item>(iter: I, n: u64) -> Take<I, Item> {
+    return Take<I, Item> {
+        iter: iter,
+        remaining: n,
+    };
+}
+
+export fn iter_skip<I: Iterator<Item>, Item>(iter: I, n: u64) -> Skip<I, Item> {
+    return Skip<I, Item> {
+        iter: iter,
+        to_skip: n,
+    };
+}
+
+export fn iter_zip<A: Iterator<ItemA>, B: Iterator<ItemB>, ItemA, ItemB>(a: A, b: B) -> Zip<A, B, ItemA, ItemB> {
+    return Zip<A, B, ItemA, ItemB> {
+        a: a,
+        b: b,
+    };
+}

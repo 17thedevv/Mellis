@@ -1,0 +1,20 @@
+import <hashmap>;
+
+fn main() -> i32 {
+    dec rw map = hashmap_new<u64, u64>();
+    map.insert(4 as u64, 40 as u64);
+    map.insert(5 as u64, 50 as u64);
+    dec rw sum = 0 as u64;
+    dec rw iter = map.into_iter();
+    dec rw running = true;
+    while running {
+        match iter.next() {
+            Option::Some(entry) -> { sum = sum + entry.0 + entry.1; },
+            Option::None -> { running = false; },
+        }
+    }
+    if sum != (99 as u64) {
+        return 1;
+    }
+    return 0;
+}

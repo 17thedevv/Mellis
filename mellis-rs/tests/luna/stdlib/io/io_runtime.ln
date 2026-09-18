@@ -1,0 +1,12 @@
+import <io>;
+
+fn main() -> i32 {
+    dec hello: [u8; 7] = [72 as u8, 101 as u8, 108 as u8, 108 as u8, 111 as u8, 44 as u8, 32 as u8];
+    dec world: [u8; 6] = [87 as u8, 111 as u8, 114 as u8, 108 as u8, 100 as u8, 33 as u8];
+    dec error: [u8; 6] = [69 as u8, 114 as u8, 114 as u8, 111 as u8, 114 as u8, 33 as u8];
+
+    io::print(&hello);
+    io::println(&world);
+    io::eprintln(&error);
+    return 0;
+}

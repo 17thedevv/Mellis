@@ -1,0 +1,16 @@
+export trait Clone {
+    fn clone(self: &Self) -> Self;
+}
+
+impl Clone for bool { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for char { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for u8 { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for u16 { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for u32 { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for u64 { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for usize { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for i8 { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for i16 { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for i32 { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for i64 { fn clone(self: &Self) -> Self { return *self; } }
+impl Clone for isize { fn clone(self: &Self) -> Self { return *self; } }

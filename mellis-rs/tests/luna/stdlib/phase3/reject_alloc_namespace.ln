@@ -1,0 +1,5 @@
+import <vec>;
+
+fn main() {
+    dec value: alloc::Vec<i32> = vec_new<i32>();
+}

@@ -1,0 +1,21 @@
+import <string>;
+import <vec>;
+import <ptr>;
+
+fn main() -> i32 {
+    dec s = string_from_str("Hi");
+    if s.len() != (2 as u64) {
+        return 1;
+    }
+    dec bytes = s.as_bytes();
+    if bytes[0] != (72 as u8) || bytes[1] != (105 as u8) {
+        return 2;
+    }
+    unsafe {
+        if ptr::read(s.as_ptr()) != (72 as u8) {
+            return 3;
+        }
+    }
+
+    return 0;
+}

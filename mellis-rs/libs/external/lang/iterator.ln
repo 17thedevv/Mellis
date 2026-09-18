@@ -1,0 +1,6 @@
+import <__lang_option>;
+
+#[lang("iterator")]
+export trait Iterator<Item> {
+    fn next(self: &rw Self) -> Option<Item>;
+}

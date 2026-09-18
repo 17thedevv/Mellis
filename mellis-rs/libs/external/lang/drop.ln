@@ -1,0 +1,5 @@
+#[lang("drop")]
+export trait Drop {
+    #[lang("drop_fn")]
+    fn drop(self: &rw Self);
+}

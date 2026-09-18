@@ -1,0 +1,3 @@
+import <alloc/vec>;
+
+fn main() {}

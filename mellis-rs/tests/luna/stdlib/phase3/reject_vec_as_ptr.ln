@@ -1,0 +1,11 @@
+import <vec>;
+import <ptr>;
+
+fn main() -> i32 {
+    dec rw value = vec_new<i32>();
+    value.push(7);
+    dec raw: *i32 = value.as_ptr();
+    unsafe {
+        return ptr::read(raw);
+    }
+}

@@ -1,0 +1,42 @@
+import <vec>;
+import <hashmap>;
+import <hashset>;
+import <iter_collect>;
+
+fn main() -> i32 {
+    dec rw values = vec_new<i32>();
+    values.push(3);
+    values.push(4);
+    values.push(5);
+    dec collected = iter_collect_vec(values.into_iter());
+    if collected.len() != (3 as u64) {
+        return 1;
+    }
+
+    dec rw pairs = vec_new<(u64, u64)>();
+    pairs.push((1 as u64, 10 as u64));
+    pairs.push((1 as u64, 20 as u64));
+    pairs.push((2 as u64, 30 as u64));
+    dec map = iter_collect_hashmap(pairs.into_iter());
+    if map.len() != (2 as u64) {
+        return 2;
+    }
+    match map.get(&(1 as u64)) {
+        Option::Some(value) -> {
+            if *value != (20 as u64) {
+                return 3;
+            }
+        },
+        Option::None -> { return 4; },
+    }
+
+    dec rw duplicates = vec_new<u64>();
+    duplicates.push(7 as u64);
+    duplicates.push(7 as u64);
+    duplicates.push(8 as u64);
+    dec set = iter_collect_hashset(duplicates.into_iter());
+    if set.len() != (2 as u64) {
+        return 5;
+    }
+    return 0;
+}

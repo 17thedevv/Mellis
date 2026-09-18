@@ -1,0 +1,502 @@
+import <__alloc_global>;
+import <ptr>;
+import <mem>;
+import <hash>;
+import <cmp>;
+import <__lang_drop>;
+import <__lang_option>;
+import <__lang_iterator>;
+
+module std {
+    export enum ProbeResult {
+        Found(u64),
+        Vacant(u64),
+    }
+
+    export struct RawTable<K, V> {
+        private states: *rw u8,
+        private hashes: *rw u64,
+        private keys: *rw K,
+        private values: *rw V,
+        private cap: u64,
+        private len: u64,
+        private tombstones: u64,
+    }
+
+    export fn raw_table_new<K, V>() -> RawTable<K, V> {
+        return RawTable<K, V> {
+            states: 0 as u64 as *rw u8,
+            hashes: 0 as u64 as *rw u64,
+            keys: 0 as u64 as *rw K,
+            values: 0 as u64 as *rw V,
+            cap: 0 as u64,
+            len: 0 as u64,
+            tombstones: 0 as u64,
+        };
+    }
+
+    export fn raw_table_with_capacity<K, V>(capacity: u64) -> RawTable<K, V> {
+        if capacity == (0 as u64) {
+            return raw_table_new<K, V>();
+        }
+        dec rw cap: u64 = 8 as u64;
+        while cap < capacity {
+            cap = cap * (2 as u64);
+        }
+        dec k_size = cap * (mem::size_of<K>() as u64);
+        dec k_align = mem::align_of<K>() as u64;
+        dec v_size = cap * (mem::size_of<V>() as u64);
+        dec v_align = mem::align_of<V>() as u64;
+
+        dec states_ptr = __mellis_alloc(cap, 1 as u64);
+        dec hashes_ptr = __mellis_alloc(cap * (8 as u64), 8 as u64) as *rw u64;
+        dec keys_ptr = __mellis_alloc(k_size, k_align) as *rw K;
+        dec values_ptr = __mellis_alloc(v_size, v_align) as *rw V;
+
+        unsafe {
+            mem::zero(states_ptr, cap);
+        }
+
+        return RawTable<K, V> {
+            states: states_ptr,
+            hashes: hashes_ptr,
+            keys: keys_ptr,
+            values: values_ptr,
+            cap: cap,
+            len: 0 as u64,
+            tombstones: 0 as u64,
+        };
+    }
+
+    impl<K: Hash + Eq, V> RawTable<K, V> {
+        export fn len(self: &Self) -> u64 {
+            return self.len;
+        }
+
+        export fn capacity(self: &Self) -> u64 {
+            return self.cap;
+        }
+
+        export fn tombstones(self: &Self) -> u64 {
+            return self.tombstones;
+        }
+
+        export fn is_empty(self: &Self) -> bool {
+            return self.len == (0 as u64);
+        }
+
+        // Probing strategy: Linear probing with first-tombstone reuse.
+        // Search rule:
+        //   - Occupied: compare hash -> Eq
+        //   - Deleted: continue probing (never terminate search)
+        //   - Empty: terminate search
+        export fn find(self: &Self, key: &K, hash: u64) -> ProbeResult {
+            if self.cap == (0 as u64) {
+                return ProbeResult::Vacant(0 as u64);
+            }
+            dec mask = self.cap - (1 as u64);
+            dec rw idx = hash & mask;
+            dec rw first_tombstone: u64 = self.cap;
+            dec rw step: u64 = 0 as u64;
+
+            while step < self.cap {
+                dec rw state_val: u8 = 0 as u8;
+                unsafe {
+                    state_val = *ptr::add<u8>(self.states as *u8, idx);
+                }
+                if state_val == (0 as u8) {
+                    if first_tombstone < self.cap {
+                        return ProbeResult::Vacant(first_tombstone);
+                    } else {
+                        return ProbeResult::Vacant(idx);
+                    }
+                }
+                if state_val == (2 as u8) {
+                    if first_tombstone == self.cap {
+                        first_tombstone = idx;
+                    }
+                }
+                if state_val == (1 as u8) {
+                    dec rw stored_hash: u64 = 0 as u64;
+                    dec rw is_eq: bool = false;
+                    unsafe {
+                        stored_hash = *ptr::add<u64>(self.hashes as *u64, idx);
+                        if stored_hash == hash {
+                            dec stored_key_ptr = ptr::add<K>(self.keys as *K, idx);
+                            is_eq = key.eq(&*stored_key_ptr);
+                        }
+                    }
+                    if stored_hash == hash && is_eq {
+                        return ProbeResult::Found(idx);
+                    }
+                }
+                step = step + (1 as u64);
+                idx = (idx + (1 as u64)) & mask;
+            }
+
+            if first_tombstone < self.cap {
+                return ProbeResult::Vacant(first_tombstone);
+            }
+            return ProbeResult::Vacant(self.cap);
+        }
+
+        export fn insert(self: &rw Self, key: K, val: V) -> bool {
+            if self.cap == (0 as u64) || ((self.len + self.tombstones + (1 as u64)) * (4 as u64) >= self.cap * (3 as u64)) {
+                self.grow();
+            }
+            dec hash = key.hash();
+            dec probe = self.find(&key, hash);
+            match probe {
+                ProbeResult::Found(idx) -> {
+                    unsafe {
+                        dec val_dst = ptr::add_mut<V>(self.values, idx);
+                        ptr::drop_in_place<V>(val_dst);
+                        ptr::write<V>(val_dst, val);
+                    }
+                    return false;
+                },
+                ProbeResult::Vacant(idx) -> {
+                    unsafe {
+                        dec state_ptr = ptr::add_mut<u8>(self.states, idx);
+                        if *state_ptr == (2 as u8) {
+                            self.tombstones = self.tombstones - (1 as u64);
+                        }
+                        *state_ptr = 1 as u8;
+                        dec hash_ptr = ptr::add_mut<u64>(self.hashes, idx);
+                        *hash_ptr = hash;
+                        dec key_dst = ptr::add_mut<K>(self.keys, idx);
+                        ptr::write<K>(key_dst, key);
+                        dec val_dst = ptr::add_mut<V>(self.values, idx);
+                        ptr::write<V>(val_dst, val);
+                    }
+                    self.len = self.len + (1 as u64);
+                    return true;
+                },
+            }
+        }
+
+        export fn get(self: &Self, key: &K) -> Option<&V> life_from(self) {
+            if self.len == (0 as u64) {
+                return Option::None;
+            }
+            dec hash = key.hash();
+            dec probe = self.find(key, hash);
+            match probe {
+                ProbeResult::Found(idx) -> {
+                    unsafe {
+                        dec val_ptr = ptr::add<V>(self.values as *V, idx);
+                        return Option::Some(&*val_ptr);
+                    }
+                },
+                ProbeResult::Vacant(_) -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn get_mut(self: &rw Self, key: &K) -> Option<&rw V> life_from(self) {
+            if self.len == (0 as u64) {
+                return Option::None;
+            }
+            dec hash = key.hash();
+            dec probe = self.find(key, hash);
+            match probe {
+                ProbeResult::Found(idx) -> {
+                    unsafe {
+                        dec val_ptr = ptr::add_mut<V>(self.values, idx);
+                        return Option::Some(&rw *val_ptr);
+                    }
+                },
+                ProbeResult::Vacant(_) -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn contains_key(self: &Self, key: &K) -> bool {
+            if self.len == (0 as u64) {
+                return false;
+            }
+            dec hash = key.hash();
+            dec probe = self.find(key, hash);
+            match probe {
+                ProbeResult::Found(_) -> true,
+                ProbeResult::Vacant(_) -> false,
+            }
+        }
+
+        export fn remove(self: &rw Self, key: &K) -> bool {
+            if self.len == (0 as u64) {
+                return false;
+            }
+            dec hash = key.hash();
+            dec probe = self.find(key, hash);
+            match probe {
+                ProbeResult::Found(idx) -> {
+                    unsafe {
+                        dec key_ptr = ptr::add_mut<K>(self.keys, idx);
+                        ptr::drop_in_place<K>(key_ptr);
+                        dec val_ptr = ptr::add_mut<V>(self.values, idx);
+                        ptr::drop_in_place<V>(val_ptr);
+                        dec state_ptr = ptr::add_mut<u8>(self.states, idx);
+                        *state_ptr = 2 as u8;
+                    }
+                    self.len = self.len - (1 as u64);
+                    self.tombstones = self.tombstones + (1 as u64);
+                    return true;
+                },
+                ProbeResult::Vacant(_) -> {
+                    return false;
+                },
+            }
+        }
+
+        export fn clear(self: &rw Self) {
+            if self.len > (0 as u64) {
+                dec rw i: u64 = 0 as u64;
+                while i < self.cap {
+                    dec rw state_val: u8 = 0 as u8;
+                    unsafe {
+                        state_val = *ptr::add<u8>(self.states as *u8, i);
+                        if state_val == (1 as u8) {
+                            ptr::drop_in_place<K>(ptr::add_mut<K>(self.keys, i));
+                            ptr::drop_in_place<V>(ptr::add_mut<V>(self.values, i));
+                        }
+                    }
+                    i = i + (1 as u64);
+                }
+                unsafe {
+                    mem::zero(self.states, self.cap);
+                }
+                self.len = 0 as u64;
+                self.tombstones = 0 as u64;
+            }
+        }
+
+        fn grow(self: &rw Self) {
+            dec rw new_cap: u64 = 8 as u64;
+            if self.cap > (0 as u64) {
+                if self.len * (2 as u64) <= self.cap {
+                    new_cap = self.cap;
+                } else {
+                    new_cap = self.cap * (2 as u64);
+                }
+            }
+
+            dec k_size = new_cap * (mem::size_of<K>() as u64);
+            dec k_align = mem::align_of<K>() as u64;
+            dec v_size = new_cap * (mem::size_of<V>() as u64);
+            dec v_align = mem::align_of<V>() as u64;
+
+            dec new_states = __mellis_alloc(new_cap, 1 as u64);
+            dec new_hashes = __mellis_alloc(new_cap * (8 as u64), 8 as u64) as *rw u64;
+            dec new_keys = __mellis_alloc(k_size, k_align) as *rw K;
+            dec new_values = __mellis_alloc(v_size, v_align) as *rw V;
+
+            unsafe {
+                mem::zero(new_states, new_cap);
+            }
+
+            if self.cap > (0 as u64) {
+                dec new_mask = new_cap - (1 as u64);
+                dec rw i: u64 = 0 as u64;
+                while i < self.cap {
+                    dec rw state_val: u8 = 0 as u8;
+                    unsafe {
+                        state_val = *ptr::add<u8>(self.states as *u8, i);
+                    }
+                    if state_val == (1 as u8) {
+                        unsafe {
+                            dec cached_hash = *ptr::add<u64>(self.hashes as *u64, i);
+                            dec k = ptr::read<K>(ptr::add<K>(self.keys as *K, i));
+                            dec v = ptr::read<V>(ptr::add<V>(self.values as *V, i));
+
+                            dec rw new_idx = cached_hash & new_mask;
+                            while *ptr::add<u8>(new_states as *u8, new_idx) != (0 as u8) {
+                                new_idx = (new_idx + (1 as u64)) & new_mask;
+                            }
+
+                            *ptr::add_mut<u8>(new_states, new_idx) = 1 as u8;
+                            *ptr::add_mut<u64>(new_hashes, new_idx) = cached_hash;
+                            ptr::write<K>(ptr::add_mut<K>(new_keys, new_idx), k);
+                            ptr::write<V>(ptr::add_mut<V>(new_values, new_idx), v);
+                        }
+                    }
+                    i = i + (1 as u64);
+                }
+
+                dec old_k_size = self.cap * (mem::size_of<K>() as u64);
+                dec old_k_align = mem::align_of<K>() as u64;
+                dec old_v_size = self.cap * (mem::size_of<V>() as u64);
+                dec old_v_align = mem::align_of<V>() as u64;
+
+                unsafe {
+                    __mellis_dealloc(self.states, self.cap, 1 as u64);
+                    __mellis_dealloc(self.hashes as *rw u8, self.cap * (8 as u64), 8 as u64);
+                    __mellis_dealloc(self.keys as *rw u8, old_k_size, old_k_align);
+                    __mellis_dealloc(self.values as *rw u8, old_v_size, old_v_align);
+                }
+            }
+
+            self.states = new_states;
+            self.hashes = new_hashes;
+            self.keys = new_keys;
+            self.values = new_values;
+            self.cap = new_cap;
+            self.tombstones = 0 as u64;
+        }
+
+        export fn iter(self: &Self) -> RawTableIter<K, V> {
+            return RawTableIter<K, V> {
+                states: self.states as *u8,
+                keys: self.keys as *K,
+                values: self.values as *V,
+                idx: 0 as u64,
+                cap: self.cap,
+            };
+        }
+    }
+
+    impl<K, V> Drop for RawTable<K, V> {
+        fn drop(self: &rw Self) {
+            if (self.states as u64) != (0 as u64) && self.cap > (0 as u64) {
+                dec rw i: u64 = 0 as u64;
+                while i < self.cap {
+                    dec rw state_val: u8 = 0 as u8;
+                    unsafe {
+                        state_val = *ptr::add<u8>(self.states as *u8, i);
+                        if state_val == (1 as u8) {
+                            ptr::drop_in_place<K>(ptr::add_mut<K>(self.keys, i));
+                            ptr::drop_in_place<V>(ptr::add_mut<V>(self.values, i));
+                        }
+                    }
+                    i = i + (1 as u64);
+                }
+                dec k_size = self.cap * (mem::size_of<K>() as u64);
+                dec k_align = mem::align_of<K>() as u64;
+                dec v_size = self.cap * (mem::size_of<V>() as u64);
+                dec v_align = mem::align_of<V>() as u64;
+
+                unsafe {
+                    __mellis_dealloc(self.states, self.cap, 1 as u64);
+                    __mellis_dealloc(self.hashes as *rw u8, self.cap * (8 as u64), 8 as u64);
+                    __mellis_dealloc(self.keys as *rw u8, k_size, k_align);
+                    __mellis_dealloc(self.values as *rw u8, v_size, v_align);
+                }
+
+                self.states = 0 as u64 as *rw u8;
+                self.hashes = 0 as u64 as *rw u64;
+                self.keys = 0 as u64 as *rw K;
+                self.values = 0 as u64 as *rw V;
+                self.cap = 0 as u64;
+                self.len = 0 as u64;
+                self.tombstones = 0 as u64;
+            }
+        }
+    }
+
+    // =========================================================================
+    // Collection Iterators: RawTableIter, MapIter, Keys, Values, RawTableIntoIter, MapIntoIter, SetIntoIter
+    // =========================================================================
+
+    export struct RawTableIntoIter<K, V> {
+        private table: RawTable<K, V>,
+        private idx: u64,
+    }
+
+    // Internal component bridge: HashMap owns the public iterator wrapper, while
+    // __raw_table retains exclusive construction access to this private state.
+    export fn raw_table_into_iter<K, V>(table: RawTable<K, V>) -> RawTableIntoIter<K, V> {
+        return RawTableIntoIter<K, V> {
+            table: table,
+            idx: 0 as u64,
+        };
+    }
+
+    impl<K, V> RawTableIntoIter<K, V> {
+        export fn next(self: &rw Self) -> Option<(K, V)> {
+            while self.idx < self.table.capacity() {
+                dec cur = self.idx;
+                self.idx = self.idx + (1 as u64);
+                unsafe {
+                    dec state_ptr = ptr::add_mut<u8>(self.table.states as *rw u8, cur);
+                    dec state_val = *state_ptr;
+                    if state_val == (1 as u8) {
+                        *state_ptr = 0 as u8;
+                        dec k_ptr = ptr::add<K>(self.table.keys as *K, cur);
+                        dec v_ptr = ptr::add<V>(self.table.values as *V, cur);
+                        dec k = ptr::read<K>(k_ptr);
+                        dec v = ptr::read<V>(v_ptr);
+                        return Option::Some((k, v));
+                    }
+                }
+            }
+            return Option::None;
+        }
+    }
+
+
+    export struct RawTableIter<K, V> {
+        private states: *u8,
+        private keys: *K,
+        private values: *V,
+        private idx: u64,
+        private cap: u64,
+    }
+
+    impl<K, V> RawTableIter<K, V> {
+        export fn next_entry(self: &rw Self) -> Option<(&K, &V)> {
+            while self.idx < self.cap {
+                dec cur = self.idx;
+                self.idx = self.idx + (1 as u64);
+                unsafe {
+                    dec state_val = *ptr::add<u8>(self.states, cur);
+                    if state_val == (1 as u8) {
+                        dec k_ptr = ptr::add<K>(self.keys, cur);
+                        dec v_ptr = ptr::add<V>(self.values, cur);
+                        return Option::Some((&*k_ptr, &*v_ptr));
+                    }
+                }
+            }
+            return Option::None;
+        }
+
+        export fn next_key(self: &rw Self) -> Option<&K> {
+            while self.idx < self.cap {
+                dec cur = self.idx;
+                self.idx = self.idx + (1 as u64);
+                unsafe {
+                    dec state_val = *ptr::add<u8>(self.states, cur);
+                    if state_val == (1 as u8) {
+                        dec k_ptr = ptr::add<K>(self.keys, cur);
+                        return Option::Some(&*k_ptr);
+                    }
+                }
+            }
+            return Option::None;
+        }
+
+        export fn next_value(self: &rw Self) -> Option<&V> {
+            while self.idx < self.cap {
+                dec cur = self.idx;
+                self.idx = self.idx + (1 as u64);
+                unsafe {
+                    dec state_val = *ptr::add<u8>(self.states, cur);
+                    if state_val == (1 as u8) {
+                        dec v_ptr = ptr::add<V>(self.values, cur);
+                        return Option::Some(&*v_ptr);
+                    }
+                }
+            }
+            return Option::None;
+        }
+    }
+
+}
+
+export type ProbeResult = std::ProbeResult;
+export type RawTable<K, V> = std::RawTable<K, V>;
+export fn raw_table_new<K, V>() -> RawTable<K, V> { return std::raw_table_new<K, V>(); }
+export fn raw_table_with_capacity<K, V>(capacity: u64) -> RawTable<K, V> { return std::raw_table_with_capacity<K, V>(capacity); }
+export type RawTableIter<K, V> = std::RawTableIter<K, V>;
+export type RawTableIntoIter<K, V> = std::RawTableIntoIter<K, V>;

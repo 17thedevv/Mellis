@@ -1,0 +1,99 @@
+import <hashmap>;
+import <hashset>;
+
+fn main() -> i32 {
+    dec rw map = hashmap_new<u64, u64>();
+    map.insert(1 as u64, 10 as u64);
+    map.insert(2 as u64, 20 as u64);
+    map.insert(3 as u64, 30 as u64);
+    if map.len() != (3 as u64) {
+        return 30;
+    }
+    match map.get(&(2 as u64)) {
+        Option::Some(value) -> {
+            if *value != (20 as u64) {
+                return 1;
+            }
+        },
+        Option::None -> { return 2; },
+    }
+    dec rw borrowed_count = 0 as u64;
+    dec rw map_iter = map.iter();
+    dec rw map_running = true;
+    while map_running {
+        match map_iter.next() {
+            Option::Some(entry) -> {
+                borrowed_count = borrowed_count + (1 as u64);
+            },
+            Option::None -> { map_running = false; },
+        }
+    }
+    if borrowed_count != (3 as u64) {
+        return 3;
+    }
+    if map.remove(&(2 as u64)) == false || map.contains_key(&(2 as u64)) {
+        return 4;
+    }
+
+    dec rw owned_map = hashmap_new<u64, u64>();
+    owned_map.insert(4 as u64, 40 as u64);
+    owned_map.insert(5 as u64, 50 as u64);
+    dec rw owned_map_sum = 0 as u64;
+    dec rw owned_map_iter = owned_map.into_iter();
+    dec rw owned_map_running = true;
+    while owned_map_running {
+        match owned_map_iter.next() {
+            Option::Some(entry) -> {
+                owned_map_sum = owned_map_sum + entry.0 + entry.1;
+            },
+            Option::None -> { owned_map_running = false; },
+        }
+    }
+    if owned_map_sum != (99 as u64) {
+        return 5;
+    }
+
+    dec rw set = hashset_new<u64>();
+    set.insert(1 as u64);
+    set.insert(2 as u64);
+    set.insert(3 as u64);
+    if set.contains(&(2 as u64)) == false {
+        return 6;
+    }
+    dec rw set_count = 0 as u64;
+    dec rw set_iter = set.iter();
+    dec rw set_running = true;
+    while set_running {
+        match set_iter.next() {
+            Option::Some(value) -> {
+                set_count = set_count + (1 as u64);
+            },
+            Option::None -> { set_running = false; },
+        }
+    }
+    if set_count != (3 as u64) {
+        return 7;
+    }
+    if set.remove(&(2 as u64)) == false || set.contains(&(2 as u64)) {
+        return 8;
+    }
+
+    dec rw owned_set = hashset_new<u64>();
+    owned_set.insert(7 as u64);
+    owned_set.insert(8 as u64);
+    dec rw owned_set_sum = 0 as u64;
+    dec rw owned_set_iter = owned_set.into_iter();
+    dec rw owned_set_running = true;
+    while owned_set_running {
+        match owned_set_iter.next() {
+            Option::Some(value) -> {
+                owned_set_sum = owned_set_sum + value;
+            },
+            Option::None -> { owned_set_running = false; },
+        }
+    }
+    if owned_set_sum != (15 as u64) {
+        return 9;
+    }
+    return 0;
+}

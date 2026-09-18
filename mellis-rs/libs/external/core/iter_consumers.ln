@@ -1,0 +1,121 @@
+import <__lang_option>;
+import <__lang_iterator>;
+
+// =========================================================================
+// Terminal Consumers: fold, count, for_each, any, all, find
+// =========================================================================
+
+export fn iter_fold<FoldIter: Iterator<FoldItem>, FoldItem, B>(iter: FoldIter, init: B, f: fn(B, FoldItem) -> B) -> B {
+    dec rw it = iter;
+    dec rw acc = init;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                dec f_ptr = f;
+                acc = f_ptr(acc, x);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return acc;
+}
+
+export fn iter_count<CountIter: Iterator<CountItem>, CountItem>(iter: CountIter) -> u64 {
+    dec rw it = iter;
+    dec rw count: u64 = 0 as u64;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(_) -> {
+                count = count + (1 as u64);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return count;
+}
+
+export fn iter_for_each<EachIter: Iterator<EachItem>, EachItem>(iter: EachIter, f: fn(EachItem)) {
+    dec rw it = iter;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                dec f_ptr = f;
+                f_ptr(x);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+}
+
+export fn iter_any<AnyIter: Iterator<AnyItem>, AnyItem>(iter: AnyIter, pred: fn(AnyItem) -> bool) -> bool {
+    dec rw it = iter;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                dec p_ptr = pred;
+                if p_ptr(x) {
+                    return true;
+                }
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return false;
+}
+
+export fn iter_all<AllIter: Iterator<AllItem>, AllItem>(iter: AllIter, pred: fn(AllItem) -> bool) -> bool {
+    dec rw it = iter;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                dec p_ptr = pred;
+                if p_ptr(x) {
+                } else {
+                    return false;
+                }
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return true;
+}
+
+export fn iter_find<FindIter: Iterator<FindItem>, FindItem>(iter: FindIter, pred: fn(FindItem) -> bool) -> Option<FindItem> {
+    dec rw it = iter;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                dec p_ptr = pred;
+                if p_ptr(x) {
+                    return Option::Some(x);
+                }
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return Option::None;
+}

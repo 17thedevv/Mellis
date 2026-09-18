@@ -1,0 +1,62 @@
+import <vec>;
+import <hashmap>;
+import <hashset>;
+import <hash>;
+import <cmp>;
+import <__lang_iterator>;
+import <__lang_option>;
+
+export fn iter_collect_vec<I: Iterator<Item>, Item>(iter: I) -> Vec<Item> {
+    dec rw vec = vec_new<Item>();
+    dec rw it = iter;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                vec.push(x);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return vec;
+}
+
+export fn iter_collect_hashset<I: Iterator<Item>, Item: Hash + Eq>(iter: I) -> HashSet<Item> {
+    dec rw set = hashset_new<Item>();
+    dec rw it = iter;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                set.insert(x);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return set;
+}
+
+export fn iter_collect_hashmap<I: Iterator<(K, V)>, K: Hash + Eq, V>(iter: I) -> HashMap<K, V> {
+    dec rw map = hashmap_new<K, V>();
+    dec rw it = iter;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some((k, v)) -> {
+                map.insert(k, v);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return map;
+}
+

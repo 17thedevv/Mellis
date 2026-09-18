@@ -1,0 +1,23 @@
+extern fn __mellis_print(p: *u8, len: usize);
+extern fn __mellis_println(p: *u8, len: usize);
+extern fn __mellis_eprintln(p: *u8, len: usize);
+
+module io {
+    export fn print(bytes: &[u8]) {
+        unsafe {
+            __mellis_print(bytes.data as *u8, bytes.len());
+        }
+    }
+
+    export fn println(bytes: &[u8]) {
+        unsafe {
+            __mellis_println(bytes.data as *u8, bytes.len());
+        }
+    }
+
+    export fn eprintln(bytes: &[u8]) {
+        unsafe {
+            __mellis_eprintln(bytes.data as *u8, bytes.len());
+        }
+    }
+}

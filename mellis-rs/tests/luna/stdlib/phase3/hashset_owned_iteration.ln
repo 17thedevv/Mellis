@@ -1,0 +1,20 @@
+import <hashset>;
+
+fn main() -> i32 {
+    dec rw set = hashset_new<u64>();
+    set.insert(7 as u64);
+    set.insert(8 as u64);
+    dec rw sum = 0 as u64;
+    dec rw iter = set.into_iter();
+    dec rw running = true;
+    while running {
+        match iter.next() {
+            Option::Some(value) -> { sum = sum + value; },
+            Option::None -> { running = false; },
+        }
+    }
+    if sum != (15 as u64) {
+        return 1;
+    }
+    return 0;
+}

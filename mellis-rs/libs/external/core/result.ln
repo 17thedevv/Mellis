@@ -1,0 +1,83 @@
+import <core/panic>;
+import <__lang_option>;
+
+export enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+impl<T, E> Result<T, E> {
+    export fn is_ok(self: &Self) -> bool {
+        match *self {
+            Result::Ok(_) -> true,
+            Result::Err(_) -> false,
+        }
+    }
+
+    export fn is_err(self: &Self) -> bool {
+        match *self {
+            Result::Ok(_) -> false,
+            Result::Err(_) -> true,
+        }
+    }
+
+    export fn as_ref(self: &Self) -> Result<&T, &E> life_from(self) {
+        if self.is_ok() {
+            unsafe {
+                dec val_ptr = ((self as *Self as u64) + (4 as u64)) as *T;
+                return Result::Ok(&*val_ptr);
+            }
+        }
+        unsafe {
+            dec err_ptr = ((self as *Self as u64) + (4 as u64)) as *E;
+            return Result::Err(&*err_ptr);
+        }
+    }
+
+    export fn as_mut(self: &rw Self) -> Result<&rw T, &rw E> life_from(self) {
+        if self.is_ok() {
+            unsafe {
+                dec val_ptr = ((self as *rw Self as u64) + (4 as u64)) as *rw T;
+                return Result::Ok(&rw *val_ptr);
+            }
+        }
+        unsafe {
+            dec err_ptr = ((self as *rw Self as u64) + (4 as u64)) as *rw E;
+            return Result::Err(&rw *err_ptr);
+        }
+    }
+
+    export fn ok(self: Self) -> Option<T> {
+        return match self {
+            Result::Ok(val) -> Option::Some(val),
+            Result::Err(e) -> Option::None,
+        };
+    }
+
+    export fn err(self: Self) -> Option<E> {
+        return match self {
+            Result::Ok(val) -> Option::None,
+            Result::Err(e) -> Option::Some(e),
+        };
+    }
+
+    export fn unwrap(self: Self) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(_) -> __mellis_panic(),
+        }
+    }
+}
+
+export trait OptionExt<T> {
+    fn ok_or<E>(self: Self, err: E) -> Result<T, E>;
+}
+
+impl<T> OptionExt<T> for Option<T> {
+    fn ok_or<E>(self: Self, err: E) -> Result<T, E> {
+        return match self {
+            Option::Some(val) -> Result::Ok(val),
+            Option::None -> Result::Err(err),
+        };
+    }
+}

@@ -1,0 +1,24 @@
+import <vec>;
+
+fn sum_owned<I: Iterator<i32>>(iter: I) -> i32 {
+    dec rw it = iter;
+    dec rw sum = 0;
+    dec rw running = true;
+    while running {
+        match it.next() {
+            Option::Some(item) -> { sum = sum + item; },
+            Option::None -> { running = false; },
+        }
+    }
+    return sum;
+}
+
+fn main() -> i32 {
+    dec rw owned = vec_new<i32>();
+    owned.push(4);
+    owned.push(5);
+    if sum_owned(owned.into_iter()) != 9 {
+        return 1;
+    }
+    return 0;
+}

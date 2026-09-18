@@ -1,0 +1,42 @@
+import <vec>;
+
+fn main() -> i32 {
+    dec rw v = vec_new<i32>();
+    v.push(10);
+    v.push(20);
+    v.push(30);
+
+    dec rw borrowed_sum = 0;
+    dec rw borrowed = v.iter();
+    dec rw borrowing = true;
+    while borrowing {
+        match borrowed.next() {
+            Option::Some(item) -> {
+                borrowed_sum = borrowed_sum + *item;
+            },
+            Option::None -> { borrowing = false; },
+        }
+    }
+    if borrowed_sum != 60 {
+        return 1;
+    }
+
+    match v.pop() {
+        Option::Some(value) -> {
+            if value != 30 {
+                return 2;
+            }
+        },
+        Option::None -> { return 3; },
+    }
+    v.truncate(1 as u64);
+    if v.len() != (1 as u64) {
+        return 4;
+    }
+    v.clear();
+    if v.is_empty() == false {
+        return 5;
+    }
+
+    return 0;
+}

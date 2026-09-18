@@ -1,0 +1,4 @@
+#[lang("into_iterator")]
+export trait IntoIterator<Item, IntoIter> {
+    fn into_iter(self: Self) -> IntoIter;
+}

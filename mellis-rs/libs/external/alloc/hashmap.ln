@@ -1,0 +1,179 @@
+import <__raw_table>;
+import <hash>;
+import <cmp>;
+import <__lang_option>;
+import <__lang_iterator>;
+import <__lang_into_iterator>;
+import <__lang_drop>;
+
+module std {
+    export struct MapIntoIter<K, V> {
+        private raw: RawTableIntoIter<K, V>,
+    }
+
+    impl<K, V> MapIntoIter<K, V> {
+        export fn next(self: &rw Self) -> Option<(K, V)> {
+            return self.raw.next();
+        }
+    }
+
+    impl<K, V> Iterator<(K, V)> for MapIntoIter<K, V> {
+        fn next(self: &rw Self) -> Option<(K, V)> {
+            return self.raw.next();
+        }
+    }
+
+
+    export struct MapIter<K, V> {
+        private raw: RawTableIter<K, V>,
+    }
+
+    impl<K, V> MapIter<K, V> {
+        export fn next(self: &rw Self) -> Option<(&K, &V)> {
+            return self.raw.next_entry();
+        }
+    }
+
+    impl<K, V> Iterator<(&K, &V)> for MapIter<K, V> {
+        fn next(self: &rw Self) -> Option<(&K, &V)> {
+            return self.raw.next_entry();
+        }
+    }
+
+    export struct Keys<K, V> {
+        private raw: RawTableIter<K, V>,
+    }
+
+    impl<K, V> Keys<K, V> {
+        export fn next(self: &rw Self) -> Option<&K> {
+            return self.raw.next_key();
+        }
+    }
+
+    impl<K, V> Iterator<&K> for Keys<K, V> {
+        fn next(self: &rw Self) -> Option<&K> {
+            return self.raw.next_key();
+        }
+    }
+
+    export struct Values<K, V> {
+        private raw: RawTableIter<K, V>,
+    }
+
+    impl<K, V> Values<K, V> {
+        export fn next(self: &rw Self) -> Option<&V> {
+            return self.raw.next_value();
+        }
+    }
+
+    impl<K, V> Iterator<&V> for Values<K, V> {
+        fn next(self: &rw Self) -> Option<&V> {
+            return self.raw.next_value();
+        }
+    }
+
+    // =========================================================================
+    // HashMap<K, V>: Canonical Key-Value Hash Map Collection
+    //
+    // Thin semantic wrapper around RawTable<K, V>.
+    // =========================================================================
+    export struct HashMap<K, V> {
+        private table: RawTable<K, V>,
+    }
+
+    export fn hashmap_new<K, V>() -> HashMap<K, V> {
+        return HashMap<K, V> {
+            table: raw_table_new<K, V>(),
+        };
+    }
+
+    export fn hashmap_with_capacity<K, V>(capacity: u64) -> HashMap<K, V> {
+        return HashMap<K, V> {
+            table: raw_table_with_capacity<K, V>(capacity),
+        };
+    }
+
+    impl<K: Hash + Eq, V> HashMap<K, V> {
+        export fn len(self: &Self) -> u64 {
+            return self.table.len();
+        }
+
+        export fn capacity(self: &Self) -> u64 {
+            return self.table.capacity();
+        }
+
+        export fn is_empty(self: &Self) -> bool {
+            return self.table.is_empty();
+        }
+
+        export fn insert(self: &rw Self, key: K, val: V) -> bool {
+            return self.table.insert(key, val);
+        }
+
+        export fn get(self: &Self, key: &K) -> Option<&V> life_from(self) {
+            return self.table.get(key);
+        }
+
+        export fn get_mut(self: &rw Self, key: &K) -> Option<&rw V> life_from(self) {
+            return self.table.get_mut(key);
+        }
+
+        export fn contains_key(self: &Self, key: &K) -> bool {
+            return self.table.contains_key(key);
+        }
+
+        export fn remove(self: &rw Self, key: &K) -> bool {
+            return self.table.remove(key);
+        }
+
+        export fn clear(self: &rw Self) {
+            self.table.clear();
+        }
+
+        export fn iter(self: &Self) -> MapIter<K, V> {
+            return MapIter<K, V> {
+                raw: self.table.iter(),
+            };
+        }
+
+        export fn into_iter(self: Self) -> MapIntoIter<K, V> {
+            return MapIntoIter<K, V> {
+                raw: raw_table_into_iter<K, V>(self.table),
+            };
+        }
+
+        export fn keys(self: &Self) -> Keys<K, V> {
+            return Keys<K, V> {
+                raw: self.table.iter(),
+            };
+        }
+
+        export fn values(self: &Self) -> Values<K, V> {
+            return Values<K, V> {
+                raw: self.table.iter(),
+            };
+        }
+    }
+
+}
+
+export type MapIter<K, V> = std::MapIter<K, V>;
+export type MapIntoIter<K, V> = std::MapIntoIter<K, V>;
+export type Keys<K, V> = std::Keys<K, V>;
+export type Values<K, V> = std::Values<K, V>;
+export type HashMap<K, V> = std::HashMap<K, V>;
+export fn hashmap_new<K, V>() -> HashMap<K, V> { return std::hashmap_new<K, V>(); }
+export fn hashmap_with_capacity<K, V>(capacity: u64) -> HashMap<K, V> { return std::hashmap_with_capacity<K, V>(capacity); }
+
+
+impl<K, V> IntoIterator<(K, V), MapIntoIter<K, V>> for std::HashMap<K, V> {
+    fn into_iter(self: Self) -> MapIntoIter<K, V> {
+        return self.into_iter();
+    }
+}
+
+impl<K, V> IntoIterator<(&K, &V), MapIter<K, V>> for &std::HashMap<K, V> {
+    fn into_iter(self: Self) -> MapIter<K, V> {
+        return self.iter();
+    }
+}

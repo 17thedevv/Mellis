@@ -1,0 +1,20 @@
+export trait Eq {
+    fn eq(self: &Self, other: &Self) -> bool;
+}
+
+export trait Ord {
+    fn cmp(self: &Self, other: &Self) -> i32;
+}
+
+impl Eq for bool { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for char { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for u8 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for u16 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for u32 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for u64 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for usize { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for i8 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for i16 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for i32 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for i64 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for isize { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }

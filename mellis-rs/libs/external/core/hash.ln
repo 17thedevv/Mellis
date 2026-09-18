@@ -1,0 +1,23 @@
+export trait Hash {
+    fn hash(self: &Self) -> u64;
+}
+
+impl Hash for bool {
+    fn hash(self: &Self) -> u64 {
+        if *self { return 1 as u64; } else { return 0 as u64; }
+    }
+}
+impl Hash for char {
+    fn hash(self: &Self) -> u64 { return (*self as u32) as u64; }
+}
+
+impl Hash for u8 { fn hash(self: &Self) -> u64 { return *self as u64; } }
+impl Hash for u16 { fn hash(self: &Self) -> u64 { return *self as u64; } }
+impl Hash for u32 { fn hash(self: &Self) -> u64 { return *self as u64; } }
+impl Hash for u64 { fn hash(self: &Self) -> u64 { return *self; } }
+impl Hash for usize { fn hash(self: &Self) -> u64 { return *self as u64; } }
+impl Hash for i8 { fn hash(self: &Self) -> u64 { return *self as u64; } }
+impl Hash for i16 { fn hash(self: &Self) -> u64 { return *self as u64; } }
+impl Hash for i32 { fn hash(self: &Self) -> u64 { return *self as u64; } }
+impl Hash for i64 { fn hash(self: &Self) -> u64 { return *self as u64; } }
+impl Hash for isize { fn hash(self: &Self) -> u64 { return *self as u64; } }

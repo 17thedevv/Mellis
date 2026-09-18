@@ -1,0 +1,18 @@
+import <string>;
+import <vec>;
+
+fn main() -> i32 {
+    dec rw utf8 = vec_new<u8>();
+    utf8.push(225 as u8);
+    utf8.push(187 as u8);
+    utf8.push(135 as u8);
+    match string_from_bytes(utf8.as_slice()) {
+        Option::Some(value) -> {
+            if value.len() != (3 as u64) {
+                return 1;
+            }
+        },
+        Option::None -> { return 2; },
+    }
+    return 0;
+}
