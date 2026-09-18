@@ -10,12 +10,14 @@
    - MVIR     -> Optimizer
    - LLVM IR  -> Backend
 
-6. Import Provider Resolution Algorithm:
-   - Resolve logical module name.
-   - Search for `.mlib`. If found, load it.
-   - Otherwise, search for `.ms`. If found, compile to `.mlib` (in-memory or persisted) and load it.
-   - Otherwise, emit unresolved-module diagnostic.
-   - Rule: If `.mlib` exists, the compiler NEVER silently recompiles `.ms`. The artifact is the source of truth for downstream dependencies.
+6. Luna Artifact Identity Principle ("Luna trusts identity, never existence"):
+   - **Existence is not validity**: The presence of an artifact (`.llib` or `.mlib`) does not imply it is valid for the current compilation context. The compiler must validate its identity before loading it. If invalid, the compiler rejects it (it does not silently recompile).
+   - **Discovery vs. Validation**: Discovery merely locates a provider candidate. Validation determines if its identity matches the current context. Package management (`mpm`) handles rebuilding if invalid.
+   - **Identity is a Tuple**: Artifact identity is not just a source hash. It encompasses Source Identity, Dependency Interface Identity, Compiler Identity, Target Identity, Feature Identity, and Artifact Kind.
+   - **Source Identity ≠ Interface Identity**: Private implementation changes affect source identity but not interface identity (canonical public contract). The compiler must use a deterministic serialization of the public interface for the `interface_hash`.
+   - **Dependency Interface Fingerprinting**: Artifacts must record the interface identities of their dependencies. Precise incremental invalidation relies on whether a dependency's interface has changed, not just its implementation.
+   - **Compiler Boundary**: The compiler validates and either loads or rejects an artifact. It never auto-rebuilds stale artifacts. `mpm` wraps this process to resolve and rebuild when the compiler rejects a candidate.
+   - **The compiler validates; the application orchestrates**: The Luna compiler is unaware of package-management policy. Artifact validation is a compiler capability; rebuilding, caching, acquisition, versioning, and invalidation policy belong to application-layer tooling.
 
 7. Compiler vs Package Manager Boundary & Module Architecture:
    - **Provider ≠ Module namespace:** `import` selects a *provider*, `module` defines a *namespace*, and `::` accesses a *namespace*.
@@ -60,3 +62,8 @@
      - Freeze Regression -> CLI harness orchestration.
    - **No Convenience Rust Stdlib Suites:** Do not create `crates/luna-driver/tests/stdlib_*` suites merely because internal Rust driver helpers are convenient. First determine whether the behavior can be expressed as a standalone `.ln` fixture executed through `luna`.
    - **Compiler Gap Protocol:** When a compiler gap is encountered during stdlib development, stop stdlib work, isolate the bug with a user-defined reproducer in a dedicated `C-GAP-*` test, and freeze the generic compiler fix before resuming stdlib work.
+
+13. Stdlib Architecture Routing:
+   - For any task involving splitting core.ln / alloc.ln, component-level stdlib providers, lang/ core/ alloc/ io/, logical std module composition, language-contract auto-loading, or stdlib provider/artifact migration.
+   - Agents MUST read `luna-stdlib-architecture`, `luna-lang-contracts`, `luna-stdlib-migration`, `luna-stdlib-compiler-boundary`, and `luna-testing-strategy`.
+   - Migration must start with a strict audit mapping declaration -> component -> dependency -> artifact before any implementation plan is drafted.
