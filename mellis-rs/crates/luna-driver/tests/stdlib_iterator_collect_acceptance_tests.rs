@@ -1092,7 +1092,9 @@ fn test_c12_collect_source_vs_llib_parity() {
     assert!(res_compile.is_ok(), "Compiling iter_collect.ln to iter_collect.llib must succeed: {:?}", res_compile.err());
 
     let canonical_llib = locate_canonical_iter_collect_llib();
-    let _ = fs::copy(&out_llib, &canonical_llib);
+    let tmp = canonical_llib.with_file_name(format!("{}.publish{}", canonical_llib.file_name().unwrap().to_string_lossy(), std::process::id()));
+    let _ = fs::copy(&out_llib, &tmp);
+    let _ = fs::rename(&tmp, &canonical_llib);
 
     let src = r#"
         import <core/panic>;

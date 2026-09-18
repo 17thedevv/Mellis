@@ -718,7 +718,9 @@ fn test_s14_string_source_and_llib_parity() {
     assert!(res_compile.is_ok(), "Compiling string.ln to string.llib must succeed: {:?}", res_compile.err());
 
     let canonical_llib = locate_canonical_string_llib();
-    let _ = fs::copy(&out_llib, &canonical_llib);
+    let tmp = canonical_llib.with_file_name(format!("{}.publish{}", canonical_llib.file_name().unwrap().to_string_lossy(), std::process::id()));
+    let _ = fs::copy(&out_llib, &tmp);
+    let _ = fs::rename(&tmp, &canonical_llib);
 
     let opts = CompilerOptions {
         search_paths: vec![sysroot.root().to_string_lossy().to_string()],

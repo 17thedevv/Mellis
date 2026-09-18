@@ -122,10 +122,7 @@ impl MlibReader {
                     reader.read_exact(&mut data)?;
                     let manifest: crate::format::Manifest = match bincode::deserialize(&data) {
                         Ok(m) => m,
-                        Err(e) => {
-                            println!("Failed to deserialize manifest: {:?}", e);
-                            return Err(MlibError::CorruptedData);
-                        }
+                        Err(_) => return Err(MlibError::CorruptedData),
                     };
                     manifest_opt = Some(manifest);
                 }
@@ -196,10 +193,7 @@ impl MlibReader {
                     let mut cursor = std::io::Cursor::new(data);
                     let m = match Self::deserialize_module_internal(&mut cursor) {
                         Ok(m) => m,
-                        Err(e) => {
-                            println!("Failed to deserialize module internal: {:?}", e);
-                            return Err(MlibError::CorruptedData);
-                        }
+                        Err(_) => return Err(MlibError::CorruptedData),
                     };
                     mlib_module.functions = m.functions;
                     if !m.strings.is_empty() {
@@ -216,10 +210,6 @@ impl MlibReader {
             }
         }
         
-        println!("Found {} sections", sections.len());
-        println!("String table raw size: {}", raw_string_table.len());
-        println!("Found {} types", mlib_module.types.len());
-
         Ok((mlib_module, manifest_opt, obj_bytes_opt, semantic_opt))
     }
 

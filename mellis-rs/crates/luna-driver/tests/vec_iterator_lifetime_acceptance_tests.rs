@@ -84,11 +84,15 @@ fn test_proof_1_alloc_compiles_to_llib_with_contracts() {
 
     // Sync canonical libs/external/alloc/vec.llib with freshly validated build
     let canonical_llib = locate_canonical_vec_llib();
-    let _ = fs::copy(&out_llib, &canonical_llib);
+    let tmp = canonical_llib.with_file_name(format!("{}.publish{}", canonical_llib.file_name().unwrap().to_string_lossy(), std::process::id()));
+    let _ = fs::copy(&out_llib, &tmp);
+    let _ = fs::rename(&tmp, &canonical_llib);
     let out_obj = dir.join("vec.obj");
     if out_obj.exists() {
         let canonical_obj = canonical_llib.with_extension("obj");
-        let _ = fs::copy(&out_obj, &canonical_obj);
+        let tmp_obj = canonical_obj.with_file_name(format!("{}.publish{}", canonical_obj.file_name().unwrap().to_string_lossy(), std::process::id()));
+        let _ = fs::copy(&out_obj, &tmp_obj);
+        let _ = fs::rename(&tmp_obj, &canonical_obj);
     }
 }
 

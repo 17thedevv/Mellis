@@ -106,8 +106,6 @@ impl<'a> MetadataBuilder<'a> {
                     if let Some(m_ty) = m_ty_opt {
                         let ty_idx = self.convert_type_id(m_ty);
                         methods.insert(m_canon.name.clone(), ty_idx);
-                    } else {
-                        println!("BUILDER DROPPED METHOD: {} (decl_id: {:?}) for impl {:?}", m_canon.name, m_canon.decl_id, impl_key.self_type_def);
                     }
                 }
 
@@ -209,14 +207,10 @@ impl<'a> MetadataBuilder<'a> {
         } else {
             self.registry.get_provider_name(sym_id.provider_id)
         };
-        let stable = StableSymbolId {
+        StableSymbolId {
             provider_name,
             symbol_path: sym_id.name.clone(),
-        };
-        if sym_id.name == "T" {
-            eprintln!("[METADATA BUILDER] convert_symbol_id T: canon_decl={:?} -> {:?}", sym_id.decl_id, stable);
         }
-        stable
     }
 
     fn convert_exported_symbol(&mut self, sym: &ExternalSymbol) -> ExportedSymbol {

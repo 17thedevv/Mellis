@@ -323,18 +323,12 @@ impl InterfaceDecoder {
 
     fn allocate_sym(&mut self, stable: &StableSymbolId) -> luna_common::ids::SymbolId {
         if let Some(&id) = self.stable_to_local_sym.get(stable) {
-            if stable.symbol_path == "T" {
-                eprintln!("[METADATA DECODER] allocate_sym (cached): {:?} -> {:?}", stable, id);
-            }
             return id;
         }
         let id = luna_common::ids::SymbolId(self.symbol_id_allocator);
         self.symbol_id_allocator += 1;
         self.stable_to_local_sym.insert(stable.clone(), id);
-        if stable.symbol_path == "T" {
-            eprintln!("[METADATA DECODER] allocate_sym (new): {:?} -> {:?}", stable, id);
-        }
-        
+
         let pid = if stable.provider_name == self.provider_name {
             self.provider_id
         } else if let Some(&other_pid) = self.known_providers.get(&stable.provider_name) {

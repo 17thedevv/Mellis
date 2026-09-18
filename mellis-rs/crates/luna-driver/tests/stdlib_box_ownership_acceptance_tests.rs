@@ -524,7 +524,9 @@ fn test_b13_source_vs_llib_parity() {
 
     // Sync canonical box.llib
     let canonical_llib = locate_canonical_alloc_llib();
-    let _ = fs::copy(&out_llib, &canonical_llib);
+    let tmp = canonical_llib.with_file_name(format!("{}.publish{}", canonical_llib.file_name().unwrap().to_string_lossy(), std::process::id()));
+    let _ = fs::copy(&out_llib, &tmp);
+    let _ = fs::rename(&tmp, &canonical_llib);
 
     let consumer_src = r#"
         import <box>;

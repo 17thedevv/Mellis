@@ -925,7 +925,9 @@ fn test_hashmap_source_vs_llib_parity() {
     assert!(res_compile.is_ok(), "Compiling hashmap.ln to hashmap.llib must succeed: {:?}", res_compile.err());
 
     let canonical_llib = locate_canonical_hashmap_llib();
-    let _ = fs::copy(&out_llib, &canonical_llib);
+    let tmp = canonical_llib.with_file_name(format!("{}.publish{}", canonical_llib.file_name().unwrap().to_string_lossy(), std::process::id()));
+    let _ = fs::copy(&out_llib, &tmp);
+    let _ = fs::rename(&tmp, &canonical_llib);
 
     let src = r#"
         import <core/panic>;

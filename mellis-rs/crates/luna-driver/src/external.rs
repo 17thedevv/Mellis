@@ -69,9 +69,20 @@ impl ExternalComponentLoader {
         // If AstInterface section is present in the binary library (.llib / .mlib),
         // deserialize and relocate the AST arena and items into global_arena,
         // making generic function bodies available for monomorphization (Rule 7, IMPORT-8).
-        if let Ok(Some((mut provider_arena, mut provider_items, source))) =
-            luna_llib::reader::MlibReader::read_ast_interface(&mut file)
-        {
+        // A corrupt AstInterface section is an invalid artifact, NOT a signal to fall back
+        // to SemanticMetadata reconstruction.
+        let ast_interface = match luna_llib::reader::MlibReader::read_ast_interface(&mut file) {
+            Ok(ast) => ast,
+            Err(e) => {
+                return Err(ExternalComponentError::InvalidArtifact {
+                    name: descriptor.name.clone(),
+                    path: descriptor.entry_file.clone(),
+                    reason: format!("Corrupt AstInterface section: {:?}", e),
+                });
+            }
+        };
+
+        if let Some((mut provider_arena, provider_items, source)) = ast_interface {
             let file_id = driver_session
                 .compiler_session
                 .source_manager
@@ -106,6 +117,30 @@ impl ExternalComponentLoader {
             ) {
                 driver_session.registry.finish_loading();
                 return Err(ExternalComponentError::ImportFailed(inner_diags));
+            }
+
+            // Re-validate dependency freshness now that all transitive dependencies are loaded.
+            // This enforces graph-wide freshness: a stale dependency interface fingerprint must
+            // reject the artifact rather than silently consume stale metadata.
+            {
+                let mut loaded_dependencies = std::collections::HashMap::new();
+                for interface in driver_session.registry.interfaces.values() {
+                    loaded_dependencies.insert(interface.name.clone(), interface.interface_fingerprint);
+                }
+                let dep_validation_ctx = luna_llib::ValidationContext {
+                    expected_compiler_version: "0.1.0".to_string(),
+                    expected_target: luna_backend::TargetConfig::default().triple,
+                    expected_source_fingerprint: None,
+                    expected_dependencies: loaded_dependencies,
+                };
+                if let Err(reason) = luna_llib::validate_artifact(&manifest, &dep_validation_ctx) {
+                    driver_session.registry.finish_loading();
+                    return Err(ExternalComponentError::InvalidArtifact {
+                        name: descriptor.name.clone(),
+                        path: descriptor.entry_file.clone(),
+                        reason,
+                    });
+                }
             }
 
             let expr_start = global_arena.exprs.len() as u32;
@@ -178,12 +213,16 @@ impl ExternalComponentLoader {
                 decls: decl_start..(global_arena.decls.len() as u32),
                 pats: pat_start..(global_arena.pats.len() as u32),
             };
-            let interface = ModuleRegistry::extract_interface_from_ctx(
+            let mut interface = ModuleRegistry::extract_interface_from_ctx(
                 descriptor.name.clone(),
                 provider_id,
                 &semantic_ctx,
                 &ranges,
             );
+            // Propagate the artifact's canonical interface fingerprint so downstream
+            // dependency freshness validation compares against the real interface identity
+            // rather than the default zero fingerprint.
+            interface.interface_fingerprint = manifest.provenance.interface_fingerprint;
             driver_session.registry.register_external(descriptor.name.clone(), interface);
             driver_session.registry.finish_loading();
 
@@ -207,8 +246,27 @@ impl ExternalComponentLoader {
             return Ok(provider_id);
         }
 
-        // Fallback for libraries without AstInterface: decode SemanticMetadata
-        // Making sure it is positioned at the start for AstRelocator
+        // Canonical current `.llib` artifacts MUST carry the AstInterface section:
+        // it is the required semantic authority for source/.llib parity
+        // (ARTIFACT-PARITY-01). The SemanticMetadata-only reconstruction below is
+        // semantic-lossy (no trait bounds / associated types / lang items), so it is
+        // restricted to legacy `.mlib` compatibility artifacts. A canonical `.llib`
+        // missing AstInterface is an invalid artifact, not a fallback case.
+        let is_legacy_mlib = descriptor
+            .entry_file
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.eq_ignore_ascii_case("mlib"))
+            .unwrap_or(false);
+        if !is_legacy_mlib {
+            return Err(ExternalComponentError::InvalidArtifact {
+                name: descriptor.name.clone(),
+                path: descriptor.entry_file.clone(),
+                reason: "canonical .llib is missing the required AstInterface section".to_string(),
+            });
+        }
+
+        // Legacy `.mlib` compatibility: decode SemanticMetadata.
         let _ = file.seek(std::io::SeekFrom::Start(0));
 
         let (_, _, _, semantic_metadata) = luna_llib::reader::MlibReader::read_module(&mut file).map_err(|e| {
