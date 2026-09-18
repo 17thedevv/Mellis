@@ -1,223 +1,266 @@
+use luna_common::CompilerSession;
+use luna_driver::resolution_context::ProviderResolutionContext;
 use luna_driver::sysroot::Sysroot;
 use luna_driver::{check, CompilerOptions};
-use luna_common::CompilerSession;
 use std::fs;
 use std::path::PathBuf;
 
 fn create_temp_dir(test_name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join("mellis_core_isolation_tests").join(test_name);
+    let dir = std::env::temp_dir()
+        .join("mellis_core_isolation_tests")
+        .join(test_name);
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("Failed to create test temp dir");
     dir
 }
 
-/// Invariant C: Core symbols do NOT appear in user namespace without `import <core>;`
-#[test]
-fn test_invariant_c_no_implicit_core_symbols_without_import() {
-    let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
-    let dir = create_temp_dir("invariant_c");
-    let main_path = dir.join("main.ln");
-
-    // 1. Check Result is unresolved without import
-    let src_result = r#"
-        fn foo(x: Result<i32, string>) {}
-    "#;
-    fs::write(&main_path, src_result).unwrap();
-    let opts = CompilerOptions {
-        search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
+fn check_with_sysroot(test_name: &str, source: &str) -> Result<(), Vec<luna_common::Diagnostic>> {
+    let sysroot = Sysroot::discover_for_test().expect("test sysroot required");
+    let dir = create_temp_dir(test_name);
+    let path = dir.join("main.ln");
+    fs::write(&path, source).unwrap();
+    let options = CompilerOptions {
+        search_paths: vec![sysroot.root().to_string_lossy().to_string()],
         quiet: true,
         ..Default::default()
     };
-    let res = check(main_path.to_str().unwrap(), src_result.to_string(), &opts);
-    assert!(res.is_err(), "Result must NOT be visible without import");
-    let errs = res.unwrap_err();
+    check(path.to_str().unwrap(), source.to_string(), &options)
+}
+
+/// Compiler-required contracts are visible without a user import, but ordinary
+/// core APIs such as Result remain explicit.
+#[test]
+fn test_language_contract_visibility_is_controlled() {
+    let contracts = r#"
+        fn accepts_drop<T: Drop>(value: &T) {}
+        fn accepts_iterator<I: Iterator>(value: &I) {}
+        fn accepts_into_iterator<I: IntoIterator>(value: &I) {}
+        fn main() {
+            dec value: Option<i32> = Option::Some(1);
+        }
+    "#;
     assert!(
-        errs.iter().any(|d| d.message.contains("cannot find type `Result`") || d.message.contains("unresolved") || d.message.contains("not found")),
-        "Expected unresolved error for Result, got: {:?}", errs
+        check_with_sysroot("implicit_contracts", contracts).is_ok(),
+        "Drop, Option, Iterator and IntoIterator are compiler contracts"
     );
 
-    // 2. Check Drop trait is unresolved without import
-    let src_drop = r#"
-        fn bar(x: Drop) {}
-    "#;
-    fs::write(&main_path, src_drop).unwrap();
-    let res = check(main_path.to_str().unwrap(), src_drop.to_string(), &opts);
-    assert!(res.is_err(), "Drop must NOT be visible without import");
-    let errs = res.unwrap_err();
+    let ordinary_api = "fn main() { dec value: Result<i32, i32> = Result::Ok(1); }";
     assert!(
-        errs.iter().any(|d| d.message.contains("cannot find type `Drop`") || d.message.contains("unresolved") || d.message.contains("not found")),
-        "Expected unresolved error for Drop, got: {:?}", errs
-    );
-
-    // 3. Check ControlFlow is unresolved without import
-    let src_cf = r#"
-        fn baz(x: ControlFlow<i32, string>) {}
-    "#;
-    fs::write(&main_path, src_cf).unwrap();
-    let res = check(main_path.to_str().unwrap(), src_cf.to_string(), &opts);
-    assert!(res.is_err(), "ControlFlow must NOT be visible without import");
-    let errs = res.unwrap_err();
-    assert!(
-        errs.iter().any(|d| d.message.contains("cannot find type `ControlFlow`") || d.message.contains("unresolved") || d.message.contains("not found")),
-        "Expected unresolved error for ControlFlow, got: {:?}", errs
+        check_with_sysroot("result_not_implicit", ordinary_api).is_err(),
+        "Result must not become implicitly visible"
     );
 }
 
-/// Invariant D: Explicitly imported core API works bare and rejects `core::...` (IMPORT-3)
 #[test]
-fn test_invariant_d_explicit_import_core_works() {
-    let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
-    let dir = create_temp_dir("invariant_d");
-    let main_path = dir.join("main.ln");
-
-    let src = r#"
-        import <core>;
-
-        fn make_result() -> Result<i32, i32> {
-            return Result::Ok(42);
-        }
-
-        fn make_cf() -> ControlFlow<i32, str> {
-            return ControlFlow::Continue("hello");
-        }
-
-        fn main() -> i32 {
-            return 0;
-        }
+fn test_explicit_result_provider_exposes_root_binding_only() {
+    let good = r#"
+        import <result>;
+        fn main() { dec value: Result<i32, i32> = Result::Ok(42); }
     "#;
-    fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions {
-        search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
-        quiet: true,
-        ..Default::default()
-    };
-    let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "Importing core and accessing bare Result, ControlFlow must succeed, got: {:?}", res.err());
+    assert!(check_with_sysroot("explicit_result", good).is_ok());
 
-    // Verify core::Result is rejected per IMPORT-3
-    let src_bad = r#"
-        import <core>;
-        fn make_result() -> core::Result<i32, i32> {
-            return core::Result::Ok(42);
-        }
+    let bad = r#"
+        import <result>;
+        fn main() { dec value: result::Result<i32, i32>; }
     "#;
-    fs::write(&main_path, src_bad).unwrap();
-    let res_bad = check(main_path.to_str().unwrap(), src_bad.to_string(), &opts);
-    assert!(res_bad.is_err(), "Accessing core::Result must be rejected under IMPORT-3");
+    assert!(
+        check_with_sysroot("result_not_namespace", bad).is_err(),
+        "logical provider identity must not synthesize a namespace"
+    );
 }
 
-/// Invariant A: `?` operator works via LangItem desugaring with bare Result
 #[test]
-fn test_invariant_a_try_operator_independent_of_lexical_try() {
-    let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
-    let dir = create_temp_dir("invariant_a");
-    let main_path = dir.join("main.ln");
+fn test_try_operator_works_through_explicit_try_contract_provider() {
+    let source = r#"
+        import <result>;
+        import <try>;
 
-    let src = r#"
-        import <core>;
-
-        fn step1() -> Result<i32, i32> {
-            return Result::Ok(10);
-        }
-
+        fn step1() -> Result<i32, i32> { return Result::Ok(10); }
         fn step2() -> Result<i32, i32> {
-            dec val = step1()?;
-            return Result::Ok(val + 5);
+            dec value = step1()?;
+            return Result::Ok(value + 5);
         }
-
-        fn main() -> i32 {
-            return 0;
-        }
+        fn main() {}
     "#;
-    fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions {
-        search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
-        quiet: true,
-        ..Default::default()
-    };
-    let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "`?` operator desugaring must succeed: {:?}", res.err());
+    assert!(
+        check_with_sysroot("explicit_try", source).is_ok(),
+        "the try surface is an explicit logical provider"
+    );
 }
 
-/// Invariant B: `Drop` semantics work with bare Drop (IMPORT-3)
 #[test]
-fn test_invariant_b_drop_independent_of_lexical_drop() {
-    let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
-    let dir = create_temp_dir("invariant_b");
-    let main_path = dir.join("main.ln");
-
-    let src = r#"
-        import <core>;
-
-        struct Handle {
-            id: i32,
-        }
-
+fn test_drop_contract_is_available_without_ordinary_core_imports() {
+    let source = r#"
+        struct Handle { id: i32, }
         impl Drop for Handle {
-            fn drop(self: &rw Handle) {
-                // cleanup
-            }
+            fn drop(self: &rw Handle) {}
         }
-
-        fn process() {
-            dec h = Handle { id: 1 };
-            // Drop should be checked and elaborated with Drop
-        }
-
-        fn main() -> i32 {
-            process();
-            return 0;
-        }
+        fn main() { dec handle = Handle { id: 1 }; }
     "#;
-    fs::write(&main_path, src).unwrap();
-    let opts = CompilerOptions {
-        search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
-        quiet: true,
-        ..Default::default()
-    };
-    let res = check(main_path.to_str().unwrap(), src.to_string(), &opts);
-    assert!(res.is_ok(), "Implementing Drop must succeed: {:?}", res.err());
+    assert!(check_with_sysroot("implicit_drop", source).is_ok());
 }
 
-/// Invariant E: LangItem registry points to canonical declaration identities from `core.ln`
 #[test]
-fn test_invariant_e_lang_items_mapped_to_canonical_declarations() {
-    let sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
-    let mut compiler_session = CompilerSession::new();
-    let mut driver_session = luna_driver::session::DriverSession::new(sysroot, &mut compiler_session, &[]);
+fn test_lang_item_registry_uses_component_provider_declarations() {
+    use luna_semantic::lang_item::LangItem;
 
+    let sysroot = Sysroot::discover_for_test().expect("test sysroot required");
+    let mut compiler_session = CompilerSession::new();
+    let mut driver_session =
+        luna_driver::session::DriverSession::new(sysroot, &mut compiler_session, &[]);
     let mut arena = luna_ast::AstArena::new();
 
-    let core_id = driver_session.bootstrap_core(&mut arena)
-        .expect("Failed to bootstrap core");
+    driver_session
+        .bootstrap_lang_contracts(&mut arena)
+        .expect("language contract bootstrap must succeed");
+    driver_session
+        .load_package("try", &mut arena, ProviderResolutionContext::SysrootDependency)
+        .expect("try provider must load through the manifest");
 
-    let interface = driver_session.registry.interfaces.get(&core_id)
-        .expect("Core interface must exist in registry");
-
-    // Verify all 6 frozen lang items are registered in core interface
-    use luna_semantic::lang_item::LangItem;
-    assert!(interface.lang_items.contains_key(&LangItem::Drop), "Drop must be registered");
-    assert!(interface.lang_items.contains_key(&LangItem::FromResidual), "FromResidual must be registered");
-    assert!(interface.lang_items.contains_key(&LangItem::Try), "Try must be registered");
-    assert!(interface.lang_items.contains_key(&LangItem::ControlFlow), "ControlFlow must be registered");
-    assert!(interface.lang_items.contains_key(&LangItem::ControlFlowContinue), "Continue must be registered");
-    assert!(interface.lang_items.contains_key(&LangItem::ControlFlowBreak), "Break must be registered");
-
-    // Verify when injected into SemanticContext, LangItemRegistry is fully populated
     let mut semantic_ctx = luna_semantic::SemanticContext::new();
     driver_session.registry.inject_into_ctx(&mut semantic_ctx);
 
-    assert!(semantic_ctx.lang_items.get(LangItem::Drop).is_some());
-    assert!(semantic_ctx.lang_items.get(LangItem::FromResidual).is_some());
-    assert!(semantic_ctx.lang_items.get(LangItem::Try).is_some());
-    assert!(semantic_ctx.lang_items.get(LangItem::ControlFlow).is_some());
-    assert!(semantic_ctx.lang_items.get(LangItem::ControlFlowContinue).is_some());
-    assert!(semantic_ctx.lang_items.get(LangItem::ControlFlowBreak).is_some());
-
-    // Verify that ScopeId(0) does NOT contain core symbols
-    let global_scope = luna_semantic::symbol::ScopeId(0);
-    assert!(semantic_ctx.symbol_table.lookup("Drop", global_scope).is_none(), "Drop must NOT be in global scope");
-    assert!(semantic_ctx.symbol_table.lookup("Result", global_scope).is_none(), "Result must NOT be in global scope");
-    assert!(semantic_ctx.symbol_table.lookup("Try", global_scope).is_none(), "Try must NOT be in global scope");
-    assert!(semantic_ctx.symbol_table.lookup("ControlFlow", global_scope).is_none(), "ControlFlow must NOT be in global scope");
+    for item in [
+        LangItem::Drop,
+        LangItem::Option,
+        LangItem::OptionSome,
+        LangItem::OptionNone,
+        LangItem::Iterator,
+        LangItem::IntoIterator,
+        LangItem::FromResidual,
+        LangItem::Try,
+        LangItem::ControlFlow,
+        LangItem::ControlFlowContinue,
+        LangItem::ControlFlowBreak,
+    ] {
+        assert!(
+            semantic_ctx.lang_items.get(item).is_some(),
+            "missing canonical lang item {item:?}"
+        );
+    }
 }
+
+#[test]
+fn test_option_ext_method_available_without_import_result() {
+    let src = r#"
+        fn main() {
+            dec opt = Option::Some(10);
+            dec r = opt.ok_or(0);
+        }
+    "#;
+    assert!(
+        check_with_sysroot("option_ext_ok_or_available", src).is_ok(),
+        "OptionExt method ok_or must be available through controlled standard prelude without importing <result>"
+    );
+}
+
+#[test]
+fn test_result_type_unresolved_without_import_result() {
+    let src = r#"
+        fn main() {
+            dec r: Result<i32, i32>;
+        }
+    "#;
+    assert!(
+        check_with_sysroot("result_type_unresolved", src).is_err(),
+        "Result type must be unresolved without explicit import <result>"
+    );
+}
+
+#[test]
+fn test_result_type_resolved_with_explicit_import_result() {
+    let src = r#"
+        import <result>;
+        fn main() {
+            dec r: Result<i32, i32> = Result::Ok(42);
+        }
+    "#;
+    assert!(
+        check_with_sysroot("result_type_resolved", src).is_ok(),
+        "Result must resolve with explicit import <result>"
+    );
+}
+
+#[test]
+fn test_transitive_bootstrap_panic_not_globally_visible() {
+    let bad = r#"
+        fn main() -> i32 {
+            __mellis_panic();
+        }
+    "#;
+    assert!(
+        check_with_sysroot("panic_not_globally_visible", bad).is_err(),
+        "__mellis_panic must not be globally visible despite core/panic being transitively loaded during bootstrap"
+    );
+
+    let good = r#"
+        import <core/panic>;
+        fn main() -> i32 {
+            __mellis_panic();
+        }
+    "#;
+    assert!(
+        check_with_sysroot("panic_with_explicit_import", good).is_ok(),
+        "__mellis_panic must be available with explicit import <core/panic>"
+    );
+}
+
+
+#[test]
+fn test_explicit_standard_providers_negative_matrix() {
+    struct Case {
+        name: &'static str,
+        provider: &'static str,
+        bad_snippet: &'static str,
+        good_snippet: &'static str,
+    }
+
+    let cases = [
+        Case {
+            name: "vec",
+            provider: "vec",
+            bad_snippet: "fn main() { dec v = vec_new<i32>(); }",
+            good_snippet: "import <vec>; fn main() { dec v = vec_new<i32>(); }",
+        },
+        Case {
+            name: "string",
+            provider: "string",
+            bad_snippet: "fn main() { dec s = string_new(); }",
+            good_snippet: "import <string>; fn main() { dec s = string_new(); }",
+        },
+        Case {
+            name: "hashmap",
+            provider: "hashmap",
+            bad_snippet: "fn main() { dec m = hashmap_new<i32, i32>(); }",
+            good_snippet: "import <hashmap>; fn main() { dec m = hashmap_new<i32, i32>(); }",
+        },
+        Case {
+            name: "hashset",
+            provider: "hashset",
+            bad_snippet: "fn main() { dec s = hashset_new<i32>(); }",
+            good_snippet: "import <hashset>; fn main() { dec s = hashset_new<i32>(); }",
+        },
+        Case {
+            name: "io",
+            provider: "io",
+            bad_snippet: "fn main() { dec msg: [u8; 1] = [65 as u8]; io::println(&msg); }",
+            good_snippet: "import <io>; fn main() { dec msg: [u8; 1] = [65 as u8]; io::println(&msg); }",
+        },
+    ];
+
+    for case in cases {
+        assert!(
+            check_with_sysroot(&format!("neg_{}", case.name), case.bad_snippet).is_err(),
+            "{} must require explicit import <{}>",
+            case.name,
+            case.provider
+        );
+        assert!(
+            check_with_sysroot(&format!("pos_{}", case.name), case.good_snippet).is_ok(),
+            "{} with import <{}> must resolve cleanly",
+            case.name,
+            case.provider
+        );
+    }
+}
+
