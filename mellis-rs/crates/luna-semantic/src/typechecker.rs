@@ -5353,16 +5353,35 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             luna_ast::Expr::Member { object, .. } | luna_ast::Expr::TupleIndex { object, .. } => {
-                self.enforce_mutability(object);
+                let obj_ty = self.ctx.tables.expr_types.get(object).copied().unwrap_or(crate::ty::SemanticTypeId(0));
+                match self.ctx.types.get(obj_ty) {
+                    SemanticType::Reference(_, crate::ty::Mutability::Immutable, _) => {
+                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                        self.ctx.diagnostics.push(Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_REFERENCE: Cannot mutate through an immutable reference `&T`")
+                            .with_span(span));
+                    }
+                    SemanticType::Reference(_, crate::ty::Mutability::Mutable, _) => {
+                        // Mutable reference provides write capability through dereference;
+                        // does not mutate the variable holding the reference.
+                    }
+                    _ => {
+                        self.enforce_mutability(object);
+                    }
+                }
             }
             luna_ast::Expr::Index { base, .. } => {
                 let base_ty = self.ctx.tables.expr_types.get(base).copied().unwrap_or(crate::ty::SemanticTypeId(0));
-                if let SemanticType::Reference(_, crate::ty::Mutability::Immutable, _) = self.ctx.types.get(base_ty) {
-                    let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
-                    self.ctx.diagnostics.push(Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_REFERENCE: Cannot mutate through an immutable reference `&T`")
-                        .with_span(span));
+                match self.ctx.types.get(base_ty) {
+                    SemanticType::Reference(_, crate::ty::Mutability::Immutable, _) => {
+                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                        self.ctx.diagnostics.push(Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_REFERENCE: Cannot mutate through an immutable reference `&T`")
+                            .with_span(span));
+                    }
+                    SemanticType::Reference(_, crate::ty::Mutability::Mutable, _) => {}
+                    _ => {
+                        self.enforce_mutability(base);
+                    }
                 }
-                self.enforce_mutability(base);
             }
             luna_ast::Expr::Unary { op: luna_ast::expr::UnaryOp::Deref | luna_ast::expr::UnaryOp::DerefMut, operand } => {
                 let ptr_ty = self.ctx.tables.expr_types.get(operand).copied().unwrap_or(crate::ty::SemanticTypeId(0));
