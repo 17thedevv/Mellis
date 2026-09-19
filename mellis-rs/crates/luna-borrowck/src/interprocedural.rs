@@ -9,17 +9,21 @@ pub struct InterproceduralContext<'a> {
 }
 
 impl<'a> InterproceduralContext<'a> {
-    pub fn new() -> Self {
+    pub fn new(ctx: &'a luna_semantic::SemanticContext) -> Self {
         Self {
             summaries: HashMap::new(),
-            ctx: None,
+            ctx: Some(ctx),
         }
     }
 
     pub fn with_context(ctx: &'a luna_semantic::SemanticContext) -> Self {
+        Self::new(ctx)
+    }
+
+    pub fn context_free_for_test() -> Self {
         Self {
             summaries: HashMap::new(),
-            ctx: Some(ctx),
+            ctx: None,
         }
     }
 

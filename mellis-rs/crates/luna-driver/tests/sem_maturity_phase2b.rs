@@ -1204,7 +1204,6 @@ mod shared_borrow_after_ended_mutable {
 
     // SEM-ENDED-05: VALID-POSITIVE - function call with mut ref, then shared
     #[test]
-    #[ignore = "COMPILER-GAP: SEM-GAP-15"]
     fn sem_borrow_ended_05_fn_call_mut_then_shared() {
         let src = r#"
             fn modify(v: &rw i32) -> i32 {
@@ -1474,4 +1473,75 @@ mod phase2c_controls {
         "#;
         assert_compile_success("ctrl_shared_read", src, "Read through &T permitted");
     }
+
+    // Control 6 (Provenance control): Returned &rw reference carrying provenance prevents subsequent incompatible borrow (INVALID)
+    #[test]
+    fn test_ctrl_prov_returned_mutref_retains_loan() {
+        let src = r#"
+            fn identity_mut(x: &rw i32) -> &rw i32 life_from(x) {
+                return x;
+            }
+            fn main() -> i32 {
+                dec rw val = 10;
+                dec r = identity_mut(&rw val);
+                dec r2 = &rw val;
+                *r = 20;
+                return *r;
+            }
+        "#;
+        assert_compile_error("ctrl_ret_mutref_loan", src, "already borrowed", "Returned &rw reference carrying provenance prevents incompatible access");
+    }
+
+    // Control 7 (Provenance control): Provenance carried through user-defined aggregate (INVALID)
+    #[test]
+    fn test_ctrl_prov_aggregate_carries_provenance() {
+        let src = r#"
+            struct RefWrap {
+                ptr: &rw i32,
+            }
+            fn wrap(x: &rw i32) -> RefWrap life_from(x) {
+                return RefWrap { ptr: x };
+            }
+            fn main() -> i32 {
+                dec rw val = 10;
+                dec w = wrap(&rw val);
+                dec r2 = &rw val;
+                *w.ptr = 20;
+                return *w.ptr;
+            }
+        "#;
+        assert_compile_error("ctrl_agg_prov", src, "already borrowed", "Aggregate-carried provenance prevents incompatible access");
+    }
+
+    // Control 8 (Entry point consistency control): check() and compile() agree on interprocedural provenance (VALID)
+    #[test]
+    fn test_ctrl_prov_check_compile_agreement() {
+        let src = r#"
+            fn helper(x: &rw i32) -> i32 {
+                dec v = *x;
+                *x = v + 1;
+                return v;
+            }
+            fn main() -> i32 {
+                dec rw a = 1;
+                dec r1 = helper(&rw a);
+                dec r2 = helper(&rw a);
+                return r1 + r2;
+            }
+        "#;
+        assert_compile_success("ctrl_check_path", src, "check() path succeeds");
+
+        let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
+        let temp = create_temp_dir("ctrl_compile_path");
+        let main_path = temp.join("main.ln");
+        fs::write(&main_path, src).unwrap();
+        let options = CompilerOptions {
+            search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
+            quiet: true,
+            ..Default::default()
+        };
+        let res = luna_driver::compile(main_path.to_str().unwrap(), src.to_string(), &options);
+        assert!(res.is_ok(), "compile() entry point must agree with check(): {:?}", res.err());
+    }
+
 }
