@@ -1544,4 +1544,65 @@ mod phase2c_controls {
         assert!(res.is_ok(), "compile() entry point must agree with check(): {:?}", res.err());
     }
 
+    // Control 9: Genuinely reference-free zero-field struct must NOT retain borrow provenance (VALID)
+    #[test]
+    fn test_ctrl_zero_field_struct_no_provenance() {
+        let src = r#"
+            struct Marker {}
+            struct Container {
+                marker: Marker,
+            }
+            fn get_marker(c: &Container) -> Marker {
+                return c.marker;
+            }
+            fn consume_marker(m: Marker) -> i32 {
+                return 0;
+            }
+            fn main() -> i32 {
+                dec rw c = Container { marker: Marker {}, };
+                dec m = get_marker(&c);
+                c.marker = Marker {};
+                return consume_marker(m);
+            }
+        "#;
+        assert_compile_success("ctrl_zero_field_no_prov", src, "Zero-field struct must not retain provenance");
+    }
+
+    // Control 10: Cast must propagate provenance interprocedurally (INVALID)
+    #[test]
+    fn test_ctrl_cast_propagates_provenance() {
+        let src = r#"
+            fn cast_ref(r: &rw i32) -> *rw i32 {
+                return r as *rw i32;
+            }
+            fn main() -> i32 {
+                dec rw val = 10;
+                dec p = cast_ref(&rw val);
+                dec r2 = &rw val;
+                unsafe {
+                    *p = 20;
+                }
+                return *r2;
+            }
+        "#;
+        assert_compile_error("ctrl_cast_prov", src, "already borrowed", "Cast-derived pointer must retain loan and reject second mutable borrow");
+    }
+
+    // Control 11: PtrOffset must propagate provenance interprocedurally (INVALID)
+    #[test]
+    fn test_ctrl_ptroffset_propagates_provenance() {
+        let src = r#"
+            fn get_elem(arr: &rw [i32; 4]) -> &rw i32 {
+                return &rw arr[0];
+            }
+            fn main() -> i32 {
+                dec rw arr = [1, 2, 3, 4];
+                dec r = get_elem(&rw arr);
+                dec r2 = &rw arr;
+                *r = 20;
+                return *r;
+            }
+        "#;
+        assert_compile_error("ctrl_ptroffset_prov", src, "already borrowed", "PtrOffset-derived pointer must retain loan and reject second mutable borrow");
+    }
 }

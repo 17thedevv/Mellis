@@ -384,10 +384,22 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
                 self.add_carried_taint(state, val_id, left);
                 self.add_carried_taint(state, val_id, right);
             }
+            Instruction::Cast { value, .. } => {
+                self.add_direct_taint(state, val_id, value);
+                self.add_carried_taint(state, val_id, value);
+                if let Operand::Value(b) = value {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
+            }
+            Instruction::PtrOffset { ptr, .. } => {
+                self.add_direct_taint(state, val_id, ptr);
+                self.add_carried_taint(state, val_id, ptr);
+                if let Operand::Value(b) = ptr {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
+            }
             Instruction::SizeOf { .. } |
-            Instruction::AlignOf { .. } |
-            Instruction::Cast { .. } |
-            Instruction::PtrOffset { .. } => {}
+            Instruction::AlignOf { .. } => {}
             _ => {}
         }
     }
