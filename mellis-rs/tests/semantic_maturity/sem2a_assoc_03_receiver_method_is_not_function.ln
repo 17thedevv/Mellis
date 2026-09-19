@@ -1,0 +1,15 @@
+// SEM2A-ASSOC-03: a receiver method is not an associated function and cannot
+// be invoked without a receiver through `Type::method`.
+struct Counter {
+    value: i32,
+}
+
+impl Counter {
+    fn read(self: &Self) -> i32 {
+        return self.value;
+    }
+}
+
+fn main() -> i32 {
+    return Counter::read();
+}

@@ -2289,6 +2289,15 @@ impl<'a> TypeChecker<'a> {
                                     }
                                 }
                             }
+                            // A type alias owns its own generic parameter list.
+                            // Substitute through the complete alias body; using
+                            // the alias arguments as the outer nominal arguments
+                            // corrupts nested aliases such as
+                            // `Wrapper<Pair<A, B>>`.
+                            if matches!(sym_kind, crate::SymbolKind::Alias) {
+                                return self.ctx.types.subst(base_ty, &subst);
+                            }
+
                             let resolved_ty = self.ctx.types.get(base_ty).clone();
                             match resolved_ty {
                                 SemanticType::Struct(s_sym, _, original_field_tys) => {
@@ -4306,7 +4315,7 @@ impl<'a> TypeChecker<'a> {
                     elem_ty
                 }
             }
-            Expr::MethodCall { object, method_name, args, .. } => {
+            Expr::MethodCall { object, method_name, generic_args, args } => {
                 let obj_ty_id = self.typecheck_expr(object);
                 let obj_ty = self.ctx.types.get(obj_ty_id).clone();
                 let member_name = self.get_span_text(*method_name);
@@ -4491,7 +4500,29 @@ impl<'a> TypeChecker<'a> {
                                 }
                                 if params.len() == args.len() + 1 {
                                     self.bind_matching_generics(params[0], obj_ty_id, &mut subst, &mut m_has_generics);
-                                    let receiver_p = if m_has_generics { self.ctx.types.subst(params[0], &subst) } else { params[0] };
+                                    let receiver_p = if m_has_generics {
+                                        self.ctx.types.subst(params[0], &subst)
+                                    } else {
+                                        params[0]
+                                    };
+                                    let receiver_needs_rw = matches!(
+                                        self.ctx.types.get(receiver_p),
+                                        SemanticType::Reference(_, crate::ty::Mutability::Mutable, _)
+                                    );
+                                    let receiver_is_shared = matches!(
+                                        obj_ty,
+                                        SemanticType::Reference(_, crate::ty::Mutability::Immutable, _)
+                                            | SemanticType::Pointer(crate::ty::Mutability::Immutable, _)
+                                    );
+                                    if receiver_needs_rw && receiver_is_shared {
+                                        let span = self
+                                            .get_expr_span_for_diag(expr_id)
+                                            .unwrap_or_else(luna_common::Span::default);
+                                        self.ctx.diagnostics.push(
+                                            Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_POINTER: Cannot call method requiring mutable receiver (&rw self) through immutable reference or pointer")
+                                                .with_span(span),
+                                        );
+                                    }
                                     let _ = self.unify(receiver_p, obj_ty_id);
                                 }
                                 let return_type = if m_has_generics { self.ctx.types.subst(return_type, &subst) } else { return_type };
@@ -4640,32 +4671,71 @@ impl<'a> TypeChecker<'a> {
                                     }
                                 }
 
-                                // 2. Method generic params
+                                // 2. Method generic params. Explicit method
+                                // arguments constrain the substitution before
+                                // value arguments are checked; they must never
+                                // be replaced by inference from those values.
+                                let mut method_gp_syms = Vec::new();
                                 if let Some(&method_decl_id) = self.ctx.tables.symbol_decls.get(&m_sym) {
-                                    if (method_decl_id.0 as usize) < self.arena.decls.len() {
-                                        if let Decl::Function { generic_params: m_gps, .. } = &self.arena.decls[method_decl_id.0 as usize] {
-                                            if !m_gps.is_empty() {
-                                                m_has_generics = true;
-                                                for (gp_idx, _) in m_gps.iter().enumerate() {
-                                                    if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(method_decl_id, gp_idx)) {
-                                                        subst.insert(*gp_sym, self.ctx.types.new_inference_var());
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        let mut gp_idx = 0;
-                                        while let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(method_decl_id, gp_idx)) {
-                                            m_has_generics = true;
-                                            subst.insert(*gp_sym, self.ctx.types.new_inference_var());
-                                            gp_idx += 1;
-                                        }
+                                    let mut gp_idx = 0;
+                                    while let Some(gp_sym) = self
+                                        .ctx
+                                        .tables
+                                        .generic_param_symbols
+                                        .get(&(method_decl_id, gp_idx))
+                                    {
+                                        method_gp_syms.push(*gp_sym);
+                                        gp_idx += 1;
                                     }
+                                }
+                                if !generic_args.is_empty()
+                                    && generic_args.len() != method_gp_syms.len()
+                                {
+                                    self.ctx.diagnostics.push(
+                                        Diagnostic::error(format!(
+                                            "wrong number of generic arguments for method `{}`: expected {}, got {}",
+                                            member_name,
+                                            method_gp_syms.len(),
+                                            generic_args.len()
+                                        ))
+                                        .with_span(*method_name),
+                                    );
+                                }
+                                for (gp_idx, gp_sym) in method_gp_syms.into_iter().enumerate() {
+                                    m_has_generics = true;
+                                    let gp_ty = if let Some(ast_ty) = generic_args.get(gp_idx) {
+                                        self.lower_type(*ast_ty)
+                                    } else {
+                                        self.ctx.types.new_inference_var()
+                                    };
+                                    subst.insert(gp_sym, gp_ty);
                                 }
 
                                 if params.len() == args.len() + 1 {
                                     self.bind_matching_generics(params[0], obj_ty_id, &mut subst, &mut m_has_generics);
-                                    let receiver_p = if m_has_generics { self.ctx.types.subst(params[0], &subst) } else { params[0] };
+                                    let receiver_p = if m_has_generics {
+                                        self.ctx.types.subst(params[0], &subst)
+                                    } else {
+                                        params[0]
+                                    };
+                                    let receiver_needs_rw = matches!(
+                                        self.ctx.types.get(receiver_p),
+                                        SemanticType::Reference(_, crate::ty::Mutability::Mutable, _)
+                                    );
+                                    let receiver_is_shared = matches!(
+                                        obj_ty,
+                                        SemanticType::Reference(_, crate::ty::Mutability::Immutable, _)
+                                            | SemanticType::Pointer(crate::ty::Mutability::Immutable, _)
+                                    );
+                                    if receiver_needs_rw && receiver_is_shared {
+                                        let span = self
+                                            .get_expr_span_for_diag(expr_id)
+                                            .unwrap_or_else(luna_common::Span::default);
+                                        self.ctx.diagnostics.push(
+                                            Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_POINTER: Cannot call method requiring mutable receiver (&rw self) through immutable reference or pointer")
+                                                .with_span(span),
+                                        );
+                                    }
                                     let _ = self.unify(receiver_p, obj_ty_id);
                                 }
 

@@ -1,0 +1,30 @@
+// SEM2A-TRAIT-01: generic trait dispatch preserves an &rw self receiver.
+trait Accumulate<T> {
+    fn add(self: &rw Self, value: T);
+    fn read(self: &Self) -> T;
+}
+
+struct Counter {
+    value: i32,
+}
+
+impl Accumulate<i32> for Counter {
+    fn add(self: &rw Counter, value: i32) {
+        self.value += value;
+    }
+
+    fn read(self: &Counter) -> i32 {
+        return self.value;
+    }
+}
+
+fn apply_twice<A: Accumulate<i32>>(target: &rw A) {
+    target.add(1);
+    target.add(1);
+}
+
+fn main() -> i32 {
+    dec rw counter = Counter { value: 40 };
+    apply_twice<Counter>(&rw counter);
+    return counter.read() - 42;
+}

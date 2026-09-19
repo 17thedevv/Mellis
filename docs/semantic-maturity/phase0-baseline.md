@@ -9,6 +9,11 @@
 > are closed through a structured frozen-code field and origin-site mappings.
 > The Phase 0 corpus is now 22 passed / 0 ignored; PARTIAL and NOT TESTED
 > inventory rows remain future coverage work rather than known open gaps.
+>
+> Phase 2A update (2026-09-19): eleven source-first type/generic/trait cases
+> exposed four independent gaps, SEM-GAP-10 through SEM-GAP-13. All four are
+> closed by generic resolver/typechecker fixes. Four inventory rows move from
+> PARTIAL to PROVEN; the baseline is now 111 PROVEN / 6 PARTIAL / 2 NOT TESTED.
 
 ## SEM-MATURITY-01 PHASE 0 PRECHECK
 
@@ -183,7 +188,7 @@ the sole proof.
 | Tuples | Frozen | parser/semantic/MVIR suites | yes | PROVEN |
 | Arrays | Frozen | semantic and const-array suites | yes | PROVEN |
 | Structs | Frozen | broad semantic/driver suites | yes | PROVEN |
-| Type aliases | Frozen | canonical serialization and resolver suites | partial | PARTIAL |
+| Type aliases | Frozen | SEM2A-TYPE-01/02 nested generic positive/negative pair | yes | PROVEN |
 | Shared reference `&T` | Frozen | borrowck/lifetime suites | yes | PROVEN |
 | Mutable reference `&rw T` | Frozen | borrowck plus receiver call controls | yes; broader public-boundary coverage remains partial | PARTIAL |
 | Function types | Frozen | C-GAP-05/06 suites | yes | PROVEN |
@@ -198,7 +203,7 @@ the sole proof.
 | Multiple generic parameters | Frozen | C-GAP-04; SEM-GENERIC-01 | yes | PROVEN |
 | Declaration-scoped repeated generic names | Frozen | artifact identity tests; SEM-GENERIC-01 | yes | PROVEN |
 | Nested generic applications | Frozen | SEM-GENERIC-01 | yes | PROVEN |
-| Generic methods | Frozen | `p3_tests` | yes | PROVEN |
+| Generic methods | Frozen | `p3_tests`; SEM2A-METHOD-01/02 explicit-argument pair | yes | PROVEN |
 | Generic trait arguments | Frozen | C-GAP-04; SEM-TRAIT-01 | yes | PROVEN |
 | Generic impls | Frozen | semantic P1A/P3 and source iterator fixtures | yes | PROVEN |
 | `where` / bound constraints | Frozen | P1A, P3, generic dispatch | yes | PROVEN |
@@ -217,7 +222,7 @@ the sole proof.
 | Nominal-head orphan/coherence rule | Frozen | P1A reference/pointer controls; SEM-COHERENCE-01 | yes | PROVEN |
 | Receiver `self` | Frozen | P3 and ownership suites | yes | PROVEN |
 | Receiver `&self` | Frozen | generic dispatch/lifetime suites | yes | PROVEN |
-| Receiver `&rw self` | Frozen | SEM-METHOD-01 plus escape/overlap controls | yes; broader receiver-form coverage remains partial | PARTIAL |
+| Receiver `&rw self` | Frozen | SEM-METHOD-01; SEM2A-TRAIT-01/02 generic valid/shared invalid pair | yes | PROVEN |
 
 ### D. Associated constructs
 
@@ -227,7 +232,7 @@ the sole proof.
 | Associated type binding | Frozen | semantic P0C; SEM-ASSOC-01 | yes | PROVEN |
 | Same-provider projection | Frozen | artifact control; SEM-ASSOC-01 | yes | PROVEN |
 | Cross-provider public projection A → B → C | Frozen | SEM-ASSOC-02: A owns trait/type/impl, B exposes `T::Output`, C consumes | yes | PROVEN |
-| Associated functions | Frozen | P3 no-receiver trait cases | partial | PARTIAL |
+| Associated functions | Frozen | SEM2A-ASSOC-01/02/03 inherent, trait, and receiver-negative controls | yes | PROVEN |
 
 ### E. Ownership and moves
 
@@ -317,7 +322,7 @@ the sole proof.
 | Generic calls | Frozen | generic dispatch; SEM-GENERIC-01 | yes | PROVEN |
 | Function pointers | Frozen | C-GAP-05/06 | yes | PROVEN |
 | Indirect calls | Frozen | C-GAP-05 | yes | PROVEN |
-| Method calls generally | Frozen | trait/inherent suites | partial | PARTIAL |
+| Method calls generally | Frozen | SEM2A-METHOD-01/02 plus trait receiver controls | yes | PROVEN |
 | Unknown-method rejection | Frozen | SEM-DIAG-01; semantic gate regression | yes | PROVEN |
 | Receiver mutability | Frozen | P3 plus SEM-METHOD-01 and two negative controls | yes | PROVEN |
 | Extern calls where semantically relevant | Frozen | FFI/UI/backend cases | stdlib-heavy | PARTIAL |
@@ -382,17 +387,17 @@ the sole proof.
 
 | Category | Audit result | Reason |
 |---|---|---|
-| A. Core type system | PARTIAL | Alias proof is not yet a generic user-defined public-boundary case. |
-| B. Generic semantics | PROVEN | New generic fixtures close the user-defined proof gap. |
-| C. Traits / impls | PARTIAL | Coherence is proven; `&rw self` coverage remains partial. |
-| D. Associated constructs | PARTIAL | Projections are proven; associated-function coverage remains partial. |
+| A. Core type system | PARTIAL | Nested generic aliases are proven; broad mutable-reference coverage remains partial. |
+| B. Generic semantics | PROVEN | Phase 2A adds nested bound and explicit generic-method positive/negative pairs. |
+| C. Traits / impls | PROVEN | Generic receiver dispatch and immutable-to-`&rw self` rejection are source-proven. |
+| D. Associated constructs | PROVEN | Projections and inherent/trait associated functions now have source proofs. |
 | E. Ownership / moves | PARTIAL | Move-through-match lacks a registered public-boundary proof. |
 | F. Borrowing | PARTIAL | Call-boundary loan termination is proven; loop proof and several broader NLL shapes remain partial. |
 | G. Lifetime semantics | PROVEN | Valid, invalid, union, receiver, outlives, and provider cases pass. |
 | H. Drop semantics | PROVEN | P0B, Copy/Drop, and new source cases cover the frozen rules. |
 | I. Control flow | PROVEN | Protocol-driven user-defined `for-in` and its control cases now pass. |
 | J. Iterator contracts | PROVEN | Direct calls and generic user-defined language lowering are proven without container special cases. |
-| K. Functions / calls | PARTIAL | Unknown methods and mutable call boundaries are proven; broad method/extern coverage remains partial. |
+| K. Functions / calls | PARTIAL | Generic method calls are proven; extern-call coverage remains partial. |
 | L. Modules / providers | PROVEN | Public-default fields and explicit-private rejection match the corrected frozen contract. |
 | M. Const / comptime | PROVEN | Positive execution and explicit negative rejection are covered. |
 | N. Diagnostics | PARTIAL | The four isolated Phase 1C identities are proven; E1004/E2001 remain partial and E6001 is an invariant control rather than a user-source target. |
@@ -428,6 +433,23 @@ the harness enters through the public `luna check` command.
 | SEM-DIAG-05 | invalid | Explicit-private access emits frozen E1003 | diagnostics | PASS (SEM-GAP-09 closed) |
 | SEM-COHERENCE-01 | invalid | Reference-head orphan impl rejects | coherence | PASS (SEM-GAP-06 closed) |
 
+Phase 2A harness:
+`mellis-rs/crates/luna-cli/tests/semantic_maturity_phase2a.rs`.
+
+| Case | Validity | Invariant | Layer | Outcome |
+|---|---|---|---|---|
+| SEM2A-TYPE-01 | valid | Nested generic alias recursively preserves argument order | resolver/typecheck | PASS (SEM-GAP-10 closed) |
+| SEM2A-TYPE-02 | invalid | Generic alias cannot erase an incompatible concrete argument | typecheck | PASS (rejected) |
+| SEM2A-GENERIC-01 | valid | Nested application satisfies parameterized trait bound | typecheck/trait selection/mono | PASS |
+| SEM2A-GENERIC-02 | invalid | Missing nested trait bound rejects explicitly | typecheck/trait selection | PASS (rejected) |
+| SEM2A-TRAIT-01 | valid | Generic trait dispatch preserves `&rw self` | typecheck/borrowck | PASS |
+| SEM2A-TRAIT-02 | invalid | Shared receiver cannot satisfy `&rw self` | typecheck | PASS (SEM-GAP-12 closed) |
+| SEM2A-ASSOC-01 | valid | Generic inherent associated function preserves explicit type argument | resolver/typecheck/mono | PASS (SEM-GAP-11 closed) |
+| SEM2A-ASSOC-02 | valid | Receiver-free trait function is callable through implementing type | resolver/typecheck/mono | PASS (SEM-GAP-11 closed) |
+| SEM2A-ASSOC-03 | invalid | Receiver method is not callable as an associated function | resolver | PASS (rejected) |
+| SEM2A-METHOD-01 | valid | Generic inherent method reconstructs nested return type | typecheck/mono | PASS |
+| SEM2A-METHOD-02 | invalid | Explicit method type argument cannot be overwritten by inference | typecheck | PASS (SEM-GAP-13 closed) |
+
 Why existing tests were insufficient:
 
 - `ui_tests.rs` registers only a narrow `try_*` subset; the large `ui/` tree is
@@ -445,10 +467,12 @@ Why existing tests were insufficient:
 
 ### User-defined generic coverage
 
-Eight cases exercise strictly generic user-defined declarations rather than
+Fifteen cases exercise strictly generic user-defined declarations rather than
 stdlib container behavior: SEM-GENERIC-01, SEM-TRAIT-01, SEM-BORROW-01,
 SEM-BORROW-02, SEM-OWN-01, SEM-ASSOC-01, and SEM-ASSOC-02. SEM-ITER-01 adds an
-eighth user-defined protocol case (`CounterIter<T>`). No maturity
+eighth user-defined protocol case (`CounterIter<T>`). Phase 2A adds seven more:
+the nested-alias pair, nested-bound pair, generic mutable-trait valid case,
+generic associated-function case, and explicit generic-method pair. No maturity
 claim in those classes relies solely on Vec, String, HashMap, HashSet, Option,
 or Result.
 
@@ -844,11 +868,167 @@ Phase 1C resolution:
   structured E1003. Public-by-default and redundant-`export` controls remain
   accepted; only already-illegal explicit-private access is tagged.
 
+### SEM-GAP-10 — Nested generic alias substitution corrupts nominal arguments
+
+Status:
+  CLOSED — PHASE 2A
+
+Severity:
+  P1
+
+Frozen semantic:
+  Generic alias parameters substitute recursively through the complete aliased
+  type while preserving nested nominal argument ownership and ordering.
+
+Minimal Luna reproduction:
+  `mellis-rs/tests/semantic_maturity/sem2a_type_01_generic_alias_nested.ln`
+
+Expected:
+  `Nested<i32, bool>` is identical to `Wrapper<Pair<i32, bool>>`.
+
+Phase 2A actual:
+  The valid declaration was rejected with a type mismatch because the alias
+  arguments `[i32, bool]` were installed as the outer `Wrapper` arguments.
+
+Diagnostic:
+  uncoded type mismatch
+
+Source-only reproduction:
+  YES
+
+Affected subsystem:
+  typechecker generic named-type lowering
+
+Root cause:
+  PROVEN
+
+Notes:
+  A one-parameter `Wrapped<T> = Wrapper<T>` alias passed by coincidence. The
+  fix applies the alias-owned substitution recursively to the complete semantic
+  alias body and contains no nominal-type special case.
+
+### SEM-GAP-11 — Type-qualified associated functions are invisible to resolver
+
+Status:
+  CLOSED — PHASE 2A
+
+Severity:
+  P1
+
+Frozen semantic:
+  Receiver-free functions declared in inherent or trait impls are callable
+  through the implementing type, with inherent-over-trait priority.
+
+Minimal Luna reproductions:
+  `mellis-rs/tests/semantic_maturity/sem2a_assoc_01_inherent_function.ln` and
+  `mellis-rs/tests/semantic_maturity/sem2a_assoc_02_trait_function.ln`
+
+Expected:
+  Both the generic inherent function and implemented trait function resolve and
+  typecheck through `Type::function`.
+
+Phase 2A actual:
+  Both valid programs were rejected as `Symbol 'Type::function' not found`.
+
+Diagnostic:
+  unresolved symbol; no frozen numeric identity applies to this valid program
+
+Source-only reproduction:
+  YES
+
+Affected subsystem:
+  resolver impl-item lookup
+
+Root cause:
+  PROVEN
+
+Notes:
+  Impl functions were present in the structured `impl_methods` index but lived
+  in impl-local lexical scopes. The resolver now consults that semantic index,
+  filters out receiver methods, applies inherent priority, and uses stable
+  symbol ordering. SEM2A-ASSOC-03 proves a receiver method is still rejected.
+
+### SEM-GAP-12 — Shared reference accepted for `&rw self` method
+
+Status:
+  CLOSED — PHASE 2A
+
+Severity:
+  P0
+
+Frozen semantic:
+  A shared `&T` receiver cannot satisfy a method receiver of `&rw Self`.
+
+Minimal Luna reproduction:
+  `mellis-rs/tests/semantic_maturity/sem2a_trait_02_shared_to_rw_receiver.ln`
+
+Expected:
+  The method call is rejected before lowering because the receiver is immutable.
+
+Phase 2A actual:
+  The invalid source was accepted and lowered successfully.
+
+Diagnostic:
+  none
+
+Source-only reproduction:
+  YES
+
+Affected subsystem:
+  typechecker method receiver validation
+
+Root cause:
+  PROVEN
+
+Notes:
+  Receiver mutability validation existed only on the dynamic-trait call path;
+  ordinary trait/impl lookup discarded receiver unification failure. The same
+  signature-driven check now guards generic-bound and concrete method paths.
+
+### SEM-GAP-13 — Explicit generic method argument is overwritten by inference
+
+Status:
+  CLOSED — PHASE 2A
+
+Severity:
+  P0
+
+Frozen semantic:
+  Explicit generic arguments on a method call constrain that invocation and
+  cannot be silently replaced by inference from value arguments.
+
+Minimal Luna reproduction:
+  `mellis-rs/tests/semantic_maturity/sem2a_method_02_generic_argument_mismatch.ln`
+
+Expected:
+  `holder.replace<bool>(7)` rejects because `7` is `i32`, not `bool`.
+
+Phase 2A actual:
+  The compiler ignored `<bool>`, inferred the method parameter as `i32`, and
+  accepted the invalid source.
+
+Diagnostic:
+  none
+
+Source-only reproduction:
+  YES
+
+Affected subsystem:
+  typechecker method-call generic substitution
+
+Root cause:
+  PROVEN
+
+Notes:
+  The method-call match arm discarded its AST generic arguments. It now seeds
+  the method substitution from explicit arguments, checks arity, and only uses
+  inference when an explicit method argument was not supplied.
+
 ### Severity summary
 
-- Closed P0: SEM-GAP-03, SEM-GAP-06
+- Closed P0: SEM-GAP-03, SEM-GAP-06, SEM-GAP-12, SEM-GAP-13
 - Open P0: none
-- Closed P1: SEM-GAP-01, SEM-GAP-02
+- Closed P1: SEM-GAP-01, SEM-GAP-02, SEM-GAP-10, SEM-GAP-11
 - Open P1: none
 - Closed P2: SEM-GAP-04, SEM-GAP-07, SEM-GAP-08, SEM-GAP-09
 - Open P2: none
@@ -997,6 +1177,41 @@ tests intentionally exercise multiple programs, while the four diagnostic
 identity tests reuse their semantic-rejection fixtures; equality of the two
 totals is therefore coincidental rather than one-test-per-program accounting.
 
+### Current metrics after Phase 2A
+
+- Frozen semantic rules inventoried: **119**
+- Rules PROVEN: **111**
+- Rules PARTIAL: **6**
+- Rules NOT TESTED: **2**
+- Rules in COMPILER GAP state: **0**
+- Unique open compiler gaps: **0**
+- Closed compiler gaps: **12**
+- Retracted gap IDs: **1** (SEM-GAP-05; never reused)
+- Open P0: **0**
+- Open P1: **0**
+- Open P2: **0**
+- Open P3: **0**
+- Compiler panics in the conformance corpus: **0**
+- Silent fallback cases in the conformance corpus: **0**
+- User-defined generic coverage count: **15 cases**
+- Phase 0 conformance tests: **22 passed / 0 ignored**
+- Phase 2A conformance tests: **11 passed / 0 ignored**
+- Phase 2A source programs: **11** (**6 valid + 5 invalid**)
+
+Phase 2A moves exactly four rows from PARTIAL to PROVEN:
+
+- Type aliases — nested generic alias plus incompatible-argument control.
+- Receiver `&rw self` — generic mutable dispatch plus shared-receiver rejection.
+- Associated functions — generic inherent, trait-implemented, and receiver-method
+  negative controls.
+- Method calls generally — explicit generic method success and mismatch rejection.
+
+The six remaining PARTIAL rules are mutable references broadly, move in loops,
+shared-after-ended-mutable borrow, borrow across branches, aggregate-field
+borrows, and extern calls. The two remaining NOT TESTED rules are move through
+match and borrow across loops. They are deferred to Phases 2B–2D rather than
+being broadened into Phase 2A.
+
 ## Test execution baseline
 
 Commands use `C:/Users/84387/.cargo/bin/cargo.exe`; test processes prepend
@@ -1138,6 +1353,36 @@ missing `libs/external/core/copy.llib`. The previously recorded stale
 `hashmap.llib` fingerprint remains a generated-artifact issue. No ad-hoc copy,
 rebuild, or artifact mutation was performed.
 
+### Phase 2A verification
+
+The worktree-local Cargo target initially exhausted the C: volume while
+building the broader regression set (`os error 112`). Its build cache was
+cleaned with Cargo and subsequent verification used
+`D:/codex-targets/luna-sem-maturity-phase2a`. This is an external compiler build
+cache only; no source, sysroot, or `.llib` was copied or generated there.
+
+| Command / group | Result |
+|---|---|
+| `cargo test -p luna-cli --test semantic_maturity_phase0 -- --test-threads=1` | 22 passed, 0 failed, 0 ignored |
+| `cargo test -p luna-cli --test semantic_maturity_phase2a -- --test-threads=1` | 11 passed, 0 failed, 0 ignored |
+| `cargo test -p luna-semantic -- --test-threads=1` | 109 passed, 0 failed |
+| `cargo test -p luna-borrowck -- --test-threads=1` | 25 passed, 0 failed |
+| six targeted generic/trait/call driver binaries | 61 passed, 0 failed |
+| `cargo test --workspace -- --test-threads=1` | preceding binaries passed; `core_provider_baseline_acceptance_tests`: 6 passed, 1 missing generated `.llib` failure |
+| `cargo test --workspace` | same baseline stop: 6 passed, 1 missing generated `.llib` failure in the failing binary |
+
+The targeted driver binaries are
+`generic_trait_dispatch_acceptance_tests`,
+`compiler_gap_c_gap_04_trait_bound_generic_args_tests`, `p3_tests`,
+`compiler_gap_c_gap_05_indirect_call_tests`,
+`compiler_gap_c_gap_06_function_pointer_mangling_tests`, and
+`semantic_gate_tests`. No zero-test binary is counted as evidence.
+
+The serial workspace run first reported missing `libs/external/core/ptr.llib`;
+the parallel run first reported missing `libs/external/core/result.llib`. These
+are the existing **BASELINE ENVIRONMENT / GENERATED-ARTIFACT FAILURE**, not a
+Phase 2A semantic regression. No ad-hoc artifact copy or rebuild was performed.
+
 ## Phase 1 proposal
 
 1. **Completed in Phase 1A:** reject unresolved method calls in the typechecker
@@ -1151,9 +1396,12 @@ rebuild, or artifact mutation was performed.
 5. **Completed in Phase 1C:** implement the typed frozen diagnostic registry,
    then migrate the independent E1003/E3001/E3002/E3003 emitters without
    treating one fix as proof of the other contracts (P2).
-6. **Phase 2 coverage closure:** add the two missing public-boundary proofs
-   (move through match and borrow across loops), then upgrade the ten remaining
-   PARTIAL rows by subsystem. Phase 2 has not started.
+6. **Completed in Phase 2A:** close type-alias, `&rw self`, associated-function,
+   and general-method coverage with eleven user-defined source cases. Four
+   newly exposed gaps are closed generically.
+7. **Remaining Phase 2B–2D coverage:** add the two missing public-boundary
+   proofs (move through match and borrow across loops), then upgrade the six
+   remaining PARTIAL rows by subsystem.
 
 ## Proposed maturity gate
 
@@ -1228,6 +1476,20 @@ Phase 1C scope:
 - New diagnostic code invented: **NO**.
 - Phase 2 started: **NO**.
 
+Phase 2A scope:
+
+- Production compiler source modified: **YES**, limited to generic alias
+  substitution, associated-function resolution, receiver mutability, and
+  explicit method-generic substitution for four proven gaps.
+- Stdlib semantic source or API modified: **NO**.
+- Runtime ABI modified: **NO**.
+- Artifact schema or semantics modified: **NO**.
+- New syntax added: **NO**.
+- New language semantic added: **NO**; frozen type/generic/trait rules are
+  enforced.
+- Container- or provider-specific compiler branch added: **NO**.
+- Phase 2B started: **NO**.
+
 ## Correction-pass verdict
 
 The corrected semantic authority, matrix counts, case/program totals, gap IDs,
@@ -1268,3 +1530,16 @@ zero panic, and zero silent fallback. Ten PARTIAL and two NOT TESTED inventory
 rules remain; this result does not claim full compiler maturity or begin Phase 2.
 
 **SEM-MATURITY-01 PHASE 1C DIAGNOSTIC CONTRACT CLOSURE COMPLETE**
+
+## Phase 2A verdict
+
+The eleven-case source-first corpus exposed SEM-GAP-10 through SEM-GAP-13.
+Each reproduction was minimized before implementation, each gap is now closed
+by its original fixture, and all positive/negative controls remain green. Type
+aliases, `&rw self`, associated functions, and general method calls move from
+PARTIAL to PROVEN. The resulting inventory is 111 PROVEN / 6 PARTIAL / 2 NOT
+TESTED, with zero open known gaps, zero compiler panic, and zero silent
+fallback. The remaining coverage is explicitly deferred; Phase 2B has not
+started.
+
+**SEM-MATURITY-01 PHASE 2A TYPE/GENERIC/TRAIT COVERAGE COMPLETE**

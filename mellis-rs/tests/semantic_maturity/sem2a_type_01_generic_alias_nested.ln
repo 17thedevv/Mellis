@@ -1,0 +1,17 @@
+// SEM2A-TYPE-01: nested generic alias substitution preserves argument order.
+struct Pair<A, B> {
+    first: A,
+    second: B,
+}
+
+struct Wrapper<T> {
+    value: T,
+}
+
+type Nested<A, B> = Wrapper<Pair<A, B>>;
+
+fn main() {
+    dec nested: Nested<i32, bool> = Wrapper<Pair<i32, bool>> {
+        value: Pair<i32, bool> { first: 42, second: true },
+    };
+}

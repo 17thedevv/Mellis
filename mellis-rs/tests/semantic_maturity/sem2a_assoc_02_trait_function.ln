@@ -1,0 +1,16 @@
+// SEM-GAP-11 control B: a trait associated function is callable by impl type.
+trait Factory {
+    fn make() -> i32;
+}
+
+struct BoolFactory {}
+
+impl Factory for BoolFactory {
+    fn make() -> i32 {
+        return 42;
+    }
+}
+
+fn main() -> i32 {
+    return BoolFactory::make() - 42;
+}

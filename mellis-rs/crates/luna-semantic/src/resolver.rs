@@ -46,6 +46,78 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
         &self.source_manager.get_file(span.file_id).unwrap().source[span.start as usize..span.end as usize]
     }
 
+    /// Resolve `Type::function` through the semantic impl index.
+    ///
+    /// Impl items deliberately live in their impl scope rather than the
+    /// nominal type's lexical scope, so ordinary path traversal cannot find
+    /// receiver-free associated functions.  Keep this lookup structured: it
+    /// is keyed by the nominal type and impl identity, never by rendered
+    /// diagnostics or a concrete library type.
+    fn resolve_associated_function(
+        &self,
+        segments: &[Span],
+    ) -> Option<luna_common::ids::SymbolId> {
+        if segments.len() != 2 {
+            return None;
+        }
+
+        let type_name = self.get_span_text(segments[0]);
+        let function_name = self.get_span_text(segments[1]);
+        let type_sym = self
+            .ctx
+            .symbol_table
+            .lookup_with_ctxt(type_name, segments[0].ctxt, self.current_scope)
+            .or_else(|| {
+                self.ctx.symbol_table.lookup_with_ctxt(
+                    type_name,
+                    segments[0].ctxt,
+                    crate::ScopeId(0),
+                )
+            })?;
+
+        if !matches!(
+            self.ctx.symbol_table.get_symbol(type_sym).kind,
+            SymbolKind::Struct | SymbolKind::Enum
+        ) {
+            return None;
+        }
+
+        let self_key = crate::semantic_tables::ImplSelfTypeKey::Nominal(type_sym);
+        let mut candidates = Vec::new();
+        for (impl_key, methods) in &self.ctx.tables.impl_methods {
+            if impl_key.self_type_def != self_key {
+                continue;
+            }
+            for &method_sym in methods {
+                let symbol = self.ctx.symbol_table.get_symbol(method_sym);
+                if symbol.name != function_name {
+                    continue;
+                }
+                let is_receiver_free = symbol.decl_id.map_or(true, |decl_id| {
+                    match self.arena.decls.get(decl_id.0 as usize) {
+                        Some(Decl::Function { params, .. }) => {
+                            params.first().map_or(true, |param_id| {
+                                !matches!(
+                                    self.arena.decls.get(param_id.0 as usize),
+                                    Some(Decl::Param { is_self: true, .. })
+                                )
+                            })
+                        }
+                        _ => false,
+                    }
+                });
+                if is_receiver_free {
+                    candidates.push((impl_key.trait_id.is_some(), method_sym));
+                }
+            }
+        }
+
+        // Preserve the frozen inherent-over-trait priority and make ties
+        // deterministic instead of depending on HashMap iteration order.
+        candidates.sort_by_key(|(is_trait, sym)| (*is_trait, sym.0));
+        candidates.first().map(|(_, sym)| *sym)
+    }
+
     pub fn new(ctx: &'a mut SemanticContext, arena: &'b AstArena, source_manager: &'c luna_common::source::SourceManager) -> Self {
         // Assume global scope is 0
         let global_scope = ScopeId(0);
@@ -1660,6 +1732,10 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                                 break;
                             }
                         }
+                    }
+
+                    if resolved_sym.is_none() {
+                        resolved_sym = self.resolve_associated_function(segments);
                     }
 
                     if let Some(sym_id) = resolved_sym {

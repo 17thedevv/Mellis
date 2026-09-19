@@ -1,0 +1,23 @@
+// SEM-GAP-12: a shared receiver cannot call an &rw self trait method.
+trait Increment {
+    fn increment(self: &rw Self);
+}
+
+struct Counter {
+    value: i32,
+}
+
+impl Increment for Counter {
+    fn increment(self: &rw Counter) {
+        self.value += 1;
+    }
+}
+
+fn invalid(counter: &Counter) {
+    counter.increment();
+}
+
+fn main() {
+    dec counter = Counter { value: 0 };
+    invalid(&counter);
+}
