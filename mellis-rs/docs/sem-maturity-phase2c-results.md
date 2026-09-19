@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-19  
 **Branch:** `sem-maturity-01-phase2c`  
-**Baseline Commit:** `399b366` (`chore(hygiene): LUNA REPO-HYGIENE-01 cleanup historical debt and dead paths`)  
+**Baseline Commit:** `d13ba24` (Phase 2A) -> `399b366` (hygiene) -> Phase 2C
 **Status:** ✅ PHASE 2C COMPLETE, VERIFIED & FROZEN  
 **Test Suite Execution:** 61 passed; 0 failed; 12 ignored  
 **Total Fixtures in Suite:** 73 (62 Phase 2B fixtures + 11 Phase 2C Controls)  
@@ -125,12 +125,12 @@ Instruction::PtrOffset { ptr, .. } => {
 
 | Category | Count | Status | Notes |
 |:---------|:------|:-------|:------|
-| **VALID-POSITIVE** | 42 | ✅ PASS | 35 Phase 2B + 3 unignored (`sem_mutref_01, 02, 05`, `sem_borrow_ended_05`) + Controls 3, 4, 5, 8, 9 |
+| **VALID-POSITIVE** | 42 | ✅ PASS | 35 Phase 2B + 4 unignored (`sem_mutref_01, 02, 05`, `sem_borrow_ended_05`) + Controls 3, 4, 5, 8, 9 |
 | **VALID-NEGATIVE** | 19 | ✅ PASS | 11 Phase 2B + 1 promoted (`sem_mutref_03`) + 1 closed (`sem_gap_14`) + Controls 1, 2, 6, 7, 10, 11 |
 | **BUG CHARACTERIZATION** | 0 | - | All characterizations eliminated / promoted to conformance |
 | **OPEN-COMPILER-GAP** | 3 | ⏸️ IGNORED | SEM-GAP-16 (2) & SEM-GAP-17 (1), deferred to Phase 2D |
 | **INVALID-TEST** | 1 | ⏸️ IGNORED | `sem_mutref_06_invalid_fixture` (mutates immutable variable `r`) |
-| **SPEC-BLOCKED** | 8 | ⏸️ IGNORED | `branch_02, 06, 08`, `loop_07, 08`, `borrow_ended_06, 08`, `e3005_02` |
+| **SPEC-BLOCKED** | 8 | ⏸️ IGNORED | `branch_02, 06, 08`, `loop_07, 08` (requires CFG/liveness fixed-point, SEM-GAP-17), `borrow_ended_06, 08`, `e3005_02` |
 | **TOTAL PASSED** | **61** | ✅ GREEN | All active tests pass with 0 failures |
 | **TOTAL IGNORED** | **12** | ⏸️ FROZEN | Strictly documented gaps and spec-blocked tests |
 | **TOTAL FIXTURES** | **73** | - | 62 original + 11 controls |
