@@ -1,0 +1,16 @@
+// [STRESS: COMPILE_REJECT: Explicit calls to drop() are forbidden]
+struct Resource {
+    id: i32,
+};
+
+impl Resource {
+    fn drop(self: &rw Self) {
+        self.id = 0;
+    }
+}
+
+fn main() -> i32 {
+    dec rw r = Resource { id: 42 };
+    r.drop();
+    return 0;
+}

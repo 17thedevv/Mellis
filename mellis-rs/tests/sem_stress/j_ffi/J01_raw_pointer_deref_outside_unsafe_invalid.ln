@@ -1,0 +1,7 @@
+// [STRESS: COMPILE_REJECT: E_UNSAFE_DEREF_OUTSIDE_UNSAFE]
+fn main() -> i32 {
+    dec rw val = 10;
+    dec p: *rw i32 = &rw val as *rw i32;
+    *p = 42;
+    return val;
+}

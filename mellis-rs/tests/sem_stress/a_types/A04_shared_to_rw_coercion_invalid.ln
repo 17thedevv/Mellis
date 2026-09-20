@@ -1,0 +1,11 @@
+// [STRESS: COMPILE_REJECT: type mismatch]
+fn mutate_val(r: &rw i32) {
+    *r = 100;
+}
+
+fn main() -> i32 {
+    dec x = 42;
+    dec shared_ref = &x;
+    mutate_val(shared_ref);
+    return 0;
+}

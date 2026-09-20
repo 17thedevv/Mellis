@@ -1,0 +1,18 @@
+// [STRESS: COMPILE_REJECT: omits declared lifetime return contract 'life_from']
+trait Source {
+    fn get_ref(self: &Self) -> &i32 life_from(self);
+}
+
+struct Item {
+    val: i32,
+};
+
+impl Source for Item {
+    fn get_ref(self: &Self) -> &i32 {
+        return &self.val;
+    }
+}
+
+fn main() -> i32 {
+    return 0;
+}

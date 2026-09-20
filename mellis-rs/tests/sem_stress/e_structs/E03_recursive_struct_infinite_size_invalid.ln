@@ -1,0 +1,9 @@
+// [STRESS: COMPILE_REJECT: Recursive type has infinite size]
+struct Node {
+    val: i32,
+    next: Node,
+};
+
+fn main() -> i32 {
+    return 0;
+}

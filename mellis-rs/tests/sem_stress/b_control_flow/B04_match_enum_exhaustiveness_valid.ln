@@ -1,0 +1,20 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 2]
+enum State {
+    Init,
+    Active,
+    Done,
+}
+
+fn evaluate(s: State) -> i32 {
+    return match s {
+        State::Init -> 0,
+        State::Active -> 1,
+        State::Done -> 2,
+    };
+}
+
+fn main() -> i32 {
+    dec s = State::Done;
+    return evaluate(s);
+}

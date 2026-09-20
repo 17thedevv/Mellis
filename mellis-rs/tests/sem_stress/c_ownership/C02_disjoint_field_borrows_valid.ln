@@ -1,0 +1,15 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+struct Pair {
+    a: i32,
+    b: i32,
+};
+
+fn main() -> i32 {
+    dec rw p = Pair { a: 10, b: 20 };
+    dec ra = &rw p.a;
+    dec rb = &rw p.b;
+    *ra = 30;
+    *rb = 12;
+    return p.a + p.b;
+}

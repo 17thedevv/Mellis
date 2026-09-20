@@ -1,0 +1,9 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+const BASE: i32 = 40;
+const OFFSET: i32 = 2;
+const TOTAL: i32 = BASE + OFFSET;
+
+fn main() -> i32 {
+    return TOTAL;
+}

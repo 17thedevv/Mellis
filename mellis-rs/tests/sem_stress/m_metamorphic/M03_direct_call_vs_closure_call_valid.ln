@@ -1,0 +1,19 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn quad(x: i32) -> i32 {
+    return x * 4;
+}
+
+fn main() -> i32 {
+    dec c = |x: i32| -> i32 {
+        return x * 4;
+    };
+
+    dec r1 = quad(10);
+    dec r2 = c(10);
+
+    if r1 == r2 {
+        return r1 + 2;
+    }
+    return 0;
+}

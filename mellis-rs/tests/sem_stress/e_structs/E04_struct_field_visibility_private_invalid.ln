@@ -1,0 +1,18 @@
+// [STRESS: COMPILE_REJECT: is private and cannot be accessed]
+module auth {
+    export struct User {
+        export name: i32,
+        private secret: i32,
+    };
+
+    export fn make_user() -> User {
+        return User { name: 42, secret: 99 };
+    }
+}
+
+module app {
+    fn main() -> i32 {
+        dec u = auth::make_user();
+        return u.secret;
+    }
+}

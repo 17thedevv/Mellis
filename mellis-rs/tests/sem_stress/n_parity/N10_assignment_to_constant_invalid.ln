@@ -1,0 +1,7 @@
+// [STRESS: COMPILE_REJECT: immutable]
+const MAX_LIMIT: i32 = 100;
+
+fn main() -> i32 {
+    MAX_LIMIT = 200;
+    return MAX_LIMIT;
+}

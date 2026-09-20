@@ -1,0 +1,8 @@
+// [STRESS: COMPILE_REJECT: mismatch]
+fn must_return_int() -> i32 {
+    return;
+}
+
+fn main() -> i32 {
+    return must_return_int();
+}

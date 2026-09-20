@@ -1,0 +1,14 @@
+// [STRESS: COMPILE_REJECT: `using` aliases cannot be exported]
+module math {
+    module ops {
+        export fn add(a: i32, b: i32) -> i32 {
+            return a + b;
+        }
+    }
+}
+
+export using math::ops as op;
+
+fn main() -> i32 {
+    return 0;
+}

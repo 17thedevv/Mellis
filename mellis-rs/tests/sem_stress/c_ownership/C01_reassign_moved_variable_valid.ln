@@ -1,0 +1,16 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+struct Resource {
+    val: i32,
+};
+
+fn consume(r: Resource) {
+    dec _ = r;
+}
+
+fn main() -> i32 {
+    dec rw r = Resource { val: 10 };
+    consume(r);
+    r = Resource { val: 42 };
+    return r.val;
+}

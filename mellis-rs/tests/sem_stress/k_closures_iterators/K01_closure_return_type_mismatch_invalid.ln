@@ -1,0 +1,7 @@
+// [STRESS: COMPILE_REJECT: Lambda return type mismatch]
+fn main() -> i32 {
+    dec f = || -> i32 {
+        return true;
+    };
+    return 0;
+}

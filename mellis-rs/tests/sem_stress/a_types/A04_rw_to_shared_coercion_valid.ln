@@ -1,0 +1,11 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn read_val(r: &i32) -> i32 {
+    return *r;
+}
+
+fn main() -> i32 {
+    dec rw x = 42;
+    dec rw_ref = &rw x;
+    return read_val(rw_ref);
+}

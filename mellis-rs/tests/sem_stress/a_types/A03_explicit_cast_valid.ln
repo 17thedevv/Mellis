@@ -1,0 +1,10 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn takes_i32(val: i32) -> i32 {
+    return val;
+}
+
+fn main() -> i32 {
+    dec big = 42 as i64;
+    return takes_i32(big as i32);
+}

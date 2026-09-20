@@ -1,0 +1,8 @@
+// [STRESS: COMPILE_REJECT: only admit reference fields]
+struct BadPointer {
+    p: *i32,
+} requires life(p) >= life(self);
+
+fn main() -> i32 {
+    return 0;
+}

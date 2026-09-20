@@ -1,0 +1,13 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn main() -> i32 {
+    dec x: i32 = 10;
+    {
+        dec x: i32 = 20;
+        {
+            dec x: i32 = 99;
+        }
+    }
+    dec y: i32 = x + 32;
+    return y;
+}

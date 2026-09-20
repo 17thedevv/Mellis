@@ -1181,7 +1181,7 @@ pub fn compute_place_desc(
                     curr_val = Some(*base_v);
                 } else { break; }
             }
-            Instruction::Assign(base) | Instruction::Cast { value: base, .. } => {
+            Instruction::Assign(base) | Instruction::Cast { value: base, .. } | Instruction::Borrow { base, .. } => {
                 if let Operand::Value(base_v) = base {
                     curr_val = Some(*base_v);
                 } else { break; }

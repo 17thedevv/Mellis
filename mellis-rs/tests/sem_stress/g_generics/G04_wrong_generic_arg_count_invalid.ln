@@ -1,0 +1,13 @@
+// [STRESS: COMPILE_REJECT: wrong number of generic arguments for method]
+struct Helper {};
+
+impl Helper {
+    fn convert<T, U>(self: &Self, val: T) -> i32 {
+        return 0;
+    }
+}
+
+fn main() -> i32 {
+    dec h = Helper {};
+    return h.convert<i32>(42);
+}

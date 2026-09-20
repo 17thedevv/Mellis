@@ -1,0 +1,10 @@
+// [STRESS: COMPILE_REJECT: is private and cannot be accessed]
+module secret {
+    fn hidden() -> i32 {
+        return 42;
+    }
+}
+
+fn main() -> i32 {
+    return secret::hidden();
+}

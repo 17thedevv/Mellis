@@ -1,0 +1,11 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn add_refs(sup: &i32, sub: &i32) -> i32 requires life(sup) >= life(sub) {
+    return *sup + *sub;
+}
+
+fn main() -> i32 {
+    dec outer = 40;
+    dec inner = 2;
+    return add_refs(&outer, &inner);
+}

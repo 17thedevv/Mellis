@@ -1,0 +1,10 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn noop() {
+    return;
+}
+
+fn main() -> i32 {
+    noop();
+    return 42;
+}

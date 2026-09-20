@@ -1,0 +1,6 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn main() -> i32 {
+    dec val: i32 = 2 + 4 * 10;
+    return val;
+}

@@ -1,0 +1,19 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+struct Point {
+    x: i32,
+    y: i32,
+};
+
+struct Rect {
+    top_left: Point,
+    bottom_right: Point,
+};
+
+fn main() -> i32 {
+    dec r = Rect {
+        top_left: Point { x: 10, y: 30 },
+        bottom_right: Point { x: 2, y: 0 },
+    };
+    return r.top_left.x + r.top_left.y + r.bottom_right.x + r.bottom_right.y;
+}

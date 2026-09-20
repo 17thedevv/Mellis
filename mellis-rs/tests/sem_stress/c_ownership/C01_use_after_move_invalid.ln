@@ -1,0 +1,14 @@
+// [STRESS: COMPILE_REJECT: E3001]
+struct Resource {
+    val: i32,
+};
+
+fn consume(r: Resource) {
+    dec _ = r;
+}
+
+fn main() -> i32 {
+    dec r = Resource { val: 10 };
+    consume(r);
+    return r.val;
+}

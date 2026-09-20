@@ -1,0 +1,16 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+struct Builder {
+    num: i32,
+};
+
+impl Builder {
+    fn add(self: Self, v: i32) -> Self {
+        return Builder { num: self.num + v };
+    }
+}
+
+fn main() -> i32 {
+    dec b = Builder { num: 10 }.add(20).add(12);
+    return b.num;
+}

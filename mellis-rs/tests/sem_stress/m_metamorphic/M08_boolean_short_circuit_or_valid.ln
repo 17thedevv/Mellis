@@ -1,0 +1,16 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn side_effect(flag: &rw bool) -> bool {
+    *flag = true;
+    return true;
+}
+
+fn main() -> i32 {
+    dec rw evaluated: bool = false;
+    if true || side_effect(&rw evaluated) {
+        if evaluated == false {
+            return 42;
+        }
+    }
+    return 0;
+}

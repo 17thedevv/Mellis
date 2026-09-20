@@ -1,0 +1,20 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+trait Evaluator {
+    fn eval(self: &Self) -> i32;
+}
+
+struct ConstantNode {
+    val: i32,
+};
+
+impl Evaluator for ConstantNode {
+    fn eval(self: &Self) -> i32 {
+        return self.val;
+    }
+}
+
+fn main() -> i32 {
+    dec node = ConstantNode { val: 42 };
+    return node.eval();
+}

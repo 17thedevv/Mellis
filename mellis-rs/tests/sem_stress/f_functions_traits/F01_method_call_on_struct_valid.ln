@@ -1,0 +1,21 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+struct Accumulator {
+    count: i32,
+};
+
+impl Accumulator {
+    fn add(self: &rw Self, n: i32) {
+        self.count = self.count + n;
+    }
+
+    fn get(self: &Self) -> i32 {
+        return self.count;
+    }
+}
+
+fn main() -> i32 {
+    dec rw acc = Accumulator { count: 40 };
+    acc.add(2);
+    return acc.get();
+}

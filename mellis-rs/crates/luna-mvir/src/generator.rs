@@ -1056,9 +1056,12 @@ impl<'a> MvirGenerator<'a> {
                 instance.closure_capture_bindings.clone()
             };
             if !closure_bindings.is_empty() {
+                let env_val = self.push_inst(Instruction::Load {
+                    ptr: Operand::Value(env_param),
+                }, env_ty_id);
                 for binding in &closure_bindings {
                     let field_ptr = self.push_inst(Instruction::FieldPtr {
-                        base: Operand::Value(env_param),
+                        base: Operand::Value(env_val),
                         field_idx: binding.env_field,
                     }, binding.env_ty);
                     let val = match binding.mode {
@@ -2707,6 +2710,53 @@ impl<'a> MvirGenerator<'a> {
                             ty: binding.ty,
                             env_ty: binding.env_ty,
                         });
+
+                        let val_op = match binding.mode {
+                            luna_semantic::semantic_tables::CaptureMode::SharedBorrow => {
+                                let borrow_val = self.push_inst(
+                                    Instruction::Borrow {
+                                        is_rw: false,
+                                        base: Operand::Value(local_val),
+                                    },
+                                    binding.env_ty,
+                                );
+                                Operand::Value(borrow_val)
+                            }
+                            luna_semantic::semantic_tables::CaptureMode::MutableBorrow => {
+                                let borrow_val = self.push_inst(
+                                    Instruction::Borrow {
+                                        is_rw: true,
+                                        base: Operand::Value(local_val),
+                                    },
+                                    binding.env_ty,
+                                );
+                                Operand::Value(borrow_val)
+                            }
+                            luna_semantic::semantic_tables::CaptureMode::Move => {
+                                let load_val = self.push_inst(
+                                    Instruction::Load {
+                                        ptr: Operand::Value(local_val),
+                                    },
+                                    binding.ty,
+                                );
+                                Operand::Value(load_val)
+                            }
+                        };
+
+                        let field_ptr = self.push_inst(
+                            Instruction::FieldPtr {
+                                base: Operand::Value(env_ptr),
+                                field_idx: binding.env_field,
+                            },
+                            binding.env_ty,
+                        );
+                        self.push_inst(
+                            Instruction::Store {
+                                ptr: Operand::Value(field_ptr),
+                                value: val_op,
+                            },
+                            self.ctx.types.bool_id(),
+                        );
                     }
                 }
                 
@@ -3099,7 +3149,27 @@ impl<'a> MvirGenerator<'a> {
         use luna_ast::Pattern;
         let pattern = &self.arena.pats[pat.0 as usize];
         match pattern {
-            Pattern::Wildcard | Pattern::Identifier { .. } => {
+            Pattern::Wildcard => {
+                Operand::Boolean(true)
+            }
+            Pattern::Identifier { .. } => {
+                if let Some(sym_id) = self.ctx.tables.pat_symbols.get(pat).copied() {
+                    let symbol = self.ctx.symbol_table.get_symbol(sym_id);
+                    if let luna_semantic::SymbolKind::EnumVariant(variant_idx) = symbol.kind {
+                        let tag_val = self.push_inst(Instruction::Tag {
+                            value: subject.clone(),
+                        }, self.ctx.types.bool_id());
+                        
+                        let expected_tag = Operand::Number(variant_idx.to_string());
+                        
+                        let eq_val = self.push_inst(Instruction::Eq {
+                            left: Operand::Value(tag_val),
+                            right: expected_tag,
+                        }, self.ctx.types.bool_id());
+                        
+                        return Operand::Value(eq_val);
+                    }
+                }
                 Operand::Boolean(true)
             }
             Pattern::Enum { path, fields } => {

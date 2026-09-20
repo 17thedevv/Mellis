@@ -1,0 +1,12 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn main() -> i32 {
+    dec flag = true;
+    if flag {
+        return 42;
+    } else {
+        return 0;
+    }
+    dec unreachable_var = 999;
+    return unreachable_var;
+}

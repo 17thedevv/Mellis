@@ -1,0 +1,10 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+struct Container<T> {
+    data: T,
+};
+
+fn main() -> i32 {
+    dec c = Container<(i32, i32)> { data: (20, 22) };
+    return c.data.0 + c.data.1;
+}

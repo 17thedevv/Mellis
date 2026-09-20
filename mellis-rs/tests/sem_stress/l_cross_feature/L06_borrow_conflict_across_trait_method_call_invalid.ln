@@ -1,0 +1,17 @@
+// [STRESS: COMPILE_REJECT: E3003]
+struct Counter {
+    val: i32,
+};
+
+impl Counter {
+    fn mutate(self: &rw Self) {
+        self.val = self.val + 1;
+    }
+}
+
+fn main() -> i32 {
+    dec rw c = Counter { val: 41 };
+    dec r = &c.val;
+    c.mutate(); //~ ERROR E3003
+    return *r;
+}

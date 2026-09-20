@@ -1,0 +1,20 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+enum Kind {
+    Alpha,
+    Beta,
+    Gamma,
+}
+
+fn from_match(k: Kind) -> i32 {
+    return match k {
+        Kind::Alpha -> 10,
+        Kind::Beta -> 20,
+        Kind::Gamma -> 42,
+    };
+}
+
+fn main() -> i32 {
+    dec k = Kind::Gamma;
+    return from_match(k);
+}

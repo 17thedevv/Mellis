@@ -1,0 +1,15 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn sign_choice(x: i32) -> i32 {
+    if x > 0 {
+        return 42;
+    } else if x < 0 {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+fn main() -> i32 {
+    return sign_choice(10);
+}

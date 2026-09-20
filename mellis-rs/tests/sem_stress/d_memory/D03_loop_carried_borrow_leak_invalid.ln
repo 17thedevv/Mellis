@@ -1,0 +1,12 @@
+// [STRESS: COMPILE_REJECT: E3005]
+fn main() -> i32 {
+    dec a = 10;
+    dec rw r = &a;
+    dec rw i = 0;
+    while (i < 2) {
+        dec local_val = 42;
+        r = &local_val;
+        i = i + 1;
+    }
+    return *r;
+}

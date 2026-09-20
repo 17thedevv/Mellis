@@ -1,0 +1,13 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+module outer {
+    export module inner {
+        export fn answer() -> i32 {
+            return 42;
+        }
+    }
+}
+
+fn main() -> i32 {
+    return outer::inner::answer();
+}

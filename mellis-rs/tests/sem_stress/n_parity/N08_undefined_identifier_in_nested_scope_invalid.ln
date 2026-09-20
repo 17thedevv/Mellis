@@ -1,0 +1,7 @@
+// [STRESS: COMPILE_REJECT: not found]
+fn main() -> i32 {
+    {
+        dec hidden: i32 = 10;
+    }
+    return hidden;
+}

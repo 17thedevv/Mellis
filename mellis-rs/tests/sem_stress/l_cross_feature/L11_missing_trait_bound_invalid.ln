@@ -1,0 +1,8 @@
+// [STRESS: COMPILE_REJECT: Method]
+fn call_foo<T>(item: &T) -> i32 {
+    return item.foo();
+}
+
+fn main() -> i32 {
+    return 0;
+}

@@ -1,0 +1,14 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+fn main() -> i32 {
+    dec rw acc: i32 = 1;
+    {
+        dec p1: &rw i32 = &rw acc;
+        *p1 = 20;
+    }
+    {
+        dec p2: &rw i32 = &rw acc;
+        *p2 = *p2 + 22;
+    }
+    return acc;
+}

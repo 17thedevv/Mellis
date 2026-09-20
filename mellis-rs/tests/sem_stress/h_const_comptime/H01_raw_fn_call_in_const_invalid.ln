@@ -1,0 +1,10 @@
+// [STRESS: COMPILE_REJECT: function calls in const initializers are forbidden]
+fn compute() -> i32 {
+    return 42;
+}
+
+const VAL: i32 = compute();
+
+fn main() -> i32 {
+    return VAL;
+}

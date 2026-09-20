@@ -1,0 +1,14 @@
+// [STRESS: COMPILE_REJECT: bare `using path;` is not allowed]
+module math {
+    module ops {
+        export fn add(a: i32, b: i32) -> i32 {
+            return a + b;
+        }
+    }
+}
+
+using math::ops;
+
+fn main() -> i32 {
+    return 0;
+}

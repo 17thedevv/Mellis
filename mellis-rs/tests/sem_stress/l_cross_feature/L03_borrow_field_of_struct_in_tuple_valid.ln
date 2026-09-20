@@ -1,0 +1,14 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+struct Point {
+    x: i32,
+    y: i32,
+};
+
+fn main() -> i32 {
+    dec rw t: (Point, i32) = (Point { x: 40, y: 2 }, 100);
+    dec rx: &rw i32 = &rw t.0.x;
+    dec ry: &rw i32 = &rw t.0.y;
+    *rx = *rx + *ry;
+    return t.0.x;
+}

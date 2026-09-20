@@ -1,0 +1,11 @@
+// [STRESS: COMPILE_ACCEPT]
+// [STRESS: EXEC_EXIT: 42]
+struct RefHolder {
+    r: &i32,
+} requires life(r) >= life(self);
+
+fn main() -> i32 {
+    dec val = 42;
+    dec h = RefHolder { r: &val };
+    return *h.r;
+}
