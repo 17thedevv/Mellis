@@ -391,7 +391,7 @@ fn test_acceptance_source_vs_llib_identical_namespace() {
         module geometry {
             export struct Circle {
                 radius: i32,
-            }
+            };
             export fn make_circle(r: i32) -> Circle {
                 return Circle { radius: r };
             }

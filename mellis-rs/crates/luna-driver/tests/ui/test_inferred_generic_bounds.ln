@@ -2,7 +2,7 @@ trait Animal {
     fn speak(self) -> i32;
 }
 
-struct Dog {}
+struct Dog {};
 
 impl Animal for Dog {
     fn speak(self) -> i32 {
@@ -10,7 +10,7 @@ impl Animal for Dog {
     }
 }
 
-struct Cat {}
+struct Cat {};
 
 fn make_sound<T: Animal>(animal: &T) -> i32 {
     return animal.speak();

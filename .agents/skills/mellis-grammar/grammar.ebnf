@@ -206,7 +206,15 @@ enum_variant_list ::= enum_variant ("," enum_variant)* ","?
 enum_variant ::= IDENTIFIER ("(" parameters ")")?
 
 // --- STRUCT, TRAIT VÀ IMPL ---
-struct_decl ::= annotation* "export"? KW_STRUCT IDENTIFIER generic_params? "{" (struct_field ("," struct_field)* ","?)? "}" lifetime_contracts?
+struct_decl ::= annotation* "export"? KW_STRUCT IDENTIFIER generic_params? "{" (struct_field ("," struct_field)* ","?)? "}" struct_lifetime_contracts? ";"
+
+struct_lifetime_contracts ::= requires_clause+
+
+requires_clause ::= "requires" lifetime_relation ("," lifetime_relation)*
+
+lifetime_relation ::= "life" "(" struct_lifetime_target ")" (">=" | "<=") "life" "(" struct_lifetime_target ")"
+
+struct_lifetime_target ::= IDENTIFIER | KW_SELF_VAL
 
 struct_field::= "export"? IDENTIFIER ":" type
 

@@ -67,7 +67,7 @@ fn test_adv_01_local_borrow_coerced_to_dyn_across_await_rejected() {
 
         struct Item {
             val: i32,
-        }
+        };
 
         impl Trait for Item {
             fn query(self: &Self) -> i32 { return self.val; }
@@ -321,7 +321,7 @@ fn test_adv_08_explicit_drop_method_call_rejected() {
 
         struct Resource {
             id: i32,
-        }
+        };
 
         impl Drop for Resource {
             fn drop(self: &rw Self) {}
@@ -358,7 +358,7 @@ fn test_adv_09_explicit_drop_through_dyn_trait_rejected() {
 
         struct Item {
             x: i32,
-        }
+        };
 
         impl CustomDrop for Item {
             fn drop(self: &rw Self) {}
@@ -482,7 +482,7 @@ fn test_adv_13_future_cancellation_at_state_0_with_active_dyn_trait() {
 
         struct Resource {
             id: i32,
-        }
+        };
 
         impl Drop for Resource {
             fn drop(self: &rw Self) {}
@@ -494,7 +494,7 @@ fn test_adv_13_future_cancellation_at_state_0_with_active_dyn_trait() {
 
         struct GreeterImpl {
             val: i32,
-        }
+        };
 
         impl Greeter for GreeterImpl {
             fn greet(self: &Self) -> i32 { return self.val; }
@@ -530,7 +530,7 @@ fn test_adv_14_future_cancellation_at_suspended_state_with_dyn_trait() {
 
         struct Resource {
             id: i32,
-        }
+        };
 
         impl Drop for Resource {
             fn drop(self: &rw Self) {}
@@ -542,7 +542,7 @@ fn test_adv_14_future_cancellation_at_suspended_state_with_dyn_trait() {
 
         struct GreeterImpl {
             val: i32,
-        }
+        };
 
         impl Greeter for GreeterImpl {
             fn greet(self: &Self) -> i32 { return self.val; }
@@ -578,7 +578,7 @@ fn test_adv_15_full_pipeline_async_virtual_dispatch() {
 
         struct Calc {
             base: i32,
-        }
+        };
 
         impl Computable for Calc {
             fn compute(self: &Self, factor: i32) -> i32 {

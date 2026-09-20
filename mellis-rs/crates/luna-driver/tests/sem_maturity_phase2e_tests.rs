@@ -41,7 +41,7 @@ fn sem_extern_02_ref_free_aggregate_by_value() {
         struct Point {
             x: i32,
             y: i32,
-        }
+        };
 
         extern fn ext_consume_point(p: Point);
 
@@ -65,7 +65,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct SharedHolder {
             p: &i32,
-        }
+        };
 
         extern fn ext_consume_shared(h: SharedHolder);
 
@@ -87,7 +87,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct MutHolder {
             p: &rw i32,
-        }
+        };
 
         extern fn ext_consume_mut(h: MutHolder);
 
@@ -109,13 +109,13 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct Inner {
             r: &i32,
-        }
+        };
 
         #[repr(C)]
         struct Outer {
             inner: Inner,
             val: i32,
-        }
+        };
 
         extern fn ext_consume_nested(o: Outer);
 
@@ -139,7 +139,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct AliasHolder {
             r: RefAlias,
-        }
+        };
 
         extern fn ext_consume_alias(a: AliasHolder);
 
@@ -162,7 +162,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         struct CleanPoint {
             x: i32,
             y: i32,
-        }
+        };
 
         extern fn ext_consume_clean(p: CleanPoint);
 
@@ -180,7 +180,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct RetWrap {
             r: &i32,
-        }
+        };
 
         extern fn ext_produce_wrap() -> RetWrap;
 
@@ -202,7 +202,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct RawHolder {
             p: *i32,
-        }
+        };
 
         extern fn ext_consume_raw(h: RawHolder);
 
@@ -224,7 +224,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct RawMutHolder {
             p: *rw i32,
-        }
+        };
 
         extern fn ext_consume_raw_mut(h: RawMutHolder);
 
@@ -246,13 +246,13 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct InnerRaw {
             p: *i32,
-        }
+        };
 
         #[repr(C)]
         struct OuterRaw {
             inner: InnerRaw,
             val: i32,
-        }
+        };
 
         extern fn ext_consume_nested_raw(o: OuterRaw);
 
@@ -276,7 +276,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct AliasRawHolder {
             p: RawAlias,
-        }
+        };
 
         extern fn ext_consume_alias_raw(a: AliasRawHolder);
 
@@ -309,7 +309,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct RawRetWrap {
             p: *i32,
-        }
+        };
 
         extern fn ext_produce_raw_wrap() -> RawRetWrap;
 
@@ -331,7 +331,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct CallbackOnly {
             cb: fn(i32) -> i32,
-        }
+        };
 
         extern fn ext_register_callback(c: CallbackOnly);
 
@@ -347,7 +347,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
         #[repr(C)]
         struct CallbackPtr {
             cb: fn(*i32) -> i32,
-        }
+        };
 
         extern fn ext_register_callback_ptr(c: CallbackPtr);
 
@@ -367,7 +367,7 @@ fn sem_extern_03_aggregate_carrying_ref() {
             #[repr(C)]
             export struct BadHolder {
                 p: &rw i32,
-            }
+            };
             export extern fn ext_bad(h: BadHolder);
         }
     "#;

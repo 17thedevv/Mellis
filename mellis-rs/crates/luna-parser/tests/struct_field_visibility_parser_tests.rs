@@ -19,7 +19,7 @@ fn test_struct_field_visibility_parsing() {
         export struct User {
             export name: str,
             password: str,
-        }
+        };
     "#;
     let (result, arena, diagnostics) = parse(input);
     assert!(diagnostics.is_empty(), "Expected no diagnostics, got {:?}", diagnostics);
@@ -49,7 +49,7 @@ fn test_struct_fields_default_public() {
         struct Point {
             x: i32,
             y: i32,
-        }
+        };
     "#;
     let (result, arena, diagnostics) = parse(input);
     assert!(diagnostics.is_empty(), "Expected no diagnostics, got {:?}", diagnostics);
@@ -78,7 +78,7 @@ fn test_struct_field_explicit_private() {
         export struct BankAccount {
             balance: i64,
             private pin: u32,
-        }
+        };
     "#;
     let (result, arena, diagnostics) = parse(input);
     assert!(diagnostics.is_empty(), "Expected no diagnostics, got {:?}", diagnostics);
@@ -108,7 +108,7 @@ fn test_struct_field_mixed_visibility() {
             name: str,              // implicit public
             export id: u64,         // explicit public
             private password: str,   // explicit private
-        }
+        };
     "#;
     let (result, arena, diagnostics) = parse(input);
     assert!(diagnostics.is_empty(), "Expected no diagnostics, got {:?}", diagnostics);

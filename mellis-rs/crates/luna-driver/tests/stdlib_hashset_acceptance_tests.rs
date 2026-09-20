@@ -466,7 +466,7 @@ import <iter_collect>;
         struct CollidingKey {
             id: i32,
             fixed_hash: u64,
-        }
+        };
 
         impl Hash for CollidingKey {
             fn hash(self: &Self) -> u64 {
@@ -627,7 +627,7 @@ import <iter_collect>;
         struct TrackedElement {
             id: i32,
             drop_ptr: *rw i32,
-        }
+        };
 
         impl Drop for TrackedElement {
             fn drop(self: &rw Self) {

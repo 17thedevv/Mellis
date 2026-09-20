@@ -6,7 +6,7 @@ trait Clone {
     fn clone(self: &rw Self) -> Self;
 }
 
-struct DoubleTraitStruct {}
+struct DoubleTraitStruct {};
 impl Debug for DoubleTraitStruct {
     fn print(self: &rw DoubleTraitStruct) {}
 }
@@ -16,7 +16,7 @@ impl Clone for DoubleTraitStruct {
     }
 }
 
-struct SingleTraitStruct {}
+struct SingleTraitStruct {};
 impl Debug for SingleTraitStruct {
     fn print(self: &rw SingleTraitStruct) {}
 }

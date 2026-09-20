@@ -200,6 +200,15 @@ impl<'a> Parser<'a> {
             .push(Diagnostic::error(message).with_span(span));
     }
 
+    pub fn get_token_text(&self, span: Span) -> &str {
+        if let Some(sm) = self.source_manager {
+            if let Some(f) = sm.get_file(span.file_id) {
+                return &f.source[span.start as usize..span.end as usize];
+            }
+        }
+        &self.source[span.start as usize..span.end as usize]
+    }
+
     pub fn parse_file(&mut self) -> Result<Vec<luna_ast::Item>, ()> {
         let mut items = Vec::new();
         while !self.is_at_end() {

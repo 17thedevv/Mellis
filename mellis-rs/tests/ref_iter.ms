@@ -8,7 +8,7 @@ module std {
     export struct VecIter<T> {
         ptr: *T,
         end: *T,
-    }
+    };
 
     impl<T> Iterator<&T> for VecIter<T> {
         fn next(self: &rw Self) -> std::Option<&T> {

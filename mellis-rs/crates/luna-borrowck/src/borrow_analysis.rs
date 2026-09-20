@@ -165,7 +165,7 @@ pub struct Loan {
     pub is_rw: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Projection {
     Field(u32),
     Tuple(u32),
@@ -173,10 +173,15 @@ pub enum Projection {
     Unknown,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PlaceDesc {
     pub root: Operand,
     pub projections: Vec<Projection>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ProvenanceSet {
+    pub sources: HashSet<PlaceDesc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -196,16 +201,10 @@ impl OverlapResult {
 pub struct BorrowStateData {
     pub direct_provenance: HashMap<ValueId, HashSet<Loan>>,
     pub carried_provenance: HashMap<ValueId, HashSet<Loan>>,
+    pub field_provenance: HashMap<PlaceDesc, ProvenanceSet>,
     pub escaped_loans: HashSet<Loan>,
     pub aliases: HashMap<ValueId, Operand>,
     pub closure_captures: HashMap<ValueId, Vec<luna_semantic::CaptureMode>>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub enum LifetimeRoot {
-    Static,
-    Parameter(u16),
-    Local(ValueId),
 }
 
 pub struct BorrowAnalyzer<'a> {
@@ -298,6 +297,311 @@ impl<'a> BorrowAnalyzer<'a> {
                         &region_solution,
                         realization,
                     ).with_aliases(current_state.aliases.clone());
+
+                    // Authoritative Region Engine check on call-site outlives preconditions (REGION-02A)
+                    match &val_data.inst {
+                        Instruction::CallDirect { callee, args } => {
+                            let mut callee_sym_id = callee.symbol_id;
+                            if callee_sym_id.is_none() {
+                                if let Some(ctx) = analyzer.ctx {
+                                    if let Some(sym_id) = ctx.symbol_table.lookup(&callee.name, luna_semantic::symbol::ScopeId(0)) {
+                                        callee_sym_id = Some(sym_id);
+                                    }
+                                }
+                            }
+                            if let Some(sym_id) = callee_sym_id {
+                                if let Some(ctx) = analyzer.ctx {
+                                    if let Some(contract) = ctx.tables.fn_lifetime_contracts.get(&sym_id) {
+                                        let has_receiver = contract.outlives_constraints.iter().any(|c| {
+                                            matches!(c.longer, luna_semantic::CanonicalContractSubject::SelfVal)
+                                                || matches!(c.shorter, luna_semantic::CanonicalContractSubject::SelfVal)
+                                        });
+                                        for obligation in contract.instantiate_call_preconditions(false) {
+                                            let longer_idx = match obligation.longer_subject {
+                                                luna_semantic::region::LifetimeSubject::Root(
+                                                    luna_semantic::region::LifetimeSubjectRoot::SelfVal,
+                                                ) => 0,
+                                                luna_semantic::region::LifetimeSubject::Root(
+                                                    luna_semantic::region::LifetimeSubjectRoot::Param(i),
+                                                ) => if has_receiver { (i + 1) as usize } else { i as usize },
+                                                _ => usize::MAX,
+                                            };
+                                            let shorter_idx = match obligation.shorter_subject {
+                                                luna_semantic::region::LifetimeSubject::Root(
+                                                    luna_semantic::region::LifetimeSubjectRoot::SelfVal,
+                                                ) => 0,
+                                                luna_semantic::region::LifetimeSubject::Root(
+                                                    luna_semantic::region::LifetimeSubjectRoot::Param(i),
+                                                ) => if has_receiver { (i + 1) as usize } else { i as usize },
+                                                _ => usize::MAX,
+                                            };
+                                            if longer_idx < args.len() && shorter_idx < args.len() {
+                                                if let Some(diag) = bridge.diagnose_call_outlives(
+                                                    &obligation.longer_subject,
+                                                    &args[longer_idx],
+                                                    &obligation.shorter_subject,
+                                                    &args[shorter_idx],
+                                                    &current_state,
+                                                    val_data.span.clone(),
+                                                ) {
+                                                    if !analyzer.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                                                        analyzer.diagnostics.push(diag);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Instruction::CallVirt { obj, method_idx, args } => {
+                            let mut trait_method_sym = None;
+                            if let Some(ctx) = analyzer.ctx {
+                                if let Operand::Value(obj_val) = obj {
+                                    let obj_ty = analyzer.func.values[obj_val.0 as usize].ty;
+                                    let dyn_trait_sym = match ctx.types.get(obj_ty) {
+                                        SemanticType::DynTrait(sym) => Some(*sym),
+                                        SemanticType::Reference(_, _, inner) => {
+                                            if let SemanticType::DynTrait(sym) = ctx.types.get(*inner) {
+                                                Some(*sym)
+                                            } else {
+                                                None
+                                            }
+                                        }
+                                        _ => None,
+                                    };
+                                    if let Some(trait_sym) = dyn_trait_sym {
+                                        if let Some(method_syms) = ctx.tables.trait_methods.get(&trait_sym) {
+                                            if let Some(&m_sym) = method_syms.get(*method_idx as usize) {
+                                                trait_method_sym = Some(m_sym);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if let Some(m_sym) = trait_method_sym {
+                                if let Some(ctx) = analyzer.ctx {
+                                    if let Some(contract) = ctx.tables.fn_lifetime_contracts.get(&m_sym) {
+                                        for obligation in contract.instantiate_call_preconditions(true) {
+                                            let longer_op = match obligation.longer_subject {
+                                                luna_semantic::region::LifetimeSubject::Root(
+                                                    luna_semantic::region::LifetimeSubjectRoot::SelfVal,
+                                                ) => Some(obj),
+                                                luna_semantic::region::LifetimeSubject::Root(
+                                                    luna_semantic::region::LifetimeSubjectRoot::Param(i),
+                                                ) => args.get(i as usize),
+                                                _ => None,
+                                            };
+                                            let shorter_op = match obligation.shorter_subject {
+                                                luna_semantic::region::LifetimeSubject::Root(
+                                                    luna_semantic::region::LifetimeSubjectRoot::SelfVal,
+                                                ) => Some(obj),
+                                                luna_semantic::region::LifetimeSubject::Root(
+                                                    luna_semantic::region::LifetimeSubjectRoot::Param(i),
+                                                ) => args.get(i as usize),
+                                                _ => None,
+                                            };
+                                            if let (Some(l_op), Some(s_op)) = (longer_op, shorter_op) {
+                                                if let Some(diag) = bridge.diagnose_call_outlives(
+                                                    &obligation.longer_subject,
+                                                    l_op,
+                                                    &obligation.shorter_subject,
+                                                    s_op,
+                                                    &current_state,
+                                                    val_data.span.clone(),
+                                                ) {
+                                                    if !analyzer.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                                                        analyzer.diagnostics.push(diag);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Instruction::Store { ptr, value } => {
+                            let mut field_store_info = None;
+                            if let Operand::Value(ptr_v) = ptr {
+                                if (ptr_v.0 as usize) < analyzer.func.values.len() {
+                                    if let Instruction::FieldPtr { base, field_idx } = &analyzer.func.values[ptr_v.0 as usize].inst {
+                                        field_store_info = Some((base.clone(), *field_idx));
+                                    }
+                                }
+                                if field_store_info.is_none() {
+                                    let resolved = analyzer.resolve_alias(ptr, &current_state);
+                                    if let Operand::Value(rv) = resolved {
+                                        if (rv.0 as usize) < analyzer.func.values.len() {
+                                            if let Instruction::FieldPtr { base, field_idx } = &analyzer.func.values[rv.0 as usize].inst {
+                                                field_store_info = Some((base.clone(), *field_idx));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            let effective_span = val_data.span.clone().or_else(|| {
+                                if let Operand::Value(vv) = value {
+                                    if (vv.0 as usize) < analyzer.func.values.len() {
+                                        analyzer.func.values[vv.0 as usize].span.clone()
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            });
+
+                            if let Some((base_op, field_idx)) = field_store_info {
+                                let mut field_contract = None;
+                                if let Some(ctx) = analyzer.ctx {
+                                    let resolved_base_op = analyzer.resolve_alias(&base_op, &current_state);
+                                    let base_vid = match resolved_base_op {
+                                        Operand::Value(bv) => Some(*bv),
+                                        _ => match &base_op {
+                                            Operand::Value(bv) => Some(*bv),
+                                            _ => None,
+                                        },
+                                    };
+                                    if let Some(b_vid) = base_vid {
+                                        if (b_vid.0 as usize) < analyzer.func.values.len() {
+                                            let base_ty = analyzer.func.values[b_vid.0 as usize].ty;
+                                            let resolved_ty = ctx.types.resolve(base_ty);
+                                            let struct_sym = match ctx.types.get(resolved_ty) {
+                                                SemanticType::Struct(s, ..) => Some(*s),
+                                                SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) => {
+                                                    if let SemanticType::Struct(s, ..) = ctx.types.get(*inner) {
+                                                        Some(*s)
+                                                    } else {
+                                                        None
+                                                    }
+                                                }
+                                                _ => None,
+                                            };
+                                            if let Some(s_sym) = struct_sym {
+                                                if let Some(contract) = ctx.tables.type_lifetime_contracts.get(&s_sym) {
+                                                    field_contract = Some(contract);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if let Some(contract) = field_contract {
+                                    let field_is_constrained = contract.outlives_constraints.iter().any(|c| {
+                                        match &c.longer {
+                                            luna_semantic::CanonicalTypeLifetimeSubject::Field(fp) => {
+                                                fp.0.first().copied() == Some(field_idx as u16)
+                                            }
+                                            _ => false,
+                                        }
+                                    });
+                                    if field_is_constrained {
+                                        if let Some(diag) = bridge.diagnose_field_store_outlives(
+                                            field_idx,
+                                            value,
+                                            &base_op,
+                                            &current_state,
+                                            effective_span.clone(),
+                                        ) {
+                                            if !analyzer.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                                                analyzer.diagnostics.push(diag);
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                let mut agg_contract = None;
+                                if let Some(ctx) = analyzer.ctx {
+                                    let mut check_tys = Vec::new();
+                                    if let Operand::Value(vv) = value {
+                                        if (vv.0 as usize) < analyzer.func.values.len() {
+                                            check_tys.push(analyzer.func.values[vv.0 as usize].ty);
+                                        }
+                                    }
+                                    if let Operand::Value(pv) = ptr {
+                                        if (pv.0 as usize) < analyzer.func.values.len() {
+                                            check_tys.push(analyzer.func.values[pv.0 as usize].ty);
+                                        }
+                                    }
+                                    for ty in check_tys {
+                                        let resolved_ty = ctx.types.resolve(ty);
+                                        let struct_sym = match ctx.types.get(resolved_ty) {
+                                            SemanticType::Struct(s, ..) => Some(*s),
+                                            SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) => {
+                                                if let SemanticType::Struct(s, ..) = ctx.types.get(*inner) {
+                                                    Some(*s)
+                                                } else {
+                                                    None
+                                                }
+                                            }
+                                            _ => None,
+                                        };
+                                        if let Some(s_sym) = struct_sym {
+                                            if let Some(contract) = ctx.tables.type_lifetime_contracts.get(&s_sym) {
+                                                agg_contract = Some(contract);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if let Some(contract) = agg_contract {
+                                    if let Some(diag) = bridge.diagnose_type_contract_instance(
+                                        contract,
+                                        value,
+                                        ptr,
+                                        &current_state,
+                                        effective_span.clone(),
+                                    ) {
+                                        if !analyzer.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                                            analyzer.diagnostics.push(diag);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Instruction::Assign(op) => {
+                            let mut agg_contract = None;
+                            if let Some(ctx) = analyzer.ctx {
+                                if (val_id.0 as usize) < analyzer.func.values.len() {
+                                    let ty = analyzer.func.values[val_id.0 as usize].ty;
+                                    let resolved_ty = ctx.types.resolve(ty);
+                                    let struct_sym = match ctx.types.get(resolved_ty) {
+                                        SemanticType::Struct(s, ..) => Some(*s),
+                                        SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) => {
+                                            if let SemanticType::Struct(s, ..) = ctx.types.get(*inner) {
+                                                Some(*s)
+                                            } else {
+                                                None
+                                            }
+                                        }
+                                        _ => None,
+                                    };
+                                    if let Some(s_sym) = struct_sym {
+                                        if let Some(contract) = ctx.tables.type_lifetime_contracts.get(&s_sym) {
+                                            agg_contract = Some(contract);
+                                        }
+                                    }
+                                }
+                            }
+                            if let Some(contract) = agg_contract {
+                                if let Some(diag) = bridge.diagnose_type_contract_instance(
+                                    contract,
+                                    op,
+                                    &Operand::Value(val_id),
+                                    &current_state,
+                                    val_data.span.clone(),
+                                ) {
+                                    if !analyzer.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                                        analyzer.diagnostics.push(diag);
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
 
                     if let Some(live_carriers) = analyzer.live_after.get(&val_id) {
                         for &carrier in live_carriers {
@@ -529,117 +833,6 @@ impl<'a> BorrowAnalyzer<'a> {
         current
     }
 
-    fn resolve_argument_roots(&self, arg: &Operand, state: &BorrowStateData) -> HashSet<LifetimeRoot> {
-        let mut roots = HashSet::new();
-        let resolved_op = self.resolve_alias(arg, state);
-
-        match resolved_op {
-            Operand::Global(_) => {
-                roots.insert(LifetimeRoot::Static);
-                return roots;
-            }
-            Operand::Value(val) => {
-                let mut loans = HashSet::new();
-                if let Some(prov) = state.direct_provenance.get(val) {
-                    loans.extend(prov.clone());
-                }
-                if let Some(prov) = state.carried_provenance.get(val) {
-                    loans.extend(prov.clone());
-                }
-
-                let mut curr = *val;
-                while let Some(alias) = state.aliases.get(&curr) {
-                    if let Operand::Value(av) = alias {
-                        if let Some(prov) = state.direct_provenance.get(av) {
-                            loans.extend(prov.clone());
-                        }
-                        if let Some(prov) = state.carried_provenance.get(av) {
-                            loans.extend(prov.clone());
-                        }
-                        curr = *av;
-                    } else {
-                        break;
-                    }
-                }
-
-                for loan in &loans {
-                    let resolved_place = self.resolve_alias(&loan.place, state);
-                    match resolved_place {
-                        Operand::Global(_) => {
-                            roots.insert(LifetimeRoot::Static);
-                        }
-                        Operand::Value(pv) => {
-                            if (pv.0 as usize) < self.func.values.len() {
-                                let val_data = &self.func.values[pv.0 as usize];
-                                match val_data.origin {
-                                    ValueOrigin::Global => {
-                                        roots.insert(LifetimeRoot::Static);
-                                    }
-                                    ValueOrigin::Parameter(p_idx) => {
-                                        roots.insert(LifetimeRoot::Parameter(p_idx as u16));
-                                    }
-                                    ValueOrigin::Local | ValueOrigin::Temporary => {
-                                        roots.insert(LifetimeRoot::Local(*pv));
-                                    }
-                                }
-                            } else {
-                                roots.insert(LifetimeRoot::Local(*pv));
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-
-                if roots.is_empty() {
-                    if (val.0 as usize) < self.func.values.len() {
-                        let val_data = &self.func.values[val.0 as usize];
-                        match val_data.origin {
-                            ValueOrigin::Global => {
-                                roots.insert(LifetimeRoot::Static);
-                            }
-                            ValueOrigin::Parameter(p_idx) => {
-                                roots.insert(LifetimeRoot::Parameter(p_idx as u16));
-                            }
-                            ValueOrigin::Local | ValueOrigin::Temporary => {
-                                roots.insert(LifetimeRoot::Local(*val));
-                            }
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-
-        roots
-    }
-
-    fn root_outlives(
-        &self,
-        longer: &LifetimeRoot,
-        shorter: &LifetimeRoot,
-        caller_contract: Option<&luna_semantic::CanonicalLifetimeContract>,
-    ) -> bool {
-        if longer == shorter {
-            return true;
-        }
-        match (longer, shorter) {
-            (LifetimeRoot::Static, _) => true,
-            (_, LifetimeRoot::Static) => false,
-            (LifetimeRoot::Parameter(_), LifetimeRoot::Local(_)) => true,
-            (LifetimeRoot::Local(_), LifetimeRoot::Parameter(_)) => false,
-            (LifetimeRoot::Parameter(p_long), LifetimeRoot::Parameter(p_short)) => {
-                if let Some(contract) = caller_contract {
-                    contract.outlives_holds(*p_long, *p_short)
-                } else {
-                    false
-                }
-            }
-            (LifetimeRoot::Local(v_long), LifetimeRoot::Local(v_short)) => {
-                v_long.0 <= v_short.0
-            }
-        }
-    }
-
     fn active_loans(&self, val_id: ValueId, state: &BorrowStateData) -> HashSet<Loan> {
         let mut active = state.escaped_loans.clone();
         let mut queue = Vec::new();
@@ -741,91 +934,56 @@ impl<'a> BorrowAnalyzer<'a> {
         }
     }
 
-    fn compute_place_desc(&self, op: &Operand, _state: &BorrowStateData) -> PlaceDesc {
-        let mut curr_val = if let Operand::Value(v) = op { Some(*v) } else { None };
-        let mut path = Vec::new();
-        let mut root_val = None;
-        
-        while let Some(v) = curr_val {
-            if (v.0 as usize) >= self.func.values.len() {
-                root_val = Some(v);
-                break;
-            }
-            let inst = &self.func.values[v.0 as usize].inst;
-            match inst {
-                Instruction::FieldPtr { base, field_idx } => {
-                    path.push(Projection::Field(*field_idx));
-                    if let Operand::Value(base_v) = base {
-                        curr_val = Some(*base_v);
-                    } else { break; }
-                }
-                Instruction::Extract { value, .. } => {
-                    // Enum precision deferred unless already frozen
-                    path.push(Projection::Unknown);
-                    if let Operand::Value(base_v) = value {
-                        curr_val = Some(*base_v);
-                    } else { break; }
-                }
-                Instruction::Load { ptr } => {
-                    // Check if `ptr` is pointing to a local stack slot (Alloca or FieldPtr on Alloca).
-                    // Loading from a local stack slot is reading the local variable/field itself,
-                    // NOT a pointer dereference.
-                    let is_local_storage = if let Operand::Value(base_v) = ptr {
-                        let mut check_v = Some(*base_v);
-                        let mut is_local = false;
-                        while let Some(cv) = check_v {
-                            if (cv.0 as usize) >= self.func.values.len() { break; }
-                            match &self.func.values[cv.0 as usize].inst {
-                                Instruction::Alloca => {
-                                    is_local = true;
-                                    break;
-                                }
-                                Instruction::FieldPtr { base, .. } => {
-                                    if let Operand::Value(bv) = base {
-                                        check_v = Some(*bv);
-                                    } else { break; }
-                                }
-                                _ => break,
-                            }
-                        }
-                        is_local
-                    } else {
-                        false
-                    };
+    pub fn compute_place_desc(&self, op: &Operand, state: &BorrowStateData) -> PlaceDesc {
+        compute_place_desc(op, &self.func.values, Some(&state.aliases))
+    }
 
-                    if !is_local_storage {
-                        path.push(Projection::Deref);
+    pub fn compute_provenance_sources(&self, value: &Operand, state: &BorrowStateData) -> ProvenanceSet {
+        let mut sources = HashSet::new();
+        let mut check_ops = vec![value.clone()];
+        let mut visited = HashSet::new();
+        
+        while let Some(op) = check_ops.pop() {
+            let desc = self.compute_place_desc(&op, state);
+            if let Operand::Value(v) = op {
+                if !visited.insert(v) {
+                    continue;
+                }
+                if (v.0 as usize) < self.func.values.len() {
+                    let inst = &self.func.values[v.0 as usize].inst;
+                    match inst {
+                        Instruction::Borrow { base, .. } => {
+                            sources.insert(self.compute_place_desc(base, state));
+                        }
+                        Instruction::Assign(base) | Instruction::Cast { value: base, .. } => {
+                            check_ops.push(base.clone());
+                        }
+                        _ => {}
                     }
-                    if let Operand::Value(base_v) = ptr {
-                        curr_val = Some(*base_v);
-                    } else { break; }
                 }
-                Instruction::MakeSlice { data_ptr, .. } | Instruction::PtrOffset { ptr: data_ptr, .. } => {
-                    path.push(Projection::Unknown);
-                    if let Operand::Value(base_v) = data_ptr {
-                        curr_val = Some(*base_v);
-                    } else { break; }
+                if let Some(alias) = state.aliases.get(&v) {
+                    check_ops.push(alias.clone());
                 }
-                Instruction::Assign(base) | Instruction::Cast { value: base, .. } => {
-                    if let Operand::Value(base_v) = base {
-                        curr_val = Some(*base_v);
-                    } else { break; }
+                if let Some(loans) = state.direct_provenance.get(&v) {
+                    for loan in loans {
+                        sources.insert(self.compute_place_desc(&loan.place, state));
+                    }
                 }
-                _ => {
-                    root_val = Some(v);
-                    break;
+                if let Some(loans) = state.carried_provenance.get(&v) {
+                    for loan in loans {
+                        sources.insert(self.compute_place_desc(&loan.place, state));
+                    }
                 }
+            } else {
+                sources.insert(desc);
             }
         }
         
-        path.reverse();
-        
-        let final_root = root_val.map(Operand::Value).unwrap_or_else(|| op.clone());
-        
-        PlaceDesc {
-            root: final_root,
-            projections: path,
+        if sources.is_empty() {
+            sources.insert(self.compute_place_desc(value, state));
         }
+        
+        ProvenanceSet { sources }
     }
     
     fn check_overlap(&self, p1: &Operand, p2: &Operand, state: &BorrowStateData) -> OverlapResult {
@@ -955,6 +1113,102 @@ impl<'a> BorrowAnalyzer<'a> {
         };
         
         state.direct_provenance.entry(val_id).or_default().insert(new_loan);
+    }
+}
+
+pub fn compute_place_desc(
+    op: &Operand,
+    func_values: &[luna_mvir::ValueData],
+    aliases: Option<&HashMap<ValueId, Operand>>,
+) -> PlaceDesc {
+    let mut curr_val = if let Operand::Value(v) = op { Some(*v) } else { None };
+    let mut path = Vec::new();
+    let mut root_val = None;
+    
+    while let Some(v) = curr_val {
+        if (v.0 as usize) >= func_values.len() {
+            root_val = Some(v);
+            break;
+        }
+        let inst = &func_values[v.0 as usize].inst;
+        match inst {
+            Instruction::FieldPtr { base, field_idx } => {
+                path.push(Projection::Field(*field_idx));
+                if let Operand::Value(base_v) = base {
+                    curr_val = Some(*base_v);
+                } else { break; }
+            }
+            Instruction::Extract { value, .. } => {
+                path.push(Projection::Unknown);
+                if let Operand::Value(base_v) = value {
+                    curr_val = Some(*base_v);
+                } else { break; }
+            }
+            Instruction::Load { ptr } => {
+                let is_local_storage = if let Operand::Value(base_v) = ptr {
+                    let mut check_v = Some(*base_v);
+                    let mut is_local = false;
+                    while let Some(cv) = check_v {
+                        if (cv.0 as usize) >= func_values.len() { break; }
+                        match &func_values[cv.0 as usize].inst {
+                            Instruction::Alloca => {
+                                is_local = true;
+                                break;
+                            }
+                            Instruction::FieldPtr { base, .. } => {
+                                if let Operand::Value(bv) = base {
+                                    check_v = Some(*bv);
+                                } else { break; }
+                            }
+                            _ => break,
+                        }
+                    }
+                    is_local
+                } else {
+                    false
+                };
+
+                if !is_local_storage {
+                    path.push(Projection::Deref);
+                }
+                if let Operand::Value(base_v) = ptr {
+                    curr_val = Some(*base_v);
+                } else { break; }
+            }
+            Instruction::MakeSlice { data_ptr, .. } | Instruction::PtrOffset { ptr: data_ptr, .. } => {
+                path.push(Projection::Unknown);
+                if let Operand::Value(base_v) = data_ptr {
+                    curr_val = Some(*base_v);
+                } else { break; }
+            }
+            Instruction::Assign(base) | Instruction::Cast { value: base, .. } => {
+                if let Operand::Value(base_v) = base {
+                    curr_val = Some(*base_v);
+                } else { break; }
+            }
+            _ => {
+                root_val = Some(v);
+                break;
+            }
+        }
+    }
+    
+    path.reverse();
+    
+    let mut final_root = root_val.map(Operand::Value).unwrap_or_else(|| op.clone());
+    if let Some(alias_map) = aliases {
+        while let Operand::Value(v) = final_root {
+            if let Some(alias) = alias_map.get(&v) {
+                final_root = alias.clone();
+            } else {
+                break;
+            }
+        }
+    }
+    
+    PlaceDesc {
+        root: final_root,
+        projections: path,
     }
 }
 
@@ -1138,49 +1392,6 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                         if let Some(contract) = ctx.tables.fn_lifetime_contracts.get(&m_sym) {
                             let all_args: Vec<&Operand> = std::iter::once(obj).chain(args.iter()).collect();
 
-                            // Enforce outlives constraints at CallVirt call-site
-                            if self.emit_diagnostics {
-                                for constraint in &contract.outlives_constraints {
-                                    let longer_idx = constraint.longer as usize;
-                                    let shorter_idx = constraint.shorter as usize;
-                                    if longer_idx < all_args.len() && shorter_idx < all_args.len() {
-                                        let longer_roots = self.resolve_argument_roots(all_args[longer_idx], state);
-                                        let shorter_roots = self.resolve_argument_roots(all_args[shorter_idx], state);
-
-                                        let caller_sym_id = self.func.name.symbol_id.or_else(|| {
-                                            ctx.symbol_table.lookup(&self.func.name.name, luna_semantic::symbol::ScopeId(0))
-                                        });
-                                        let caller_contract = caller_sym_id.and_then(|sym| {
-                                            ctx.tables.fn_lifetime_contracts.get(&sym)
-                                        });
-
-                                        let mut satisfied = !longer_roots.is_empty() && !shorter_roots.is_empty();
-                                        for l_root in &longer_roots {
-                                            for s_root in &shorter_roots {
-                                                if !self.root_outlives(l_root, s_root, caller_contract) {
-                                                    satisfied = false;
-                                                    break;
-                                                }
-                                            }
-                                            if !satisfied {
-                                                break;
-                                            }
-                                        }
-
-                                        if !satisfied {
-                                            let mut diag = Diagnostic::error(format!(
-                                                "error[E2016]: LifetimeConstraintViolation: argument for parameter (index {}) does not outlive parameter (index {})",
-                                                constraint.longer, constraint.shorter
-                                            ));
-                                            diag.span = self.func.value(val_id).span.clone();
-                                            if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
-                                                self.diagnostics.push(diag);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
                             // Propagate return provenance from all_args
                             if let Some(prov) = &contract.return_provenance {
                                 for &param_idx in prov.indices() {
@@ -1192,6 +1403,23 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                             }
                                             if let Some(p) = state.carried_provenance.get(arg_v).cloned() {
                                                 state.direct_provenance.entry(val_id).or_default().extend(p);
+                                            }
+                                        }
+
+                                        let ret_ty = self.func.values[val_id.0 as usize].ty;
+                                        let resolved_ret_ty = ctx.types.resolve(ret_ty);
+                                        if let SemanticType::Struct(s_sym, ..) = ctx.types.get(resolved_ret_ty) {
+                                            if let Some(type_contract) = ctx.tables.type_lifetime_contracts.get(s_sym) {
+                                                for constraint in &type_contract.outlives_constraints {
+                                                    if let luna_semantic::CanonicalTypeLifetimeSubject::Field(fp) = &constraint.longer {
+                                                        if let Some(&f_idx) = fp.0.first() {
+                                                            let mut field_place = self.compute_place_desc(&Operand::Value(val_id), state);
+                                                            field_place.projections.push(Projection::Field(f_idx as u32));
+                                                            let prov_sources = self.compute_provenance_sources(all_args[idx], state);
+                                                            state.field_provenance.entry(field_place).or_default().sources.extend(prov_sources.sources);
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -1228,27 +1456,114 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                         && (resolved_ptr.0 as usize) < self.func.values.len()
                         && matches!(self.func.values[resolved_ptr.0 as usize].inst, Instruction::Alloca);
 
-                    if is_direct_alloca {
-                        // Strong update: overwrite previous provenance for this variable
-                        state.direct_provenance.remove(&resolved_ptr);
-                        state.carried_provenance.remove(&resolved_ptr);
+                    // Check if ptr is a FieldPtr (or alias to FieldPtr)
+                    let mut field_ptr_info = None;
+                    if (ptr_val.0 as usize) < self.func.values.len() {
+                        if let Instruction::FieldPtr { base, field_idx } = &self.func.values[ptr_val.0 as usize].inst {
+                            field_ptr_info = Some((base.clone(), *field_idx));
+                        }
+                    }
+                    if field_ptr_info.is_none() && (resolved_ptr.0 as usize) < self.func.values.len() {
+                        if let Instruction::FieldPtr { base, field_idx } = &self.func.values[resolved_ptr.0 as usize].inst {
+                            field_ptr_info = Some((base.clone(), *field_idx));
+                        }
+                    }
 
+                    if let Some((base_op, f_idx)) = field_ptr_info {
+                        let resolved_base = match self.resolve_alias(&base_op, state) {
+                            Operand::Value(bv) => *bv,
+                            _ => match base_op {
+                                Operand::Value(bv) => bv,
+                                _ => ValueId(0),
+                            },
+                        };
+
+                        let mut val_loans = HashSet::new();
                         if let Operand::Value(val_v) = value {
-                            if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
-                                state.direct_provenance.insert(resolved_ptr, prov);
+                            if let Some(prov) = state.direct_provenance.get(val_v) {
+                                val_loans.extend(prov.iter().cloned());
                             }
-                            if let Some(prov) = state.carried_provenance.get(val_v).cloned() {
-                                state.carried_provenance.insert(resolved_ptr, prov);
+                            if let Some(prov) = state.carried_provenance.get(val_v) {
+                                val_loans.extend(prov.iter().cloned());
+                            }
+                            let mut curr = *val_v;
+                            while let Some(alias) = state.aliases.get(&curr) {
+                                if let Operand::Value(av) = alias {
+                                    if let Some(prov) = state.direct_provenance.get(av) {
+                                        val_loans.extend(prov.iter().cloned());
+                                    }
+                                    if let Some(prov) = state.carried_provenance.get(av) {
+                                        val_loans.extend(prov.iter().cloned());
+                                    }
+                                    curr = *av;
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Update Place-based field provenance (ProvenanceSet of PlaceDesc)
+                        let mut field_place_desc = self.compute_place_desc(&base_op, state);
+                        field_place_desc.projections.push(Projection::Field(f_idx));
+                        let prov_sources = self.compute_provenance_sources(value, state);
+                        state.field_provenance.insert(field_place_desc, prov_sources);
+
+                        state.carried_provenance.entry(resolved_base).or_default().extend(val_loans.clone());
+                        if let Operand::Value(base_v) = base_op {
+                            if base_v != resolved_base {
+                                state.carried_provenance.entry(base_v).or_default().extend(val_loans.clone());
                             }
                         }
                     } else {
-                        // Weak update: conservative accumulation for indirect / aggregate writes
-                        if let Operand::Value(val_v) = value {
-                            if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
-                                state.direct_provenance.entry(resolved_ptr).or_default().extend(prov);
+                        let dest_base_desc = self.compute_place_desc(ptr, state);
+                        if is_direct_alloca {
+                            // Strong update: overwrite previous provenance for this variable
+                            state.direct_provenance.remove(&resolved_ptr);
+                            state.carried_provenance.remove(&resolved_ptr);
+                            state.field_provenance.retain(|k, _| k.root != dest_base_desc.root);
+
+                            if let Operand::Value(val_v) = value {
+                                if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
+                                    state.direct_provenance.insert(resolved_ptr, prov);
+                                }
+                                if let Some(prov) = state.carried_provenance.get(val_v).cloned() {
+                                    state.carried_provenance.insert(resolved_ptr, prov);
+                                }
+                                let src_base_desc = self.compute_place_desc(value, state);
+                                let mut to_copy = Vec::new();
+                                for (place, prov_set) in &state.field_provenance {
+                                    if place.root == src_base_desc.root && place.projections.starts_with(&src_base_desc.projections) {
+                                        let mut new_place = dest_base_desc.clone();
+                                        new_place.projections.extend_from_slice(&place.projections[src_base_desc.projections.len()..]);
+                                        to_copy.push((new_place, prov_set.clone()));
+                                    }
+                                }
+                                for (new_place, prov_set) in to_copy {
+                                    state.field_provenance.insert(new_place, prov_set);
+                                }
                             }
-                            if let Some(prov) = state.carried_provenance.get(val_v).cloned() {
-                                state.carried_provenance.entry(resolved_ptr).or_default().extend(prov);
+                        } else {
+                            // Weak update: conservative accumulation for indirect / aggregate writes
+                            if let Operand::Value(val_v) = value {
+                                if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
+                                    state.direct_provenance.entry(resolved_ptr).or_default().extend(prov);
+                                }
+                                if let Some(prov) = state.carried_provenance.get(val_v).cloned() {
+                                    state.carried_provenance.entry(resolved_ptr).or_default().extend(prov);
+                                }
+                                let src_base_desc = self.compute_place_desc(value, state);
+                                let mut to_copy = Vec::new();
+                                for (place, prov_set) in &state.field_provenance {
+                                    if place.root == src_base_desc.root && place.projections.starts_with(&src_base_desc.projections) {
+                                        let mut new_place = dest_base_desc.clone();
+                                        new_place.projections.extend_from_slice(&place.projections[src_base_desc.projections.len()..]);
+                                        to_copy.push((new_place, prov_set.clone()));
+                                    }
+                                }
+                                for (new_place, prov_set) in to_copy {
+                                    let entry = state.field_provenance.entry(new_place).or_default();
+                                    entry.sources.extend(prov_set.sources);
+                                }
                             }
                         }
                     }
@@ -1291,6 +1606,23 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                         }
                         if let Some(prov) = state.carried_provenance.get(ptr_val).cloned() {
                             state.carried_provenance.entry(val_id).or_default().extend(prov);
+                        }
+
+                        // Copy field provenance if loading aggregate through pointer to a new place
+                        let dest_desc = self.compute_place_desc(&Operand::Value(val_id), state);
+                        let src_desc = self.compute_place_desc(ptr, state);
+                        if dest_desc != src_desc {
+                            let mut to_copy = Vec::new();
+                            for (place, prov_set) in &state.field_provenance {
+                                if place.root == src_desc.root && place.projections.starts_with(&src_desc.projections) {
+                                    let mut new_place = dest_desc.clone();
+                                    new_place.projections.extend_from_slice(&place.projections[src_desc.projections.len()..]);
+                                    to_copy.push((new_place, prov_set.clone()));
+                                }
+                            }
+                            for (new_place, prov_set) in to_copy {
+                                state.field_provenance.entry(new_place).or_default().sources.extend(prov_set.sources);
+                            }
                         }
                     }
                 }
@@ -1484,49 +1816,6 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                 if let Some(sym_id) = callee_sym_id {
                     if let Some(ctx) = self.ctx {
                         if let Some(contract) = ctx.tables.fn_lifetime_contracts.get(&sym_id) {
-                            // Phase 3.6B: Enforce outlives constraints at call-site
-                            if self.emit_diagnostics {
-                                for constraint in &contract.outlives_constraints {
-                                    let longer_idx = constraint.longer as usize;
-                                    let shorter_idx = constraint.shorter as usize;
-                                    if longer_idx < args.len() && shorter_idx < args.len() {
-                                        let longer_roots = self.resolve_argument_roots(&args[longer_idx], state);
-                                        let shorter_roots = self.resolve_argument_roots(&args[shorter_idx], state);
-
-                                        let caller_sym_id = self.func.name.symbol_id.or_else(|| {
-                                            ctx.symbol_table.lookup(&self.func.name.name, luna_semantic::symbol::ScopeId(0))
-                                        });
-                                        let caller_contract = caller_sym_id.and_then(|sym| {
-                                            ctx.tables.fn_lifetime_contracts.get(&sym)
-                                        });
-
-                                        let mut satisfied = !longer_roots.is_empty() && !shorter_roots.is_empty();
-                                        for l_root in &longer_roots {
-                                            for s_root in &shorter_roots {
-                                                if !self.root_outlives(l_root, s_root, caller_contract) {
-                                                    satisfied = false;
-                                                    break;
-                                                }
-                                            }
-                                            if !satisfied {
-                                                break;
-                                            }
-                                        }
-
-                                        if !satisfied {
-                                            let mut diag = Diagnostic::error(format!(
-                                                "error[E2016]: LifetimeConstraintViolation: argument for parameter (index {}) does not outlive parameter (index {})",
-                                                constraint.longer, constraint.shorter
-                                            ));
-                                            diag.span = self.func.value(val_id).span.clone();
-                                            if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
-                                                self.diagnostics.push(diag);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
                             if let Some(prov) = &contract.return_provenance {
                                 for &param_idx in prov.indices() {
                                     let idx = param_idx as usize;
@@ -1537,6 +1826,24 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                                             }
                                             if let Some(p) = state.carried_provenance.get(arg_v).cloned() {
                                                 state.direct_provenance.entry(val_id).or_default().extend(p);
+                                            }
+                                        }
+
+                                        // Propagate referent provenance sources to reference fields of returned struct
+                                        let ret_ty = self.func.values[val_id.0 as usize].ty;
+                                        let resolved_ret_ty = ctx.types.resolve(ret_ty);
+                                        if let SemanticType::Struct(s_sym, ..) = ctx.types.get(resolved_ret_ty) {
+                                            if let Some(type_contract) = ctx.tables.type_lifetime_contracts.get(s_sym) {
+                                                for constraint in &type_contract.outlives_constraints {
+                                                    if let luna_semantic::CanonicalTypeLifetimeSubject::Field(fp) = &constraint.longer {
+                                                        if let Some(&f_idx) = fp.0.first() {
+                                                            let mut field_place = self.compute_place_desc(&Operand::Value(val_id), state);
+                                                            field_place.projections.push(Projection::Field(f_idx as u32));
+                                                            let prov_sources = self.compute_provenance_sources(&args[idx], state);
+                                                            state.field_provenance.entry(field_place).or_default().sources.extend(prov_sources.sources);
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -1765,7 +2072,7 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     }
                 }
             }
-            Instruction::Extract { value, .. } => {
+            Instruction::Extract { value, field_idx, .. } => {
                 self.check_access(value, false, val_id, state);
                 if let Operand::Value(v) = value {
                     let resolved = self.resolve_alias(value, state);
@@ -1782,10 +2089,26 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     if let Some(prov) = state.carried_provenance.get(v).cloned() {
                         state.carried_provenance.entry(val_id).or_default().extend(prov);
                     }
+                    let mut field_place = self.compute_place_desc(value, state);
+                    field_place.projections.push(Projection::Field(*field_idx));
+                    let dest_desc = self.compute_place_desc(&Operand::Value(val_id), state);
+                    if dest_desc != field_place {
+                        let mut to_copy = Vec::new();
+                        for (place, prov_set) in &state.field_provenance {
+                            if place.root == field_place.root && place.projections.starts_with(&field_place.projections) {
+                                let mut new_place = dest_desc.clone();
+                                new_place.projections.extend_from_slice(&place.projections[field_place.projections.len()..]);
+                                to_copy.push((new_place, prov_set.clone()));
+                            }
+                        }
+                        for (new_place, prov_set) in to_copy {
+                            state.field_provenance.entry(new_place).or_default().sources.extend(prov_set.sources);
+                        }
+                    }
                 }
             }
             Instruction::Tag { .. } => {}
-            Instruction::FieldPtr { base, .. } => {
+            Instruction::FieldPtr { base, field_idx: _ } => {
                 if let Operand::Value(b) = base {
                     let resolved = self.resolve_alias(base, state);
                     let check_val = if let Operand::Value(rv) = resolved { *rv } else { *b };
@@ -1894,6 +2217,21 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     if let Some(prov) = state.carried_provenance.get(v).cloned() {
                         state.carried_provenance.entry(val_id).or_default().extend(prov);
                     }
+                    let dest_desc = self.compute_place_desc(&Operand::Value(val_id), state);
+                    let src_desc = self.compute_place_desc(op, state);
+                    if dest_desc != src_desc {
+                        let mut to_copy = Vec::new();
+                        for (place, prov_set) in &state.field_provenance {
+                            if place.root == src_desc.root && place.projections.starts_with(&src_desc.projections) {
+                                let mut new_place = dest_desc.clone();
+                                new_place.projections.extend_from_slice(&place.projections[src_desc.projections.len()..]);
+                                to_copy.push((new_place, prov_set.clone()));
+                            }
+                        }
+                        for (new_place, prov_set) in to_copy {
+                            state.field_provenance.entry(new_place).or_default().sources.extend(prov_set.sources);
+                        }
+                    }
                 }
             }
             Instruction::Cast { value, .. } => {
@@ -1912,6 +2250,21 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                     }
                     if let Some(prov) = state.carried_provenance.get(v).cloned() {
                         state.carried_provenance.entry(val_id).or_default().extend(prov);
+                    }
+                    let dest_desc = self.compute_place_desc(&Operand::Value(val_id), state);
+                    let src_desc = self.compute_place_desc(value, state);
+                    if dest_desc != src_desc {
+                        let mut to_copy = Vec::new();
+                        for (place, prov_set) in &state.field_provenance {
+                            if place.root == src_desc.root && place.projections.starts_with(&src_desc.projections) {
+                                let mut new_place = dest_desc.clone();
+                                new_place.projections.extend_from_slice(&place.projections[src_desc.projections.len()..]);
+                                to_copy.push((new_place, prov_set.clone()));
+                            }
+                        }
+                        for (new_place, prov_set) in to_copy {
+                            state.field_provenance.entry(new_place).or_default().sources.extend(prov_set.sources);
+                        }
                     }
                 }
             }
@@ -2004,6 +2357,14 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
             let dest_loans = dest.carried_provenance.entry(*v).or_default();
             for loan in loans {
                 if dest_loans.insert(loan.clone()) {
+                    changed = true;
+                }
+            }
+        }
+        for (k, prov_set) in &src.field_provenance {
+            let dest_entry = dest.field_provenance.entry(k.clone()).or_default();
+            for src_place in &prov_set.sources {
+                if dest_entry.sources.insert(src_place.clone()) {
                     changed = true;
                 }
             }

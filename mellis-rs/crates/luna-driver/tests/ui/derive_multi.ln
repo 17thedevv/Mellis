@@ -2,7 +2,7 @@
 struct Vector {
     x: i32,
     y: i32,
-}
+};
 
 fn main() -> i32 {
     dec v1 = Vector { x: 1, y: 2 };

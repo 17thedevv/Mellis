@@ -18,6 +18,7 @@ pub struct InterfaceDecoder {
     impl_generic_param_symbols: Vec<ExternalSymbol>,
     allocated_generic_params: std::collections::HashSet<luna_common::ids::SymbolId>,
     symbol_lifetime_contracts: HashMap<luna_common::ids::SymbolId, luna_semantic::CanonicalLifetimeContract>,
+    symbol_type_lifetime_contracts: HashMap<luna_common::ids::SymbolId, luna_semantic::CanonicalTypeLifetimeContract>,
     unsafe_functions: std::collections::HashSet<luna_common::ids::SymbolId>,
     known_providers: HashMap<String, ProviderId>,
 }
@@ -44,6 +45,7 @@ impl InterfaceDecoder {
             impl_generic_param_symbols: Vec::new(),
             allocated_generic_params: std::collections::HashSet::new(),
             symbol_lifetime_contracts: HashMap::new(),
+            symbol_type_lifetime_contracts: HashMap::new(),
             unsafe_functions: std::collections::HashSet::new(),
             known_providers,
         }
@@ -208,6 +210,7 @@ impl InterfaceDecoder {
             expr_member_indices: HashMap::new(),
             raw_generic_param_symbols: HashMap::new(),
             symbol_lifetime_contracts: self.symbol_lifetime_contracts,
+            symbol_type_lifetime_contracts: self.symbol_type_lifetime_contracts,
             symbol_ffi_sync_noescape: HashMap::new(),
             trait_methods,
             unsafe_functions: self.unsafe_functions,
@@ -301,6 +304,9 @@ impl InterfaceDecoder {
         }
         if let Some(contract) = &exported.lifetime_contract {
             self.symbol_lifetime_contracts.insert(sym_id, contract.clone());
+        }
+        if let Some(contract) = &exported.type_lifetime_contract {
+            self.symbol_type_lifetime_contracts.insert(sym_id, contract.clone());
         }
         if let Some(ty_idx) = exported.ty_index {
             if let Some(&sem_ty_id) = self.type_map.get(&ty_idx) {

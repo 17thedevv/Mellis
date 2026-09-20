@@ -1,7 +1,7 @@
 // SEM-BORROW-01: valid shared field borrows ending before a mutable field borrow.
 struct Owner<T> {
     value: T,
-}
+};
 
 fn main() -> i32 {
     dec rw owner = Owner<i32> { value: 20 };

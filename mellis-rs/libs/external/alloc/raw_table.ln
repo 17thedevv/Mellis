@@ -21,7 +21,7 @@ module std {
         private cap: u64,
         private len: u64,
         private tombstones: u64,
-    }
+    };
 
     export fn raw_table_new<K, V>() -> RawTable<K, V> {
         return RawTable<K, V> {
@@ -402,7 +402,7 @@ module std {
     export struct RawTableIntoIter<K, V> {
         private table: RawTable<K, V>,
         private idx: u64,
-    }
+    };
 
     // Internal component bridge: HashMap owns the public iterator wrapper, while
     // __raw_table retains exclusive construction access to this private state.
@@ -442,7 +442,7 @@ module std {
         private values: *V,
         private idx: u64,
         private cap: u64,
-    }
+    };
 
     impl<K, V> RawTableIter<K, V> {
         export fn next_entry(self: &rw Self) -> Option<(&K, &V)> {

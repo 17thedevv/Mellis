@@ -1,9 +1,9 @@
 struct Vec {
     data: &rw i32,
-}
+};
 struct VecIterMut {
     ptr: &rw i32,
-}
+};
 impl Vec {
     fn iter_mut(self: &rw Vec) -> VecIterMut {
         return VecIterMut { ptr: self.data };

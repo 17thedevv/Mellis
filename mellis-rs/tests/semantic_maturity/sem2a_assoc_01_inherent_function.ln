@@ -2,9 +2,9 @@
 // callable by type and preserves its explicit type argument.
 struct Wrapper<T> {
     value: T,
-}
+};
 
-struct Builder {}
+struct Builder {};
 
 impl Builder {
     fn wrap<T>(value: T) -> Wrapper<T> {

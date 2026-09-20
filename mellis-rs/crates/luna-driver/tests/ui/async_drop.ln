@@ -1,6 +1,6 @@
 struct Resource {
     id: i32,
-}
+};
 
 async fn worker() -> i32 {
     return 100;

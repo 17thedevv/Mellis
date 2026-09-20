@@ -397,12 +397,12 @@ import <vec>;
 struct DropCounter {
     private created: u64,
     private dropped: u64,
-}
+};
 
 struct TrackedItem {
     val: i32,
     counter: *rw DropCounter,
-}
+};
 
 impl Drop for TrackedItem {
     fn drop(self: &rw Self) {
@@ -492,12 +492,12 @@ import <vec>;
 struct DropCounter {
     private created: u64,
     private dropped: u64,
-}
+};
 
 struct TrackedItem {
     val: i32,
     counter: *rw DropCounter,
-}
+};
 
 impl Drop for TrackedItem {
     fn drop(self: &rw Self) {

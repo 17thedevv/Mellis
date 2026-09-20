@@ -59,7 +59,7 @@ import <iter_collect>;
         struct Point {
             x: i32,
             y: i32,
-        }
+        };
 
         fn main() -> i32 {
             dec b = std::box_new<i32>(42);
@@ -105,7 +105,7 @@ import <iter_collect>;
 
         struct ManagedItem {
             value: i32,
-        }
+        };
 
         impl Drop for ManagedItem {
             fn drop(self: &rw Self) {
@@ -189,7 +189,7 @@ import <iter_collect>;
 
         struct Resource {
             active: bool,
-        }
+        };
 
         impl Drop for Resource {
             fn drop(self: &rw Self) {
@@ -351,7 +351,8 @@ import <hashmap>;
 import <hashset>;
 import <iter_collect>;
 
-        struct Unit {}
+        struct Unit {};
+
 
         fn main() -> i32 {
             dec b = std::box_new<Unit>(Unit {});
@@ -589,7 +590,7 @@ import <iter_collect>;
         struct Data {
             a: i32,
             b: bool,
-        }
+        };
 
         fn main() -> i32 {
             dec b1 = std::box_new<i32>(10);
@@ -677,7 +678,7 @@ import <iter_collect>;
         struct ManagedResource {
             id: i32,
             is_active: bool,
-        }
+        };
 
         impl Drop for ManagedResource {
             fn drop(self: &rw Self) {
@@ -724,7 +725,7 @@ import <iter_collect>;
 
         struct TrackedItem {
             val: i32,
-        }
+        };
 
         impl Drop for TrackedItem {
             fn drop(self: &rw Self) {

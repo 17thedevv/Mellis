@@ -4,7 +4,7 @@ trait Speaker {
 
 struct Dog {
     age: i32,
-}
+};
 
 impl Speaker for Dog {
     fn speak(self: &Dog) -> i32 {

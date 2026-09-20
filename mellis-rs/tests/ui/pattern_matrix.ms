@@ -4,12 +4,12 @@ module test {
     export struct Point {
         x: int,
         y: int,
-    }
+    };
 
     export struct Nested {
         p: Point,
         z: int,
-    }
+    };
 
     export enum Result {
         Ok(Point),

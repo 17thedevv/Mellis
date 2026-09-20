@@ -95,7 +95,7 @@ struct DropTracker {
     id: i32,
     counter: *rw i32,
     last_dropped: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {
@@ -160,7 +160,7 @@ import <iter_collect>;
 
 struct DropTracker {
     counter: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {
@@ -230,7 +230,7 @@ import <iter_collect>;
 struct DropTracker {
     id: i32,
     counter: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {
@@ -305,7 +305,7 @@ import <iter_collect>;
 struct DropTracker {
     id: i32,
     counter: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {
@@ -624,7 +624,7 @@ import <iter_collect>;
 
 struct Tracker {
     counter: *rw i32,
-}
+};
 
 impl Drop for Tracker {
     fn drop(self: &rw Self) {

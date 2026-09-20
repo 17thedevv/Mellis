@@ -268,7 +268,7 @@ fn test_c_gap_03_generic_and_non_generic_mixed_provider() {
 
         export struct BoxedVal<T> {
             export val: T,
-        }
+        };
 
         impl<T> BoxedVal<T> {
             export fn get(self: &BoxedVal<T>) -> T {
@@ -337,7 +337,7 @@ fn test_c_gap_03_custom_drop_and_provider_state() {
     let tracker_src = r#"
         export struct ManagedResource {
             export status: i32,
-        }
+        };
 
         impl Drop for ManagedResource {
             export fn drop(self: &rw ManagedResource) {

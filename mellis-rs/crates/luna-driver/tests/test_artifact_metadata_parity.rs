@@ -96,11 +96,11 @@ fn test_generic_same_name_params_declaration_scoped() {
 module gen {
     export struct First<T> {
         export value: T,
-    }
+    };
 
     export struct Second<T> {
         export value: T,
-    }
+    };
 
     impl<T> First<T> {
         export fn get(self: &First<T>) -> T {
@@ -148,7 +148,7 @@ fn test_transitive_nominal_type_identity_a_b_c() {
 module alpha {
     export struct Item {
         export x: i32,
-    }
+    };
 
     export fn make(x: i32) -> Item {
         return Item { x: x };
@@ -205,7 +205,7 @@ fn test_transitive_generic_type_args_a_b_c() {
 module alpha {
     export struct Wrapper<T> {
         export inner: T,
-    }
+    };
 
     export fn wrap(x: i32) -> Wrapper<i32> {
         return Wrapper<i32> { inner: x };
@@ -265,7 +265,7 @@ module alpha {
 
     export struct Item {
         export x: i32,
-    }
+    };
 
     impl Describer for Item {
         fn describe(self: &Self) -> i32 {
@@ -335,7 +335,7 @@ fn test_mixed_source_artifact_graph_parity() {
 module alpha {
     export struct Item {
         export x: i32,
-    }
+    };
 
     export fn make(x: i32) -> Item {
         return Item { x: x };
@@ -420,11 +420,11 @@ module meta {
 
     export struct First<T> {
         export value: T,
-    }
+    };
 
     export struct Second<T> {
         export value: T,
-    }
+    };
 
     impl Marker for First<i32> {
         fn mark(self: &Self) -> i32 {
@@ -520,7 +520,7 @@ fn test_transitive_lifetime_contract_a_b_c() {
 module alpha {
     export struct Item {
         export x: i32,
-    }
+    };
 
     export fn make(x: i32) -> Item {
         return Item { x: x };
@@ -589,7 +589,7 @@ import "tb";
 
 struct Thing {
     v: i32,
-}
+};
 
 impl tb::Marker for Thing {
     fn mark(self: &Self) -> i32 {
@@ -636,7 +636,7 @@ module assoc {
 
     export struct Num {
         export v: i32,
-    }
+    };
 
     impl Producer for Num {
         type Output = i32;

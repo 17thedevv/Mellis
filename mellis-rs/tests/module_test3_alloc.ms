@@ -1,3 +1,3 @@
 module std {
-    export struct Vec {}
+    export struct Vec {};
 }

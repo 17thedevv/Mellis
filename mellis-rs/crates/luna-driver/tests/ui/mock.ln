@@ -7,7 +7,7 @@ export enum MyResult<T, E> {
 
 export struct MyResidual<E> {
     err: E,
-}
+};
 
 impl<T, E> Try for MyResult<T, E> {
     type Output = T;

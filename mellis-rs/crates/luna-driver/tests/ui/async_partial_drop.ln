@@ -1,11 +1,11 @@
 struct Item {
     val: i32,
-}
+};
 
 struct Foo {
     a: Item,
     b: Item,
-}
+};
 
 fn consume_item(i: Item) -> i32 {
     return i.val;

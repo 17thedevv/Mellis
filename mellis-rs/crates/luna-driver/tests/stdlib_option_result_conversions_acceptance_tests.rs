@@ -229,7 +229,8 @@ import <ptr>;
 import <iter_adapters>;
 import <iter_consumers>;
 
-struct NoCopy { val: i32 }
+struct NoCopy { val: i32 };
+
 
 fn main() {
     dec opt = Option::Some(NoCopy { val: 1 });
@@ -267,7 +268,8 @@ import <ptr>;
 import <iter_adapters>;
 import <iter_consumers>;
 
-struct NoCopy { val: i32 }
+struct NoCopy { val: i32 };
+
 
 fn main() {
     dec res: Result<NoCopy, i32> = Result::Ok(NoCopy { val: 1 });
@@ -305,7 +307,8 @@ import <ptr>;
 import <iter_adapters>;
 import <iter_consumers>;
 
-struct Droppable { id: i32 }
+struct Droppable { id: i32 };
+
 impl Drop for Droppable {
     fn drop(self: &rw Self) {}
 }
@@ -352,7 +355,8 @@ import <ptr>;
 import <iter_adapters>;
 import <iter_consumers>;
 
-struct CustomError { code: i32 }
+struct CustomError { code: i32 };
+
 
 fn main() -> i32 {
     dec opt1 = Option::Some(10);

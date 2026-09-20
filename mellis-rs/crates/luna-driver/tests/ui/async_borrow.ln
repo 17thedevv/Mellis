@@ -1,6 +1,6 @@
 struct Counter {
     val: i32,
-}
+};
 
 fn read_counter(c: &Counter) -> i32 {
     return c.val;

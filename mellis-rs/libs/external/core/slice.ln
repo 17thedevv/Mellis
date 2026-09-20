@@ -11,7 +11,7 @@ module slice {
     export struct SliceIter<T> {
         private ptr: *T,
         private end: *T,
-    }
+    };
     
     impl<T> SliceIter<T> {
         // Shared borrow iteration - returns reference to backing element
@@ -44,7 +44,7 @@ module slice {
     export struct SliceIterMut<T> {
         private ptr: *rw T,
         private end: *rw T,
-    }
+    };
     
     impl<T> SliceIterMut<T> {
         export fn next_mut(self: &rw Self) -> Option<&rw T> life_from(self) {

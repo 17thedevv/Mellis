@@ -1,4 +1,4 @@
-﻿use luna_common::Span;
+use luna_common::Span;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum BuiltinKind {
@@ -143,6 +143,9 @@ pub enum TokenKind {
     KwSelfVal,
     KwSelfTyp,
     KwLifeFrom,
+    KwRequires,
+    KwLife,
+    // Legacy tokens retained temporarily solely for targeted parser migration diagnostics
     KwWhere,
     KwOutlives,
     KwPrivate,

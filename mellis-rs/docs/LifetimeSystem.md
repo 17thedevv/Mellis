@@ -9,7 +9,7 @@ Mellis's lifetime system ensures that references never outlive the data they poi
 1. [Why Lifetimes?](#why-lifetimes)
 2. [Basic Syntax](#basic-syntax)
 3. [life_from()](#life_from)
-4. [where outlives()](#where-outlives)
+4. [requires life() >= life()](#requires-life--life)
 5. [Examples](#examples)
 6. [Error Messages](#error-messages)
 7. [Best Practices](#best-practices)
@@ -42,7 +42,7 @@ fn function_name(param: &Type) -> &Type [lifetime_signature]
 The lifetime signature consists of:
 
 1. **`life_from(ident)`** — declares the provenance of the return value
-2. **`where outlives(a, b)`** — constrains relative lifetimes
+2. **`requires life(a) >= life(b)`** (or `requires life(b) <= life(a)`) — constrains relative lifetimes between parameters or receiver
 
 ---
 
@@ -83,30 +83,36 @@ The `|` (pipe) means "or". The return can come from either `a` or `b`.
 
 ---
 
-## where outlives()
+## requires life() >= life()
 
 Declares that one lifetime must be at least as long as another.
 
 ### Syntax
 
 ```mellis
-where outlives(longer, shorter)
+requires life(longer) >= life(shorter)
+// Or equivalently:
+requires life(shorter) <= life(longer)
 ```
 
-This reads as: "`longer` must outlive `shorter`" — meaning `longer`'s lifetime must be **greater than or equal to** `shorter`'s.
+This reads as: "`longer` must outlive `shorter`" — meaning `longer`'s region is valid at least as long as `shorter`'s ($R_{longer} \succeq R_{shorter}$).
 
-### Example
+### Multiple Constraints and Order Independence
+
+Multiple constraints can be chained (`requires ... requires ...`) or comma-separated (`requires ..., ...`).
+`requires` and `life_from` can appear in any order in the function signature:
 
 ```mellis
 fn merge(a: &i32, b: &i32) -> &i32
     life_from(a)
-    where outlives(a, b)
+    requires life(a) >= life(b)
 {
     return a;
 }
 ```
 
-This says: "return comes from `a`, but `a` must outlive `b`".
+> **Migration Note**: Legacy `where outlives(a, b)` syntax has been removed. The compiler emits a targeted diagnostic:
+> `'where outlives(...)' has been removed; use canonical 'requires life(a) >= life(b)'`.
 
 ### Why?
 
@@ -115,10 +121,10 @@ Consider this scenario:
 ```mellis
 fn cache_result(result: &i32, cache: &i32) -> &i32
     life_from(result)
-    where outlives(result, cache)
+    requires life(result) >= life(cache)
 ```
 
-If `cache` is dropped before `result` is used, there could be issues. The `outlives` constraint ensures `result` lives at least as long as `cache`.
+If `cache` is dropped before `result` is used, there could be issues. The constraint ensures `result` lives at least as long as `cache`.
 
 ---
 
@@ -156,7 +162,7 @@ fn select(positive: &i32, negative: &i32, flag: bool) -> &i32
 ```mellis
 fn longest(x: &i32, y: &i32) -> &i32
     life_from(x | y)
-    where outlives(x, y)
+    requires life(x) >= life(y)
 {
     if *x > *y {
         return x;
@@ -179,7 +185,7 @@ fn create_span(a: &i32, b: &i32) -> Span life_from(a | b) {
 ```
 
 > **Note:** Mellis does NOT use lifetime annotations like Rust's `'a`, `'b`. 
-> Lifetime relationships are expressed through `life_from()` and `where outlives()` only.
+> Lifetime relationships are expressed through `life_from()` and `requires life(...) >= life(...)` only.
 > The compiler infers actual lifetimes internally.
 
 ---
@@ -208,17 +214,15 @@ fn bad(a: &i32, b: &str) -> &i32 life_from(a | b)
 ```mellis
 fn bad(a: &i32, b: &i32) -> &i32
     life_from(a)
-    where outlives(a, b)
+    requires life(a) >= life(b)
 // When called with arguments where a doesn't outlive b...
 ```
 
 This is caught at call site with:
 
 ```
-error: argument 1 does not satisfy lifetime constraint: 'a must outlive 'b
+error[E2016]: LifetimeConstraintViolation: ...
 ```
-
-> **Note:** The `'a`, `'b` in error messages refer to the parameter names, not explicit lifetime annotations.
 
 ### Return Provenance Mismatch
 
@@ -244,24 +248,23 @@ fn get_data(data: &Buffer) -> &u8 life_from(data)
 // Avoid: Overly complex
 fn get_data(data: &Buffer, temp: &Buffer, cache: &Cache) -> &u8
     life_from(data | temp | cache)
-    where outlives(data, temp)
-    where outlives(data, cache)
+    requires life(data) >= life(temp), life(data) >= life(cache)
 ```
 
 ### 2. Use Constraints Judiciously
 
-Only add `where outlives` when there's a semantic requirement, not just to be explicit.
+Only add `requires` when there's a semantic requirement, not just to be explicit.
 
 ```mellis
 // Good: Actual semantic requirement
 fn cache_key(key: &str, cache: &Cache) -> &str
     life_from(key)
-    where outlives(key, cache)
+    requires life(key) >= life(cache)
 
 // Unnecessary: Both parameters have same lifetime anyway
 fn pair(a: &i32, b: &i32) -> &i32
     life_from(a)
-    where outlives(a, b)
+    requires life(a) >= life(b)
 ```
 
 ### 3. Match Return Patterns

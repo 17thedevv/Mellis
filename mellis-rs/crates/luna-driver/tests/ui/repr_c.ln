@@ -1,11 +1,11 @@
 #[repr(C)]
 struct FfiSafe {
     x: i32,
-}
+};
 
 struct NotFfiSafe {
     x: i32,
-}
+};
 
 // Function that takes an FFI safe struct is fine if not exported as C ABI, but 
 // let's just make sure #[repr(C)] compiles without errors.

@@ -1,7 +1,7 @@
 struct Pair {
     first: i32,
     second: i32,
-}
+};
 
 async fn helper() -> i32 {
     return 10;

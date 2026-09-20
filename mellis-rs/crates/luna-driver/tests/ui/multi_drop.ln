@@ -1,5 +1,5 @@
-struct StructA { val: i32 }
-struct StructB { val: i32 }
+struct StructA { val: i32 };
+struct StructB { val: i32 };
 
 trait Drop {
     fn drop(self: &rw Self);

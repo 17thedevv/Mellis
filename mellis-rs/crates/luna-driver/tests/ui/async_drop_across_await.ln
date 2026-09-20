@@ -1,6 +1,6 @@
 struct Resource {
     id: i32,
-}
+};
 
 impl Drop for Resource {
     fn drop(self: &rw Resource) {}

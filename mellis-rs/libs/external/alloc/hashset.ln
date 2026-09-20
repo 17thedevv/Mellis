@@ -9,7 +9,7 @@ import <__lang_drop>;
 module std {
     export struct SetIntoIter<T> {
         private map: MapIntoIter<T, ()>,
-    }
+    };
 
     impl<T> SetIntoIter<T> {
         export fn next(self: &rw Self) -> Option<T> {
@@ -34,7 +34,7 @@ module std {
 
     export struct SetIter<T> {
         private keys: Keys<T, ()>,
-    }
+    };
 
     impl<T> SetIter<T> {
         export fn next(self: &rw Self) -> Option<&T> {
@@ -50,7 +50,7 @@ module std {
 
     export struct HashSet<T> {
         private map: HashMap<T, ()>,
-    }
+    };
 
     export fn hashset_new<T>() -> HashSet<T> {
         return HashSet {

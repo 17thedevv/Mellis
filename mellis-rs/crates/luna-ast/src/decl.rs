@@ -1,4 +1,4 @@
-﻿#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum ImportKind {
     Local,
     External,
@@ -98,6 +98,7 @@ pub enum Decl {
         name: Span,
         generic_params: Vec<GenericParam>,
         fields: Vec<StructField>,
+        lifetime_contract: Option<crate::StructLifetimeContractAst>,
     },
     Enum {
         annotations: Vec<Annotation>,

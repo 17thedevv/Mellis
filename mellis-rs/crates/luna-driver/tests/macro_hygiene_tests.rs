@@ -1,4 +1,4 @@
-﻿use luna_driver::check;
+use luna_driver::check;
 
 #[test]
 fn test_macro_hygiene_generic_params() {
@@ -7,7 +7,7 @@ fn test_macro_hygiene_generic_params() {
             (@name: ident) => {
                 struct @name<T> {
                     val: T,
-                }
+                };
                 
                 impl<T> @name<T> {
                     fn get_val(self: @name<T>) -> T {

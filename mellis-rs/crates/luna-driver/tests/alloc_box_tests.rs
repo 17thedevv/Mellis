@@ -138,7 +138,7 @@ import <iter_collect>;
         struct Pair {
             a: i32,
             b: i32,
-        }
+        };
         fn take_box(b: std::Box<Pair>) -> std::Box<Pair> {
             return b;
         }

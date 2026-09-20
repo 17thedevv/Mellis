@@ -237,7 +237,7 @@ fn test_case_12_move_analysis_still_active_inside_unsafe() {
     let src = r#"
         struct NonCopy {
             val: i32,
-        }
+        };
 
         fn main() -> i32 {
             dec a = NonCopy { val: 10 };

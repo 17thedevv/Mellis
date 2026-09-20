@@ -1,9 +1,9 @@
 module std {
-    export struct Vec {}
+    export struct Vec {};
 }
 
 module sys {
-    export struct LinkedList {}
+    export struct LinkedList {};
 }
 
 fn main() {

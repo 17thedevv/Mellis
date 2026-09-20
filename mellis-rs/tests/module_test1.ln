@@ -1,8 +1,8 @@
 module std {
-    struct Hidden {}
-    export struct Top {}
+    struct Hidden {};
+    export struct Top {};
     export module io {
-        export struct File {}
+        export struct File {};
     }
 }
 

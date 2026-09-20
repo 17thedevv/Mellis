@@ -234,12 +234,12 @@ import <iter_collect>;
         struct Point {
             x: i32,
             y: i32,
-        }
+        };
 
         struct PointGenerator {
             count: i32,
             max: i32,
-        }
+        };
 
         impl Iterator<Point> for PointGenerator {
             fn next(self: &rw Self) -> Option<Point> {
@@ -327,12 +327,12 @@ import <iter_collect>;
         struct DropCounter {
             created: u64,
             dropped: u64,
-        }
+        };
 
         struct TrackedItem {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Drop for TrackedItem {
             fn drop(self: &rw Self) {
@@ -346,7 +346,7 @@ import <iter_collect>;
             cur: i32,
             max: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Iterator<TrackedItem> for TrackedGenerator {
             fn next(self: &rw Self) -> Option<TrackedItem> {
@@ -551,12 +551,12 @@ fn test_c7_collect_hashset_droptracker() {
         struct DropCounter {
             created: u64,
             dropped: u64,
-        }
+        };
 
         struct TrackedItem {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Hash for TrackedItem {
             fn hash(self: &Self) -> u64 {
@@ -581,7 +581,7 @@ fn test_c7_collect_hashset_droptracker() {
         struct DedupGenerator {
             step: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Iterator<TrackedItem> for DedupGenerator {
             fn next(self: &rw Self) -> Option<TrackedItem> {
@@ -676,7 +676,7 @@ import <iter_collect>;
         struct PairGenerator {
             cur: i32,
             max: i32,
-        }
+        };
 
         impl Iterator<(i32, i32)> for PairGenerator {
             fn next(self: &rw Self) -> Option<(i32, i32)> {
@@ -762,7 +762,7 @@ import <iter_collect>;
 
         struct DupPairGenerator {
             step: i32,
-        }
+        };
 
         impl Iterator<(i32, i32)> for DupPairGenerator {
             fn next(self: &rw Self) -> Option<(i32, i32)> {
@@ -847,13 +847,13 @@ fn test_c10_collect_hashmap_droptracker_identity() {
         struct Counter {
             created: u64,
             dropped: u64,
-        }
+        };
 
         struct TrackedKey {
             id: i32,
             marker: i32,
             counter: *rw Counter,
-        }
+        };
 
         impl Hash for TrackedKey {
             fn hash(self: &Self) -> u64 {
@@ -881,7 +881,7 @@ fn test_c10_collect_hashmap_droptracker_identity() {
             id: i32,
             marker: i32,
             counter: *rw Counter,
-        }
+        };
 
         impl Drop for TrackedVal {
             fn drop(self: &rw Self) {
@@ -897,7 +897,7 @@ fn test_c10_collect_hashmap_droptracker_identity() {
             step: i32,
             k_counter: *rw Counter,
             v_counter: *rw Counter,
-        }
+        };
 
         impl Iterator<(TrackedKey, TrackedVal)> for PairGenerator {
             fn next(self: &rw Self) -> Option<(TrackedKey, TrackedVal)> {
@@ -1121,7 +1121,7 @@ fn test_c12_collect_source_vs_llib_parity() {
         struct PairGenerator {
             cur: i32,
             max: i32,
-        }
+        };
 
         impl Iterator<(i32, i32)> for PairGenerator {
             fn next(self: &rw Self) -> Option<(i32, i32)> {
@@ -1405,7 +1405,7 @@ fn test_c15_collect_hashset_duplicate_representative_semantics() {
         struct ItemWithIdentity {
             id: i32,
             marker: i32,
-        }
+        };
 
         impl Hash for ItemWithIdentity {
             fn hash(self: &Self) -> u64 {
@@ -1421,7 +1421,7 @@ fn test_c15_collect_hashset_duplicate_representative_semantics() {
 
         struct IdentityGenerator {
             step: i32,
-        }
+        };
 
         impl Iterator<ItemWithIdentity> for IdentityGenerator {
             fn next(self: &rw Self) -> Option<ItemWithIdentity> {

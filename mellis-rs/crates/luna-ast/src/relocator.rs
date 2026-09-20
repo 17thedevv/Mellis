@@ -1,6 +1,6 @@
 use crate::{AstArena, Decl, Expr, Pattern, Stmt, Type};
 use crate::{DeclId, ExprId, PatId, StmtId, TypeId};
-use crate::{FnLifetimeSignature, LifetimeExpr, LifetimeConstraint};
+use crate::{FnLifetimeSignature, LifetimeExpr};
 use luna_common::ids::{FileId, Span};
 
 /// Relocates all IDs in an AstArena by given offsets.
@@ -249,13 +249,16 @@ impl AstRelocator {
                 if let Some(b) = body { *b = self.shift_stmt_id(*b); }
                 self.relocate_lifetime_signature(lifetime_signature);
             }
-            Decl::Struct { annotations, name, generic_params, fields, .. } => {
+            Decl::Struct { annotations, name, generic_params, fields, lifetime_contract, .. } => {
                 self.relocate_annotations(annotations);
                 self.shift_span(name);
                 self.relocate_generic_params(generic_params);
                 for field in fields {
                     self.shift_span(&mut field.name);
                     field.ty = self.shift_type_id(field.ty);
+                }
+                if let Some(c) = lifetime_contract {
+                    self.relocate_struct_lifetime_contract(c);
                 }
             }
             Decl::Enum { annotations, name, generic_params, variants, .. } => {
@@ -469,6 +472,18 @@ impl AstRelocator {
         }
     }
 
+    fn relocate_lifetime_target(&self, target: &mut crate::LifetimeTargetAst) {
+        match target {
+            crate::LifetimeTargetAst::Named { span, .. } => self.shift_span(span),
+            crate::LifetimeTargetAst::SelfVal(span) => self.shift_span(span),
+            crate::LifetimeTargetAst::Return(span) => self.shift_span(span),
+            crate::LifetimeTargetAst::Projection { base, span, .. } => {
+                self.relocate_lifetime_target(base);
+                self.shift_span(span);
+            }
+        }
+    }
+
     fn relocate_lifetime_signature(&self, sig: &mut FnLifetimeSignature) {
         if let Some(ref mut provenance) = sig.provenance {
             match provenance {
@@ -481,8 +496,17 @@ impl AstRelocator {
             }
         }
         for constraint in &mut sig.constraints {
-            self.shift_span(&mut constraint.first);
-            self.shift_span(&mut constraint.second);
+            self.relocate_lifetime_target(&mut constraint.longer);
+            self.relocate_lifetime_target(&mut constraint.shorter);
+            self.shift_span(&mut constraint.span);
+        }
+    }
+
+    fn relocate_struct_lifetime_contract(&self, contract: &mut crate::StructLifetimeContractAst) {
+        for constraint in &mut contract.constraints {
+            self.relocate_lifetime_target(&mut constraint.longer);
+            self.relocate_lifetime_target(&mut constraint.shorter);
+            self.shift_span(&mut constraint.span);
         }
     }
 }

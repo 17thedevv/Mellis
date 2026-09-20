@@ -223,7 +223,7 @@ fn sem_loop_11_iteration_local_struct_carrying_ref() {
     let src = r#"
         struct Holder {
             r: &i32,
-        }
+        };
         fn main() -> i32 {
             dec rw x = 10;
             dec rw i = 0;

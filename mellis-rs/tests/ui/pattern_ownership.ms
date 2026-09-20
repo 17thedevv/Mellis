@@ -3,7 +3,7 @@
 export struct Point {
     x: int,
     y: int,
-}
+};
 
 export enum Option {
     Some(Point),

@@ -232,7 +232,7 @@ fn test_m2_module_struct_and_impl() {
             export struct Point {
                 export x: i32,
                 export y: i32,
-            }
+            };
             export trait Describable {
                 fn val(self: &Self) -> i32;
             }
@@ -395,7 +395,7 @@ fn test_m4_private_struct_rejected() {
         module data {
             struct SecretData {
                 key: i32,
-            }
+            };
         }
         fn main() {
             dec s: data::SecretData;
@@ -424,7 +424,7 @@ fn test_m4_private_method_rejected() {
         module engine {
             export struct Motor {
                 export power: i32,
-            }
+            };
             export impl Motor {
                 fn internal_spark(self: &Motor) -> i32 { return self.power; }
                 export fn start(self: &Motor) -> i32 { return self.internal_spark(); }

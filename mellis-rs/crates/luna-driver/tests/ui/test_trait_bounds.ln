@@ -2,14 +2,14 @@ trait Printable {
     fn print(self);
 }
 
-struct MyStruct {}
+struct MyStruct {};
 
 impl Printable for MyStruct {
     fn print(self) {
     }
 }
 
-struct Unprintable {}
+struct Unprintable {};
 
 fn print_it<T: Printable>(val: T) {
     val.print();

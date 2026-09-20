@@ -1,7 +1,7 @@
 // SEM-METHOD-03: a live shared receiver-derived borrow conflicts with &rw self.
 struct Counter {
     value: i32,
-}
+};
 
 impl Counter {
     fn value_ref(self: &Self) -> &i32 life_from(self) {

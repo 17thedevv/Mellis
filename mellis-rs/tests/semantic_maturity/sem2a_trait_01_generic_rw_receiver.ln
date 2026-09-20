@@ -6,7 +6,7 @@ trait Accumulate<T> {
 
 struct Counter {
     value: i32,
-}
+};
 
 impl Accumulate<i32> for Counter {
     fn add(self: &rw Counter, value: i32) {

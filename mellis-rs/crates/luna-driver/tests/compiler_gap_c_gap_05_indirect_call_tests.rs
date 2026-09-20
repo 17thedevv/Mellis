@@ -102,7 +102,7 @@ fn test_c_gap_05_struct_field_indirect_call() {
 struct MathEngine {
     op: fn(i32, i32) -> i32,
     bias: i32,
-}
+};
 
 fn multiply(a: i32, b: i32) -> i32 {
     return a * b;
@@ -137,7 +137,7 @@ trait Evaluator {
 
 struct DoubleEvaluator {
     multiplier: i32,
-}
+};
 
 impl Evaluator for DoubleEvaluator {
     fn compute(self: &Self, v: i32) -> i32 {

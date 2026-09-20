@@ -28,7 +28,7 @@ const PROVIDER: &str = r#"
 module prov {
     export struct Container<T> {
         export value: T,
-    }
+    };
 
     export fn create_container(val: i32) -> Container<i32> {
         return Container<i32> { value: val };

@@ -56,7 +56,7 @@ import <iter_consumers>;
 struct Wrapper<T> {
     val: T,
     drop_counter: *rw i32,
-}
+};
 
 impl<T> Drop for Wrapper<T> {
     fn drop(self: &rw Self) {
@@ -107,7 +107,7 @@ struct DropTracker {
     order_seq: *rw i32,
     tracker_order: *rw i32,
     tracker_count: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {
@@ -124,7 +124,7 @@ struct Holder<T> {
     order_seq: *rw i32,
     holder_order: *rw i32,
     holder_count: *rw i32,
-}
+};
 
 impl<T> Drop for Holder<T> {
     fn drop(self: &rw Self) {
@@ -204,7 +204,7 @@ struct DropTracker {
     order_seq: *rw i32,
     order: *rw i32,
     count: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {
@@ -221,7 +221,7 @@ struct Inner<T> {
     order_seq: *rw i32,
     order: *rw i32,
     count: *rw i32,
-}
+};
 
 impl<T> Drop for Inner<T> {
     fn drop(self: &rw Self) {
@@ -238,7 +238,7 @@ struct Outer<T> {
     order_seq: *rw i32,
     order: *rw i32,
     count: *rw i32,
-}
+};
 
 impl<T> Drop for Outer<T> {
     fn drop(self: &rw Self) {
@@ -328,7 +328,7 @@ import <iter_collect>;
 struct DropTracker {
     id: i32,
     counter: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {
@@ -381,7 +381,7 @@ import <iter_collect>;
 struct DropTracker {
     id: i32,
     counter: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {
@@ -430,7 +430,7 @@ import <iter_collect>;
 
 struct PlainData<T> {
     val: T,
-}
+};
 
 fn main() -> i32 {
     dec p = PlainData<i32> { val: 12345 };
@@ -474,7 +474,7 @@ import <iter_collect>;
 struct DropTracker {
     id: i32,
     counter: *rw i32,
-}
+};
 
 impl Drop for DropTracker {
     fn drop(self: &rw Self) {

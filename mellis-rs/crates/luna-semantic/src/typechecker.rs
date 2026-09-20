@@ -1264,8 +1264,39 @@ impl<'a> TypeChecker<'a> {
                             field_tys.push(f_ty);
                         }
                         if let Some(sym_id) = sym_id_opt {
-                            let struct_ty = self.ctx.types.intern(SemanticType::Struct(sym_id, Vec::new(), field_tys));
+                            let struct_ty = self.ctx.types.intern(SemanticType::Struct(sym_id, Vec::new(), field_tys.clone()));
                             self.ctx.tables.symbol_types.insert(sym_id, struct_ty);
+
+                            // Field type admissibility gate for struct lifetime contracts:
+                            // life(field) only admits reference types (&T or &rw T). Non-reference types reject with E2016.
+                            if let Some(resolved_contract) = self.ctx.tables.resolved_type_lifetime_contracts.get(&sym_id).cloned() {
+                                let struct_name = self.ctx.symbol_table.get_symbol(sym_id).name.clone();
+                                let mut has_admissibility_error = false;
+                                for constraint in &resolved_contract.constraints {
+                                    if let crate::ResolvedTypeLifetimeSubject::Field(field_sym) = constraint.longer {
+                                        if let Some(field_syms) = self.ctx.tables.struct_fields.get(&sym_id) {
+                                            if let Some(idx) = field_syms.iter().position(|&s| s == field_sym) {
+                                                if let Some(&fty) = field_tys.get(idx) {
+                                                    if !matches!(self.ctx.types.get(fty), SemanticType::Reference(..)) {
+                                                        let field_name = self.ctx.symbol_table.get_symbol(field_sym).name.clone();
+                                                        self.ctx.diagnostics.push(
+                                                            Diagnostic::error(format!(
+                                                                "error[E2016]: LifetimeConstraintViolation: field '{}' in struct '{}' has non-reference type, but struct lifetime contracts only admit reference fields (&T or &rw T)",
+                                                                field_name, struct_name
+                                                            ))
+                                                            .with_span(constraint.span),
+                                                        );
+                                                        has_admissibility_error = true;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if has_admissibility_error {
+                                    self.ctx.tables.type_lifetime_contracts.remove(&sym_id);
+                                }
+                            }
                         }
                         self.current_scope = prev_scope;
                     }

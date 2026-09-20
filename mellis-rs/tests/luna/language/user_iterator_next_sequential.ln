@@ -1,7 +1,7 @@
 struct UserIter {
     current: i32,
     limit: i32,
-}
+};
 
 impl Iterator<i32> for UserIter {
     fn next(self: &rw Self) -> Option<i32> {

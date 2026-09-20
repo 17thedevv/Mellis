@@ -115,7 +115,7 @@ module utf8 {
 module std {
     export struct String {
         private vec: Vec<u8>,
-    }
+    };
 
     export fn string_new() -> String {
         return String {

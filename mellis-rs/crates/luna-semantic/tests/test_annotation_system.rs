@@ -1,4 +1,4 @@
-﻿use luna_ast::AstArena;
+use luna_ast::AstArena;
 use luna_common::ids::FileId;
 use luna_lexer::lexer::Lexer;
 use luna_parser::Parser;
@@ -39,7 +39,7 @@ fn parse_and_process(src: &str, allow_internal: bool) -> (SemanticContext, Vec<l
 fn test_unknown_attribute_on_struct() {
     let src = r#"
         #[non_existent_attr]
-        struct S {}
+        struct S {};
     "#;
     let (_, diags) = parse_and_process(src, false);
     assert!(!diags.is_empty());
@@ -150,7 +150,7 @@ fn test_lang_unauthorized() {
 fn test_lang_wrong_target_struct() {
     let src = r#"
         #[lang("try")]
-        export struct Foo {}
+        export struct Foo {};
     "#;
     let (_, diags) = parse_and_process(src, true);
     assert!(!diags.is_empty());
@@ -193,7 +193,7 @@ fn test_lang_wrong_target_type_alias() {
 #[test]
 fn test_lang_wrong_target_impl() {
     let src = r#"
-        struct Foo {}
+        struct Foo {};
         #[lang("try")]
         impl Foo {}
     "#;
@@ -282,7 +282,7 @@ fn test_sync_noescape_valid_on_param() {
 fn test_sync_noescape_invalid_on_struct() {
     let src = r#"
         #[sync_noescape]
-        struct BadStruct {}
+        struct BadStruct {};
     "#;
     let (_, diags) = parse_and_process(src, false);
     assert!(!diags.is_empty());

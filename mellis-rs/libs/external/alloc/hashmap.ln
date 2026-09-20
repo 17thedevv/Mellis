@@ -9,7 +9,7 @@ import <__lang_drop>;
 module std {
     export struct MapIntoIter<K, V> {
         private raw: RawTableIntoIter<K, V>,
-    }
+    };
 
     impl<K, V> MapIntoIter<K, V> {
         export fn next(self: &rw Self) -> Option<(K, V)> {
@@ -26,7 +26,7 @@ module std {
 
     export struct MapIter<K, V> {
         private raw: RawTableIter<K, V>,
-    }
+    };
 
     impl<K, V> MapIter<K, V> {
         export fn next(self: &rw Self) -> Option<(&K, &V)> {
@@ -42,7 +42,7 @@ module std {
 
     export struct Keys<K, V> {
         private raw: RawTableIter<K, V>,
-    }
+    };
 
     impl<K, V> Keys<K, V> {
         export fn next(self: &rw Self) -> Option<&K> {
@@ -58,7 +58,7 @@ module std {
 
     export struct Values<K, V> {
         private raw: RawTableIter<K, V>,
-    }
+    };
 
     impl<K, V> Values<K, V> {
         export fn next(self: &rw Self) -> Option<&V> {
@@ -79,7 +79,7 @@ module std {
     // =========================================================================
     export struct HashMap<K, V> {
         private table: RawTable<K, V>,
-    }
+    };
 
     export fn hashmap_new<K, V>() -> HashMap<K, V> {
         return HashMap<K, V> {

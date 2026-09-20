@@ -9,7 +9,7 @@ enum Option {
 struct Counter {
     current: i32;
     max: i32;
-}
+};
 
 fn counter_new(max: i32) -> Counter {
     return Counter { current: 0, max: max };

@@ -1,4 +1,4 @@
-﻿use luna_ast::AstArena;
+use luna_ast::AstArena;
 use luna_semantic::{SemanticContext, Resolver};
 
 fn run_check(src: &str, allow_internal: bool) -> SemanticContext {
@@ -28,7 +28,7 @@ fn test_lang_item_1_registration_and_2_forward_lookup() {
         export trait MyTestTrait {}
 
         #[lang("test_struct")]
-        export struct MyTestStruct {}
+        export struct MyTestStruct {};
     "#;
     let ctx = run_check(src, true);
     assert!(ctx.diagnostics.is_empty(), "Expected no diagnostics, got: {:?}", ctx.diagnostics);
@@ -91,7 +91,7 @@ fn test_lang_item_5_duplicate_symbol() {
 fn test_lang_item_6_wrong_target() {
     let src = r#"
         #[lang("test_trait")]
-        export struct InvalidTargetStruct {}
+        export struct InvalidTargetStruct {};
     "#;
     let ctx = run_check(src, true);
     assert_eq!(ctx.diagnostics.len(), 1);

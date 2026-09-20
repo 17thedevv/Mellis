@@ -302,14 +302,54 @@ Borrow Integration
 ```
 *Rule:* If a lifetime case cannot be expressed within the formal Region system, it is a design gap requiring semantic review, never an ad-hoc heuristic patch inside `BorrowAnalyzer`.
 
-### Post-Freeze Hardening Roadmap
-- **REGION-HARDENING: Canonical Loop Tree Hierarchy** (Non-semantic refactor / robustness item)
-  - Replace `min_by_key(|nl| nl.blocks.len())` with explicit loop nesting metadata: `LoopInfo { id, parent: Option<LoopId>, depth: usize, blocks }` and `max_by_key(|nl| nl.depth)`.
-  - **Invariant:** *"Loop nesting identity is semantic/compiler-structural metadata. Block-set size is never a lifetime semantic."*
-  - Hardening must preserve 100% of observable lifetime behavior and pass complete maturity + Region suites.
+### Canonical Architecture & Roadmap Status
 
-- **REGION-02: Borrowck Integration**
-  - Integrate Loan, Provenance, and the Region Solver into the existing CFG analysis.
-- **REGION-03: User Contract Layer**
-  - Parse and integrate user-facing contracts (`life_from`, `requires`), and finalize Elision rules in the compiler frontend.
+| Milestone | Scope / Responsibility | Canonical Status |
+|---|---|---|
+| **SEM-MATURITY-01** | Compiler semantic test suite & maturity stabilization | **COMPLETE & FROZEN ✅** |
+| **REGION-DESIGN-01** | Architectural design and separation of concerns | **FROZEN ✅** |
+| **REGION-SPEC-01** | Formal mathematical and lattice specification | **FROZEN ✅** |
+| **REGION-01** | Formal Region Graph Engine | **COMPLETE & FROZEN ✅** |
+| ├─ **REGION-01A** | Region IR, Graph, Regions, Points, Relations | **FROZEN ✅** |
+| ├─ **REGION-01B** | Semantic Constraint Generation (Contract + Body) | **FROZEN ✅** |
+| ├─ **REGION-01C** | Symbolic Region Relation Solver | **FROZEN ✅** |
+| └─ **REGION-01D** | CFG Realization + Borrow Authority Cutover | **FROZEN ✅** |
+| *(Old REGION-02)* | *Borrowck Integration* | *Subsumed by REGION-01D-C & 01D-D* |
+| **Memory-Safety Authority Migration** | End-to-end delegation of all lifetime checks to Region Engine | **PARTIAL until REGION-02A cutover** |
+
+### Post-Freeze Maintenance
+- **REGION-HARDENING: Canonical Loop Tree Hierarchy** *(Non-semantic refactor / robustness item)*
+  - Replace `min_by_key(|nl| nl.blocks.len())` with explicit loop nesting metadata: `LoopInfo { id, parent: Option<LoopId>, depth: usize, blocks }` and `max_by_key(|nl| nl.depth)`.
+  - **Invariants:**
+    - *"Loop nesting identity is semantic/compiler-structural metadata. Block-set size is never a lifetime semantic."*
+    - Hardening must preserve 100% of observable lifetime behavior and pass complete maturity + Region suites.
+
+### Completed Semantic Milestones
+- **REGION-02: User Contract Pipeline Alignment & Call-Site Authority Completion — COMPLETE & FROZEN ✅**
+  - **REGION-02A: Call-Site Outlives Authority Cutover — COMPLETE & FROZEN ✅**
+    - Eliminated `BorrowAnalyzer::root_outlives` and the lexical heuristic `v_long.0 <= v_short.0`.
+    - Realized pipeline:
+      $$\text{CanonicalLifetimeContract} \longrightarrow \text{LifetimeSubject} \longrightarrow \text{Argument RegionIds} \longrightarrow \text{RegionGraph / RegionSolution} \longrightarrow \text{Outlives Verdict} \longrightarrow \text{Diagnostic E2016}$$
+    - Verified by `CALLSITE-01..12` (12/12 passing).
+  - **REGION-02B: Canonical Surface Syntax Alignment — COMPLETE & FROZEN ✅**
+    - Canonical syntax: `requires life(a) >= life(b);` and `requires life(a) <= life(b);` with mandatory `;` terminator.
+    - Deterministic rejection of legacy `where outlives` with migration diagnostic (`E1032`).
+    - Semantic receiver mapping `life(self)` via canonical `SelfVal` identity.
+    - Verified by `SYNTAX-01..12` (12/12 passing).
+  - **REGION-02C: Struct / Resolved Contract Completion — COMPLETE & FROZEN ✅**
+    - Parser & AST: `struct S { field: &T } requires life(field) >= life(self);` with mandatory `;` terminator.
+    - Admissibility Gate: v1 admits only reference fields (`&T`, `&rw T`) outliving `SelfVal`; raw pointers (`*T`, `*rw T`) and non-reference values strictly rejected.
+    - Pipeline: $\text{Parser AST} \longrightarrow \text{Resolver} \longrightarrow \text{ResolvedLifetimeContract} \longrightarrow \text{CanonicalLifetimeContract}$.
+    - Verification in borrowck: Projected `PlaceDesc`-keyed `ProvenanceSet` decoupled from loans; dynamic destination `Place(s)` instance regions.
+    - Verified by `STRUCT-SYNTAX-01..05` (5/5) and `STRUCT-LIFE-01..21` (21/21 passing).
+  - **REGION-02D: End-to-End Contract Parity & Legacy Compatibility — 100% ABSORBED & FROZEN ✅**
+    - *Scope Absorption Audit:*
+      - Legacy `where outlives` removal & migration diagnostic $\longrightarrow$ Absorbed in **02B** (`SYNTAX-08`).
+      - Canonical syntax source behavior & `SelfVal` canonical identity $\longrightarrow$ Absorbed in **02B** (`SYNTAX-01..03, 11`).
+      - Function `.llib` parity $\longrightarrow$ Absorbed in **02A / 02B** (`test_syntax_10_llib_contract_parity`, `cutover_08_source_and_llib_parity_after_cutover`).
+      - Struct `.llib` parity $\longrightarrow$ Absorbed in **02C** (`STRUCT-LIFE-09`).
+      - Artifact format version bump & deterministic mismatch rejection $\longrightarrow$ Absorbed in **02C** (`STRUCT-LIFE-17`, `LLIB_FORMAT_VERSION = 1`).
+      - Type field canonical identity $\longrightarrow$ Absorbed in **02C** (`CanonicalFieldPath`, 0-based indexing, `STRUCT-LIFE-02`).
+    - All requirements independently and rigorously verified with zero remaining debt. Standalone phase superseded.
+
 

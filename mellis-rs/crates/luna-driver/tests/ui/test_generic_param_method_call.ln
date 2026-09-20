@@ -1,7 +1,7 @@
 trait Printable {
     fn print(self);
 }
-struct Dummy {}
+struct Dummy {};
 impl Printable for Dummy {
     fn print(self) {}
 }

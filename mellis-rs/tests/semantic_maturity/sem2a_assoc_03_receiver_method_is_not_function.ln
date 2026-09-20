@@ -2,7 +2,7 @@
 // be invoked without a receiver through `Type::method`.
 struct Counter {
     value: i32,
-}
+};
 
 impl Counter {
     fn read(self: &Self) -> i32 {

@@ -29,10 +29,10 @@ fn test_o1_valid_outlives_accepted() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
-fn caller_params(a: &i32, b: &i32) where outlives(a, b) {
+fn caller_params(a: &i32, b: &i32) requires life(a) >= life(b) {
     callee(a, b);
 }
 
@@ -56,7 +56,7 @@ fn test_o2a_inverted_locals_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
 fn caller() {
@@ -85,7 +85,7 @@ fn test_o2b_local_passed_to_param_position_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
 fn caller(p: &i32) {
@@ -113,7 +113,7 @@ fn test_o3_equal_lifetimes_accepted() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
 fn caller_param(p: &i32) {
@@ -139,10 +139,10 @@ fn test_o4_transitive_outlives_accepted() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
-fn caller_transitive(a: &i32, b: &i32, c: &i32) where outlives(a, b) where outlives(b, c) {
+fn caller_transitive(a: &i32, b: &i32, c: &i32) requires life(a) >= life(b) requires life(b) >= life(c) {
     callee(a, c);
 }
 "#;
@@ -160,10 +160,10 @@ fn test_o5_contradiction_cycle_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
-fn caller_bad(a: &i32, b: &i32, c: &i32) where outlives(a, b) where outlives(b, c) {
+fn caller_bad(a: &i32, b: &i32, c: &i32) requires life(a) >= life(b) requires life(b) >= life(c) {
     callee(c, a);
 }
 "#;
@@ -187,7 +187,7 @@ fn test_o6_independent_parameters_rejected() {
     let opts = make_opts(&test_sysroot);
 
     let src = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
 fn caller_unconstrained(a: &i32, b: &i32) {
@@ -219,7 +219,7 @@ fn test_o7_source_and_llib_outlives_parity() {
 
     let provider_src = r#"
 module order_lib {
-    export fn enforce_order(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+    export fn enforce_order(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
     }
 }
 "#;
@@ -352,11 +352,11 @@ fn test_o8_combined_life_from_and_outlives() {
     let opts = make_opts(&test_sysroot);
 
     let src_valid = r#"
-fn pick_longer(a: &i32, b: &i32) -> &i32 life_from(a) where outlives(a, b) {
+fn pick_longer(a: &i32, b: &i32) -> &i32 life_from(a) requires life(a) >= life(b) {
     return a;
 }
 
-fn caller(x: &i32, y: &i32) -> &i32 life_from(x) where outlives(x, y) {
+fn caller(x: &i32, y: &i32) -> &i32 life_from(x) requires life(x) >= life(y) {
     dec r = pick_longer(x, y);
     return r;
 }
@@ -367,11 +367,11 @@ fn caller(x: &i32, y: &i32) -> &i32 life_from(x) where outlives(x, y) {
     assert!(res_valid.is_ok(), "O8: Valid combined contract call MUST pass! Got: {:?}", res_valid.err());
 
     let src_invalid = r#"
-fn pick_longer(a: &i32, b: &i32) -> &i32 life_from(a) where outlives(a, b) {
+fn pick_longer(a: &i32, b: &i32) -> &i32 life_from(a) requires life(a) >= life(b) {
     return a;
 }
 
-fn caller(x: &i32, y: &i32) -> &i32 life_from(x) where outlives(x, y) {
+fn caller(x: &i32, y: &i32) -> &i32 life_from(x) requires life(x) >= life(y) {
     dec r = pick_longer(y, x);
     return r;
 }
@@ -400,7 +400,7 @@ fn test_direction_inversion_regression() {
     let opts = make_opts(&test_sysroot);
 
     let src_correct_direction = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
 fn test_valid() {
@@ -415,7 +415,7 @@ fn test_valid() {
     assert!(res_correct.is_ok(), "Direction regression: callee(outer, inner) MUST pass! Got: {:?}", res_correct.err());
 
     let src_inverted_direction = r#"
-fn callee(longer: &i32, shorter: &i32) where outlives(longer, shorter) {
+fn callee(longer: &i32, shorter: &i32) requires life(longer) >= life(shorter) {
 }
 
 fn test_inverted() {

@@ -1,6 +1,6 @@
 struct RefWrapper {
     ptr: &i32,
-}
+};
 fn main() {
     dec rw a = 1;
     dec wrapper = RefWrapper { ptr: &a };

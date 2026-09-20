@@ -403,7 +403,7 @@ fn test_case_19_comptime_use_of_moved_value() {
     let src = r#"
         struct NonCopy {
             val: i32,
-        }
+        };
 
         const BAD_MOVE: i32 = comptime {
             dec a = NonCopy { val: 10 };

@@ -38,7 +38,10 @@ pub use lifetime::{
     LifetimeIdent, LifetimeVar, LifetimeConstraintExpr, Provenance,
     LifetimeSolver, SolveResult, LifetimeAssignment,
     LifetimeError, resolve_fn_lifetime_signature,
-    LIFETIME_RELATION_ABI_VERSION, CanonicalProvenance, CanonicalOutlivesConstraint, CanonicalLifetimeContract,
+    LIFETIME_RELATION_ABI_VERSION, CanonicalProvenance, CanonicalContractSubject, CanonicalOutlivesConstraint, CanonicalLifetimeContract,
+    ResolvedTypeLifetimeSubject, ResolvedTypeOutlivesConstraint, ResolvedTypeLifetimeContract,
+    CanonicalFieldPath, CanonicalTypeLifetimeSubject, CanonicalTypeOutlivesConstraint, CanonicalTypeLifetimeContract,
+    LifetimeObligation,
 };
 
 pub trait ComptimeEngine: Send + Sync {

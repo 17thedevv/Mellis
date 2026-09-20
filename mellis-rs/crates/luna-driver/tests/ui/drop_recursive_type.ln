@@ -1,7 +1,7 @@
 struct Node {
     value: i32,
     next: *rw Node,
-}
+};
 
 trait Drop { fn drop(self: &rw Self); }
 impl Drop for Node { fn drop(self: &rw Self) {} }

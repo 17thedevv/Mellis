@@ -39,7 +39,7 @@ import <iter_consumers>;
 
 struct Data {
     val: i32,
-}
+};
 
 trait Source {
     fn get_data(self: &Self) -> &Data life_from(self);
@@ -47,7 +47,7 @@ trait Source {
 
 struct MySource {
     data: Data,
-}
+};
 
 impl Source for MySource {
     fn get_data(self: &Self) -> &Data life_from(self) {
@@ -92,7 +92,7 @@ import <iter_consumers>;
 
 struct Data {
     val: i32,
-}
+};
 
 trait Source {
     fn get_data(self: &Self) -> &Data life_from(self);
@@ -100,7 +100,7 @@ trait Source {
 
 struct MySource {
     data: Data,
-}
+};
 
 impl Source for MySource {
     fn get_data(self: &Self) -> &Data life_from(self) {
@@ -134,7 +134,7 @@ import <iter_consumers>;
 
 struct Data {
     val: i32,
-}
+};
 
 trait Source {
     fn get_data(self: &Self) -> &Data life_from(self);
@@ -142,7 +142,7 @@ trait Source {
 
 struct MySource {
     data: Data,
-}
+};
 
 impl Source for MySource {
     fn get_data(self: &Self) -> &Data life_from(self) {
@@ -180,7 +180,7 @@ fn test_v3_dynamic_call_via_llib() {
 module source_lib {
     export struct Data {
         export val: i32,
-    }
+    };
 
     export trait Source {
         fn get_data(self: &Self) -> &Data life_from(self);
@@ -188,7 +188,7 @@ module source_lib {
 
     export struct MySource {
         export data: Data,
-    }
+    };
 
     impl Source for MySource {
         fn get_data(self: &Self) -> &Data life_from(self) {
@@ -314,7 +314,7 @@ import <iter_consumers>;
 
 struct Data {
     val: i32,
-}
+};
 
 trait Source {
     fn get_data(self: &Self) -> &Data life_from(self);
@@ -322,7 +322,7 @@ trait Source {
 
 struct BadSource {
     data: Data,
-}
+};
 
 impl Source for BadSource {
     fn get_data(self: &Self) -> &Data {
@@ -361,13 +361,13 @@ import <iter_adapters>;
 import <iter_consumers>;
 
 trait Transformer {
-    fn transform(self: &Self, longer: &i32, shorter: &i32) -> void where outlives(longer, shorter);
+    fn transform(self: &Self, longer: &i32, shorter: &i32) -> void requires life(longer) >= life(shorter);
 }
 
-struct MyTransformer {}
+struct MyTransformer {};
 
 impl Transformer for MyTransformer {
-    fn transform(self: &Self, longer: &i32, shorter: &i32) -> void where outlives(longer, shorter) {
+    fn transform(self: &Self, longer: &i32, shorter: &i32) -> void requires life(longer) >= life(shorter) {
     }
 }
 
@@ -400,13 +400,13 @@ import <iter_adapters>;
 import <iter_consumers>;
 
 trait Transformer {
-    fn transform(self: &Self, longer: &i32, shorter: &i32) -> void where outlives(longer, shorter);
+    fn transform(self: &Self, longer: &i32, shorter: &i32) -> void requires life(longer) >= life(shorter);
 }
 
-struct MyTransformer {}
+struct MyTransformer {};
 
 impl Transformer for MyTransformer {
-    fn transform(self: &Self, longer: &i32, shorter: &i32) -> void where outlives(longer, shorter) {
+    fn transform(self: &Self, longer: &i32, shorter: &i32) -> void requires life(longer) >= life(shorter) {
     }
 }
 
@@ -442,7 +442,7 @@ trait Selector {
     fn pick(self: &Self, a: &i32, b: &i32) -> &i32 life_from(a);
 }
 
-struct MySelector {}
+struct MySelector {};
 
 impl Selector for MySelector {
     fn pick(self: &Self, a: &i32, b: &i32) -> &i32 life_from(a | b) {
@@ -483,7 +483,7 @@ trait Selector {
     fn pick(self: &Self, a: &i32, b: &i32) -> &i32 life_from(a | b);
 }
 
-struct MySelector {}
+struct MySelector {};
 
 impl Selector for MySelector {
     fn pick(self: &Self, a: &i32, b: &i32) -> &i32 life_from(a) {

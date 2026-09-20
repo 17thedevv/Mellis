@@ -1,7 +1,7 @@
 // SEM-BORROW-02: invalid overlapping shared and mutable field borrows.
 struct Owner<T> {
     value: T,
-}
+};
 
 fn main() {
     dec rw owner = Owner<i32> { value: 1 };

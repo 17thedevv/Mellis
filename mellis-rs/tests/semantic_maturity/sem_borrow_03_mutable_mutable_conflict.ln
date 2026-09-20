@@ -1,7 +1,7 @@
 // SEM-BORROW-03: invalid overlapping mutable borrows use E3003.
 struct Owner<T> {
     value: T,
-}
+};
 
 fn main() {
     dec rw owner = Owner<i32> { value: 1 };

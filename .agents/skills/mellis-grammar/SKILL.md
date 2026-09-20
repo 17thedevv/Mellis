@@ -102,26 +102,36 @@ dec y = identity<i32>(42);
 ```
 
 ### Struct Declarations
-Struct fields **strictly use comma `,` delimiters**. Semicolons `;` are forbidden in v1.0.
-Trailing comma is permitted.
+Struct fields **strictly use comma `,` delimiters**. Semicolons `;` are forbidden inside the field list in v1.0. Trailing comma is permitted.
+
+**Struct Declaration Terminator Invariant**:
+A struct declaration is terminated by exactly one `;` after all postfix type-level contracts.
+- `}` closes the struct body.
+- `;` closes the struct declaration.
+Therefore, `struct A {};` and `struct B { field: &T } requires life(field) >= life(self);` are canonical.
 
 Fields are **private by default**. Prefixing a field with `export` makes it public (only valid on exported structs, per `VIS-STRUCT-2`):
 ```rust
 export struct Point {
     export x: f64,
     export y: f64,
-}
+};
 
 export struct User {
     export name: str,
     password_hash: str, // private field
-}
+};
 
 // In a private struct, all fields are private; 'export' on fields is rejected (VIS-STRUCT-2)
 struct InternalBuffer {
     capacity: usize,
     len: usize,
-}
+};
+
+// Struct with lifetime contract:
+struct Holder {
+    value: &i32,
+} requires life(value) >= life(self);
 ```
 
 ### Imports & Module Architecture (Provider vs Namespace)

@@ -4,7 +4,7 @@ trait Value {
 
 struct Counter {
     current: i32,
-}
+};
 
 impl Counter {
     fn value(self: &Self) -> i32 {

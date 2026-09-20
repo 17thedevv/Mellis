@@ -169,7 +169,7 @@ fn test_iter_for_each_basic() {
         struct Context {
             total: i32,
             visits: u64,
-        }
+        };
 
         fn visit_item(ctx: *rw Context, x: &i32) {
             unsafe {
@@ -458,12 +458,12 @@ import <iter_collect>;
         struct DropCounter {
             private created: u64,
             private dropped: u64,
-        }
+        };
 
         struct TrackedItem {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Drop for TrackedItem {
             fn drop(self: &rw Self) {
@@ -548,12 +548,12 @@ import <iter_collect>;
         struct DropCounter {
             private created: u64,
             private dropped: u64,
-        }
+        };
 
         struct TrackedItem {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Drop for TrackedItem {
             fn drop(self: &rw Self) {
@@ -639,12 +639,12 @@ import <iter_collect>;
         struct DropCounter {
             private created: u64,
             private dropped: u64,
-        }
+        };
 
         struct TrackedItem {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Drop for TrackedItem {
             fn drop(self: &rw Self) {
@@ -783,12 +783,12 @@ fn test_iter_find_owned_droptracker() {
         struct DropCounter {
             private created: u64,
             private dropped: u64,
-        }
+        };
 
         struct TrackedItem {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Drop for TrackedItem {
             fn drop(self: &rw Self) {
@@ -805,7 +805,7 @@ fn test_iter_find_owned_droptracker() {
             buf: *rw TrackedItem,
             pos: u64,
             len: u64,
-        }
+        };
 
         impl Iterator<TrackedItem> for OwnedPairIter {
             fn next(self: &rw Self) -> Option<TrackedItem> {
@@ -862,7 +862,7 @@ fn test_iter_find_owned_droptracker() {
             buf: *rw i32,
             pos: u64,
             len: u64,
-        }
+        };
 
         impl Drop for OwnedCopyIter {
             fn drop(self: &rw Self) {
@@ -944,12 +944,12 @@ fn test_iter_any_owned_droptracker() {
         struct DropCounter {
             private created: u64,
             private dropped: u64,
-        }
+        };
 
         struct TrackedItem {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Drop for TrackedItem {
             fn drop(self: &rw Self) {
@@ -966,7 +966,7 @@ fn test_iter_any_owned_droptracker() {
             buf: *rw TrackedItem,
             pos: u64,
             len: u64,
-        }
+        };
 
         impl Drop for OwnedTripleIter {
             fn drop(self: &rw Self) {
@@ -1070,12 +1070,12 @@ fn test_iter_all_owned_droptracker() {
         struct DropCounter {
             private created: u64,
             private dropped: u64,
-        }
+        };
 
         struct TrackedItem {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Drop for TrackedItem {
             fn drop(self: &rw Self) {
@@ -1092,7 +1092,7 @@ fn test_iter_all_owned_droptracker() {
             buf: *rw TrackedItem,
             pos: u64,
             len: u64,
-        }
+        };
 
         impl Drop for OwnedTripleIter {
             fn drop(self: &rw Self) {
@@ -1195,12 +1195,12 @@ fn test_iter_fold_droptracker_accumulator() {
         struct DropCounter {
             private created: u64,
             private dropped: u64,
-        }
+        };
 
         struct TrackedAcc {
             val: i32,
             counter: *rw DropCounter,
-        }
+        };
 
         impl Drop for TrackedAcc {
             fn drop(self: &rw Self) {

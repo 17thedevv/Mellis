@@ -60,7 +60,7 @@ fn test_import_2_and_7_hierarchy_preservation() {
         module foo {
             export struct Bar {
                 export x: i32,
-            }
+            };
         }
     "#;
     fs::write(&prov_path, prov_src).unwrap();
@@ -101,10 +101,10 @@ fn test_import_6_visibility_enforcement() {
     let prov_src = r#"
         export struct PublicItem {
             export x: i32,
-        }
+        };
         struct PrivateItem {
             y: i32,
-        }
+        };
         fn private_helper() -> i32 {
             return 123;
         }
@@ -202,10 +202,10 @@ import <iter_collect>;
 fn test_import_5_deterministic_collision() {
     let dir = create_temp_dir("import_5_collision");
     let prov_a = dir.join("prov_a.ln");
-    fs::write(&prov_a, "export struct ConflictingStruct { a: i32, }").unwrap();
+    fs::write(&prov_a, "export struct ConflictingStruct { a: i32, };").unwrap();
 
     let prov_b = dir.join("prov_b.ln");
-    fs::write(&prov_b, "export struct ConflictingStruct { b: i32, }").unwrap();
+    fs::write(&prov_b, "export struct ConflictingStruct { b: i32, };").unwrap();
 
     let main_path = dir.join("main.ln");
     let src = r#"
@@ -239,7 +239,7 @@ fn test_import_8_source_vs_binary_parity() {
     let prov_src = r#"
         export struct Widget<T> {
             val: T,
-        }
+        };
         impl<T> Widget<T> {
             export fn get(self: &Self) -> T {
                 return self.val;

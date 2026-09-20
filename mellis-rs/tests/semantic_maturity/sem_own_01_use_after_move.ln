@@ -1,7 +1,7 @@
 // SEM-OWN-01: invalid use of a non-Copy user-defined value after a full move.
 struct Owner<T> {
     value: T,
-}
+};
 
 fn consume<T>(value: T) {}
 
