@@ -1,0 +1,10 @@
+// SEM2A-TYPE-02: a generic alias cannot erase an incompatible type argument.
+struct Wrapper<T> {
+    value: T,
+}
+
+type Wrapped<T> = Wrapper<T>;
+
+fn main() {
+    dec invalid: Wrapped<i32> = Wrapper<bool> { value: true };
+}

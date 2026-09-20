@@ -18,8 +18,9 @@ impl SemanticContext {
         match self.types.get(ty_id) {
             SemanticType::Struct(s, _, _) => Some(*s),
             SemanticType::Enum(e, _, _) => Some(*e),
-            SemanticType::Reference(_, _, inner) => self.nominal_head(*inner),
-            SemanticType::Pointer(_, inner) => self.nominal_head(*inner),
+            // Fundamental wrappers are themselves non-local heads. Locality of
+            // a nested type must not authorize an impl for `&T` or `*T`.
+            SemanticType::Reference(..) | SemanticType::Pointer(..) => None,
             _ => None,
         }
     }

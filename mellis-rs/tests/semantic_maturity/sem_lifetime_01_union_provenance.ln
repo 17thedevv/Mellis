@@ -1,0 +1,13 @@
+// SEM-LIFETIME-01: valid multiple-input provenance in canonical Luna syntax.
+fn pick(a: &i32, b: &i32, choose_a: bool) -> &i32 life_from(a | b) {
+    if choose_a {
+        return a;
+    }
+    return b;
+}
+
+fn main() -> i32 {
+    dec a = 20;
+    dec b = 22;
+    return *pick(&a, &b, false) - 22;
+}

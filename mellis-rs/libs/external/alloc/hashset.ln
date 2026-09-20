@@ -120,9 +120,3 @@ impl<T> IntoIterator<T, SetIntoIter<T>> for std::HashSet<T> {
     }
 }
 
-impl<T> IntoIterator<&T, SetIter<T>> for &std::HashSet<T> {
-    fn into_iter(self: Self) -> SetIter<T> {
-        return self.iter();
-    }
-}
-

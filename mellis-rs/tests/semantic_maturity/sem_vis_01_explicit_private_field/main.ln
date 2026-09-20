@@ -1,0 +1,7 @@
+// SEM-VIS-01: invalid external read of an explicitly private field.
+import "secret_provider";
+
+fn main() -> i32 {
+    dec secret = make_secret(42);
+    return secret.value;
+}

@@ -1,4 +1,4 @@
-use luna_mvir::{BasicBlock, Function};
+use luna_mvir::Function;
 use std::collections::HashMap;
 
 pub trait DataflowAnalysis<State> {
@@ -9,6 +9,7 @@ pub trait DataflowAnalysis<State> {
         state: &mut State,
     );
     fn transfer_terminator(&mut self, term: &luna_mvir::Terminator, state: &mut State);
+    fn transfer_edge(&mut self, _from: &str, _to: &str, _state: &mut State) {}
     fn merge(&mut self, dest: &mut State, src: &State) -> bool;
     fn init_entry_state(&mut self, func: &Function, state: &mut State);
 }
@@ -51,10 +52,6 @@ impl DataflowEngine {
         if let Some(entry) = func.blocks.first() {
             let mut entry_state = State::default();
             analysis.init_entry_state(func, &mut entry_state);
-            // Wait, what if this is incremental and the entry state hasn't changed?
-            // Actually, we must guarantee the entry block starts with init_entry_state.
-            // But we should merge it in case it's incremental and we don't want to lose info.
-            // Wait, for forward analysis, entry state is absolute.
             block_states.insert(entry.label.name.clone(), entry_state);
         }
 
@@ -104,8 +101,11 @@ impl DataflowEngine {
                             changed = true; // Need to process this new reachable block
                         }
                         
+                        let mut edge_state = current_state.clone();
+                        analysis.transfer_edge(&block.label.name, &succ, &mut edge_state);
+
                         let dest_state = block_states.get_mut(&succ).unwrap();
-                        if analysis.merge(dest_state, &current_state) {
+                        if analysis.merge(dest_state, &edge_state) {
                             changed = true;
                         }
                     }

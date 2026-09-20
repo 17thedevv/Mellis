@@ -1,0 +1,25 @@
+// SEM-METHOD-03: a live shared receiver-derived borrow conflicts with &rw self.
+struct Counter {
+    value: i32,
+}
+
+impl Counter {
+    fn value_ref(self: &Self) -> &i32 life_from(self) {
+        return &self.value;
+    }
+
+    fn advance(self: &rw Self) {
+        self.value = self.value + 1;
+    }
+}
+
+fn observe(value: &i32) -> i32 {
+    return *value;
+}
+
+fn main() -> i32 {
+    dec rw counter = Counter { value: 4 };
+    dec held = counter.value_ref();
+    counter.advance();
+    return observe(held) - 4;
+}

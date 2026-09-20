@@ -68,6 +68,22 @@ pub struct TraitResolution {
     pub method_sym: SymbolId,
 }
 
+/// Fully resolved language-protocol plan for a `for pattern in iterable` loop.
+///
+/// This records semantic identities selected by the type checker so lowering
+/// never needs to recognize a concrete container or rediscover an impl by name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ForLoopResolution {
+    pub into_iter_method: SymbolId,
+    pub into_iter_subst: crate::ty::Substitution,
+    pub next_method: SymbolId,
+    pub next_subst: crate::ty::Substitution,
+    pub iterator_type: SemanticTypeId,
+    pub item_type: SemanticTypeId,
+    pub option_type: SemanticTypeId,
+    pub next_receiver_type: SemanticTypeId,
+}
+
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IntrinsicKind {
@@ -112,6 +128,7 @@ pub struct SemanticTables {
     // For loop desugaring tracking
     pub for_loop_next: HashMap<StmtId, SymbolId>,
     pub for_loop_subst: HashMap<StmtId, crate::ty::Substitution>,
+    pub for_loop_resolutions: HashMap<StmtId, ForLoopResolution>,
     
     pub pat_symbols: HashMap<PatId, SymbolId>,
     pub pat_types: HashMap<PatId, SemanticTypeId>,
@@ -239,6 +256,7 @@ impl SemanticTables {
             try_branches: HashMap::new(),
             for_loop_next: HashMap::new(),
             for_loop_subst: HashMap::new(),
+            for_loop_resolutions: HashMap::new(),
             pat_symbols: HashMap::new(),
             pat_types: HashMap::new(),
             decl_symbols: HashMap::new(),

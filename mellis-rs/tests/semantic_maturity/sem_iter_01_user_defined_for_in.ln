@@ -1,0 +1,31 @@
+// SEM-ITER-01: valid for-in over user-defined IntoIterator/Iterator impls.
+struct CounterIter<T> {
+    current: i32,
+    limit: i32,
+}
+
+impl<T> Iterator<i32> for CounterIter<T> {
+    fn next(self: &rw Self) -> Option<i32> {
+        if self.current < self.limit {
+            dec value = self.current;
+            self.current = self.current + 1;
+            return Option::Some(value);
+        }
+        return Option::None;
+    }
+}
+
+impl<T> IntoIterator<i32, CounterIter<T>> for CounterIter<T> {
+    fn into_iter(self: Self) -> CounterIter<T> {
+        return self;
+    }
+}
+
+fn main() -> i32 {
+    dec rw sum = 0;
+    dec values = CounterIter<i32> { current: 4, limit: 6 };
+    for value in values {
+        sum = sum + value;
+    }
+    return sum - 9;
+}

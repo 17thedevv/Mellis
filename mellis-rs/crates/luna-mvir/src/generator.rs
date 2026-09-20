@@ -17,6 +17,7 @@ pub struct MvirGenerator<'a> {
     // Track local variables to their Alloca ValueId
     locals: HashMap<luna_common::ids::SymbolId, ValueId>,
     lexical_scopes: Vec<Vec<luna_common::ids::SymbolId>>,
+    temporary_drop_scopes: Vec<Vec<(ValueId, luna_semantic::SemanticTypeId)>>,
     loop_scopes: Vec<usize>,
     loop_break_targets: Vec<LabelId>,
     loop_continue_targets: Vec<LabelId>,
@@ -45,6 +46,7 @@ impl<'a> MvirGenerator<'a> {
             next_label_id: 0,
             locals: HashMap::new(),
             lexical_scopes: Vec::new(),
+            temporary_drop_scopes: Vec::new(),
             loop_scopes: Vec::new(),
             loop_break_targets: Vec::new(),
             loop_continue_targets: Vec::new(),
@@ -132,6 +134,27 @@ impl<'a> MvirGenerator<'a> {
             return Some(canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, base_name));
         }
         None
+    }
+
+    fn mono_instance_global(
+        &self,
+        method_sym: luna_common::ids::SymbolId,
+        instance: &luna_semantic::mono::MonoInstance,
+    ) -> GlobalId {
+        let base_name = self.ctx.symbol_table.get_symbol(method_sym).name.clone();
+        let canonical_id = luna_semantic::CanonicalInstanceIdentity {
+            kind: luna_semantic::CanonicalInstanceKind::Decl(instance.decl_id),
+            subst: instance.subst.clone(),
+        };
+        GlobalId {
+            name: canonical_id.symbol_name_with_tables(
+                &self.ctx.types,
+                &self.ctx.symbol_table,
+                &self.ctx.tables,
+                &base_name,
+            ),
+            symbol_id: Some(method_sym),
+        }
     }
 
     fn resolve_ast_type(&self, type_id: &luna_ast::TypeId) -> luna_semantic::SemanticTypeId {
@@ -371,6 +394,7 @@ impl<'a> MvirGenerator<'a> {
         self.current_block = None;
         self.locals.clear();
         self.lexical_scopes.clear();
+        self.temporary_drop_scopes.clear();
         self.loop_scopes.clear();
         self.loop_break_targets.clear();
         self.loop_continue_targets.clear();
@@ -530,11 +554,34 @@ impl<'a> MvirGenerator<'a> {
 
     fn push_scope(&mut self) {
         self.lexical_scopes.push(Vec::new());
+        self.temporary_drop_scopes.push(Vec::new());
     }
 
     fn pop_scope_and_drop(&mut self, keep: Option<luna_common::ids::SymbolId>) {
+        if let Some(temporaries) = self.temporary_drop_scopes.pop() {
+            self.emit_temporary_drops(&temporaries);
+        }
         if let Some(scope) = self.lexical_scopes.pop() {
             self.emit_drops_for_scope(&scope, keep);
+        }
+    }
+
+    fn emit_temporary_drops(
+        &mut self,
+        temporaries: &[(ValueId, luna_semantic::SemanticTypeId)],
+    ) {
+        for &(value, ty) in temporaries.iter().rev() {
+            if self.ctx.needs_drop(ty) {
+                let callee = self.get_drop_glue_global_id(ty);
+                self.push_inst(
+                    Instruction::Drop {
+                        value: Operand::Value(value),
+                        callee,
+                        ty,
+                    },
+                    ty,
+                );
+            }
         }
     }
 
@@ -558,6 +605,8 @@ impl<'a> MvirGenerator<'a> {
 
     fn emit_drops_up_to(&mut self, target_depth: usize, keep: Option<luna_common::ids::SymbolId>) {
         for i in (target_depth..self.lexical_scopes.len()).rev() {
+            let temporaries = self.temporary_drop_scopes[i].clone();
+            self.emit_temporary_drops(&temporaries);
             let scope = self.lexical_scopes[i].clone();
             self.emit_drops_for_scope(&scope, keep);
         }
@@ -973,6 +1022,7 @@ impl<'a> MvirGenerator<'a> {
             });
             self.locals.clear();
             self.lexical_scopes.clear();
+            self.temporary_drop_scopes.clear();
             self.loop_scopes.clear();
             self.loop_break_targets.clear();
             self.loop_continue_targets.clear();
@@ -1194,6 +1244,7 @@ impl<'a> MvirGenerator<'a> {
 
             self.locals.clear();
             self.lexical_scopes.clear();
+            self.temporary_drop_scopes.clear();
             self.loop_scopes.clear();
             self.loop_break_targets.clear();
             self.loop_continue_targets.clear();
@@ -1603,7 +1654,156 @@ impl<'a> MvirGenerator<'a> {
                             self.start_block(end_label.clone());
                             self.pop_scope_and_drop(None);
                         } else {
-                            self.diagnostics.push(luna_common::Diagnostic::error("for-each over non-range iterables is not yet supported".to_string()));
+                            let mono_loop = self.current_instance.and_then(|inst_ptr| {
+                                let inst = unsafe { &*inst_ptr };
+                                inst.mono_for_loops.get(stmt_id).cloned()
+                            });
+                            let semantic_loop = self
+                                .ctx
+                                .tables
+                                .for_loop_resolutions
+                                .get(stmt_id)
+                                .cloned();
+                            let (Some(mono_loop), Some(semantic_loop)) =
+                                (mono_loop, semantic_loop)
+                            else {
+                                self.diagnostics.push(luna_common::Diagnostic::error(
+                                    "E6001: MVIR invariant violated: resolved for-in protocol plan is missing"
+                                        .to_string(),
+                                ));
+                                return;
+                            };
+
+                            let Some(some_sym) = self
+                                .ctx
+                                .lang_items
+                                .get(luna_semantic::lang_item::LangItem::OptionSome)
+                            else {
+                                self.diagnostics.push(luna_common::Diagnostic::error(
+                                    "E6001: MVIR invariant violated: Option::Some language item is missing"
+                                        .to_string(),
+                                ));
+                                return;
+                            };
+                            let some_variant = match self.ctx.symbol_table.get_symbol(some_sym).kind {
+                                luna_semantic::SymbolKind::EnumVariant(index) => index,
+                                _ => {
+                                    self.diagnostics.push(luna_common::Diagnostic::error(
+                                        "E6001: MVIR invariant violated: Option::Some is not an enum variant"
+                                            .to_string(),
+                                    ));
+                                    return;
+                                }
+                            };
+
+                            // The iterator temporary owns the result of the
+                            // protocol conversion for the entire loop.
+                            self.push_scope();
+                            let source = self.generate_expr(iter_expr);
+                            let into_iter = self.push_inst(
+                                Instruction::CallDirect {
+                                    callee: self.mono_instance_global(
+                                        semantic_loop.into_iter_method,
+                                        &mono_loop.into_iter,
+                                    ),
+                                    args: vec![source],
+                                },
+                                mono_loop.iterator_type,
+                            );
+                            let iterator_slot =
+                                self.push_inst(Instruction::Alloca, mono_loop.iterator_type);
+                            self.push_inst(
+                                Instruction::Store {
+                                    ptr: Operand::Value(iterator_slot),
+                                    value: Operand::Value(into_iter),
+                                },
+                                mono_loop.iterator_type,
+                            );
+                            if let Some(scope) = self.temporary_drop_scopes.last_mut() {
+                                scope.push((iterator_slot, mono_loop.iterator_type));
+                            }
+
+                            let next_label = self.new_label("for_next");
+                            let body_label = self.new_label("for_body");
+                            let end_label = self.new_label("for_end");
+                            self.terminate_block(Terminator::Br {
+                                target: next_label.clone(),
+                            });
+                            self.start_block(next_label.clone());
+
+                            let next_is_rw = matches!(
+                                self.ctx.types.get(mono_loop.next_receiver_type),
+                                luna_semantic::SemanticType::Reference(
+                                    _,
+                                    luna_semantic::ty::Mutability::Mutable,
+                                    _
+                                )
+                            );
+                            let receiver = self.push_inst(
+                                Instruction::Borrow {
+                                    is_rw: next_is_rw,
+                                    base: Operand::Value(iterator_slot),
+                                },
+                                mono_loop.next_receiver_type,
+                            );
+                            let next_value = self.push_inst(
+                                Instruction::CallDirect {
+                                    callee: self.mono_instance_global(
+                                        semantic_loop.next_method,
+                                        &mono_loop.next,
+                                    ),
+                                    args: vec![Operand::Value(receiver)],
+                                },
+                                mono_loop.option_type,
+                            );
+                            let tag = self.push_inst(
+                                Instruction::Tag {
+                                    value: Operand::Value(next_value),
+                                },
+                                self.ctx.types.bool_id(),
+                            );
+                            let is_some = self.push_inst(
+                                Instruction::Eq {
+                                    left: Operand::Value(tag),
+                                    right: Operand::Number(some_variant.to_string()),
+                                },
+                                self.ctx.types.bool_id(),
+                            );
+                            self.terminate_block(Terminator::CondBr {
+                                condition: Operand::Value(is_some),
+                                true_target: body_label.clone(),
+                                false_target: end_label.clone(),
+                            });
+
+                            self.start_block(body_label);
+                            self.push_scope();
+                            let item = self.push_inst(
+                                Instruction::Extract {
+                                    value: Operand::Value(next_value),
+                                    variant_idx: some_variant,
+                                    field_idx: 0,
+                                },
+                                mono_loop.item_type,
+                            );
+                            self.bind_pattern(pat, Some(Operand::Value(item)));
+
+                            // A break/continue leaves the per-iteration pattern
+                            // scope, while the iterator itself remains alive
+                            // until the common loop exit.
+                            self.loop_scopes.push(self.lexical_scopes.len() - 1);
+                            self.loop_break_targets.push(end_label.clone());
+                            self.loop_continue_targets.push(next_label.clone());
+                            self.generate_stmt(body);
+                            self.pop_scope_and_drop(None);
+                            self.terminate_block(Terminator::Br {
+                                target: next_label.clone(),
+                            });
+                            self.loop_scopes.pop();
+                            self.loop_break_targets.pop();
+                            self.loop_continue_targets.pop();
+
+                            self.start_block(end_label);
+                            self.pop_scope_and_drop(None);
                         }
                     }
                 }
@@ -2331,9 +2531,11 @@ impl<'a> MvirGenerator<'a> {
                         m_name = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &m_name);
                     }
                     let m_ty_opt = self.get_symbol_type(&m_sym);
+                    let mut receiver_ty = luna_semantic::SemanticTypeId(0);
                     let (is_ref_self, is_rw_self) = if let Some(m_ty) = m_ty_opt {
                         if let luna_semantic::SemanticType::Function { params, .. } = self.ctx.types.get(m_ty) {
                             if let Some(&first_param) = params.first() {
+                                receiver_ty = first_param;
                                 match self.ctx.types.get(first_param) {
                                     luna_semantic::SemanticType::Reference(_, mutability, _) => (
                                         true,
@@ -2352,27 +2554,50 @@ impl<'a> MvirGenerator<'a> {
                         luna_semantic::SemanticType::Reference(..) | luna_semantic::SemanticType::Pointer(..)
                     );
 
-                    let obj_op = if is_ref_self && !is_already_ref {
-                        let lval = self.generate_lvalue(object);
-                        let borrow_val = self.push_inst(Instruction::Borrow { is_rw: is_rw_self, base: lval }, luna_semantic::SemanticTypeId(0));
-                        Operand::Value(borrow_val)
+                    enum PreparedReceiver {
+                        Place(Operand),
+                        Value(Operand),
+                    }
+
+                    let prepared_receiver = if is_ref_self && !is_already_ref {
+                        PreparedReceiver::Place(self.generate_lvalue(object))
                     } else {
-                        self.generate_expr(object)
+                        PreparedReceiver::Value(self.generate_expr(object))
                     };
 
-                    let mut arg_ops = vec![obj_op];
+                    let mut arg_ops = Vec::new();
                     for arg in args {
                         arg_ops.push(self.generate_expr(&arg.value));
                     }
+
+                    let obj_op = match prepared_receiver {
+                        PreparedReceiver::Place(place) => {
+                            let borrow_val = self.push_inst(Instruction::Borrow { is_rw: is_rw_self, base: place }, receiver_ty);
+                            Operand::Value(borrow_val)
+                        }
+                        PreparedReceiver::Value(value) => value,
+                    };
+
+                    let mut final_args = vec![obj_op];
+                    final_args.extend(arg_ops);
+
                     let call_val = self.push_inst(Instruction::CallDirect {
                         callee: GlobalId {
                             name: m_name,
                             symbol_id: Some(m_sym),
                         },
-                        args: arg_ops,
+                        args: final_args,
                     }, ty_id);
                     return Operand::Value(call_val);
                 }
+                let method_text = self.get_span_text(*method_name);
+                self.diagnostics.push(
+                    luna_common::Diagnostic::error(format!(
+                        "E6001: MVIR invariant violated: unresolved method `{}` reached lowering",
+                        method_text
+                    ))
+                    .with_span(*method_name),
+                );
                 Operand::Number("0".to_string())
             }
             Expr::Index { .. } => {
@@ -2443,6 +2668,7 @@ impl<'a> MvirGenerator<'a> {
                         self.terminate_block(Terminator::Br { target: end_label.clone() });
                     } else {
                         self.lexical_scopes.pop();
+                        self.temporary_drop_scopes.pop();
                     }
                 }
                 

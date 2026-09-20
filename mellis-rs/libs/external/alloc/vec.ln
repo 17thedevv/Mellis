@@ -104,15 +104,6 @@ impl<T> IntoIterator<T, VecIntoIter<T>> for Vec<T> {
     }
 }
 
-// Borrowed: yields &T
-impl<T> IntoIterator<&T, SliceIter<T>> for &Vec<T> {
-    fn into_iter(self: Self) -> SliceIter<T> {
-        return slice_iter<T>(self.as_slice());
-    }
-}
-
-
-
 impl<T> Vec<T> {
     export fn push(self: &rw Self, item: T) {
         if self.len == self.cap {

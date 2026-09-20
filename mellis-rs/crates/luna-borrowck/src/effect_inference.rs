@@ -133,20 +133,15 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
                             self.summary.args[arg_idx].access.merge(&AccessKind::Read);
                     }
                 }
-                // Loaded value inherits pointer's carried provenance as its own direct and carried provenance
-                // ONLY if the loaded value's type can contain references!
-                let carries_prov = if let Some(ctx) = self.ctx {
-                    let sem_ty = self.func.values[val_id.0 as usize].ty;
-                    ctx.types.contains_reference(sem_ty)
-                } else {
-                    true
-                };
-                if carries_prov {
-                    if let Operand::Value(ptr_val) = ptr {
-                        if let Some(taints) = state.carried.get(ptr_val).cloned() {
-                            state.direct.entry(val_id).or_default().extend(taints.clone());
-                            state.carried.entry(val_id).or_default().extend(taints);
-                        }
+                // Loaded values conservatively inherit the pointer's carried
+                // provenance. Even with type context, aggregate and
+                // projection layouts can carry loans that are not visible from
+                // the immediate MVIR value type. Return boundaries below use the
+                // semantic return type to decide whether that provenance can escape.
+                if let Operand::Value(ptr_val) = ptr {
+                    if let Some(taints) = state.carried.get(ptr_val).cloned() {
+                        state.direct.entry(val_id).or_default().extend(taints.clone());
+                        state.carried.entry(val_id).or_default().extend(taints);
                     }
                 }
             }
@@ -389,10 +384,22 @@ impl<'a> DataflowAnalysis<TaintState> for EffectInference<'a> {
                 self.add_carried_taint(state, val_id, left);
                 self.add_carried_taint(state, val_id, right);
             }
+            Instruction::Cast { value, .. } => {
+                self.add_direct_taint(state, val_id, value);
+                self.add_carried_taint(state, val_id, value);
+                if let Operand::Value(b) = value {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
+            }
+            Instruction::PtrOffset { ptr, .. } => {
+                self.add_direct_taint(state, val_id, ptr);
+                self.add_carried_taint(state, val_id, ptr);
+                if let Operand::Value(b) = ptr {
+                    state.aliases.insert(val_id, Operand::Value(*b));
+                }
+            }
             Instruction::SizeOf { .. } |
-            Instruction::AlignOf { .. } |
-            Instruction::Cast { .. } |
-            Instruction::PtrOffset { .. } => {}
+            Instruction::AlignOf { .. } => {}
             _ => {}
         }
     }

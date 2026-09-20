@@ -1,0 +1,7 @@
+// SEM-LIFETIME-02: invalid local borrow escape under an input provenance contract.
+fn bad(input: &i32) -> &i32 life_from(input) {
+    dec local = 42;
+    return &local;
+}
+
+fn main() {}

@@ -1,0 +1,22 @@
+// SEM-METHOD-01: valid sequential non-escaping mutable receiver calls.
+struct Counter {
+    value: i32,
+}
+
+impl Counter {
+    fn advance(self: &rw Self) -> i32 {
+        dec current = self.value;
+        self.value = self.value + 1;
+        return current;
+    }
+}
+
+fn main() -> i32 {
+    dec rw counter = Counter { value: 4 };
+    dec first = counter.advance();
+    dec second = counter.advance();
+    if first == 4 && second == 5 && counter.value == 6 {
+        return 0;
+    }
+    return 1;
+}

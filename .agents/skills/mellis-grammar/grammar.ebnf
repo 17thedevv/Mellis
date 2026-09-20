@@ -77,6 +77,9 @@ KW_MACRO   ::= "macro"
 KW_DYN     ::= "dyn"
 KW_SELF_VAL::= "self"
 KW_SELF_TYP::= "Self"
+KW_REQUIRES::= "requires"
+KW_LIFE_FROM::= "life_from"
+KW_LIFE    ::= "life"
 
 // --- TOÁN TỬ VÀ KÝ HIỆU ---
 PLUS       ::= "+"
@@ -166,6 +169,16 @@ declaration ::= import_decl
               | type_alias_decl
               | macro_decl
 
+// --- LIFETIME CONTRACTS ---
+lifetime_contracts ::= lifetime_clause+
+
+lifetime_clause    ::= KW_LIFE_FROM "(" arguments ")"
+                     | KW_REQUIRES lifetime_relation
+
+lifetime_relation  ::= KW_LIFE "(" lifetime_target ")" (GREATER_EQ | LESS_EQ) KW_LIFE "(" lifetime_target ")"
+
+lifetime_target    ::= expression | KW_RETURN
+
 // --- IMPORT: make a provider available ---
 import_decl   ::= KW_IMPORT ("<" IDENTIFIER ">" | STRING_LITERAL) ";"
 
@@ -177,7 +190,7 @@ module_path   ::= IDENTIFIER ("::" IDENTIFIER)*
 
 module_decl      ::= annotation* "export"? KW_MODULE IDENTIFIER "{" declaration* "}"
 
-extern_decl ::= "extern" KW_FN IDENTIFIER "(" parameters? ")" ("->" type)? ";"
+extern_decl ::= "extern" KW_FN IDENTIFIER "(" parameters? ")" ("->" type)? lifetime_contracts? ";"
 
 type_alias_decl ::= "export"? KW_TYPE IDENTIFIER generic_params? "=" type ";"
 
@@ -193,7 +206,7 @@ enum_variant_list ::= enum_variant ("," enum_variant)* ","?
 enum_variant ::= IDENTIFIER ("(" parameters ")")?
 
 // --- STRUCT, TRAIT VÀ IMPL ---
-struct_decl ::= annotation* "export"? KW_STRUCT IDENTIFIER generic_params? "{" (struct_field ("," struct_field)* ","?)? "}"
+struct_decl ::= annotation* "export"? KW_STRUCT IDENTIFIER generic_params? "{" (struct_field ("," struct_field)* ","?)? "}" lifetime_contracts?
 
 struct_field::= "export"? IDENTIFIER ":" type
 
@@ -211,7 +224,7 @@ full_trait_impl ::= "impl" generic_params? type_path "for" type_path "{" func_de
 var_decl_core ::= "export"? ("dec" | "const") IDENTIFIER (":" type)? "=" expression
 var_decl    ::= var_decl_core ";"
 
-func_decl   ::= annotation* "export"? KW_COMPTIME? KW_ASYNC? KW_UNSAFE? KW_FN IDENTIFIER generic_params? "(" parameters? ")" ("->" type)? block_stmt
+func_decl   ::= annotation* "export"? KW_COMPTIME? KW_ASYNC? KW_UNSAFE? KW_FN IDENTIFIER generic_params? "(" parameters? ")" ("->" type)? lifetime_contracts? block_stmt
 
 regular_param  ::= IDENTIFIER ":" type
 variadic_param ::= IDENTIFIER ":" DOT_DOT_DOT type

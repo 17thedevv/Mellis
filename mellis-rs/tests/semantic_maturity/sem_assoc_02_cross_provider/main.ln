@@ -1,0 +1,8 @@
+// SEM-ASSOC-02 provider C: consumes B's public projection of A's associated type.
+import "provider_a";
+import "provider_b";
+
+fn main() -> i32 {
+    dec num = make_num(42);
+    return project_output<Num>(&num) - 42;
+}

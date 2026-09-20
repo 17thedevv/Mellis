@@ -1,0 +1,12 @@
+// SEM-OWN-01: invalid use of a non-Copy user-defined value after a full move.
+struct Owner<T> {
+    value: T,
+}
+
+fn consume<T>(value: T) {}
+
+fn main() -> i32 {
+    dec owner = Owner<i32> { value: 42 };
+    consume<Owner<i32>>(owner);
+    return owner.value;
+}

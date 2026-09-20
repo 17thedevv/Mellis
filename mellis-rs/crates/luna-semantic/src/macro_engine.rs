@@ -4,7 +4,7 @@ use luna_ast::{
     MacroMatcher, MacroRule, MatcherElement, RepetitionKind, Stmt, StmtId, TranscriberElement,
     Type, TypeId,
 };
-use luna_common::diagnostic::Diagnostic;
+use luna_common::diagnostic::{Diagnostic, DiagnosticCode};
 use luna_common::ids::{FileId, Span, SyntaxContext};
 use luna_lexer::{Token, TokenKind};
 use luna_parser::Parser;
@@ -383,6 +383,7 @@ impl<'a> MacroEngine<'a> {
                 if !self.symbol_table.is_accessible(macro_sym, self.current_scope, None) {
                     self.diagnostics.push(
                         Diagnostic::error(format!("Macro `{}` is private and cannot be accessed from this scope", macro_name))
+                            .with_code(DiagnosticCode::PrivateSymbolAccess)
                             .with_span(span),
                     );
                     return ty_id;
@@ -530,6 +531,7 @@ impl<'a> MacroEngine<'a> {
         if !self.symbol_table.is_accessible(macro_sym, self.current_scope, None) {
             self.diagnostics.push(
                 Diagnostic::error(format!("Macro `{}` is private and cannot be accessed from this scope", macro_name))
+                    .with_code(DiagnosticCode::PrivateSymbolAccess)
                     .with_span(call_span),
             );
             return self.arena.alloc_expr(Expr::Literal(Token::new(TokenKind::IntegerLiteral, call_span), "0".to_string()));
@@ -637,6 +639,7 @@ impl<'a> MacroEngine<'a> {
         if !self.symbol_table.is_accessible(macro_sym, self.current_scope, None) {
             self.diagnostics.push(
                 Diagnostic::error(format!("Macro `{}` is private and cannot be accessed from this scope", macro_name))
+                    .with_code(DiagnosticCode::PrivateSymbolAccess)
                     .with_span(call_span),
             );
             return None;

@@ -1,6 +1,6 @@
 use crate::dataflow::{DataflowAnalysis, DataflowEngine};
-use crate::effect::{CallEffectSummary, EscapeKind, ReturnEffect};
-use luna_common::Diagnostic;
+use crate::effect::{CallEffectSummary, ReturnEffect};
+use luna_common::{Diagnostic, DiagnosticCode};
 use luna_mvir::{Function, GlobalId, Instruction, Operand, Terminator, ValueId, ValueOrigin};
 use luna_semantic::{SemanticContext, SemanticType};
 use std::collections::{HashMap, HashSet};
@@ -24,9 +24,11 @@ pub struct LivenessState {
     pub live: HashSet<ValueId>,
 }
 
-pub struct LivenessAnalyzer;
+pub struct LivenessAnalyzer<'a> {
+    pub func: &'a Function,
+}
 
-impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
+impl<'a> DataflowAnalysis<LivenessState> for LivenessAnalyzer<'a> {
     fn transfer_instruction(&mut self, val_id: ValueId, inst: &Instruction, state: &mut LivenessState) {
         // In backward dataflow, definition kills liveness
         state.live.remove(&val_id);
@@ -57,7 +59,9 @@ impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
                 }
             }
             Instruction::Store { ptr, value } => {
-                if let Operand::Value(v) = ptr { state.live.insert(*v); }
+                if let Operand::Value(ptr_val) = ptr {
+                    state.live.insert(*ptr_val);
+                }
                 if let Operand::Value(v) = value { state.live.insert(*v); }
             }
             Instruction::Borrow { base, .. } => {
@@ -124,14 +128,15 @@ impl DataflowAnalysis<LivenessState> for LivenessAnalyzer {
     fn init_entry_state(&mut self, _func: &Function, _state: &mut LivenessState) {}
 }
 
-pub fn compute_liveness(func: &Function) -> (HashMap<String, LivenessState>, HashMap<ValueId, HashSet<ValueId>>, HashMap<ValueId, HashSet<ValueId>>) {
-    let mut analyzer = LivenessAnalyzer;
+pub fn compute_liveness(func: &Function) -> (HashMap<String, LivenessState>, HashMap<ValueId, HashSet<ValueId>>, HashMap<ValueId, HashSet<ValueId>>, HashMap<String, HashSet<ValueId>>) {
+    let mut analyzer = LivenessAnalyzer { func };
     // run_backward gives us the OUT state of each block
     let block_out = DataflowEngine::run_backward(func, &mut analyzer);
     
     // Now compute liveness BEFORE and AFTER each instruction
     let mut live_before = HashMap::new();
     let mut live_after = HashMap::new();
+    let mut live_at_entry = HashMap::new();
     
     for block in &func.blocks {
         let mut current_state = block_out.get(&block.label.name).cloned().unwrap_or_default();
@@ -144,9 +149,11 @@ pub fn compute_liveness(func: &Function) -> (HashMap<String, LivenessState>, Has
             analyzer.transfer_instruction(val_id, &func.value(val_id).inst, &mut current_state);
             live_before.insert(val_id, current_state.live.clone());
         }
+
+        live_at_entry.insert(block.label.name.clone(), current_state.live.clone());
     }
     
-    (block_out, live_before, live_after)
+    (block_out, live_before, live_after, live_at_entry)
 }
 
 // --- Borrow Analysis (NLL) ---
@@ -156,6 +163,33 @@ pub struct Loan {
     pub id: ValueId,
     pub place: Operand,
     pub is_rw: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Projection {
+    Field(u32),
+    Tuple(u32),
+    Deref,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlaceDesc {
+    pub root: Operand,
+    pub projections: Vec<Projection>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OverlapResult {
+    DefinitelyOverlap,
+    DefinitelyDisjoint,
+    MayOverlap,
+}
+
+impl OverlapResult {
+    pub fn is_conflict(&self) -> bool {
+        matches!(self, OverlapResult::DefinitelyOverlap | OverlapResult::MayOverlap)
+    }
 }
 
 #[derive(Clone, Default, PartialEq, Debug)]
@@ -178,6 +212,8 @@ pub struct BorrowAnalyzer<'a> {
     pub diagnostics: Vec<Diagnostic>,
     live_before: HashMap<ValueId, HashSet<ValueId>>,
     live_after: HashMap<ValueId, HashSet<ValueId>>,
+    live_at_entry: HashMap<String, HashSet<ValueId>>,
+    loop_info: crate::cfg::LoopInfo,
     callee_summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
     ctx: Option<&'a SemanticContext>,
     func: &'a Function,
@@ -185,11 +221,19 @@ pub struct BorrowAnalyzer<'a> {
 }
 
 impl<'a> BorrowAnalyzer<'a> {
-    pub fn new(live_before: HashMap<ValueId, HashSet<ValueId>>, callee_summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>, ctx: Option<&'a SemanticContext>, func: &'a Function) -> Self {
+    pub fn new(
+        live_before: HashMap<ValueId, HashSet<ValueId>>,
+        callee_summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
+        ctx: Option<&'a SemanticContext>,
+        func: &'a Function,
+    ) -> Self {
+        let loop_info = crate::cfg::analyze_loops(func);
         Self {
             diagnostics: Vec::new(),
             live_before,
             live_after: HashMap::new(),
+            live_at_entry: HashMap::new(),
+            loop_info,
             callee_summaries,
             ctx,
             func,
@@ -202,25 +246,275 @@ impl<'a> BorrowAnalyzer<'a> {
         self
     }
 
-    pub fn analyze(func: &'a Function, summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>, ctx: Option<&'a SemanticContext>) -> Vec<Diagnostic> {
-        let (_, live_before, live_after) = compute_liveness(func);
-        let mut analyzer = Self::new(live_before, summaries, ctx, func).with_live_after(live_after);
+    pub fn with_live_at_entry(mut self, live_at_entry: HashMap<String, HashSet<ValueId>>) -> Self {
+        self.live_at_entry = live_at_entry;
+        self
+    }
+
+    pub fn analyze(
+        func: &'a Function,
+        summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
+        ctx: Option<&'a SemanticContext>,
+    ) -> Vec<Diagnostic> {
+        Self::analyze_with_shadow(func, summaries, ctx).0
+    }
+
+    pub fn analyze_with_shadow(
+        func: &'a Function,
+        summaries: Option<&'a HashMap<GlobalId, CallEffectSummary>>,
+        ctx: Option<&'a SemanticContext>,
+    ) -> (Vec<Diagnostic>, Vec<crate::region_bridge::ShadowComparison>) {
+        let (_, live_before, live_after, live_at_entry) = compute_liveness(func);
+        let mut analyzer = Self::new(live_before, summaries, ctx, func)
+            .with_live_after(live_after)
+            .with_live_at_entry(live_at_entry);
         let block_states = DataflowEngine::run_forward(func, &mut analyzer);
-        
+
+        // Build Region context, solve, and realize for shadow checking
+        let loop_info = crate::cfg::analyze_loops(func);
+        let region_context = crate::region_bridge::RegionBorrowContext::build(func, &loop_info, ctx);
+        let region_solution = luna_semantic::region::solve_region_graph(&region_context.graph);
+        let region_realization = match luna_semantic::region::realize_regions(&region_solution, &region_context.facts) {
+            Ok(r) => Some(r),
+            Err(_) => None,
+        };
+
+        let mut shadow_comparisons = Vec::new();
+
         // Second pass to emit diagnostics with final computed state
         analyzer.emit_diagnostics = true;
         for block in &func.blocks {
             let mut current_state = block_states.get(&block.label.name).cloned().unwrap_or_default();
             for &val_id in &block.insts {
                 let val_data = func.value(val_id);
+                let initial_diag_count = analyzer.diagnostics.len();
                 analyzer.transfer_instruction(val_id, &val_data.inst, &mut current_state);
+                let emitted_diag = analyzer.diagnostics.get(initial_diag_count..).and_then(|slice| slice.first()).cloned();
+
+                // Shadow check on carrier uses / live carriers
+                if let Some(realization) = &region_realization {
+                    let bridge = crate::region_bridge::RegionBorrowBridge::new(
+                        &region_context,
+                        &region_solution,
+                        realization,
+                    ).with_aliases(current_state.aliases.clone());
+
+                    if let Some(live_carriers) = analyzer.live_after.get(&val_id) {
+                        for &carrier in live_carriers {
+                            let mut provenance = Vec::new();
+                            if let Some(loans) = current_state.direct_provenance.get(&carrier) {
+                                provenance.extend(loans.iter().map(|l| l.place.clone()));
+                            }
+                            if let Some(loans) = current_state.carried_provenance.get(&carrier) {
+                                provenance.extend(loans.iter().map(|l| l.place.clone()));
+                            }
+                            if !provenance.is_empty() {
+                                let shadow_verdict = bridge.check_carrier_use(carrier, &provenance, val_id);
+                                let legacy_verdict = if let Some(diag) = &emitted_diag {
+                                    crate::region_bridge::LegacyVerdict::Rejected {
+                                        diagnostic_code: format!("{:?}", diag.code),
+                                        message: diag.message.clone(),
+                                    }
+                                } else {
+                                    crate::region_bridge::LegacyVerdict::Allowed
+                                };
+                                let comparison = bridge.evaluate_comparison(
+                                    format!("inst_{}", val_id.0),
+                                    shadow_verdict,
+                                    legacy_verdict,
+                                );
+                                shadow_comparisons.push(comparison);
+                            }
+                        }
+                    }
+                }
             }
+
             if let Some(term) = &block.terminator {
+                // Authoritative Region Engine check on function return / escape
+                if let Some(realization) = &region_realization {
+                    let bridge = crate::region_bridge::RegionBorrowBridge::new(
+                        &region_context,
+                        &region_solution,
+                        realization,
+                    ).with_aliases(current_state.aliases.clone());
+
+                    if let Terminator::Ret { value: Some(Operand::Value(val)) } = term {
+                        let mut ret_loans = Vec::new();
+                        if let Some(loans) = current_state.direct_provenance.get(val) {
+                            ret_loans.extend(loans.iter().map(|l| l.place.clone()));
+                        }
+                        if let Some(loans) = current_state.carried_provenance.get(val) {
+                            ret_loans.extend(loans.iter().map(|l| l.place.clone()));
+                        }
+                        let val_op = Operand::Value(*val);
+                        let resolved_op = analyzer.resolve_alias(&val_op, &current_state);
+                        if let Operand::Value(res_v) = resolved_op {
+                            if *res_v != *val {
+                                if let Some(loans) = current_state.direct_provenance.get(res_v) {
+                                    ret_loans.extend(loans.iter().map(|l| l.place.clone()));
+                                }
+                                if let Some(loans) = current_state.carried_provenance.get(res_v) {
+                                    ret_loans.extend(loans.iter().map(|l| l.place.clone()));
+                                }
+                            }
+                        }
+
+                        let closure_modes = current_state.closure_captures.get(val).cloned();
+                        let is_ref_ret = if let Some(ctx) = analyzer.ctx {
+                            type_has_borrow(func.ret_ty, ctx)
+                        } else {
+                            false
+                        };
+                        let is_direct_ref_ret = if let Some(ctx) = analyzer.ctx {
+                            matches!(ctx.types.get(func.ret_ty), SemanticType::Reference(..))
+                        } else {
+                            false
+                        };
+                        let fn_sym_id = func.name.symbol_id.or_else(|| {
+                            analyzer.ctx.and_then(|c| c.symbol_table.lookup(&func.name.name, luna_semantic::symbol::ScopeId(0)))
+                        });
+                        let declared_contract = fn_sym_id.and_then(|sym| {
+                            analyzer.ctx.and_then(|c| c.tables.fn_lifetime_contracts.get(&sym))
+                        });
+
+                        if let Some(diag) = bridge.diagnose_return(
+                            *val,
+                            &ret_loans,
+                            closure_modes.as_deref(),
+                            func.value(*val).span.clone(),
+                            declared_contract,
+                            is_ref_ret,
+                            is_direct_ref_ret,
+                        ) {
+                            if !analyzer.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                                analyzer.diagnostics.push(diag);
+                            }
+                        }
+                    }
+                }
+
                 analyzer.transfer_terminator(term, &mut current_state);
+
+                let successors = match term {
+                    Terminator::Br { target } => vec![target.name.clone()],
+                    Terminator::CondBr { true_target, false_target, .. } => {
+                        vec![true_target.name.clone(), false_target.name.clone()]
+                    }
+                    _ => vec![],
+                };
+                for succ in successors {
+                    let mut edge_state = current_state.clone();
+                    analyzer.transfer_edge(&block.label.name, &succ, &mut edge_state);
+
+                    // Authoritative Region Engine check on carriers crossing this dynamic boundary
+                    if let Some(realization) = &region_realization {
+                        let bridge = crate::region_bridge::RegionBorrowBridge::new(
+                            &region_context,
+                            &region_solution,
+                            realization,
+                        ).with_aliases(current_state.aliases.clone());
+
+                        let entry_live = analyzer.live_at_entry.get(&succ);
+                        let ending_locals = analyzer.loop_info.ending_lifetime_locals(&block.label.name, &succ);
+
+                        if !ending_locals.is_empty() {
+                            for (carrier, loans) in &current_state.direct_provenance {
+                                let is_carrier_live = entry_live.map_or(false, |live| live.contains(carrier));
+                                if is_carrier_live {
+                                    let provenance: Vec<Operand> = loans.iter().map(|l| l.place.clone()).collect();
+                                    let loan_span = loans.iter().next().and_then(|l| {
+                                        if (l.id.0 as usize) < func.values.len() {
+                                            func.values[l.id.0 as usize].span.clone()
+                                        } else {
+                                            None
+                                        }
+                                    });
+
+                                    let shadow_verdict = bridge.check_boundary_crossing(*carrier, &provenance, &block.label.name, &succ);
+
+                                    if let Some(diag) = bridge.diagnose_boundary_crossing(
+                                        *carrier,
+                                        &provenance,
+                                        &block.label.name,
+                                        &succ,
+                                        loan_span,
+                                    ) {
+                                        if !analyzer.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                                            analyzer.diagnostics.push(diag.clone());
+                                        }
+                                    }
+
+                                    let legacy_verdict = match &shadow_verdict {
+                                        crate::region_bridge::ShadowRegionVerdict::Invalid(failure) => {
+                                            let d = failure.clone().into_diagnostic();
+                                            crate::region_bridge::LegacyVerdict::Rejected {
+                                                diagnostic_code: format!("{:?}", d.code),
+                                                message: d.message,
+                                            }
+                                        }
+                                        _ => crate::region_bridge::LegacyVerdict::Allowed,
+                                    };
+                                    let comparison = bridge.evaluate_comparison(
+                                        format!("edge_{}_{}_carrier_{}", block.label.name, succ, carrier.0),
+                                        shadow_verdict,
+                                        legacy_verdict,
+                                    );
+                                    shadow_comparisons.push(comparison);
+                                }
+                            }
+
+                            for (carrier, loans) in &current_state.carried_provenance {
+                                let is_carrier_live = entry_live.map_or(false, |live| live.contains(carrier));
+                                if is_carrier_live {
+                                    let provenance: Vec<Operand> = loans.iter().map(|l| l.place.clone()).collect();
+                                    let loan_span = loans.iter().next().and_then(|l| {
+                                        if (l.id.0 as usize) < func.values.len() {
+                                            func.values[l.id.0 as usize].span.clone()
+                                        } else {
+                                            None
+                                        }
+                                    });
+
+                                    let shadow_verdict = bridge.check_boundary_crossing(*carrier, &provenance, &block.label.name, &succ);
+
+                                    if let Some(diag) = bridge.diagnose_boundary_crossing(
+                                        *carrier,
+                                        &provenance,
+                                        &block.label.name,
+                                        &succ,
+                                        loan_span,
+                                    ) {
+                                        if !analyzer.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
+                                            analyzer.diagnostics.push(diag.clone());
+                                        }
+                                    }
+
+                                    let legacy_verdict = match &shadow_verdict {
+                                        crate::region_bridge::ShadowRegionVerdict::Invalid(failure) => {
+                                            let d = failure.clone().into_diagnostic();
+                                            crate::region_bridge::LegacyVerdict::Rejected {
+                                                diagnostic_code: format!("{:?}", d.code),
+                                                message: d.message,
+                                            }
+                                        }
+                                        _ => crate::region_bridge::LegacyVerdict::Allowed,
+                                    };
+                                    let comparison = bridge.evaluate_comparison(
+                                        format!("edge_{}_{}_carrier_{}", block.label.name, succ, carrier.0),
+                                        shadow_verdict,
+                                        legacy_verdict,
+                                    );
+                                    shadow_comparisons.push(comparison);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-        
-        analyzer.diagnostics
+
+        (analyzer.diagnostics, shadow_comparisons)
     }
 
     fn resolve_alias<'b>(&self, op: &'b Operand, state: &'b BorrowStateData) -> &'b Operand {
@@ -447,6 +741,123 @@ impl<'a> BorrowAnalyzer<'a> {
         }
     }
 
+    fn compute_place_desc(&self, op: &Operand, _state: &BorrowStateData) -> PlaceDesc {
+        let mut curr_val = if let Operand::Value(v) = op { Some(*v) } else { None };
+        let mut path = Vec::new();
+        let mut root_val = None;
+        
+        while let Some(v) = curr_val {
+            if (v.0 as usize) >= self.func.values.len() {
+                root_val = Some(v);
+                break;
+            }
+            let inst = &self.func.values[v.0 as usize].inst;
+            match inst {
+                Instruction::FieldPtr { base, field_idx } => {
+                    path.push(Projection::Field(*field_idx));
+                    if let Operand::Value(base_v) = base {
+                        curr_val = Some(*base_v);
+                    } else { break; }
+                }
+                Instruction::Extract { value, .. } => {
+                    // Enum precision deferred unless already frozen
+                    path.push(Projection::Unknown);
+                    if let Operand::Value(base_v) = value {
+                        curr_val = Some(*base_v);
+                    } else { break; }
+                }
+                Instruction::Load { ptr } => {
+                    // Check if `ptr` is pointing to a local stack slot (Alloca or FieldPtr on Alloca).
+                    // Loading from a local stack slot is reading the local variable/field itself,
+                    // NOT a pointer dereference.
+                    let is_local_storage = if let Operand::Value(base_v) = ptr {
+                        let mut check_v = Some(*base_v);
+                        let mut is_local = false;
+                        while let Some(cv) = check_v {
+                            if (cv.0 as usize) >= self.func.values.len() { break; }
+                            match &self.func.values[cv.0 as usize].inst {
+                                Instruction::Alloca => {
+                                    is_local = true;
+                                    break;
+                                }
+                                Instruction::FieldPtr { base, .. } => {
+                                    if let Operand::Value(bv) = base {
+                                        check_v = Some(*bv);
+                                    } else { break; }
+                                }
+                                _ => break,
+                            }
+                        }
+                        is_local
+                    } else {
+                        false
+                    };
+
+                    if !is_local_storage {
+                        path.push(Projection::Deref);
+                    }
+                    if let Operand::Value(base_v) = ptr {
+                        curr_val = Some(*base_v);
+                    } else { break; }
+                }
+                Instruction::MakeSlice { data_ptr, .. } | Instruction::PtrOffset { ptr: data_ptr, .. } => {
+                    path.push(Projection::Unknown);
+                    if let Operand::Value(base_v) = data_ptr {
+                        curr_val = Some(*base_v);
+                    } else { break; }
+                }
+                Instruction::Assign(base) | Instruction::Cast { value: base, .. } => {
+                    if let Operand::Value(base_v) = base {
+                        curr_val = Some(*base_v);
+                    } else { break; }
+                }
+                _ => {
+                    root_val = Some(v);
+                    break;
+                }
+            }
+        }
+        
+        path.reverse();
+        
+        let final_root = root_val.map(Operand::Value).unwrap_or_else(|| op.clone());
+        
+        PlaceDesc {
+            root: final_root,
+            projections: path,
+        }
+    }
+    
+    fn check_overlap(&self, p1: &Operand, p2: &Operand, state: &BorrowStateData) -> OverlapResult {
+        let desc1 = self.compute_place_desc(p1, state);
+        let desc2 = self.compute_place_desc(p2, state);
+        
+        if desc1.root != desc2.root {
+            return OverlapResult::DefinitelyDisjoint;
+        }
+        
+        let min_len = std::cmp::min(desc1.projections.len(), desc2.projections.len());
+        for i in 0..min_len {
+            match (&desc1.projections[i], &desc2.projections[i]) {
+                (Projection::Field(f1), Projection::Field(f2)) => {
+                    if f1 != f2 {
+                        return OverlapResult::DefinitelyDisjoint;
+                    }
+                }
+                (Projection::Tuple(t1), Projection::Tuple(t2)) => {
+                    if t1 != t2 {
+                        return OverlapResult::DefinitelyDisjoint;
+                    }
+                }
+                _ => {
+                    return OverlapResult::MayOverlap;
+                }
+            }
+        }
+        
+        OverlapResult::DefinitelyOverlap
+    }
+
     fn check_access(&mut self, place: &Operand, is_write: bool, val_id: ValueId, state: &BorrowStateData) {
         if !self.emit_diagnostics { return; }
         let resolved_place = self.resolve_alias(place, state);
@@ -471,13 +882,16 @@ impl<'a> BorrowAnalyzer<'a> {
                     }
                 }
             }
-            let resolved_loan_place = self.resolve_alias(&loan.place, state);
-            if print_operand_name(resolved_loan_place) == place_name {
+            if self.check_overlap(&loan.place, place, state).is_conflict() {
+                let _resolved_loan_place = self.resolve_alias(&loan.place, state);
+                let desc2 = self.compute_place_desc(place, state);
+                let desc1 = self.compute_place_desc(&loan.place, state);
                 if loan.is_rw {
                     let mut diag = Diagnostic::error(format!(
-                        "Cannot access '{}' because it is borrowed as &rw",
-                        place_name
-                    ));
+                        "Cannot access '{}' (root: {:?}) because it is borrowed as &rw (root: {:?})",
+                        place_name, desc2.root, desc1.root
+                    ))
+                    .with_code(DiagnosticCode::BorrowConflict);
                     diag.span = self.func.values[val_id.0 as usize].span.clone();
                     if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
                         self.diagnostics.push(diag);
@@ -486,7 +900,8 @@ impl<'a> BorrowAnalyzer<'a> {
                     let mut diag = Diagnostic::error(format!(
                         "Cannot write to '{}' because it is borrowed as &",
                         place_name
-                    ));
+                    ))
+                    .with_code(DiagnosticCode::BorrowConflict);
                     diag.span = self.func.values[val_id.0 as usize].span.clone();
                     if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
                         self.diagnostics.push(diag);
@@ -506,14 +921,14 @@ impl<'a> BorrowAnalyzer<'a> {
                 if self.is_external_loan(loan, state) {
                     continue;
                 }
-                let resolved_loan_place = self.resolve_alias(&loan.place, state);
-                if print_operand_name(resolved_loan_place) == place_name {
+                if self.check_overlap(&loan.place, place, state).is_conflict() {
                     if loan.is_rw {
                         let mut diag = Diagnostic::error(format!(
                             "Cannot borrow '{}' as {} because it is already borrowed as &rw",
                             place_name,
                             if is_rw { "&rw" } else { "&" }
-                        ));
+                        ))
+                        .with_code(DiagnosticCode::BorrowConflict);
                         diag.span = self.func.values[val_id.0 as usize].span.clone();
                         if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
                             self.diagnostics.push(diag);
@@ -522,7 +937,8 @@ impl<'a> BorrowAnalyzer<'a> {
                         let mut diag = Diagnostic::error(format!(
                             "Cannot borrow '{}' as &rw because it is already borrowed as &",
                             place_name
-                        ));
+                        ))
+                        .with_code(DiagnosticCode::BorrowConflict);
                         diag.span = self.func.values[val_id.0 as usize].span.clone();
                         if !self.diagnostics.iter().any(|d| d.message == diag.message && d.span == diag.span) {
                             self.diagnostics.push(diag);
@@ -808,12 +1224,32 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
                         }
                     }
                     
-                    if let Operand::Value(val_v) = value {
-                        if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
-                            state.direct_provenance.entry(resolved_ptr).or_default().extend(prov);
+                    let is_direct_alloca = *ptr_val == resolved_ptr
+                        && (resolved_ptr.0 as usize) < self.func.values.len()
+                        && matches!(self.func.values[resolved_ptr.0 as usize].inst, Instruction::Alloca);
+
+                    if is_direct_alloca {
+                        // Strong update: overwrite previous provenance for this variable
+                        state.direct_provenance.remove(&resolved_ptr);
+                        state.carried_provenance.remove(&resolved_ptr);
+
+                        if let Operand::Value(val_v) = value {
+                            if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
+                                state.direct_provenance.insert(resolved_ptr, prov);
+                            }
+                            if let Some(prov) = state.carried_provenance.get(val_v).cloned() {
+                                state.carried_provenance.insert(resolved_ptr, prov);
+                            }
                         }
-                        if let Some(prov) = state.carried_provenance.get(val_v).cloned() {
-                            state.carried_provenance.entry(resolved_ptr).or_default().extend(prov);
+                    } else {
+                        // Weak update: conservative accumulation for indirect / aggregate writes
+                        if let Operand::Value(val_v) = value {
+                            if let Some(prov) = state.direct_provenance.get(val_v).cloned() {
+                                state.direct_provenance.entry(resolved_ptr).or_default().extend(prov);
+                            }
+                            if let Some(prov) = state.carried_provenance.get(val_v).cloned() {
+                                state.carried_provenance.entry(resolved_ptr).or_default().extend(prov);
+                            }
                         }
                     }
                 }
@@ -1483,175 +1919,74 @@ impl<'a> DataflowAnalysis<BorrowStateData> for BorrowAnalyzer<'a> {
         }
     }
 
-    fn transfer_terminator(&mut self, term: &Terminator, state: &mut BorrowStateData) {
-        if !self.emit_diagnostics {
-            return;
+    fn transfer_terminator(&mut self, _term: &Terminator, _state: &mut BorrowStateData) {
+        // Lifetime and return escape checks are authoritatively owned by the Region Engine
+        // (RegionBorrowBridge::diagnose_return).
+    }
+
+    fn transfer_edge(&mut self, from: &str, to: &str, state: &mut BorrowStateData) {
+        let ending_locals = self.loop_info.ending_lifetime_locals(from, to);
+        if !ending_locals.is_empty() {
+            // Step 1: Lifetime validity checks across dynamic boundaries are authoritatively
+            // owned by the Region Engine (RegionBorrowBridge::diagnose_boundary_crossing).
+
+
+            // Step 2: Kill all loans of iteration-local places across this lifetime exit edge
+            let aliases_snapshot = state.aliases.clone();
+            let is_local_loan = |loan: &Loan, aliases: &HashMap<ValueId, Operand>| -> bool {
+                let mut current = &loan.place;
+                while let Operand::Value(v) = current {
+                    if let Some(alias) = aliases.get(v) {
+                        current = alias;
+                    } else {
+                        break;
+                    }
+                }
+                if let Operand::Value(pv) = current {
+                    ending_locals.contains(pv)
+                } else {
+                    false
+                }
+            };
+
+            for loans in state.direct_provenance.values_mut() {
+                loans.retain(|loan| !is_local_loan(loan, &aliases_snapshot));
+            }
+            for loans in state.carried_provenance.values_mut() {
+                loans.retain(|loan| !is_local_loan(loan, &aliases_snapshot));
+            }
+            state.escaped_loans.retain(|loan| !is_local_loan(loan, &aliases_snapshot));
+
+            // Step 3: Kill all provenance held by ending local carriers
+            for local_val in &ending_locals {
+                state.direct_provenance.remove(local_val);
+                state.carried_provenance.remove(local_val);
+                state.aliases.remove(local_val);
+            }
         }
-        if let Terminator::Ret { value: Some(Operand::Value(value)) } = term {
-            if let Some(modes) = state.closure_captures.get(value) {
-                if modes.iter().any(|mode| matches!(mode, luna_semantic::CaptureMode::SharedBorrow | luna_semantic::CaptureMode::MutableBorrow)) {
-                    let mut diag = Diagnostic::error("error[E3005]: LocalBorrowEscape: Cannot return a closure that captures a local borrow");
-                    diag.span = self.func.value(*value).span.clone();
-                    if !self.diagnostics.iter().any(|existing| existing.message == diag.message) {
-                        self.diagnostics.push(diag);
-                    }
+
+        // Fixed-point pruning: prune carriers that are dead at the target block entry
+        if let Some(entry_live) = self.live_at_entry.get(to) {
+            state.direct_provenance.retain(|carrier, loans| {
+                if loans.is_empty() { return false; }
+                let is_local = (carrier.0 as usize) < self.func.values.len()
+                    && matches!(self.func.values[carrier.0 as usize].origin, ValueOrigin::Local | ValueOrigin::Temporary);
+                if is_local {
+                    entry_live.contains(carrier)
+                } else {
+                    true
                 }
-            }
-
-            // Def-site Return Safety validation (P0-A, P0-B, P0-C, P0-D)
-            let ret_ty = self.func.ret_ty;
-            let is_ref_ret = if let Some(ctx) = self.ctx {
-                type_has_borrow(ret_ty, ctx)
-            } else {
-                false
-            };
-            let is_direct_ref_ret = if let Some(ctx) = self.ctx {
-                matches!(ctx.types.get(ret_ty), SemanticType::Reference(..))
-            } else {
-                false
-            };
-
-            let fn_sym_id = self.func.name.symbol_id.or_else(|| {
-                self.ctx.and_then(|c| c.symbol_table.lookup(&self.func.name.name, luna_semantic::symbol::ScopeId(0)))
             });
-            let declared_contract = fn_sym_id.and_then(|sym| {
-                self.ctx.and_then(|c| c.tables.fn_lifetime_contracts.get(&sym))
+            state.carried_provenance.retain(|carrier, loans| {
+                if loans.is_empty() { return false; }
+                let is_local = (carrier.0 as usize) < self.func.values.len()
+                    && matches!(self.func.values[carrier.0 as usize].origin, ValueOrigin::Local | ValueOrigin::Temporary);
+                if is_local {
+                    entry_live.contains(carrier)
+                } else {
+                    true
+                }
             });
-
-            if is_ref_ret || declared_contract.is_some() {
-                // Collect all loans for `value`
-                let mut ret_loans = HashSet::new();
-                if let Some(prov) = state.direct_provenance.get(value) {
-                    ret_loans.extend(prov.clone());
-                }
-                if let Some(prov) = state.carried_provenance.get(value) {
-                    ret_loans.extend(prov.clone());
-                }
-                let val_op = Operand::Value(*value);
-                let resolved_op = self.resolve_alias(&val_op, state);
-                if let Operand::Value(res_v) = resolved_op {
-                    if res_v != value {
-                        if let Some(prov) = state.direct_provenance.get(res_v) {
-                            ret_loans.extend(prov.clone());
-                        }
-                        if let Some(prov) = state.carried_provenance.get(res_v) {
-                            ret_loans.extend(prov.clone());
-                        }
-                    }
-                }
-
-                // Step 1: Check for local escapes (P0-A)
-                let mut has_local_escape = false;
-                let mut actual_param_origins = HashSet::new();
-                let mut has_global_origin = false;
-
-                for loan in &ret_loans {
-                    let resolved = self.resolve_alias(&loan.place, state);
-                    match resolved {
-                        Operand::Global(_) => {
-                            has_global_origin = true;
-                        }
-                        Operand::Value(v) => {
-                            if (v.0 as usize) < self.func.values.len() {
-                                let val_data = &self.func.values[v.0 as usize];
-                                match &val_data.origin {
-                                    ValueOrigin::Global => {
-                                        has_global_origin = true;
-                                    }
-                                    ValueOrigin::Parameter(p_idx) => {
-                                        let is_ref_param = if let Some(ctx) = self.ctx {
-                                            matches!(ctx.types.get(val_data.ty), SemanticType::Reference(..))
-                                        } else {
-                                            false
-                                        };
-                                        if is_ref_param {
-                                            actual_param_origins.insert(*p_idx as u16);
-                                        } else {
-                                            has_local_escape = true;
-                                        }
-                                    }
-                                    ValueOrigin::Local | ValueOrigin::Temporary => {
-                                        has_local_escape = true;
-                                    }
-                                }
-                            } else {
-                                has_local_escape = true;
-                            }
-                        }
-                        _ => {
-                            has_local_escape = true;
-                        }
-                    }
-                }
-
-                // If value resolved directly to an operand without explicit loans in provenance:
-                if ret_loans.is_empty() && is_direct_ref_ret {
-                    if let Operand::Value(res_v) = resolved_op {
-                        if (res_v.0 as usize) < self.func.values.len() {
-                            let val_data = &self.func.values[res_v.0 as usize];
-                            match &val_data.origin {
-                                ValueOrigin::Local | ValueOrigin::Temporary => {
-                                    has_local_escape = true;
-                                }
-                                ValueOrigin::Parameter(p_idx) => {
-                                    let is_ref_param = if let Some(ctx) = self.ctx {
-                                        matches!(ctx.types.get(val_data.ty), SemanticType::Reference(..))
-                                    } else {
-                                        false
-                                    };
-                                    if is_ref_param {
-                                        actual_param_origins.insert(*p_idx as u16);
-                                    } else {
-                                        has_local_escape = true;
-                                    }
-                                }
-                                ValueOrigin::Global => {
-                                    has_global_origin = true;
-                                }
-                            }
-                        }
-                    } else if let Operand::Global(_) = resolved_op {
-                        has_global_origin = true;
-                    }
-                }
-
-                if has_local_escape {
-                    let mut diag = Diagnostic::error("error[E3005]: LocalBorrowEscape: Reference to local variable escapes function scope");
-                    diag.span = self.func.value(*value).span.clone();
-                    if !self.diagnostics.iter().any(|existing| existing.message == diag.message && existing.span == diag.span) {
-                        self.diagnostics.push(diag);
-                    }
-                } else if let Some(contract) = declared_contract {
-                    // Step 2: Check declared contract satisfaction (P0-B)
-                    if let Some(prov) = &contract.return_provenance {
-                        let allowed_indices: HashSet<u16> = prov.indices().iter().copied().collect();
-                        let invalid_origins: Vec<u16> = actual_param_origins
-                            .iter()
-                            .copied()
-                            .filter(|idx| !allowed_indices.contains(idx))
-                            .collect();
-
-                        if !invalid_origins.is_empty() {
-                            let mut diag = Diagnostic::error(format!(
-                                "error[E2016]: LifetimeConstraintViolation: return value has provenance from parameter (index {}), which does not satisfy declared lifetime contract",
-                                invalid_origins[0]
-                            ));
-                            diag.span = self.func.value(*value).span.clone();
-                            if !self.diagnostics.iter().any(|existing| existing.message == diag.message && existing.span == diag.span) {
-                                self.diagnostics.push(diag);
-                            }
-                        } else if is_direct_ref_ret && actual_param_origins.is_empty() && !has_global_origin {
-                            let mut diag = Diagnostic::error(
-                                "error[E2016]: LifetimeConstraintViolation: return expression does not satisfy declared lifetime contract"
-                            );
-                            diag.span = self.func.value(*value).span.clone();
-                            if !self.diagnostics.iter().any(|existing| existing.message == diag.message && existing.span == diag.span) {
-                                self.diagnostics.push(diag);
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 

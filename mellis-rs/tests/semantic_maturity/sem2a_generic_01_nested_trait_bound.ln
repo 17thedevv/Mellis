@@ -1,0 +1,32 @@
+// SEM2A-GENERIC-01: nested generic trait arguments substitute through a bound.
+struct Wrapper<T> {
+    value: T,
+}
+
+trait Mapper<A, B> {
+    fn map(self: &Self, input: A) -> B;
+}
+
+struct IntToBool {}
+
+impl Mapper<Wrapper<i32>, Wrapper<bool>> for IntToBool {
+    fn map(self: &Self, input: Wrapper<i32>) -> Wrapper<bool> {
+        return Wrapper<bool> { value: input.value == 42 };
+    }
+}
+
+fn apply<M: Mapper<Wrapper<i32>, Wrapper<bool>>>(
+    mapper: &M,
+    input: Wrapper<i32>
+) -> Wrapper<bool> {
+    return mapper.map(input);
+}
+
+fn main() -> i32 {
+    dec mapper = IntToBool {};
+    dec result = apply<IntToBool>(&mapper, Wrapper<i32> { value: 42 });
+    if result.value {
+        return 0;
+    }
+    return 1;
+}

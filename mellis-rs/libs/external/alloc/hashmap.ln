@@ -171,9 +171,3 @@ impl<K, V> IntoIterator<(K, V), MapIntoIter<K, V>> for std::HashMap<K, V> {
         return self.into_iter();
     }
 }
-
-impl<K, V> IntoIterator<(&K, &V), MapIter<K, V>> for &std::HashMap<K, V> {
-    fn into_iter(self: Self) -> MapIter<K, V> {
-        return self.iter();
-    }
-}

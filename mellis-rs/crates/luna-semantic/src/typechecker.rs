@@ -1,7 +1,7 @@
 use crate::{SemanticContext, ty::{SemanticTypeId, SemanticType, BuiltinType}};
 use luna_ast::{AstArena, Item, Stmt, Expr, Decl};
 use luna_lexer::{BuiltinKind, TokenKind};
-use luna_common::diagnostic::Diagnostic;
+use luna_common::diagnostic::{Diagnostic, DiagnosticCode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssociatedTypeEqObligation {
@@ -209,17 +209,72 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub fn is_ffi_safe(&self, ty_id: SemanticTypeId) -> Result<(), String> {
-        let ty = self.ctx.types.get(ty_id).clone();
+    pub fn contains_ffi_provenance_capability(&self, ty_id: SemanticTypeId) -> bool {
+        let mut visited = std::collections::HashSet::new();
+        self.contains_ffi_provenance_capability_inner(ty_id, &mut visited)
+    }
+
+    fn contains_ffi_provenance_capability_inner(
+        &self,
+        ty_id: SemanticTypeId,
+        visited: &mut std::collections::HashSet<SemanticTypeId>,
+    ) -> bool {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        if !visited.insert(resolved_id) {
+            return false;
+        }
+
+        let ty = self.ctx.types.get(resolved_id).clone();
         match ty {
-            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => Ok(()),
-            SemanticType::Pointer(_, _inner) | SemanticType::Reference(_, _, _inner) => {
-                // The C-ABI doesn't strictly require the pointee to be FFI-safe if it's opaque,
-                // but generally it's safer to ensure pointees are also FFI-safe. 
-                // We'll just allow it for now since C pointers can point to opaque structs.
+            SemanticType::Reference(..) | SemanticType::Pointer(..) | SemanticType::Slice(..) => true,
+            SemanticType::Struct(sym_id, _, ref field_tys) => {
+                if field_tys.iter().any(|&f| self.contains_ffi_provenance_capability_inner(f, visited)) {
+                    return true;
+                }
+                if let Some(full_ty_id) = self.ctx.tables.symbol_types.get(&sym_id).copied() {
+                    if full_ty_id != ty_id && full_ty_id != resolved_id {
+                        if let SemanticType::Struct(_, _, ref full_fields) = self.ctx.types.get(full_ty_id).clone() {
+                            if full_fields.iter().any(|&f| self.contains_ffi_provenance_capability_inner(f, visited)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                false
+            }
+            SemanticType::Enum(_, _, ref variant_tys) => {
+                variant_tys.iter().any(|&v| self.contains_ffi_provenance_capability_inner(v, visited))
+            }
+            SemanticType::Tuple(ref elems) => {
+                elems.iter().any(|&e| self.contains_ffi_provenance_capability_inner(e, visited))
+            }
+            SemanticType::Array(elem, _) => {
+                self.contains_ffi_provenance_capability_inner(elem, visited)
+            }
+            SemanticType::Function { .. } => false,
+            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never | SemanticType::Error => false,
+            _ => false,
+        }
+    }
+
+    pub fn is_ffi_safe_param(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        let ty = self.ctx.types.get(resolved_id).clone();
+        match ty {
+            SemanticType::Primitive(_) | SemanticType::Void => Ok(()),
+            SemanticType::Pointer(_, _) => Ok(()),
+            SemanticType::Reference(_, _, _inner) => Ok(()),
+            SemanticType::Function { ref params, return_type } => {
+                for &p in params {
+                    self.is_ffi_safe_param(p)?;
+                }
+                self.is_ffi_safe_return(return_type)?;
                 Ok(())
-            },
-            SemanticType::Struct(sym_id, _, field_tys) => {
+            }
+            SemanticType::Struct(sym_id, _, ref field_tys) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
                 if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
                     if let Decl::Struct { annotations, .. } = &self.arena.decls[decl_id.0 as usize] {
                         let has_repr_c = annotations.iter().any(|a| {
@@ -227,23 +282,125 @@ impl<'a> TypeChecker<'a> {
                             name == "repr"
                         });
                         if !has_repr_c {
-                            return Err(format!("Struct is not marked with @repr(C)"));
+                            return Err("Struct is not marked with #[repr(C)]".to_string());
                         }
                     }
                 }
-                for f in field_tys {
-                    self.is_ffi_safe(f)?;
+                for &f in field_tys {
+                    self.is_ffi_safe_field(f)?;
                 }
                 Ok(())
-            },
+            }
+            SemanticType::Tuple(_) | SemanticType::Enum(..) | SemanticType::Array(..) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
+                Err("Type is not FFI-safe".to_string())
+            }
+            _ => Err("Parameter type is not FFI-safe".to_string()),
+        }
+    }
+
+    pub fn is_ffi_safe_return(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        let ty = self.ctx.types.get(resolved_id).clone();
+        match ty {
+            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => Ok(()),
+            SemanticType::Pointer(_, _) => Ok(()),
+            SemanticType::Reference(..) => {
+                Err("Extern function returning safe reference is not supported without an explicit lifetime contract".to_string())
+            }
+            SemanticType::Function { ref params, return_type } => {
+                for &p in params {
+                    self.is_ffi_safe_param(p)?;
+                }
+                self.is_ffi_safe_return(return_type)?;
+                Ok(())
+            }
+            SemanticType::Struct(sym_id, _, ref field_tys) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
+                if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
+                    if let Decl::Struct { annotations, .. } = &self.arena.decls[decl_id.0 as usize] {
+                        let has_repr_c = annotations.iter().any(|a| {
+                            let name = self.get_span_text(a.name);
+                            name == "repr"
+                        });
+                        if !has_repr_c {
+                            return Err("Struct is not marked with #[repr(C)]".to_string());
+                        }
+                    }
+                }
+                for &f in field_tys {
+                    self.is_ffi_safe_field(f)?;
+                }
+                Ok(())
+            }
+            SemanticType::Tuple(_) | SemanticType::Enum(..) | SemanticType::Array(..) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
+                Err("Type is not FFI-safe".to_string())
+            }
+            _ => Err("Return type is not FFI-safe".to_string()),
+        }
+    }
+
+    pub fn is_ffi_safe_field(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        let ty = self.ctx.types.get(resolved_id).clone();
+        match ty {
+            SemanticType::Primitive(_) | SemanticType::Void => Ok(()),
+            SemanticType::Pointer(_, _) => {
+                Err("By-value aggregate containing pointer capability is not supported across FFI boundary".to_string())
+            }
+            SemanticType::Reference(..) => {
+                Err("By-value aggregate containing safe reference is not supported across FFI boundary".to_string())
+            }
+            SemanticType::Function { ref params, return_type } => {
+                for &p in params {
+                    self.is_ffi_safe_param(p)?;
+                }
+                self.is_ffi_safe_return(return_type)?;
+                Ok(())
+            }
+            SemanticType::Struct(sym_id, _, ref field_tys) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
+                if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
+                    if let Decl::Struct { annotations, .. } = &self.arena.decls[decl_id.0 as usize] {
+                        let has_repr_c = annotations.iter().any(|a| {
+                            let name = self.get_span_text(a.name);
+                            name == "repr"
+                        });
+                        if !has_repr_c {
+                            return Err("Struct is not marked with #[repr(C)]".to_string());
+                        }
+                    }
+                }
+                for &f in field_tys {
+                    self.is_ffi_safe_field(f)?;
+                }
+                Ok(())
+            }
+            _ => Err("Field type is not FFI-safe".to_string()),
+        }
+    }
+
+    pub fn is_ffi_safe(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        let ty = self.ctx.types.get(resolved_id).clone();
+        match ty {
             SemanticType::Function { params, return_type } => {
                 for p in params {
-                    self.is_ffi_safe(p)?;
+                    self.is_ffi_safe_param(p)?;
                 }
-                self.is_ffi_safe(return_type)?;
+                self.is_ffi_safe_return(return_type)?;
                 Ok(())
-            },
-            _ => Err(format!("Type is not FFI-safe")),
+            }
+            _ => self.is_ffi_safe_param(ty_id),
         }
     }
 
@@ -2243,7 +2400,7 @@ impl<'a> TypeChecker<'a> {
                             };
                             if let Some(id) = sym_id {
                                 if i > 0 && !self.ctx.symbol_table.is_accessible(id, self.current_scope, self.ctx.current_provider) {
-                                    self.ctx.diagnostics.push(Diagnostic::error(format!("Type `{}` is private and cannot be accessed from this scope", seg_name)).with_span(*seg));
+                                    self.ctx.diagnostics.push(Diagnostic::error(format!("Type `{}` is private and cannot be accessed from this scope", seg_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*seg));
                                     return None;
                                 }
                                 res = Some(id);
@@ -2265,7 +2422,7 @@ impl<'a> TypeChecker<'a> {
                     if !self.ctx.symbol_table.is_accessible(sym, self.current_scope, self.ctx.current_provider) {
                         let name_str = segments.iter().map(|s| self.get_span_text(*s)).collect::<Vec<_>>().join("::");
                         let span = segments.last().copied().unwrap_or(luna_common::Span::default());
-                        self.ctx.diagnostics.push(Diagnostic::error(format!("Type `{}` is private and cannot be accessed from this scope", name_str)).with_span(span));
+                        self.ctx.diagnostics.push(Diagnostic::error(format!("Type `{}` is private and cannot be accessed from this scope", name_str)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(span));
                         return self.ctx.types.intern(SemanticType::Error);
                     }
                     let sym_kind = self.ctx.symbol_table.get_symbol(sym).kind.clone();
@@ -2289,6 +2446,15 @@ impl<'a> TypeChecker<'a> {
                                     }
                                 }
                             }
+                            // A type alias owns its own generic parameter list.
+                            // Substitute through the complete alias body; using
+                            // the alias arguments as the outer nominal arguments
+                            // corrupts nested aliases such as
+                            // `Wrapper<Pair<A, B>>`.
+                            if matches!(sym_kind, crate::SymbolKind::Alias) {
+                                return self.ctx.types.subst(base_ty, &subst);
+                            }
+
                             let resolved_ty = self.ctx.types.get(base_ty).clone();
                             match resolved_ty {
                                 SemanticType::Struct(s_sym, _, original_field_tys) => {
@@ -2771,7 +2937,12 @@ impl<'a> TypeChecker<'a> {
 
                             if let Some(func_ty) = self.ctx.tables.symbol_types.get(&sym_id).copied() {
                                 if let Err(e) = self.is_ffi_safe(func_ty) {
-                                    self.ctx.diagnostics.push(Diagnostic::error(format!("Extern function signature is not FFI-safe: {}", e)));
+                                    let span = self.ctx.symbol_table.get_symbol(sym_id).span;
+                                    self.ctx.diagnostics.push(
+                                        Diagnostic::error(format!("error[E2030]: NonFfiSafeType: Extern function signature is not FFI-safe: {}", e))
+                                            .with_code(DiagnosticCode::NonFfiSafeType)
+                                            .with_span(span)
+                                    );
                                 }
                             }
                         }
@@ -2971,6 +3142,259 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
+    fn select_protocol_impl(
+        &mut self,
+        trait_id: luna_common::ids::SymbolId,
+        self_ty: SemanticTypeId,
+        span: luna_common::Span,
+    ) -> Option<(crate::semantic_tables::TraitImplEntry, crate::ty::Substitution)> {
+        let mut matches = Vec::new();
+        for entry in &self.ctx.tables.trait_impl_entries {
+            if entry.trait_id != trait_id {
+                continue;
+            }
+            let mut subst = crate::ty::Substitution::new();
+            if self.ctx.matches_impl_pattern(
+                entry.self_type,
+                self_ty,
+                &entry.generic_params,
+                &mut subst,
+            ) {
+                matches.push((entry.clone(), subst));
+            }
+        }
+
+        match matches.len() {
+            1 => matches.pop(),
+            0 => {
+                let trait_name = self.ctx.symbol_table.get_symbol(trait_id).name.clone();
+                self.ctx.diagnostics.push(
+                    Diagnostic::error(format!(
+                        "Type `{:?}` does not implement required language protocol `{}`",
+                        self.ctx.types.get(self_ty),
+                        trait_name,
+                    ))
+                    .with_span(span),
+                );
+                None
+            }
+            _ => {
+                let trait_name = self.ctx.symbol_table.get_symbol(trait_id).name.clone();
+                self.ctx.diagnostics.push(
+                    Diagnostic::error(format!(
+                        "Multiple implementations of language protocol `{}` match `{:?}`",
+                        trait_name,
+                        self.ctx.types.get(self_ty),
+                    ))
+                    .with_span(span),
+                );
+                None
+            }
+        }
+    }
+
+    fn protocol_impl_method(
+        &mut self,
+        trait_id: luna_common::ids::SymbolId,
+        entry: &crate::semantic_tables::TraitImplEntry,
+        span: luna_common::Span,
+    ) -> Option<luna_common::ids::SymbolId> {
+        let required_methods = self
+            .ctx
+            .tables
+            .trait_methods
+            .get(&trait_id)
+            .cloned()
+            .unwrap_or_default();
+        if required_methods.len() != 1 {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("Iterator language protocols must define exactly one required method")
+                    .with_span(span),
+            );
+            return None;
+        }
+        let required_name = self
+            .ctx
+            .symbol_table
+            .get_symbol(required_methods[0])
+            .name
+            .clone();
+
+        if let Some(impl_decl) = entry.decl_id {
+            if let Some(Decl::Impl { methods, .. }) = self.arena.decls.get(impl_decl.0 as usize) {
+                for method_decl in methods {
+                    if let Some(&method_sym) = self.ctx.tables.decl_symbols.get(method_decl) {
+                        if self.ctx.symbol_table.get_symbol(method_sym).name == required_name {
+                            return Some(method_sym);
+                        }
+                    }
+                }
+            }
+        }
+
+        let self_key = match self.ctx.types.get(entry.self_type) {
+            SemanticType::Struct(sym, ..) | SemanticType::Enum(sym, ..) => {
+                Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*sym))
+            }
+            SemanticType::Primitive(kind) => {
+                Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*kind))
+            }
+            _ => None,
+        };
+        if let Some(self_type_def) = self_key {
+            let key = crate::semantic_tables::ImplKey {
+                trait_id: Some(trait_id),
+                self_type_def,
+            };
+            if let Some(methods) = self.ctx.tables.impl_methods.get(&key) {
+                for &method_sym in methods {
+                    if self.ctx.symbol_table.get_symbol(method_sym).name == required_name {
+                        return Some(method_sym);
+                    }
+                }
+            }
+        }
+
+        self.ctx.diagnostics.push(
+            Diagnostic::error(format!(
+                "Implementation of language protocol method `{}` is missing",
+                required_name,
+            ))
+            .with_span(span),
+        );
+        None
+    }
+
+    fn resolve_for_each_protocol(
+        &mut self,
+        stmt_id: luna_ast::StmtId,
+        iterable_ty: SemanticTypeId,
+        pattern: luna_ast::PatId,
+        span: luna_common::Span,
+    ) {
+        use crate::lang_item::LangItem;
+
+        let Some(into_iterator_trait) = self.ctx.lang_items.get(LangItem::IntoIterator) else {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("language item `into_iterator` is required for `for-in`")
+                    .with_span(span),
+            );
+            return;
+        };
+        let Some(iterator_trait) = self.ctx.lang_items.get(LangItem::Iterator) else {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("language item `iterator` is required for `for-in`")
+                    .with_span(span),
+            );
+            return;
+        };
+        let Some(option_sym) = self.ctx.lang_items.get(LangItem::Option) else {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("language item `option` is required for `for-in`").with_span(span),
+            );
+            return;
+        };
+
+        let Some((into_entry, into_subst)) =
+            self.select_protocol_impl(into_iterator_trait, iterable_ty, span)
+        else {
+            return;
+        };
+        if into_entry.trait_args.len() != 2 {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("IntoIterator language protocol requires item and iterator type arguments")
+                    .with_span(span),
+            );
+            return;
+        }
+        let item_ty = self.ctx.types.subst(into_entry.trait_args[0], &into_subst);
+        let iterator_ty = self.ctx.types.subst(into_entry.trait_args[1], &into_subst);
+        let Some(into_iter_method) =
+            self.protocol_impl_method(into_iterator_trait, &into_entry, span)
+        else {
+            return;
+        };
+
+        let Some((iterator_entry, next_subst)) =
+            self.select_protocol_impl(iterator_trait, iterator_ty, span)
+        else {
+            return;
+        };
+        if iterator_entry.trait_args.len() != 1 {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("Iterator language protocol requires one item type argument")
+                    .with_span(span),
+            );
+            return;
+        }
+        let next_item_ty = self.ctx.types.subst(iterator_entry.trait_args[0], &next_subst);
+        if let Err(error) = self.unify(item_ty, next_item_ty) {
+            self.ctx.diagnostics.push(Diagnostic::error(error).with_span(span));
+            return;
+        }
+        let Some(next_method) = self.protocol_impl_method(iterator_trait, &iterator_entry, span)
+        else {
+            return;
+        };
+
+        let Some(&next_fn_ty) = self.ctx.tables.symbol_types.get(&next_method) else {
+            self.ctx.diagnostics.push(
+                Diagnostic::error("Iterator protocol method has no semantic function type")
+                    .with_span(span),
+            );
+            return;
+        };
+        let (next_receiver_type, option_type) =
+            match self.ctx.types.get(next_fn_ty).clone() {
+                SemanticType::Function { params, return_type } if !params.is_empty() => (
+                    self.ctx.types.subst(params[0], &next_subst),
+                    self.ctx.types.subst(return_type, &next_subst),
+                ),
+                _ => {
+                    self.ctx.diagnostics.push(
+                        Diagnostic::error("Iterator protocol method must have a receiver")
+                            .with_span(span),
+                    );
+                    return;
+                }
+            };
+        match self.ctx.types.get(option_type).clone() {
+            SemanticType::Enum(sym, args, _) if sym == option_sym && args.len() == 1 => {
+                if let Err(error) = self.unify(item_ty, args[0]) {
+                    self.ctx.diagnostics.push(Diagnostic::error(error).with_span(span));
+                    return;
+                }
+            }
+            _ => {
+                self.ctx.diagnostics.push(
+                    Diagnostic::error("Iterator protocol method must return the Option language contract")
+                        .with_span(span),
+                );
+                return;
+            }
+        }
+
+        let item_ty = self.ctx.types.resolve(item_ty);
+        let iterator_ty = self.ctx.types.resolve(iterator_ty);
+        let option_type = self.ctx.types.resolve(option_type);
+        self.typecheck_pattern(&pattern, item_ty);
+        self.ctx.tables.for_loop_next.insert(stmt_id, next_method);
+        self.ctx.tables.for_loop_subst.insert(stmt_id, next_subst.clone());
+        self.ctx.tables.for_loop_resolutions.insert(
+            stmt_id,
+            crate::semantic_tables::ForLoopResolution {
+                into_iter_method,
+                into_iter_subst: into_subst,
+                next_method,
+                next_subst,
+                iterator_type: iterator_ty,
+                item_type: item_ty,
+                option_type,
+                next_receiver_type,
+            },
+        );
+    }
+
     fn typecheck_stmt(&mut self, stmt_id: &luna_ast::StmtId) {
         let stmt = &self.arena.stmts[stmt_id.0 as usize];
         match stmt {
@@ -3004,7 +3428,7 @@ impl<'a> TypeChecker<'a> {
                 self.typecheck_stmt(body);
                 self.loop_depth -= 1;
             }
-            Stmt::For { init, cond, step, body, iterable, .. } => {
+            Stmt::For { kind, init, cond, step, body, pattern, iterable, .. } => {
                 if let Some(item) = init { self.typecheck_item(item); }
                 if let Some(c) = cond { 
                     let cond_ty = self.typecheck_expr(c); 
@@ -3014,7 +3438,25 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
                 if let Some(s) = step { self.typecheck_expr(s); }
-                if let Some(iter) = iterable { self.typecheck_expr(iter); }
+                if let Some(iter) = iterable {
+                    let iterable_ty = self.typecheck_expr(iter);
+                    if matches!(kind, luna_ast::stmt::ForKind::ForEach)
+                        && !matches!(
+                            &self.arena.exprs[iter.0 as usize],
+                            Expr::Binary {
+                                op: luna_ast::expr::BinaryOp::Range | luna_ast::expr::BinaryOp::RangeInc,
+                                ..
+                            }
+                        )
+                    {
+                        if let Some(pattern) = pattern {
+                            let span = self
+                                .get_expr_span_for_diag(iter)
+                                .unwrap_or_else(luna_common::Span::default);
+                            self.resolve_for_each_protocol(*stmt_id, iterable_ty, *pattern, span);
+                        }
+                    }
+                }
                 self.loop_depth += 1;
                 self.typecheck_stmt(body);
                 self.loop_depth -= 1;
@@ -3682,7 +4124,7 @@ impl<'a> TypeChecker<'a> {
                                                             self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
                                                         };
                                                         if !is_accessible {
-                                                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_span(*member));
+                                                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*member));
                                                             return self.ctx.types.intern(SemanticType::Error);
                                                         }
                                                         if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
@@ -3712,7 +4154,7 @@ impl<'a> TypeChecker<'a> {
                                         self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
                                     };
                                     if !is_accessible {
-                                        self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_span(*member));
+                                        self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*member));
                                         return self.ctx.types.intern(SemanticType::Error);
                                     }
                                     if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
@@ -3836,7 +4278,7 @@ impl<'a> TypeChecker<'a> {
                         };
                         if let Some(id) = sym_id {
                             if i > 0 && !self.ctx.symbol_table.is_accessible(id, self.current_scope, self.ctx.current_provider) {
-                                self.ctx.diagnostics.push(Diagnostic::error(format!("Struct `{}` is private and cannot be accessed from this scope", seg_name)).with_span(*seg));
+                                self.ctx.diagnostics.push(Diagnostic::error(format!("Struct `{}` is private and cannot be accessed from this scope", seg_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*seg));
                                 return self.ctx.types.new_inference_var();
                             }
                             res = Some(id);
@@ -3860,7 +4302,7 @@ impl<'a> TypeChecker<'a> {
                 };
 
                 if !self.ctx.symbol_table.is_accessible(symbol, self.current_scope, self.ctx.current_provider) {
-                    self.ctx.diagnostics.push(Diagnostic::error(format!("Struct '{}' is private and cannot be accessed from this scope", full_name)).with_span(span));
+                    self.ctx.diagnostics.push(Diagnostic::error(format!("Struct '{}' is private and cannot be accessed from this scope", full_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(span));
                     return self.ctx.types.new_inference_var();
                 }
 
@@ -4035,7 +4477,7 @@ impl<'a> TypeChecker<'a> {
                     elem_ty
                 }
             }
-            Expr::MethodCall { object, method_name, args, .. } => {
+            Expr::MethodCall { object, method_name, generic_args, args } => {
                 let obj_ty_id = self.typecheck_expr(object);
                 let obj_ty = self.ctx.types.get(obj_ty_id).clone();
                 let member_name = self.get_span_text(*method_name);
@@ -4220,7 +4662,29 @@ impl<'a> TypeChecker<'a> {
                                 }
                                 if params.len() == args.len() + 1 {
                                     self.bind_matching_generics(params[0], obj_ty_id, &mut subst, &mut m_has_generics);
-                                    let receiver_p = if m_has_generics { self.ctx.types.subst(params[0], &subst) } else { params[0] };
+                                    let receiver_p = if m_has_generics {
+                                        self.ctx.types.subst(params[0], &subst)
+                                    } else {
+                                        params[0]
+                                    };
+                                    let receiver_needs_rw = matches!(
+                                        self.ctx.types.get(receiver_p),
+                                        SemanticType::Reference(_, crate::ty::Mutability::Mutable, _)
+                                    );
+                                    let receiver_is_shared = matches!(
+                                        obj_ty,
+                                        SemanticType::Reference(_, crate::ty::Mutability::Immutable, _)
+                                            | SemanticType::Pointer(crate::ty::Mutability::Immutable, _)
+                                    );
+                                    if receiver_needs_rw && receiver_is_shared {
+                                        let span = self
+                                            .get_expr_span_for_diag(expr_id)
+                                            .unwrap_or_else(luna_common::Span::default);
+                                        self.ctx.diagnostics.push(
+                                            Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_POINTER: Cannot call method requiring mutable receiver (&rw self) through immutable reference or pointer")
+                                                .with_span(span),
+                                        );
+                                    }
                                     let _ = self.unify(receiver_p, obj_ty_id);
                                 }
                                 let return_type = if m_has_generics { self.ctx.types.subst(return_type, &subst) } else { return_type };
@@ -4299,7 +4763,7 @@ impl<'a> TypeChecker<'a> {
                             self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
                         };
                         if !is_accessible {
-                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_span(*method_name));
+                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*method_name));
                             return self.ctx.types.intern(SemanticType::Error);
                         }
                         self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
@@ -4369,32 +4833,71 @@ impl<'a> TypeChecker<'a> {
                                     }
                                 }
 
-                                // 2. Method generic params
+                                // 2. Method generic params. Explicit method
+                                // arguments constrain the substitution before
+                                // value arguments are checked; they must never
+                                // be replaced by inference from those values.
+                                let mut method_gp_syms = Vec::new();
                                 if let Some(&method_decl_id) = self.ctx.tables.symbol_decls.get(&m_sym) {
-                                    if (method_decl_id.0 as usize) < self.arena.decls.len() {
-                                        if let Decl::Function { generic_params: m_gps, .. } = &self.arena.decls[method_decl_id.0 as usize] {
-                                            if !m_gps.is_empty() {
-                                                m_has_generics = true;
-                                                for (gp_idx, _) in m_gps.iter().enumerate() {
-                                                    if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(method_decl_id, gp_idx)) {
-                                                        subst.insert(*gp_sym, self.ctx.types.new_inference_var());
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        let mut gp_idx = 0;
-                                        while let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(method_decl_id, gp_idx)) {
-                                            m_has_generics = true;
-                                            subst.insert(*gp_sym, self.ctx.types.new_inference_var());
-                                            gp_idx += 1;
-                                        }
+                                    let mut gp_idx = 0;
+                                    while let Some(gp_sym) = self
+                                        .ctx
+                                        .tables
+                                        .generic_param_symbols
+                                        .get(&(method_decl_id, gp_idx))
+                                    {
+                                        method_gp_syms.push(*gp_sym);
+                                        gp_idx += 1;
                                     }
+                                }
+                                if !generic_args.is_empty()
+                                    && generic_args.len() != method_gp_syms.len()
+                                {
+                                    self.ctx.diagnostics.push(
+                                        Diagnostic::error(format!(
+                                            "wrong number of generic arguments for method `{}`: expected {}, got {}",
+                                            member_name,
+                                            method_gp_syms.len(),
+                                            generic_args.len()
+                                        ))
+                                        .with_span(*method_name),
+                                    );
+                                }
+                                for (gp_idx, gp_sym) in method_gp_syms.into_iter().enumerate() {
+                                    m_has_generics = true;
+                                    let gp_ty = if let Some(ast_ty) = generic_args.get(gp_idx) {
+                                        self.lower_type(*ast_ty)
+                                    } else {
+                                        self.ctx.types.new_inference_var()
+                                    };
+                                    subst.insert(gp_sym, gp_ty);
                                 }
 
                                 if params.len() == args.len() + 1 {
                                     self.bind_matching_generics(params[0], obj_ty_id, &mut subst, &mut m_has_generics);
-                                    let receiver_p = if m_has_generics { self.ctx.types.subst(params[0], &subst) } else { params[0] };
+                                    let receiver_p = if m_has_generics {
+                                        self.ctx.types.subst(params[0], &subst)
+                                    } else {
+                                        params[0]
+                                    };
+                                    let receiver_needs_rw = matches!(
+                                        self.ctx.types.get(receiver_p),
+                                        SemanticType::Reference(_, crate::ty::Mutability::Mutable, _)
+                                    );
+                                    let receiver_is_shared = matches!(
+                                        obj_ty,
+                                        SemanticType::Reference(_, crate::ty::Mutability::Immutable, _)
+                                            | SemanticType::Pointer(crate::ty::Mutability::Immutable, _)
+                                    );
+                                    if receiver_needs_rw && receiver_is_shared {
+                                        let span = self
+                                            .get_expr_span_for_diag(expr_id)
+                                            .unwrap_or_else(luna_common::Span::default);
+                                        self.ctx.diagnostics.push(
+                                            Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_POINTER: Cannot call method requiring mutable receiver (&rw self) through immutable reference or pointer")
+                                                .with_span(span),
+                                        );
+                                    }
                                     let _ = self.unify(receiver_p, obj_ty_id);
                                 }
 
@@ -4441,7 +4944,17 @@ impl<'a> TypeChecker<'a> {
                     self.typecheck_expr(&arg.value);
                 }
 
-                self.ctx.types.new_inference_var()
+                if !matches!(obj_ty, SemanticType::Error) {
+                    self.ctx.diagnostics.push(
+                        Diagnostic::error(format!(
+                            "Method `{}` not found for type `{:?}`",
+                            member_name, obj_ty
+                        ))
+                        .with_span(*method_name),
+                    );
+                }
+
+                self.ctx.types.error_id()
             }
             Expr::Sizeof { target_type } => {
                 self.lower_type(*target_type);
@@ -5002,16 +5515,35 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             luna_ast::Expr::Member { object, .. } | luna_ast::Expr::TupleIndex { object, .. } => {
-                self.enforce_mutability(object);
+                let obj_ty = self.ctx.tables.expr_types.get(object).copied().unwrap_or(crate::ty::SemanticTypeId(0));
+                match self.ctx.types.get(obj_ty) {
+                    SemanticType::Reference(_, crate::ty::Mutability::Immutable, _) => {
+                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                        self.ctx.diagnostics.push(Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_REFERENCE: Cannot mutate through an immutable reference `&T`")
+                            .with_span(span));
+                    }
+                    SemanticType::Reference(_, crate::ty::Mutability::Mutable, _) => {
+                        // Mutable reference provides write capability through dereference;
+                        // does not mutate the variable holding the reference.
+                    }
+                    _ => {
+                        self.enforce_mutability(object);
+                    }
+                }
             }
             luna_ast::Expr::Index { base, .. } => {
                 let base_ty = self.ctx.tables.expr_types.get(base).copied().unwrap_or(crate::ty::SemanticTypeId(0));
-                if let SemanticType::Reference(_, crate::ty::Mutability::Immutable, _) = self.ctx.types.get(base_ty) {
-                    let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
-                    self.ctx.diagnostics.push(Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_REFERENCE: Cannot mutate through an immutable reference `&T`")
-                        .with_span(span));
+                match self.ctx.types.get(base_ty) {
+                    SemanticType::Reference(_, crate::ty::Mutability::Immutable, _) => {
+                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                        self.ctx.diagnostics.push(Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_REFERENCE: Cannot mutate through an immutable reference `&T`")
+                            .with_span(span));
+                    }
+                    SemanticType::Reference(_, crate::ty::Mutability::Mutable, _) => {}
+                    _ => {
+                        self.enforce_mutability(base);
+                    }
                 }
-                self.enforce_mutability(base);
             }
             luna_ast::Expr::Unary { op: luna_ast::expr::UnaryOp::Deref | luna_ast::expr::UnaryOp::DerefMut, operand } => {
                 let ptr_ty = self.ctx.tables.expr_types.get(operand).copied().unwrap_or(crate::ty::SemanticTypeId(0));
@@ -5057,6 +5589,7 @@ impl<'a> TypeChecker<'a> {
                     "Field `{}` of struct `{}` is private and cannot be accessed from this scope",
                     field_name, struct_sym.name
                 ))
+                .with_code(DiagnosticCode::PrivateSymbolAccess)
                 .with_span(span),
             );
             false

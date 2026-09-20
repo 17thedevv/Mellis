@@ -208,6 +208,7 @@ impl InterfaceDecoder {
             expr_member_indices: HashMap::new(),
             raw_generic_param_symbols: HashMap::new(),
             symbol_lifetime_contracts: self.symbol_lifetime_contracts,
+            symbol_ffi_sync_noescape: HashMap::new(),
             trait_methods,
             unsafe_functions: self.unsafe_functions,
             trait_bounds: HashMap::new(),

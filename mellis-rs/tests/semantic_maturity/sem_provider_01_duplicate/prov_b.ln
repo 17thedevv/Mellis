@@ -1,0 +1,4 @@
+// SEM-PROVIDER-01 provider B conflicting contribution.
+export fn duplicate_symbol() -> i32 {
+    return 2;
+}

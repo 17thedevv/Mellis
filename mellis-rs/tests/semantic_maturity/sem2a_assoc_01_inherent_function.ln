@@ -1,0 +1,18 @@
+// SEM2A-ASSOC-01 / SEM-GAP-11: a generic inherent associated function is
+// callable by type and preserves its explicit type argument.
+struct Wrapper<T> {
+    value: T,
+}
+
+struct Builder {}
+
+impl Builder {
+    fn wrap<T>(value: T) -> Wrapper<T> {
+        return Wrapper<T> { value: value };
+    }
+}
+
+fn main() -> i32 {
+    dec wrapped = Builder::wrap<i32>(42);
+    return wrapped.value - 42;
+}

@@ -1,0 +1,10 @@
+// SEM-CONST-01: valid pure comptime mutation and value production.
+const ANSWER: i32 = comptime {
+    dec rw value = 40;
+    value = value + 2;
+    value
+};
+
+fn main() -> i32 {
+    return ANSWER - 42;
+}

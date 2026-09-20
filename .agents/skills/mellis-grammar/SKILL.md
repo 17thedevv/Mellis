@@ -282,6 +282,18 @@ Mellis v1 has exactly 4 module system primitives:
 | `using`   | Local namespace alias | `using std::collections as col;` |
 | `::`      | Qualified namespace lookup | `col::Vec<i32>` |
 
+## Lifetime Contracts (REGION-DESIGN-01)
+
+Luna uses explicit lifetime relation contracts rather than lifetime generic parameters.
+
+| Syntax Primitive | Usage | Example |
+|------------------|-------|---------|
+| `life_from(x)` | Reference acquires lifetime provenance from `x`. | `fn id(x: &i32) -> &i32 life_from(x)` |
+| `requires life(a) >= life(b)` | Explicit outlives constraint. | `requires life(owner) >= life(value)` |
+| `life(self)` / `life(return)` | Special query targets for the current instance or return value. | `requires life(return) <= life(owner)` |
+
+These contracts are appended at the end of function, struct, and extern declarations before the block/semicolon.
+
 ## Grammar Layer Invariant
 
 $$\text{AST accepted by parser} \iff \text{Exactly defined by grammar.ebnf} \iff \text{Exactly supported by parser} \iff \text{No accepted syntax silently ignored}$$

@@ -1,0 +1,24 @@
+// SEM2A-METHOD-01: a generic inherent method reconstructs nested return types.
+struct Pair<A, B> {
+    first: A,
+    second: B,
+}
+
+struct Holder<T> {
+    value: T,
+}
+
+impl<T> Holder<T> {
+    fn pair_with<U>(self: &Self, other: U) -> Pair<T, U> {
+        return Pair<T, U> { first: self.value, second: other };
+    }
+}
+
+fn main() -> i32 {
+    dec holder = Holder<i32> { value: 42 };
+    dec pair = holder.pair_with<bool>(true);
+    if pair.first == 42 && pair.second {
+        return 0;
+    }
+    return 1;
+}
