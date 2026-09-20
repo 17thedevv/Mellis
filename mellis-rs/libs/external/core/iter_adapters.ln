@@ -185,3 +185,76 @@ export fn iter_zip<A: Iterator<ItemA>, B: Iterator<ItemB>, ItemA, ItemB>(a: A, b
         b: b,
     };
 }
+
+// =========================================================================
+// Range & RangeInclusive Iterators
+// =========================================================================
+
+export struct Range {
+    export start: i32,
+    export end: i32,
+};
+
+export struct RangeInclusive {
+    export start: i32,
+    export end: i32,
+};
+
+export fn range(start: i32, end: i32) -> Range {
+    return Range {
+        start: start,
+        end: end,
+    };
+}
+
+export fn range_inclusive(start: i32, end: i32) -> RangeInclusive {
+    return RangeInclusive {
+        start: start,
+        end: end,
+    };
+}
+
+impl Range {
+    export fn next(self: &rw Self) -> Option<i32> {
+        if self.start >= self.end {
+            return Option::None;
+        }
+        dec val = self.start;
+        self.start = self.start + 1;
+        return Option::Some(val);
+    }
+}
+
+impl RangeInclusive {
+    export fn next(self: &rw Self) -> Option<i32> {
+        if self.start > self.end {
+            return Option::None;
+        }
+        dec val = self.start;
+        self.start = self.start + 1;
+        return Option::Some(val);
+    }
+}
+
+impl Iterator<i32> for Range {
+    fn next(self: &rw Self) -> Option<i32> {
+        if self.start >= self.end {
+            return Option::None;
+        }
+        dec val = self.start;
+        self.start = self.start + 1;
+        return Option::Some(val);
+    }
+}
+
+impl Iterator<i32> for RangeInclusive {
+    fn next(self: &rw Self) -> Option<i32> {
+        if self.start > self.end {
+            return Option::None;
+        }
+        dec val = self.start;
+        self.start = self.start + 1;
+        return Option::Some(val);
+    }
+}
+

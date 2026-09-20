@@ -1,6 +1,8 @@
 import <__lang_option>;
 import <__lang_iterator>;
 import <ptr>;
+import <cmp>;
+import <result>;
 
 module slice {
     // SliceIter: Borrowed iterator over slice
@@ -87,6 +89,96 @@ module slice {
             end: end_ptr,
         };
     }
+
+    export fn contains<T: Eq>(s: &[T], item: &T) -> bool {
+        dec len = s.len as u64;
+        dec rw i: u64 = 0 as u64;
+        while i < len {
+            dec elem = &s[i];
+            if elem.eq(item) {
+                return true;
+            }
+            i = i + (1 as u64);
+        }
+        return false;
+    }
+
+    export fn position<T>(s: &[T], predicate: fn(&T) -> bool) -> Option<u64> {
+        dec len = s.len as u64;
+        dec rw i: u64 = 0 as u64;
+        while i < len {
+            if predicate(&s[i]) {
+                return Option::Some(i);
+            }
+            i = i + (1 as u64);
+        }
+        return Option::None;
+    }
+
+    export fn binary_search<T: Ord>(s: &[T], item: &T) -> Result<u64, u64> {
+        dec rw low: u64 = 0 as u64;
+        dec rw high: u64 = s.len as u64;
+        while low < high {
+            dec mid = low + ((high - low) / (2 as u64));
+            dec c = s[mid].cmp(item);
+            if c < 0 {
+                low = mid + (1 as u64);
+            } else if c > 0 {
+                high = mid;
+            } else {
+                return Result::Ok(mid);
+            }
+        }
+        return Result::Err(low);
+    }
+
+    export fn reverse<T>(s: &rw [T]) {
+        dec len = s.len as u64;
+        if len <= (1 as u64) {
+            return;
+        }
+        dec rw left: u64 = 0 as u64;
+        dec rw right: u64 = len;
+        while left + (1 as u64) < right {
+            right = right - (1 as u64);
+            unsafe {
+                dec p_left = ptr::add_mut<T>(s.data, left);
+                dec p_right = ptr::add_mut<T>(s.data, right);
+                dec tmp = ptr::read<T>(p_left as *T);
+                ptr::write<T>(p_left, ptr::read<T>(p_right as *T));
+                ptr::write<T>(p_right, tmp);
+            }
+            left = left + (1 as u64);
+        }
+    }
+
+    export fn sort<T: Ord>(s: &rw [T]) {
+        dec len = s.len as u64;
+        if len <= (1 as u64) {
+            return;
+        }
+        dec rw i: u64 = 1 as u64;
+        while i < len {
+            dec rw j: u64 = i;
+            while j > (0 as u64) {
+                dec j_prev = j - (1 as u64);
+                dec c = s[j].cmp(&s[j_prev]);
+                if c < 0 {
+                    unsafe {
+                        dec p1 = ptr::add_mut<T>(s.data, j);
+                        dec p2 = ptr::add_mut<T>(s.data, j_prev);
+                        dec tmp = ptr::read<T>(p1 as *T);
+                        ptr::write<T>(p1, ptr::read<T>(p2 as *T));
+                        ptr::write<T>(p2, tmp);
+                    }
+                    j = j_prev;
+                } else {
+                    break;
+                }
+            }
+            i = i + (1 as u64);
+        }
+    }
 }
 
 export fn slice_iter<T>(s: &[T]) -> slice::SliceIter<T> life_from(s) {
@@ -95,6 +187,26 @@ export fn slice_iter<T>(s: &[T]) -> slice::SliceIter<T> life_from(s) {
 
 export fn slice_iter_mut<T>(s: &rw [T]) -> slice::SliceIterMut<T> life_from(s) {
     return slice::slice_iter_mut<T>(s);
+}
+
+export fn slice_contains<T: Eq>(s: &[T], item: &T) -> bool {
+    return slice::contains<T>(s, item);
+}
+
+export fn slice_position<T>(s: &[T], predicate: fn(&T) -> bool) -> Option<u64> {
+    return slice::position<T>(s, predicate);
+}
+
+export fn slice_binary_search<T: Ord>(s: &[T], item: &T) -> Result<u64, u64> {
+    return slice::binary_search<T>(s, item);
+}
+
+export fn slice_reverse<T>(s: &rw [T]) {
+    slice::reverse<T>(s);
+}
+
+export fn slice_sort<T: Ord>(s: &rw [T]) {
+    slice::sort<T>(s);
 }
 
 export type SliceIter<T> = slice::SliceIter<T>;
