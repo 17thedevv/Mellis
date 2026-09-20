@@ -302,14 +302,32 @@ Borrow Integration
 ```
 *Rule:* If a lifetime case cannot be expressed within the formal Region system, it is a design gap requiring semantic review, never an ad-hoc heuristic patch inside `BorrowAnalyzer`.
 
-### Post-Freeze Hardening Roadmap
-- **REGION-HARDENING: Canonical Loop Tree Hierarchy** (Non-semantic refactor / robustness item)
-  - Replace `min_by_key(|nl| nl.blocks.len())` with explicit loop nesting metadata: `LoopInfo { id, parent: Option<LoopId>, depth: usize, blocks }` and `max_by_key(|nl| nl.depth)`.
-  - **Invariant:** *"Loop nesting identity is semantic/compiler-structural metadata. Block-set size is never a lifetime semantic."*
-  - Hardening must preserve 100% of observable lifetime behavior and pass complete maturity + Region suites.
+### Canonical Architecture & Roadmap Status
 
-- **REGION-02: Borrowck Integration**
-  - Integrate Loan, Provenance, and the Region Solver into the existing CFG analysis.
-- **REGION-03: User Contract Layer**
-  - Parse and integrate user-facing contracts (`life_from`, `requires`), and finalize Elision rules in the compiler frontend.
+| Milestone | Scope / Responsibility | Canonical Status |
+|---|---|---|
+| **SEM-MATURITY-01** | Compiler semantic test suite & maturity stabilization | **COMPLETE & FROZEN ✅** |
+| **REGION-DESIGN-01** | Architectural design and separation of concerns | **FROZEN ✅** |
+| **REGION-SPEC-01** | Formal mathematical and lattice specification | **FROZEN ✅** |
+| **REGION-01** | Formal Region Graph Engine & Borrow Integration | **COMPLETE & FROZEN ✅** |
+| ├─ **REGION-01A** | Region IR, Graph, Regions, Points, Relations | **FROZEN ✅** |
+| ├─ **REGION-01B** | Semantic Constraint Generation (Contract + Body) | **FROZEN ✅** |
+| ├─ **REGION-01C** | Fixed-Point Symbolic Solver & Inference Engine | **FROZEN ✅** |
+| └─ **REGION-01D** | CFG Realization, Borrowck Bridge & Authority Cutover | **FROZEN ✅** |
+| *(Old REGION-02)* | *Borrowck Integration* | *Subsumed by REGION-01D-C & 01D-D* |
+
+### Post-Freeze Maintenance
+- **REGION-HARDENING: Canonical Loop Tree Hierarchy** *(Non-semantic refactor / robustness item)*
+  - Replace `min_by_key(|nl| nl.blocks.len())` with explicit loop nesting metadata: `LoopInfo { id, parent: Option<LoopId>, depth: usize, blocks }` and `max_by_key(|nl| nl.depth)`.
+  - **Invariants:**
+    - *"Loop nesting identity is semantic/compiler-structural metadata. Block-set size is never a lifetime semantic."*
+    - Hardening must preserve 100% of observable lifetime behavior and pass complete maturity + Region suites.
+
+### Next Semantic Milestone
+- **REGION-02: User Contract Pipeline Alignment** *(Audited Semantic Contract Gap)*
+  - **Audit Verdict:** The user contract pipeline is **PARTIAL**:
+    1. **Frontend Syntax**: `life_from(...)` and `where outlives(a, b)` are fully supported on functions, methods, and externs. However, `requires life(a) >= life(b)`, `life(return)`, and struct contracts (`struct S { ... } requires ...`) are specified in grammar but not yet parsed in `luna-parser`/`luna-lexer`.
+    2. **Canonical Artifact Parity**: `.llib` metadata serialization, deserialization, and cross-module source/binary parity for `CanonicalLifetimeContract` are fully functional and verified (`lifetime_relation_abi_acceptance_tests.rs`).
+    3. **Call-Site Region Authority**: Call-site outlives verification currently checks `BorrowAnalyzer::root_outlives` (legacy heuristic) rather than dispatching to the formal Region Engine / solver.
+  - **Scope:** Align frontend syntax to canonical `requires life(...) >= life(...)`, bridge `CanonicalLifetimeContract` directly into `RegionBorrowContext`, and cut over call-site outlives checking to the Region Engine.
 
