@@ -96,7 +96,7 @@ fn test_canonical_dag_integrity() {
         }
     }
 
-    assert_eq!(all_edges.len(), 61, "Expected exactly 61 dependency edges in canonical DAG");
+    assert_eq!(all_edges.len(), 64, "Expected exactly 64 dependency edges in canonical DAG");
 }
 
 /// Helper: extract provider imports from source content
