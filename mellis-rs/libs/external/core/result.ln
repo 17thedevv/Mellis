@@ -21,32 +21,6 @@ impl<T, E> Result<T, E> {
         }
     }
 
-    export fn as_ref(self: &Self) -> Result<&T, &E> life_from(self) {
-        if self.is_ok() {
-            unsafe {
-                dec val_ptr = ((self as *Self as u64) + (4 as u64)) as *T;
-                return Result::Ok(&*val_ptr);
-            }
-        }
-        unsafe {
-            dec err_ptr = ((self as *Self as u64) + (4 as u64)) as *E;
-            return Result::Err(&*err_ptr);
-        }
-    }
-
-    export fn as_mut(self: &rw Self) -> Result<&rw T, &rw E> life_from(self) {
-        if self.is_ok() {
-            unsafe {
-                dec val_ptr = ((self as *rw Self as u64) + (4 as u64)) as *rw T;
-                return Result::Ok(&rw *val_ptr);
-            }
-        }
-        unsafe {
-            dec err_ptr = ((self as *rw Self as u64) + (4 as u64)) as *rw E;
-            return Result::Err(&rw *err_ptr);
-        }
-    }
-
     export fn ok(self: Self) -> Option<T> {
         return match self {
             Result::Ok(val) -> Option::Some(val),
@@ -65,6 +39,48 @@ impl<T, E> Result<T, E> {
         match self {
             Result::Ok(val) -> val,
             Result::Err(_) -> __mellis_panic(),
+        }
+    }
+
+    export fn expect(self: Self, _msg: str) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(_) -> __mellis_panic(),
+        }
+    }
+
+    export fn unwrap_err(self: Self) -> E {
+        match self {
+            Result::Err(e) -> e,
+            Result::Ok(_) -> __mellis_panic(),
+        }
+    }
+
+    export fn unwrap_or(self: Self, default: T) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(_) -> default,
+        }
+    }
+
+    export fn map<U>(self: Self, f: fn(T) -> U) -> Result<U, E> {
+        match self {
+            Result::Ok(val) -> Result::Ok(f(val)),
+            Result::Err(e) -> Result::Err(e),
+        }
+    }
+
+    export fn map_err<F>(self: Self, f: fn(E) -> F) -> Result<T, F> {
+        match self {
+            Result::Ok(val) -> Result::Ok(val),
+            Result::Err(e) -> Result::Err(f(e)),
+        }
+    }
+
+    export fn and_then<U>(self: Self, f: fn(T) -> Result<U, E>) -> Result<U, E> {
+        match self {
+            Result::Ok(val) -> f(val),
+            Result::Err(e) -> Result::Err(e),
         }
     }
 }

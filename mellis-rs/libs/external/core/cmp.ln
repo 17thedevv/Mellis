@@ -18,3 +18,15 @@ impl Eq for i16 { fn eq(self: &Self, other: &Self) -> bool { return *self == *ot
 impl Eq for i32 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
 impl Eq for i64 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
 impl Eq for isize { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+
+impl Ord for char { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for u8 { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for u16 { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for u32 { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for u64 { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for usize { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for i8 { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for i16 { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for i32 { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for i64 { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }
+impl Ord for isize { fn cmp(self: &Self, other: &Self) -> i32 { if *self < *other { return 0 - 1; } if *self > *other { return 1; } return 0; } }

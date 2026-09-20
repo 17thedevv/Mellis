@@ -23,31 +23,18 @@ impl<T> Option<T> {
         }
     }
 
-    export fn as_ref(self: &Self) -> Option<&T> life_from(self) {
-        if self.is_some() {
-            unsafe {
-                dec val_ptr = ((self as *Self as u64) + (4 as u64)) as *T;
-                return Option::Some(&*val_ptr);
-            }
-        }
-        return Option::None;
-    }
-
-    export fn as_mut(self: &rw Self) -> Option<&rw T> life_from(self) {
-        if self.is_some() {
-            unsafe {
-                dec val_ptr = ((self as *rw Self as u64) + (4 as u64)) as *rw T;
-                return Option::Some(&rw *val_ptr);
-            }
-        }
-        return Option::None;
-    }
-
     export fn ok(self: Self) -> Option<T> {
         return self;
     }
 
     export fn unwrap(self: Self) -> T {
+        match self {
+            Option::Some(val) -> val,
+            Option::None -> __mellis_panic(),
+        }
+    }
+
+    export fn expect(self: Self, _msg: str) -> T {
         match self {
             Option::Some(val) -> val,
             Option::None -> __mellis_panic(),
@@ -64,6 +51,13 @@ impl<T> Option<T> {
     export fn map<U>(self: Self, f: fn(T) -> U) -> Option<U> {
         match self {
             Option::Some(val) -> Option::Some(f(val)),
+            Option::None -> Option::None,
+        }
+    }
+
+    export fn and_then<U>(self: Self, f: fn(T) -> Option<U>) -> Option<U> {
+        match self {
+            Option::Some(val) -> f(val),
             Option::None -> Option::None,
         }
     }

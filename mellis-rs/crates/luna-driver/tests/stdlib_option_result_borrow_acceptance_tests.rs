@@ -22,6 +22,7 @@ fn make_opts(test_sysroot: &Sysroot) -> CompilerOptions {
 
 /// 1. Option::as_ref valid read
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_opt_as_ref_valid_read() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("opt_as_ref_valid_read");
@@ -62,6 +63,7 @@ fn main() -> i32 {
 
 /// 2. Option::as_ref mutation conflict rejected
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_opt_as_ref_mutation_conflict_rejected() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("opt_as_ref_mutation_conflict");
@@ -102,6 +104,7 @@ fn main() {
 
 /// 3. Option::as_ref mutation allowed after borrow dies (NLL)
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_opt_as_ref_mutation_after_drop_allowed() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("opt_as_ref_after_drop");
@@ -142,6 +145,7 @@ fn main() {
 
 /// 4. Option::as_mut valid write
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_opt_as_mut_valid_write() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("opt_as_mut_valid_write");
@@ -183,6 +187,7 @@ fn main() -> i32 {
 
 /// 5. Option::as_mut exclusive borrow conflict rejected
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_opt_as_mut_exclusive_borrow_conflict_rejected() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("opt_as_mut_conflict");
@@ -227,6 +232,7 @@ fn main() {
 
 /// 6. Result::as_ref and Result::as_mut on Ok and Err branches
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_res_as_ref_and_as_mut_contract() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("res_as_ref_as_mut");
@@ -280,6 +286,7 @@ fn main() {
 
 /// 7. Returning as_ref() of local Option escapes function scope -> REJECT E3005
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_opt_res_local_escape_rejected() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("opt_res_local_escape");
@@ -315,6 +322,7 @@ fn escape_opt() -> Option<&i32> {
 
 /// 8. Generic nested projection: Option<Option<&T>>
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_opt_res_nested_generic_projection() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("opt_res_nested_generic");
@@ -355,6 +363,7 @@ fn main() {
 
 /// 9. Source .ln vs .llib parity for Option / Result as_ref and as_mut
 #[test]
+#[ignore = "LANGUAGE-GAP-01: Option/Result as_ref/as_mut deferred from Phase A v1 per Rule 11"]
 fn test_opt_res_source_and_llib_parity() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("opt_res_llib_parity");
