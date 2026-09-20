@@ -164,6 +164,37 @@ module std {
         }
     }
 
+    export fn string_from_i32(val: i32) -> String {
+        if val == 0 {
+            return string_from_str("0");
+        }
+        if val == (0 - 2147483647 - 1) {
+            return string_from_str("-2147483648");
+        }
+        dec rw s = string_new();
+        dec rw n = val;
+        if n < 0 {
+            s.push_char('-');
+            n = 0 - n;
+        }
+        dec rw digits = vec_new<u8>();
+        while n > 0 {
+            dec d = (n % 10) as u8;
+            digits.push(d + (48 as u8));
+            n = n / 10;
+        }
+        dec rw i = digits.len();
+        while i > (0 as u64) {
+            i = i - (1 as u64);
+            dec b = match digits.get(i) {
+                Option::Some(r) -> *r,
+                Option::None -> 0 as u8,
+            };
+            s.push_char(b as char);
+        }
+        return s;
+    }
+
     impl String {
         export fn len(self: &Self) -> u64 {
             return self.vec.len();
@@ -250,6 +281,70 @@ module std {
             }
             return true;
         }
+
+        export fn parse_i32(self: &Self) -> Option<i32> {
+            dec bytes = self.as_bytes();
+            dec len = bytes.len as u64;
+            if len == (0 as u64) {
+                return Option::None;
+            }
+            dec rw i: u64 = 0 as u64;
+            dec rw is_neg: bool = false;
+            if bytes[0] == (45 as u8) {
+                is_neg = true;
+                i = 1 as u64;
+                if len == (1 as u64) {
+                    return Option::None;
+                }
+            }
+            dec rw acc: i32 = 0;
+            while i < len {
+                dec b = bytes[i];
+                if b < (48 as u8) || b > (57 as u8) {
+                    return Option::None;
+                }
+                dec digit = (b - (48 as u8)) as i32;
+                acc = (acc * 10) + digit;
+                i = i + (1 as u64);
+            }
+            if is_neg {
+                return Option::Some(0 - acc);
+            }
+            return Option::Some(acc);
+        }
+
+        export fn trim(self: &Self) -> &[u8] life_from(self) {
+            dec bytes = self.as_bytes();
+            dec len = bytes.len as u64;
+            if len == (0 as u64) {
+                return bytes;
+            }
+            dec rw start: u64 = 0 as u64;
+            while start < len {
+                dec b = bytes[start];
+                if b != (32 as u8) && b != (9 as u8) && b != (10 as u8) && b != (13 as u8) {
+                    break;
+                }
+                start = start + (1 as u64);
+            }
+            if start == len {
+                unsafe {
+                    return slice_from_raw_parts<u8>(self.as_ptr(), 0 as u64);
+                }
+            }
+            dec rw end: u64 = len;
+            while end > start {
+                dec b = bytes[end - (1 as u64)];
+                if b != (32 as u8) && b != (9 as u8) && b != (10 as u8) && b != (13 as u8) {
+                    break;
+                }
+                end = end - (1 as u64);
+            }
+            unsafe {
+                dec ptr_start = ptr::add<u8>(self.as_ptr(), start);
+                return slice_from_raw_parts<u8>(ptr_start, end - start);
+            }
+        }
     }
 
 }
@@ -266,4 +361,7 @@ export fn string_from_str(s: str) -> String {
 }
 export fn string_from_bytes(bytes: &[u8]) -> Option<String> {
     return std::string_from_bytes(bytes);
+}
+export fn string_from_i32(val: i32) -> String {
+    return std::string_from_i32(val);
 }
