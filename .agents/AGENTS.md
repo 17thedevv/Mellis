@@ -67,3 +67,9 @@
    - For any task involving splitting core.ln / alloc.ln, component-level stdlib providers, lang/ core/ alloc/ io/, logical std module composition, language-contract auto-loading, or stdlib provider/artifact migration.
    - Agents MUST read `luna-stdlib-architecture`, `luna-lang-contracts`, `luna-stdlib-migration`, `luna-stdlib-compiler-boundary`, and `luna-testing-strategy`.
    - Migration must start with a strict audit mapping declaration -> component -> dependency -> artifact before any implementation plan is drafted.
+
+14. Adversarial Validation & Permanent Reproducer Policy:
+   - **Feature Freeze Pipeline:** Every new feature must follow the mandatory verification progression:
+     $$\text{Feature semantics/design} \longrightarrow \text{Implementation} \longrightarrow \text{Focused acceptance tests} \longrightarrow \text{Adversarial Luna programs} \longrightarrow \text{Cross-feature interaction tests} \longrightarrow \text{Full workspace regression} \longrightarrow \text{Freeze}$$
+   - **Permanent User-Facing Reproducers:** Every compiler bug discovered after freeze MUST produce a permanent `.ln` reproducer fixture (in `tests/sem_stress/` or dedicated `C-GAP-*` test) demonstrating the defect from the user's perspective, rather than relying solely on internal Rust driver mocks.
+   - **Stress Corpus Extensibility:** The initial `SEM-STRESS-01` 100-case baseline is immutable and frozen (`COMPLETE & FROZEN ✅`), while `tests/sem_stress/` serves as a living, extensible, append-only permanent regression asset.
