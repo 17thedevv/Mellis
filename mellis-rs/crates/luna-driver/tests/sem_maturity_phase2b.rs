@@ -668,13 +668,43 @@ mod borrow_across_branches {
         assert_compile_success("sem_borrow_branch_01", src, "SEM-BRANCH-01: Branch-local borrow dead before join");
     }
 
-    // SEM-BRANCH-02: SPEC-BLOCKED - borrow escape detection semantics
+    // SEM-BRANCH-02: RULE-BRANCH-JOIN-01 - borrow assigned in branch escaping to outer scope
     #[test]
-    #[ignore] // SPEC-BLOCKED - need clarification on borrow escape semantics
     fn sem_borrow_branch_02_borrow_escapes_branch() {
-        // The semantics of whether a borrow declared at function scope
-        // and assigned in a branch is valid is not clearly defined.
-        // Deferred for clarification.
+        // Positive control: outer reference assigned in branch, referent is outer variable
+        let src_valid = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw val = 42;
+                dec rw r: &i32 = &val;
+                if cond {
+                    r = &val;
+                }
+                return *r;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_success("sem_borrow_branch_02_valid", src_valid, "SEM-BRANCH-02: Outer borrow assigned in branch valid");
+
+        // Negative control: conflicting write to outer referent while carrier is used after join
+        let src_conflict = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw val = 42;
+                dec rw r: &i32 = &val;
+                if cond {
+                    r = &val;
+                }
+                val = 100;
+                return *r;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_error("sem_borrow_branch_02_conflict", src_conflict, "borrowed", "SEM-BRANCH-02: Conflict on outer referent while carrier live after join");
     }
 
     // SEM-BRANCH-03: VALID-POSITIVE - shared borrow in branch, used after
@@ -745,12 +775,71 @@ mod borrow_across_branches {
         assert_compile_success("sem_borrow_branch_05", src, "SEM-BRANCH-05: Both branches use shared borrow");
     }
 
-    // SEM-BRANCH-06: SPEC-BLOCKED - loan from one branch live
+    // SEM-BRANCH-06: RULE-BRANCH-JOIN-02 - loan live from one branch at CFG join point
     #[test]
-    #[ignore] // SPEC-BLOCKED - CFG join point loan semantics unclear
     fn sem_borrow_branch_06_loan_live_from_one_branch() {
-        // Need clarification on whether a loan created in only one branch
-        // is considered live at the join point.
+        // Positive control: loan created in one branch, used after join, no conflicting mutations -> succeeds
+        let src_valid = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw x = 10;
+                dec rw y = 20;
+                dec rw r: &i32 = &x;
+                if cond {
+                    r = &x;
+                } else {
+                    r = &y;
+                }
+                return *r;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_success("sem_borrow_branch_06_valid", src_valid, "SEM-BRANCH-06: Join with branch loan used safely");
+
+        // Negative control: carrier holding branch loan is live across join, referent mutated -> rejected
+        let src_conflict = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw x = 10;
+                dec rw y = 20;
+                dec rw r: &i32 = &x;
+                if cond {
+                    r = &x;
+                } else {
+                    r = &y;
+                }
+                x = 99;
+                return *r;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_error("sem_borrow_branch_06_conflict", src_conflict, "borrowed", "SEM-BRANCH-06: Mutation of branch-borrowed referent while carrier live after join rejected");
+
+        // Release control: carrier dead before mutation after join -> succeeds
+        let src_released = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw x = 10;
+                dec rw y = 20;
+                dec rw r: &i32 = &x;
+                if cond {
+                    r = &x;
+                } else {
+                    r = &y;
+                }
+                dec res = *r;
+                x = 99;
+                return res + x;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_success("sem_borrow_branch_06_released", src_released, "SEM-BRANCH-06: Referent mutated after carrier death succeeds");
     }
 
     // SEM-BRANCH-07: VALID-POSITIVE - if/else local borrows die before join
@@ -776,11 +865,95 @@ mod borrow_across_branches {
         assert_compile_success("sem_borrow_branch_07", src, "SEM-BRANCH-07: If/else local borrows die");
     }
 
-    // SEM-BRANCH-08: SPEC-BLOCKED - variable-declared borrows
+    // SEM-BRANCH-08: RULE-BRANCH-JOIN-03 - conflicting borrows across alternative branches
     #[test]
-    #[ignore] // SPEC-BLOCKED - need clarification on variable-scope borrows
     fn sem_borrow_branch_08_conflicting_borrows_across_branches() {
-        // Variable-declared borrows at function scope have unclear semantics.
+        // Control 1: Mutually exclusive branches creating mutable borrows of the same place
+        let src_mut_branches = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw x = 10;
+                dec rw res = 0;
+                if cond {
+                    dec r = &rw x;
+                    *r = *r + 1;
+                    res = *r;
+                } else {
+                    dec r2 = &rw x;
+                    *r2 = *r2 + 2;
+                    res = *r2;
+                }
+                return res + x;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_success("sem_borrow_branch_08_mut_branches", src_mut_branches, "SEM-BRANCH-08: Mutually exclusive mutable borrows of same place valid");
+
+        // Control 2: Outer carrier assigned mutable borrows in alternative branches, safely used after join
+        let src_outer_mut = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw x = 10;
+                dec rw y = 20;
+                dec rw r: &rw i32;
+                if cond {
+                    r = &rw x;
+                } else {
+                    r = &rw y;
+                }
+                *r = 30;
+                return x + y;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_success("sem_borrow_branch_08_outer_mut", src_outer_mut, "SEM-BRANCH-08: Outer carrier assigned mutable borrow across branches valid");
+
+        // Control 3: Post-join carrier live retains provenance of both branches ({x, y}); access to either referent rejected
+        let src_carrier_conflict_x = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw x = 10;
+                dec rw y = 20;
+                dec rw r: &rw i32;
+                if cond {
+                    r = &rw x;
+                } else {
+                    r = &rw y;
+                }
+                dec conflict = x;
+                *r = 30;
+                return conflict;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_error("sem_borrow_branch_08_carrier_conflict_x", src_carrier_conflict_x, "borrowed", "SEM-BRANCH-08: Accessing referent x while multi-branch carrier live rejected");
+
+        let src_carrier_conflict_y = r#"
+            fn helper(cond: bool) -> i32 {
+                dec rw x = 10;
+                dec rw y = 20;
+                dec rw r: &rw i32;
+                if cond {
+                    r = &rw x;
+                } else {
+                    r = &rw y;
+                }
+                dec conflict = y;
+                *r = 30;
+                return conflict;
+            }
+
+            fn main() -> i32 {
+                return helper(true);
+            }
+        "#;
+        assert_compile_error("sem_borrow_branch_08_carrier_conflict_y", src_carrier_conflict_y, "borrowed", "SEM-BRANCH-08: Accessing alternative referent y while multi-branch carrier live rejected");
     }
 }
 
@@ -813,9 +986,8 @@ mod borrow_through_aggregate_fields {
         assert_compile_success("sem_borrow_field_01", src, "SEM-FIELD-01: Borrow field, access aggregate");
     }
 
-    // SEM-FIELD-02: COMPILER-GAP - borrow field, mutate sibling (disjoint)
+    // SEM-FIELD-02: CLOSED (SEM-GAP-16) - borrow field, mutate sibling (disjoint)
     #[test]
-    #[ignore] // COMPILER-GAP: SEM-GAP-16 - disjoint field borrow sensitivity
     fn sem_borrow_field_02_borrow_field_mutate_sibling() {
         let src = r#"
             struct Point {
@@ -856,9 +1028,8 @@ mod borrow_through_aggregate_fields {
         assert_compile_success("sem_borrow_field_03", src, "SEM-FIELD-03: Borrow whole, access field");
     }
 
-    // SEM-FIELD-04: COMPILER-GAP - mutable borrow of field blocks mutation
+    // SEM-FIELD-04: CLOSED (SEM-GAP-16) - mutable borrow of field blocks mutation
     #[test]
-    #[ignore] // COMPILER-GAP: SEM-GAP-16 - disjoint field borrow sensitivity
     fn sem_borrow_field_04_mut_borrow_field_blocks_aggregate_mutation() {
         let src = r#"
             struct Point {
@@ -989,9 +1160,8 @@ mod borrow_across_loops {
         assert_compile_success("sem_borrow_loop_01", src, "SEM-LOOP-01: Persistent shared borrow across loop");
     }
 
-    // SEM-LOOP-02: COMPILER-GAP - per-iteration temporary borrow
+    // SEM-LOOP-02: CLOSED (SEM-GAP-17) - per-iteration temporary borrow
     #[test]
-    #[ignore] // COMPILER-GAP: SEM-GAP-17 - loop back-edge retains loan of dead iteration-local
     fn sem_borrow_loop_02_per_iteration_temporary_borrow() {
         let src = r#"
             fn process(val: &i32) -> i32 {
@@ -1085,16 +1255,51 @@ mod borrow_across_loops {
         assert_compile_success("sem_borrow_loop_06", src, "SEM-LOOP-06: Use before borrow, sequential");
     }
 
-    // SEM-LOOP-07: SPEC-BLOCKED - borrow escaping loop via struct
+    // SEM-LOOP-07: RULE-LOOP-ESCAPE-01 - aggregate-carried borrow escaping loop iteration
     #[test]
-    #[ignore] // SPEC-BLOCKED - need clarification on aggregate-carried borrows
     fn sem_borrow_loop_07_borrow_escapes_loop() {
-        // Whether storing a borrow in a struct "escapes" it is unclear.
+        // Positive control: aggregate carrying outer reference updated in loop is valid
+        let src_valid = r#"
+            struct RefBox {
+                ptr: &i32,
+            }
+
+            fn main() -> i32 {
+                dec rw x = 10;
+                dec rw b = RefBox { ptr: &x };
+                dec rw i = 0;
+                while i < 3 {
+                    b.ptr = &x;
+                    i = i + 1;
+                }
+                return *b.ptr;
+            }
+        "#;
+        assert_compile_success("sem_borrow_loop_07_valid", src_valid, "SEM-LOOP-07: Aggregate carrying outer borrow in loop valid");
+
+        // Negative control: aggregate storing iteration-local borrow escaping loop back-edge rejected
+        let src_escape = r#"
+            struct RefBox {
+                ptr: &i32,
+            }
+
+            fn main() -> i32 {
+                dec rw x = 0;
+                dec rw b = RefBox { ptr: &x };
+                dec rw i = 0;
+                while i < 3 {
+                    dec local = i;
+                    b.ptr = &local;
+                    i = i + 1;
+                }
+                return *b.ptr;
+            }
+        "#;
+        assert_compile_error("sem_borrow_loop_07_escape", src_escape, "escape", "SEM-LOOP-07: Aggregate storing iteration-local borrow escaping loop rejected");
     }
 
-    // SEM-LOOP-08: COMPILER-GAP - conditional borrow in loop
+    // SEM-LOOP-08: RULE-LOOP-PATH-02 - conditional borrow in loop
     #[test]
-    #[ignore] // COMPILER-GAP: SEM-GAP-17 - loop back-edge retains loan of dead iteration-local
     fn sem_borrow_loop_08_conditional_borrow_in_loop() {
         let src = r#"
             fn use_val(val: &i32) -> i32 {
@@ -1223,12 +1428,84 @@ mod shared_borrow_after_ended_mutable {
         assert_compile_success("sem_borrow_ended_05", src, "SEM-ENDED-05: Function call with mut ref, then shared");
     }
 
-    // SEM-ENDED-06: SPEC-BLOCKED - mutable stored in struct
+    // SEM-ENDED-06: RULE-CARRIED-REF-01 - mutable stored in struct, shared after last use
     #[test]
-    #[ignore] // SPEC-BLOCKED - need clarification on aggregate-carried provenance
     fn sem_borrow_ended_06_mut_stored_shared_after() {
-        // Whether storing a mutable borrow in a struct "carries" the borrow
-        // such that it conflicts with later shared access needs clarification.
+        // Positive control: struct carrying mutable borrow ends, subsequent shared borrow succeeds
+        let src_valid = r#"
+            struct MutBox {
+                ptr: &rw i32,
+            }
+
+            fn main() -> i32 {
+                dec rw x = 10;
+                {
+                    dec rw b = MutBox { ptr: &rw x };
+                    *b.ptr = 20;
+                }
+                dec s = &x;
+                return *s;
+            }
+        "#;
+        assert_compile_success("sem_borrow_ended_06_valid", src_valid, "SEM-ENDED-06: Mut stored in struct ends, shared after valid");
+
+        // Negative control: struct carrying mutable borrow live while shared borrow taken is rejected
+        let src_conflict = r#"
+            struct MutBox {
+                ptr: &rw i32,
+            }
+
+            fn main() -> i32 {
+                dec rw x = 10;
+                dec rw b = MutBox { ptr: &rw x };
+                dec s = &x;
+                *b.ptr = 20;
+                return *s;
+            }
+        "#;
+        assert_compile_error("sem_borrow_ended_06_conflict", src_conflict, "borrowed", "SEM-ENDED-06: Mut in struct live during shared borrow rejected");
+
+        // Control 3: Provenance transferred from aggregate A to B; A dies while B remains live -> referent access rejected
+        let src_transfer_conflict = r#"
+            struct MutBox {
+                ptr: &rw i32,
+            }
+
+            fn main() -> i32 {
+                dec rw x = 10;
+                dec rw b: MutBox;
+                {
+                    dec a = MutBox { ptr: &rw x };
+                    b = a;
+                }
+                dec s = &x;
+                *b.ptr = 20;
+                return *s;
+            }
+        "#;
+        assert_compile_error("sem_borrow_ended_06_transfer_conflict", src_transfer_conflict, "borrowed", "SEM-ENDED-06: Transferred carried loan active while receiver live rejected");
+
+        // Control 4: Transferred aggregate B also dies -> referent access permitted
+        let src_transfer_valid = r#"
+            struct MutBox {
+                ptr: &rw i32,
+            }
+
+            fn main() -> i32 {
+                dec rw x = 10;
+                {
+                    dec rw b: MutBox;
+                    {
+                        dec a = MutBox { ptr: &rw x };
+                        b = a;
+                    }
+                    *b.ptr = 20;
+                }
+                dec s = &x;
+                return *s;
+            }
+        "#;
+        assert_compile_success("sem_borrow_ended_06_transfer_valid", src_transfer_valid, "SEM-ENDED-06: Transferred carried loan expires when all carriers dead");
     }
 
     // SEM-ENDED-07: VALID-POSITIVE - nested scope with mutable borrow
@@ -1248,12 +1525,89 @@ mod shared_borrow_after_ended_mutable {
         assert_compile_success("sem_borrow_ended_07", src, "SEM-ENDED-07: Nested scope ends, shared after");
     }
 
-    // SEM-ENDED-08: SPEC-BLOCKED - mutable borrow in struct field
+    // SEM-ENDED-08: RULE-CARRIED-REF-02 - mutable struct field loan isolation and expiration
     #[test]
-    #[ignore] // SPEC-BLOCKED - need clarification on aggregate-carried provenance
     fn sem_borrow_ended_08_mut_struct_field_shared_access() {
-        // Need clarification on whether struct fields carrying references
-        // propagate borrow conflicts.
+        // Positive control: disjoint field accessed alongside struct-held borrow; referent accessible after struct dead
+        let src_valid = r#"
+            struct PairHolder {
+                target: &rw i32,
+                counter: i32,
+            }
+
+            fn main() -> i32 {
+                dec rw val = 100;
+                dec rw h = PairHolder { target: &rw val, counter: 0 };
+                *h.target = 200;
+                h.counter = h.counter + 1;
+                dec res = h.counter;
+                dec s = &val;
+                return res + *s;
+            }
+        "#;
+        assert_compile_success("sem_borrow_ended_08_valid", src_valid, "SEM-ENDED-08: Struct field mutable borrow ends, shared access succeeds");
+
+        // Negative control: shared borrow taken while struct field mutable borrow is still active
+        let src_conflict = r#"
+            struct PairHolder {
+                target: &rw i32,
+                counter: i32,
+            }
+
+            fn main() -> i32 {
+                dec rw val = 100;
+                dec rw h = PairHolder { target: &rw val, counter: 0 };
+                dec s = &val;
+                *h.target = 200;
+                return *s;
+            }
+        "#;
+        assert_compile_error("sem_borrow_ended_08_conflict", src_conflict, "borrowed", "SEM-ENDED-08: Shared borrow while struct field mut borrow active rejected");
+
+        // Control 3: Field reference transferred out of struct (q = h.target);
+        // holder dies, but q remains live -> access to val rejected
+        let src_field_transfer_conflict = r#"
+            struct PairHolder {
+                target: &rw i32,
+                counter: i32,
+            }
+
+            fn main() -> i32 {
+                dec rw val = 100;
+                dec rw q: &rw i32;
+                {
+                    dec rw h = PairHolder { target: &rw val, counter: 0 };
+                    q = h.target;
+                }
+                dec s = &val;
+                *q = 300;
+                return *s;
+            }
+        "#;
+        assert_compile_error("sem_borrow_ended_08_field_transfer_conflict", src_field_transfer_conflict, "borrowed", "SEM-ENDED-08: Accessing val while transferred field reference q is live rejected");
+
+        // Control 4: Transferred reference q finishes its last use (dies) -> referent val access valid
+        let src_field_transfer_valid = r#"
+            struct PairHolder {
+                target: &rw i32,
+                counter: i32,
+            }
+
+            fn main() -> i32 {
+                dec rw val = 100;
+                {
+                    dec rw q: &rw i32;
+                    {
+                        dec rw h = PairHolder { target: &rw val, counter: 0 };
+                        q = h.target;
+                    }
+                    *q = 300;
+                }
+                dec s = &val;
+                return *s;
+            }
+        "#;
+        assert_compile_success("sem_borrow_ended_08_field_transfer_valid", src_field_transfer_valid, "SEM-ENDED-08: Referent val accessible after transferred field reference q dies");
     }
 }
 
@@ -1341,11 +1695,29 @@ mod regression_controls {
         assert_compile_error("e3005_01", src, "escape", "E3005-01: Local borrow escape");
     }
 
-    // E3005-02: SPEC-BLOCKED - closure capturing local borrow
+    // E3005-02: RULE-CLOSURE-ESCAPE-01 - closure capturing local borrow
     #[test]
-    #[ignore] // SPEC-BLOCKED - closures and capture semantics not confirmed frozen
     fn e3005_02_closure_local_borrow() {
-        // Closures and capture semantics are not confirmed in frozen spec
+        // Negative control: closure capturing local borrow cannot be returned
+        let src_escape = r#"
+            type ClosureType = typeof(|y: i32| -> i32 { y });
+
+            fn make_closure() -> ClosureType {
+                dec x = 10;
+                return |y: i32| -> i32 { x + y };
+            }
+        "#;
+        assert_compile_error("e3005_02_escape", src_escape, "escape", "E3005-02: Closure capturing local borrow cannot escape");
+
+        // Positive control: closure capturing local borrow invoked within scope is valid
+        let src_valid = r#"
+            fn main() -> i32 {
+                dec x = 10;
+                dec f = |y: i32| -> i32 { x + y };
+                return f(5);
+            }
+        "#;
+        assert_compile_success("e3005_02_valid", src_valid, "E3005-02: Closure capturing local borrow invoked locally is valid");
     }
 }
 

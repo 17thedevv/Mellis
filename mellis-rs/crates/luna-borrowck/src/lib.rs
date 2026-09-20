@@ -1,4 +1,5 @@
 pub mod borrow_analysis;
+pub mod cfg;
 pub mod cleanup;
 pub mod dataflow;
 pub mod effect;
@@ -6,11 +7,17 @@ pub mod effect_inference;
 pub mod interprocedural;
 pub mod move_analysis;
 pub mod place;
+pub mod region_bridge;
 pub mod return_analysis;
 pub mod suspension;
 
 use crate::dataflow::{DataflowEngine, DataflowAnalysis};
 use crate::move_analysis::MoveAnalyzer;
+pub use crate::region_bridge::{
+    ContractViolationReason, DivergenceClassification, LegacyVerdict, RegionBorrowBridge,
+    RegionBorrowContext, RegionFailure, ReturnEscapeReason, ShadowComparison, ShadowGap,
+    ShadowRegionVerdict,
+};
 use luna_common::Diagnostic;
 use luna_mvir::{Function, GlobalId};
 use luna_semantic::SemanticContext;
@@ -21,6 +28,19 @@ pub fn borrow_check_function(
     _ctx: &SemanticContext, 
     summaries: &HashMap<GlobalId, crate::effect::CallEffectSummary>
 ) -> (Vec<Diagnostic>, std::collections::HashSet<luna_mvir::ValueId>) {
+    let (diags, dead_drops, _) = borrow_check_function_with_shadow(func, _ctx, summaries);
+    (diags, dead_drops)
+}
+
+pub fn borrow_check_function_with_shadow(
+    func: &Function, 
+    _ctx: &SemanticContext, 
+    summaries: &HashMap<GlobalId, crate::effect::CallEffectSummary>
+) -> (
+    Vec<Diagnostic>,
+    std::collections::HashSet<luna_mvir::ValueId>,
+    Vec<ShadowComparison>,
+) {
     let mut diagnostics = Vec::new();
 
     // 1. Run Move Analysis
@@ -37,15 +57,20 @@ pub fn borrow_check_function(
     diagnostics.extend(move_analyzer.diagnostics);
     let dead_drops = move_analyzer.dead_drops;
 
-    // 2. Run Borrow Analysis (Loans)
+    // 2. Run Borrow Analysis (Loans) with Shadow Region Validation
     let mut cleaned_func = func.clone();
     crate::cleanup::eliminate_redundant_drops(&mut cleaned_func, &dead_drops);
-    let mut borrow_diagnostics = crate::borrow_analysis::BorrowAnalyzer::analyze(&cleaned_func, Some(summaries), Some(_ctx));
+    let (mut borrow_diagnostics, shadow_comparisons) =
+        crate::borrow_analysis::BorrowAnalyzer::analyze_with_shadow(
+            &cleaned_func,
+            Some(summaries),
+            Some(_ctx),
+        );
     diagnostics.append(&mut borrow_diagnostics);
 
     // 3. Run Return Analysis
     let mut return_diagnostics = crate::return_analysis::analyze_returns(func);
     diagnostics.append(&mut return_diagnostics);
 
-    (diagnostics, dead_drops)
+    (diagnostics, dead_drops, shadow_comparisons)
 }

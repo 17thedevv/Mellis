@@ -16,6 +16,7 @@ pub mod const_eval;
 pub mod coercion;
 
 pub mod mangler;
+pub mod region;
 
 pub use coercion::{CoercionKind, try_coerce};
 pub use effect::{Effect, EffectSet};

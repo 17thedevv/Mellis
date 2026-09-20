@@ -12,9 +12,10 @@ fn create_temp_dir(test_name: &str) -> PathBuf {
     dir
 }
 
-fn make_opts(test_sysroot: &Sysroot) -> CompilerOptions {
+fn make_opts(test_sysroot: &Sysroot, dir: &std::path::Path) -> CompilerOptions {
     CompilerOptions {
         search_paths: vec![test_sysroot.root().to_string_lossy().to_string()],
+        output_path: Some(dir.join("main.exe").to_string_lossy().to_string()),
         quiet: true,
         ..Default::default()
     }
@@ -25,7 +26,7 @@ fn make_opts(test_sysroot: &Sysroot) -> CompilerOptions {
 fn test_vec_as_slice_len_and_is_empty() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("vec_as_slice_len");
-    let opts = make_opts(&test_sysroot);
+    let opts = make_opts(&test_sysroot, &dir);
 
     let src = r#"
 import <core/panic>;
@@ -75,7 +76,7 @@ fn main() -> i32 {
 fn test_vec_as_slice_mutation_conflict_rejected() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("vec_as_slice_conflict");
-    let opts = make_opts(&test_sysroot);
+    let opts = make_opts(&test_sysroot, &dir);
 
     let src = r#"
 import <core/panic>;
@@ -113,7 +114,7 @@ fn conflict() {
 fn test_vec_as_slice_mutation_after_drop_allowed() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("vec_as_slice_nll");
-    let opts = make_opts(&test_sysroot);
+    let opts = make_opts(&test_sysroot, &dir);
 
     let src = r#"
 import <core/panic>;
@@ -156,7 +157,7 @@ fn main() -> i32 {
 fn test_vec_as_mut_slice_exclusive() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("vec_as_mut_slice_exclusive");
-    let opts = make_opts(&test_sysroot);
+    let opts = make_opts(&test_sysroot, &dir);
 
     let src = r#"
 import <core/panic>;
@@ -194,7 +195,7 @@ fn conflict_mut() {
 fn test_slice_local_escape_rejected() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("slice_local_escape");
-    let opts = make_opts(&test_sysroot);
+    let opts = make_opts(&test_sysroot, &dir);
 
     let src = r#"
 import <core/panic>;
@@ -315,7 +316,7 @@ fn main() {
 fn test_slice_from_raw_parts_rejects_unprovenanced_raw_ptr_escape() {
     let test_sysroot = Sysroot::discover_for_test().expect("Failed to locate test sysroot");
     let dir = create_temp_dir("slice_raw_ptr_escape");
-    let opts = make_opts(&test_sysroot);
+    let opts = make_opts(&test_sysroot, &dir);
 
     let src = r#"
 import <core/panic>;

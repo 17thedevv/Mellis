@@ -2531,9 +2531,11 @@ impl<'a> MvirGenerator<'a> {
                         m_name = canonical_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &m_name);
                     }
                     let m_ty_opt = self.get_symbol_type(&m_sym);
+                    let mut receiver_ty = luna_semantic::SemanticTypeId(0);
                     let (is_ref_self, is_rw_self) = if let Some(m_ty) = m_ty_opt {
                         if let luna_semantic::SemanticType::Function { params, .. } = self.ctx.types.get(m_ty) {
                             if let Some(&first_param) = params.first() {
+                                receiver_ty = first_param;
                                 match self.ctx.types.get(first_param) {
                                     luna_semantic::SemanticType::Reference(_, mutability, _) => (
                                         true,
@@ -2552,24 +2554,39 @@ impl<'a> MvirGenerator<'a> {
                         luna_semantic::SemanticType::Reference(..) | luna_semantic::SemanticType::Pointer(..)
                     );
 
-                    let obj_op = if is_ref_self && !is_already_ref {
-                        let lval = self.generate_lvalue(object);
-                        let borrow_val = self.push_inst(Instruction::Borrow { is_rw: is_rw_self, base: lval }, luna_semantic::SemanticTypeId(0));
-                        Operand::Value(borrow_val)
+                    enum PreparedReceiver {
+                        Place(Operand),
+                        Value(Operand),
+                    }
+
+                    let prepared_receiver = if is_ref_self && !is_already_ref {
+                        PreparedReceiver::Place(self.generate_lvalue(object))
                     } else {
-                        self.generate_expr(object)
+                        PreparedReceiver::Value(self.generate_expr(object))
                     };
 
-                    let mut arg_ops = vec![obj_op];
+                    let mut arg_ops = Vec::new();
                     for arg in args {
                         arg_ops.push(self.generate_expr(&arg.value));
                     }
+
+                    let obj_op = match prepared_receiver {
+                        PreparedReceiver::Place(place) => {
+                            let borrow_val = self.push_inst(Instruction::Borrow { is_rw: is_rw_self, base: place }, receiver_ty);
+                            Operand::Value(borrow_val)
+                        }
+                        PreparedReceiver::Value(value) => value,
+                    };
+
+                    let mut final_args = vec![obj_op];
+                    final_args.extend(arg_ops);
+
                     let call_val = self.push_inst(Instruction::CallDirect {
                         callee: GlobalId {
                             name: m_name,
                             symbol_id: Some(m_sym),
                         },
-                        args: arg_ops,
+                        args: final_args,
                     }, ty_id);
                     return Operand::Value(call_val);
                 }

@@ -1,0 +1,113 @@
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <copy>;
+import <clone>;
+import <ptr>;
+import <iter_adapters>;
+import <iter_consumers>;
+import <box>;
+import <vec>;
+import <string>;
+
+struct SideEffect {
+    counter: i32,
+}
+
+impl SideEffect {
+    fn run(self: &rw Self, val: i32) -> i32 {
+        self.counter = self.counter + val;
+        self.counter
+    }
+}
+
+struct Logger {
+    log: Vec<i32>,
+}
+
+impl Logger {
+    fn record(self: &rw Self, val: i32) -> i32 {
+        self.log.push(val);
+        val
+    }
+    
+    // &rw self method
+    fn method_mut(self: &rw Self, arg1: i32, arg2: i32) {
+        self.log.push(arg1);
+        self.log.push(arg2);
+    }
+    
+    // &self method
+    fn method_ref(self: &Self, arg1: i32) {
+        // Just read something to ensure it works
+        dec len = self.log.len();
+    }
+    
+    // by-value method
+    fn method_val(self: Self, arg1: i32) {
+        dec len = self.log.len();
+    }
+}
+
+fn get_logger(logger: &rw Logger, val: i32) -> &rw Logger {
+    logger.log.push(val); // logs val
+    logger
+}
+
+fn make_arg(tracker: &rw SideEffect, val: i32) -> i32 {
+    tracker.run(val); // logs val
+    val
+}
+
+fn test_valid_allocation_arg() {
+    dec rw logger = Logger { log: vec_new<i32>() };
+    // Here box_new does an unrelated allocation. Should not conflict.
+    dec rw b = std::box_new<i32>(42);
+    logger.method_mut(42, 0);
+}
+
+fn test_evaluation_order() -> bool {
+    dec rw tracker = SideEffect { counter: 0 };
+    dec rw logger = Logger { log: vec_new<i32>() };
+    
+    // Receiver should evaluate (tracker + 1) BEFORE arguments (tracker + 10, tracker + 100)
+    get_logger(&rw logger, make_arg(&rw tracker, 1)).method_mut(
+        make_arg(&rw tracker, 10),
+        make_arg(&rw tracker, 100)
+    );
+    
+    // tracker should be 1 + 10 + 100 = 111
+    if tracker.counter != 111 {
+        return false;
+    }
+    return true;
+}
+
+fn test_already_ref() {
+    dec rw logger = Logger { log: vec_new<i32>() };
+    dec r = &rw logger;
+    r.method_mut(1, 2);
+}
+
+fn test_by_value() {
+    dec rw logger = Logger { log: vec_new<i32>() };
+    // move out
+    dec l = logger;
+    l.method_val(1);
+}
+
+fn test_by_ref() {
+    dec rw logger = Logger { log: vec_new<i32>() };
+    logger.method_ref(1);
+}
+
+fn main() -> i32 {
+    test_valid_allocation_arg();
+    if test_evaluation_order() == false {
+        return 101;
+    }
+    test_already_ref();
+    test_by_value();
+    test_by_ref();
+    return 0;
+}

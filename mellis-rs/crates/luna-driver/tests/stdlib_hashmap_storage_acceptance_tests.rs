@@ -177,9 +177,9 @@ import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
-            dec ins1 = table.insert<i32, i32>(10, 100);
-            dec ins2 = table.insert<i32, i32>(20, 200);
-            dec ins3 = table.insert<i32, i32>(30, 300);
+            dec ins1 = table.insert(10, 100);
+            dec ins2 = table.insert(20, 200);
+            dec ins3 = table.insert(30, 300);
 
             if ins1 == false || ins2 == false || ins3 == false {
                 return 1;
@@ -188,9 +188,9 @@ import <__raw_table>;
                 return 2;
             }
 
-            dec v10 = table.get<i32, i32>(&10);
-            dec v20 = table.get<i32, i32>(&20);
-            dec v99 = table.get<i32, i32>(&99);
+            dec v10 = table.get(&10);
+            dec v20 = table.get(&20);
+            dec v99 = table.get(&99);
 
             dec r1 = match v10 {
                 Option::Some(v) -> *v,
@@ -216,10 +216,10 @@ import <__raw_table>;
                 return 5;
             }
 
-            if table.contains_key<i32, i32>(&10) == false {
+            if table.contains_key(&10) == false {
                 return 6;
             }
-            if table.contains_key<i32, i32>(&99) == true {
+            if table.contains_key(&99) == true {
                 return 7;
             }
 
@@ -263,9 +263,9 @@ import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
-            table.insert<i32, i32>(5, 50);
+            table.insert(5, 50);
 
-            dec mut_opt = table.get_mut<i32, i32>(&5);
+            dec mut_opt = table.get_mut(&5);
             match mut_opt {
                 Option::Some(val_ref) -> {
                     *val_ref = 500;
@@ -275,7 +275,7 @@ import <__raw_table>;
                 },
             }
 
-            dec read_opt = table.get<i32, i32>(&5);
+            dec read_opt = table.get(&5);
             dec final_val = match read_opt {
                 Option::Some(v) -> *v,
                 Option::None -> 0,
@@ -325,7 +325,7 @@ import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
-            dec first_ins = table.insert<i32, i32>(7, 70);
+            dec first_ins = table.insert(7, 70);
             if first_ins == false {
                 return 1;
             }
@@ -333,7 +333,7 @@ import <__raw_table>;
                 return 2;
             }
 
-            dec second_ins = table.insert<i32, i32>(7, 777);
+            dec second_ins = table.insert(7, 777);
             if second_ins == true {
                 return 3; // Must return false indicating overwrite
             }
@@ -341,7 +341,7 @@ import <__raw_table>;
                 return 4; // Length must remain 1
             }
 
-            dec v = match table.get<i32, i32>(&7) {
+            dec v = match table.get(&7) {
                 Option::Some(val) -> *val,
                 Option::None -> 0,
             };
@@ -419,9 +419,9 @@ import <__raw_table>;
             dec k2 = CollidingKey { id: 2 as u64, forced_hash: 42 as u64 };
             dec k3 = CollidingKey { id: 3 as u64, forced_hash: 42 as u64 };
 
-            table.insert<CollidingKey, i32>(k1, 100);
-            table.insert<CollidingKey, i32>(k2, 200);
-            table.insert<CollidingKey, i32>(k3, 300);
+            table.insert(k1, 100);
+            table.insert(k2, 200);
+            table.insert(k3, 300);
 
             if table.len() != (3 as u64) {
                 return 1;
@@ -429,7 +429,7 @@ import <__raw_table>;
 
             // Remove the first key (k1). Its slot is now Deleted (a tombstone).
             dec q1 = CollidingKey { id: 1 as u64, forced_hash: 42 as u64 };
-            dec rem1 = table.remove<CollidingKey, i32>(&q1);
+            dec rem1 = table.remove(&q1);
             if rem1 == false {
                 return 2;
             }
@@ -445,7 +445,7 @@ import <__raw_table>;
             // It MUST skip the tombstone and continue probing to find k3, returning Found(k3_idx)!
             // It MUST NOT terminate or prematurely return Vacant(first_tombstone).
             dec q3 = CollidingKey { id: 3 as u64, forced_hash: 42 as u64 };
-            dec v3 = match table.get<CollidingKey, i32>(&q3) {
+            dec v3 = match table.get(&q3) {
                 Option::Some(v) -> *v,
                 Option::None -> 0,
             };
@@ -455,7 +455,7 @@ import <__raw_table>;
 
             // Verify k2 (between tombstone and k3) is also found
             dec q2 = CollidingKey { id: 2 as u64, forced_hash: 42 as u64 };
-            dec v2 = match table.get<CollidingKey, i32>(&q2) {
+            dec v2 = match table.get(&q2) {
                 Option::Some(v) -> *v,
                 Option::None -> 0,
             };
@@ -467,14 +467,14 @@ import <__raw_table>;
             // Probing must check tombstone, k2, k3, and then terminate at Empty,
             // returning Vacant(first_tombstone).
             dec q_absent = CollidingKey { id: 99 as u64, forced_hash: 42 as u64 };
-            if table.contains_key<CollidingKey, i32>(&q_absent) == true {
+            if table.contains_key(&q_absent) == true {
                 return 7;
             }
 
             // Now insert new key k4 with same hash:
             // It MUST reuse the first tombstone slot!
             dec k4 = CollidingKey { id: 4 as u64, forced_hash: 42 as u64 };
-            dec ins4 = table.insert<CollidingKey, i32>(k4, 400);
+            dec ins4 = table.insert(k4, 400);
             if ins4 == false {
                 return 8;
             }
@@ -488,7 +488,7 @@ import <__raw_table>;
 
             // Verify all 3 keys (k4 at reused slot, k2, k3) are intact
             dec q4 = CollidingKey { id: 4 as u64, forced_hash: 42 as u64 };
-            dec v4 = match table.get<CollidingKey, i32>(&q4) {
+            dec v4 = match table.get(&q4) {
                 Option::Some(v) -> *v,
                 Option::None -> 0,
             };
@@ -496,7 +496,7 @@ import <__raw_table>;
                 return 11;
             }
 
-            dec v3_final = match table.get<CollidingKey, i32>(&q3) {
+            dec v3_final = match table.get(&q3) {
                 Option::Some(v) -> *v,
                 Option::None -> 0,
             };
@@ -551,7 +551,7 @@ import <__raw_table>;
             // Insert 20 elements (forces 8 -> 16 -> 32 capacity growth)
             dec rw i: i32 = 1;
             while i <= 20 {
-                table.insert<i32, i32>(i, i * 10);
+                table.insert(i, i * 10);
                 i = i + 1;
             }
 
@@ -565,7 +565,7 @@ import <__raw_table>;
             // Verify all 20 elements are retrievable after multiple resizings and rehashes
             dec rw j: i32 = 1;
             while j <= 20 {
-                dec val = match table.get<i32, i32>(&j) {
+                dec val = match table.get(&j) {
                     Option::Some(v) -> *v,
                     Option::None -> 0,
                 };
@@ -653,32 +653,32 @@ import <__raw_table>;
             while i <= 6 {
                 dec k = TrackedItem { id: i, drop_ptr: drop_count_ptr };
                 dec v = TrackedItem { id: i * 10, drop_ptr: drop_count_ptr };
-                table.insert<TrackedItem, TrackedItem>(k, v);
+                table.insert(k, v);
                 i = i + 1;
             }
 
             // Overwrite 2 entries (+4 items created, 2 old values dropped in-place)
             dec k_ow1 = TrackedItem { id: 1, drop_ptr: drop_count_ptr };
             dec v_ow1 = TrackedItem { id: 111, drop_ptr: drop_count_ptr };
-            table.insert<TrackedItem, TrackedItem>(k_ow1, v_ow1);
+            table.insert(k_ow1, v_ow1);
 
             dec k_ow2 = TrackedItem { id: 2, drop_ptr: drop_count_ptr };
             dec v_ow2 = TrackedItem { id: 222, drop_ptr: drop_count_ptr };
-            table.insert<TrackedItem, TrackedItem>(k_ow2, v_ow2);
+            table.insert(k_ow2, v_ow2);
 
             // Remove 2 entries (2 keys + 2 values dropped in-place = 4 items dropped)
             dec q_rem1 = TrackedItem { id: 3, drop_ptr: drop_count_ptr };
-            table.remove<TrackedItem, TrackedItem>(&q_rem1);
+            table.remove(&q_rem1);
 
             dec q_rem2 = TrackedItem { id: 4, drop_ptr: drop_count_ptr };
-            table.remove<TrackedItem, TrackedItem>(&q_rem2);
+            table.remove(&q_rem2);
 
             // Trigger table resize by inserting 8 more entries (causes growth from 8 -> 16 -> 32)
             dec rw j: i32 = 10;
             while j <= 17 {
                 dec k = TrackedItem { id: j, drop_ptr: drop_count_ptr };
                 dec v = TrackedItem { id: j * 10, drop_ptr: drop_count_ptr };
-                table.insert<TrackedItem, TrackedItem>(k, v);
+                table.insert(k, v);
                 j = j + 1;
             }
 
@@ -765,14 +765,14 @@ import <__raw_table>;
 
         fn main() -> i32 {
             dec rw table = raw_table_with_capacity<i32, i32>(8 as u64);
-            table.insert<i32, i32>(100, 1000);
-            table.insert<i32, i32>(200, 2000);
+            table.insert(100, 1000);
+            table.insert(200, 2000);
 
-            dec v1 = match table.get<i32, i32>(&100) {
+            dec v1 = match table.get(&100) {
                 Option::Some(v) -> *v,
                 Option::None -> 0,
             };
-            dec v2 = match table.get<i32, i32>(&200) {
+            dec v2 = match table.get(&200) {
                 Option::Some(v) -> *v,
                 Option::None -> 0,
             };
@@ -781,11 +781,11 @@ import <__raw_table>;
                 return 1;
             }
 
-            table.remove<i32, i32>(&100);
-            if table.contains_key<i32, i32>(&100) == true {
+            table.remove(&100);
+            if table.contains_key(&100) == true {
                 return 2;
             }
-            if table.contains_key<i32, i32>(&200) == false {
+            if table.contains_key(&200) == false {
                 return 3;
             }
 

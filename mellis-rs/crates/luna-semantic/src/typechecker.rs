@@ -209,17 +209,72 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub fn is_ffi_safe(&self, ty_id: SemanticTypeId) -> Result<(), String> {
-        let ty = self.ctx.types.get(ty_id).clone();
+    pub fn contains_ffi_provenance_capability(&self, ty_id: SemanticTypeId) -> bool {
+        let mut visited = std::collections::HashSet::new();
+        self.contains_ffi_provenance_capability_inner(ty_id, &mut visited)
+    }
+
+    fn contains_ffi_provenance_capability_inner(
+        &self,
+        ty_id: SemanticTypeId,
+        visited: &mut std::collections::HashSet<SemanticTypeId>,
+    ) -> bool {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        if !visited.insert(resolved_id) {
+            return false;
+        }
+
+        let ty = self.ctx.types.get(resolved_id).clone();
         match ty {
-            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => Ok(()),
-            SemanticType::Pointer(_, _inner) | SemanticType::Reference(_, _, _inner) => {
-                // The C-ABI doesn't strictly require the pointee to be FFI-safe if it's opaque,
-                // but generally it's safer to ensure pointees are also FFI-safe. 
-                // We'll just allow it for now since C pointers can point to opaque structs.
+            SemanticType::Reference(..) | SemanticType::Pointer(..) | SemanticType::Slice(..) => true,
+            SemanticType::Struct(sym_id, _, ref field_tys) => {
+                if field_tys.iter().any(|&f| self.contains_ffi_provenance_capability_inner(f, visited)) {
+                    return true;
+                }
+                if let Some(full_ty_id) = self.ctx.tables.symbol_types.get(&sym_id).copied() {
+                    if full_ty_id != ty_id && full_ty_id != resolved_id {
+                        if let SemanticType::Struct(_, _, ref full_fields) = self.ctx.types.get(full_ty_id).clone() {
+                            if full_fields.iter().any(|&f| self.contains_ffi_provenance_capability_inner(f, visited)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                false
+            }
+            SemanticType::Enum(_, _, ref variant_tys) => {
+                variant_tys.iter().any(|&v| self.contains_ffi_provenance_capability_inner(v, visited))
+            }
+            SemanticType::Tuple(ref elems) => {
+                elems.iter().any(|&e| self.contains_ffi_provenance_capability_inner(e, visited))
+            }
+            SemanticType::Array(elem, _) => {
+                self.contains_ffi_provenance_capability_inner(elem, visited)
+            }
+            SemanticType::Function { .. } => false,
+            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never | SemanticType::Error => false,
+            _ => false,
+        }
+    }
+
+    pub fn is_ffi_safe_param(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        let ty = self.ctx.types.get(resolved_id).clone();
+        match ty {
+            SemanticType::Primitive(_) | SemanticType::Void => Ok(()),
+            SemanticType::Pointer(_, _) => Ok(()),
+            SemanticType::Reference(_, _, _inner) => Ok(()),
+            SemanticType::Function { ref params, return_type } => {
+                for &p in params {
+                    self.is_ffi_safe_param(p)?;
+                }
+                self.is_ffi_safe_return(return_type)?;
                 Ok(())
-            },
-            SemanticType::Struct(sym_id, _, field_tys) => {
+            }
+            SemanticType::Struct(sym_id, _, ref field_tys) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
                 if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
                     if let Decl::Struct { annotations, .. } = &self.arena.decls[decl_id.0 as usize] {
                         let has_repr_c = annotations.iter().any(|a| {
@@ -227,23 +282,125 @@ impl<'a> TypeChecker<'a> {
                             name == "repr"
                         });
                         if !has_repr_c {
-                            return Err(format!("Struct is not marked with @repr(C)"));
+                            return Err("Struct is not marked with #[repr(C)]".to_string());
                         }
                     }
                 }
-                for f in field_tys {
-                    self.is_ffi_safe(f)?;
+                for &f in field_tys {
+                    self.is_ffi_safe_field(f)?;
                 }
                 Ok(())
-            },
+            }
+            SemanticType::Tuple(_) | SemanticType::Enum(..) | SemanticType::Array(..) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
+                Err("Type is not FFI-safe".to_string())
+            }
+            _ => Err("Parameter type is not FFI-safe".to_string()),
+        }
+    }
+
+    pub fn is_ffi_safe_return(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        let ty = self.ctx.types.get(resolved_id).clone();
+        match ty {
+            SemanticType::Primitive(_) | SemanticType::Void | SemanticType::Never => Ok(()),
+            SemanticType::Pointer(_, _) => Ok(()),
+            SemanticType::Reference(..) => {
+                Err("Extern function returning safe reference is not supported without an explicit lifetime contract".to_string())
+            }
+            SemanticType::Function { ref params, return_type } => {
+                for &p in params {
+                    self.is_ffi_safe_param(p)?;
+                }
+                self.is_ffi_safe_return(return_type)?;
+                Ok(())
+            }
+            SemanticType::Struct(sym_id, _, ref field_tys) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
+                if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
+                    if let Decl::Struct { annotations, .. } = &self.arena.decls[decl_id.0 as usize] {
+                        let has_repr_c = annotations.iter().any(|a| {
+                            let name = self.get_span_text(a.name);
+                            name == "repr"
+                        });
+                        if !has_repr_c {
+                            return Err("Struct is not marked with #[repr(C)]".to_string());
+                        }
+                    }
+                }
+                for &f in field_tys {
+                    self.is_ffi_safe_field(f)?;
+                }
+                Ok(())
+            }
+            SemanticType::Tuple(_) | SemanticType::Enum(..) | SemanticType::Array(..) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
+                Err("Type is not FFI-safe".to_string())
+            }
+            _ => Err("Return type is not FFI-safe".to_string()),
+        }
+    }
+
+    pub fn is_ffi_safe_field(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        let ty = self.ctx.types.get(resolved_id).clone();
+        match ty {
+            SemanticType::Primitive(_) | SemanticType::Void => Ok(()),
+            SemanticType::Pointer(_, _) => {
+                Err("By-value aggregate containing pointer capability is not supported across FFI boundary".to_string())
+            }
+            SemanticType::Reference(..) => {
+                Err("By-value aggregate containing safe reference is not supported across FFI boundary".to_string())
+            }
+            SemanticType::Function { ref params, return_type } => {
+                for &p in params {
+                    self.is_ffi_safe_param(p)?;
+                }
+                self.is_ffi_safe_return(return_type)?;
+                Ok(())
+            }
+            SemanticType::Struct(sym_id, _, ref field_tys) => {
+                if self.contains_ffi_provenance_capability(resolved_id) {
+                    return Err("By-value aggregate containing reference or pointer capability is not supported across FFI boundary".to_string());
+                }
+                if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id) {
+                    if let Decl::Struct { annotations, .. } = &self.arena.decls[decl_id.0 as usize] {
+                        let has_repr_c = annotations.iter().any(|a| {
+                            let name = self.get_span_text(a.name);
+                            name == "repr"
+                        });
+                        if !has_repr_c {
+                            return Err("Struct is not marked with #[repr(C)]".to_string());
+                        }
+                    }
+                }
+                for &f in field_tys {
+                    self.is_ffi_safe_field(f)?;
+                }
+                Ok(())
+            }
+            _ => Err("Field type is not FFI-safe".to_string()),
+        }
+    }
+
+    pub fn is_ffi_safe(&self, ty_id: SemanticTypeId) -> Result<(), String> {
+        let resolved_id = self.ctx.types.resolve(ty_id);
+        let ty = self.ctx.types.get(resolved_id).clone();
+        match ty {
             SemanticType::Function { params, return_type } => {
                 for p in params {
-                    self.is_ffi_safe(p)?;
+                    self.is_ffi_safe_param(p)?;
                 }
-                self.is_ffi_safe(return_type)?;
+                self.is_ffi_safe_return(return_type)?;
                 Ok(())
-            },
-            _ => Err(format!("Type is not FFI-safe")),
+            }
+            _ => self.is_ffi_safe_param(ty_id),
         }
     }
 
@@ -2780,7 +2937,12 @@ impl<'a> TypeChecker<'a> {
 
                             if let Some(func_ty) = self.ctx.tables.symbol_types.get(&sym_id).copied() {
                                 if let Err(e) = self.is_ffi_safe(func_ty) {
-                                    self.ctx.diagnostics.push(Diagnostic::error(format!("Extern function signature is not FFI-safe: {}", e)));
+                                    let span = self.ctx.symbol_table.get_symbol(sym_id).span;
+                                    self.ctx.diagnostics.push(
+                                        Diagnostic::error(format!("error[E2030]: NonFfiSafeType: Extern function signature is not FFI-safe: {}", e))
+                                            .with_code(DiagnosticCode::NonFfiSafeType)
+                                            .with_span(span)
+                                    );
                                 }
                             }
                         }

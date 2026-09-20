@@ -44,11 +44,15 @@ fn copy_tree(source: &Path, destination: &Path) {
         let entry = entry.expect("Failed to read canonical sysroot entry");
         let source_path = entry.path();
         let destination_path = destination.join(entry.file_name());
+        if let Some(name) = source_path.file_name().and_then(|n| n.to_str()) {
+            if name.starts_with('.') {
+                continue;
+            }
+        }
         if source_path.is_dir() {
             copy_tree(&source_path, &destination_path);
-        } else {
-            fs::copy(&source_path, &destination_path)
-                .expect("Failed to copy canonical sysroot entry");
+        } else if source_path.exists() {
+            let _ = fs::copy(&source_path, &destination_path);
         }
     }
 }
