@@ -309,12 +309,13 @@ Borrow Integration
 | **SEM-MATURITY-01** | Compiler semantic test suite & maturity stabilization | **COMPLETE & FROZEN ✅** |
 | **REGION-DESIGN-01** | Architectural design and separation of concerns | **FROZEN ✅** |
 | **REGION-SPEC-01** | Formal mathematical and lattice specification | **FROZEN ✅** |
-| **REGION-01** | Formal Region Graph Engine & Borrow Integration | **COMPLETE & FROZEN ✅** |
+| **REGION-01** | Formal Region Graph Engine | **COMPLETE & FROZEN ✅** |
 | ├─ **REGION-01A** | Region IR, Graph, Regions, Points, Relations | **FROZEN ✅** |
 | ├─ **REGION-01B** | Semantic Constraint Generation (Contract + Body) | **FROZEN ✅** |
-| ├─ **REGION-01C** | Fixed-Point Symbolic Solver & Inference Engine | **FROZEN ✅** |
-| └─ **REGION-01D** | CFG Realization, Borrowck Bridge & Authority Cutover | **FROZEN ✅** |
+| ├─ **REGION-01C** | Symbolic Region Relation Solver | **FROZEN ✅** |
+| └─ **REGION-01D** | CFG Realization + Borrow Authority Cutover | **FROZEN ✅** |
 | *(Old REGION-02)* | *Borrowck Integration* | *Subsumed by REGION-01D-C & 01D-D* |
+| **Memory-Safety Authority Migration** | End-to-end delegation of all lifetime checks to Region Engine | **PARTIAL until REGION-02A cutover** |
 
 ### Post-Freeze Maintenance
 - **REGION-HARDENING: Canonical Loop Tree Hierarchy** *(Non-semantic refactor / robustness item)*
@@ -324,10 +325,22 @@ Borrow Integration
     - Hardening must preserve 100% of observable lifetime behavior and pass complete maturity + Region suites.
 
 ### Next Semantic Milestone
-- **REGION-02: User Contract Pipeline Alignment** *(Audited Semantic Contract Gap)*
-  - **Audit Verdict:** The user contract pipeline is **PARTIAL**:
-    1. **Frontend Syntax**: `life_from(...)` and `where outlives(a, b)` are fully supported on functions, methods, and externs. However, `requires life(a) >= life(b)`, `life(return)`, and struct contracts (`struct S { ... } requires ...`) are specified in grammar but not yet parsed in `luna-parser`/`luna-lexer`.
-    2. **Canonical Artifact Parity**: `.llib` metadata serialization, deserialization, and cross-module source/binary parity for `CanonicalLifetimeContract` are fully functional and verified (`lifetime_relation_abi_acceptance_tests.rs`).
-    3. **Call-Site Region Authority**: Call-site outlives verification currently checks `BorrowAnalyzer::root_outlives` (legacy heuristic) rather than dispatching to the formal Region Engine / solver.
-  - **Scope:** Align frontend syntax to canonical `requires life(...) >= life(...)`, bridge `CanonicalLifetimeContract` directly into `RegionBorrowContext`, and cut over call-site outlives checking to the Region Engine.
+- **REGION-02: User Contract Pipeline Alignment & Call-Site Authority Completion**
+  - **REGION-02A: Call-Site Outlives Authority Cutover** *(Priority 1)*
+    - Eliminate `BorrowAnalyzer::root_outlives` and the lexical heuristic `v_long.0 <= v_short.0`.
+    - Realize pipeline:
+      $$\text{CanonicalLifetimeContract} \longrightarrow \text{LifetimeSubject} \longrightarrow \text{Argument RegionIds} \longrightarrow \text{RegionGraph / RegionSolution} \longrightarrow \text{Outlives Verdict} \longrightarrow \text{Diagnostic E2016}$$
+    - **Invariant:** *"Reordering unrelated ValueIds MUST NOT change outlives contract satisfaction."*
+  - **REGION-02B: Canonical Surface Syntax Alignment**
+    - Canonical syntax: `requires life(a) >= life(b)`.
+    - Legacy compatibility syntax: `where outlives(a, b)` (both lower to identical semantic relation $R_a \succeq R_b$).
+    - `life(return)`: `requires life(source) >= life(return)` (parser syntax node -> resolver `LifetimeSubject::Return`).
+  - **REGION-02C: Resolved Contract IR / Struct Contract Completion**
+    - Complete struct contracts in parser and AST (`Decl::Struct`): `struct Holder { value: &T } requires life(value) >= life(self)`.
+    - Pipeline: $\text{Parser AST} \longrightarrow \text{Resolver} \longrightarrow \text{ResolvedLifetimeContract} \longrightarrow \text{CanonicalLifetimeContract}$.
+    - Semantic boundary: *"source spelling $\ne$ semantic identity"* (field projections resolve to symbolic identities, not strings).
+  - **REGION-02D: End-to-End Contract Parity & Legacy Compatibility**
+    - Cross-verify `where outlives` and `requires life() >= life()`.
+    - Verify identical `CanonicalLifetimeContract` and call-site Region verdicts across source and `.llib` providers.
+    - Guarantee struct contracts survive `.llib` metadata serialization.
 
