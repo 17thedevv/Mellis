@@ -3,6 +3,7 @@ import <slice>;
 import <ptr>;
 import <mem>;
 import <__lang_drop>;
+import <core/panic>;
 import <__lang_option>;
 import <__lang_iterator>;
 import <__lang_into_iterator>;
@@ -136,6 +137,46 @@ impl<T> Vec<T> {
             }
         }
         self.len = 0 as u64;
+    }
+
+    export fn insert(self: &rw Self, index: u64, item: T) {
+        if index > self.len {
+            __mellis_panic();
+        }
+        if self.len == self.cap {
+            self.grow();
+        }
+        unsafe {
+            dec rw i = self.len;
+            while i > index {
+                dec src = ptr::add<T>(self.ptr as *T, i - (1 as u64));
+                dec dst = ptr::add_mut<T>(self.ptr, i);
+                ptr::write<T>(dst, ptr::read<T>(src));
+                i = i - (1 as u64);
+            }
+            dec target = ptr::add_mut<T>(self.ptr, index);
+            ptr::write<T>(target, item);
+        }
+        self.len = self.len + (1 as u64);
+    }
+
+    export fn remove(self: &rw Self, index: u64) -> T {
+        if index >= self.len {
+            __mellis_panic();
+        }
+        unsafe {
+            dec target = ptr::add<T>(self.ptr as *T, index);
+            dec val = ptr::read<T>(target);
+            dec rw i = index;
+            while i + (1 as u64) < self.len {
+                dec src = ptr::add<T>(self.ptr as *T, i + (1 as u64));
+                dec dst = ptr::add_mut<T>(self.ptr, i);
+                ptr::write<T>(dst, ptr::read<T>(src));
+                i = i + (1 as u64);
+            }
+            self.len = self.len - (1 as u64);
+            return val;
+        }
     }
 
     export fn len(self: &Self) -> u64 {

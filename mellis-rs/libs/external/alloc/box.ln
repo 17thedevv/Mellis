@@ -43,6 +43,10 @@ module std {
                 return &rw *self.ptr;
             }
         }
+
+        export fn into_inner(self: Self) -> T {
+            return box_into_inner<T>(self);
+        }
     }
 
     impl<T> Drop for Box<T> {
