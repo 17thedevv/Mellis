@@ -1,4 +1,4 @@
-export struct MyType {}
+export struct MyType {};
 
 impl Iterator<MyType> for &MyType {
     fn next(self: &rw Self) -> Option<MyType> {

@@ -1,6 +1,6 @@
 struct File {
     fd: i32
-}
+};
 
 trait Drop { fn drop(self: &rw Self); }
 
@@ -11,7 +11,7 @@ impl Drop for File {
 struct Mixed {
     a: File,
     b: i32
-}
+};
 
 fn main() {
     dec m = Mixed {

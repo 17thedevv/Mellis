@@ -128,7 +128,7 @@ fn test_generic_trait_dispatch_hash_custom_struct() {
         struct Point {
             x: u64,
             y: u64,
-        }
+        };
 
         impl Hash for Point {
             fn hash(self: &Self) -> u64 {
@@ -184,7 +184,7 @@ fn test_generic_trait_dispatch_eq() {
             r: u8,
             g: u8,
             b: u8,
-        }
+        };
 
         impl Eq for Color {
             fn eq(self: &Self, other: &Self) -> bool {
@@ -253,7 +253,7 @@ fn test_generic_trait_dispatch_clone() {
         struct Vector2 {
             x: i32,
             y: i32,
-        }
+        };
 
         impl Clone for Vector2 {
             fn clone(self: &Self) -> Self {
@@ -312,7 +312,7 @@ fn test_generic_trait_dispatch_negative_unhashable_rejected() {
 
         struct Unhashable {
             val: i32,
-        }
+        };
 
         fn hash_val<T: Hash>(x: T) -> u64 {
             return x.hash();

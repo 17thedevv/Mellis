@@ -21,7 +21,7 @@ fn test_sem_gap_16_disjoint_sibling_fields() {
         struct Point {
             x: i32,
             y: i32,
-        }
+        };
         
         export fn main() {
             dec rw p = Point { x: 1, y: 2 };
@@ -47,7 +47,7 @@ fn test_sem_gap_16_overlapping_same_field() {
         struct Point {
             x: i32,
             y: i32,
-        }
+        };
         
         export fn main() {
             dec rw p = Point { x: 1, y: 2 };
@@ -70,7 +70,7 @@ fn test_sem_gap_16_prefix_overlap_aggregate_borrow_subplace_mutate() {
         struct Point {
             x: i32,
             y: i32,
-        }
+        };
         
         export fn main() {
             dec rw p = Point { x: 1, y: 2 };
@@ -93,7 +93,7 @@ fn test_sem_gap_16_prefix_overlap_subplace_borrow_aggregate_mutate() {
         struct Point {
             x: i32,
             y: i32,
-        }
+        };
         
         export fn main() {
             dec rw p = Point { x: 1, y: 2 };
@@ -116,11 +116,11 @@ fn test_sem_gap_16_nested_disjoint_fields() {
         struct Inner {
             a: i32,
             b: i32,
-        }
+        };
         struct Outer {
             inner: Inner,
             c: i32,
-        }
+        };
         
         export fn main() {
             dec rw o = Outer { inner: Inner { a: 1, b: 2 }, c: 3 };
@@ -143,11 +143,11 @@ fn test_sem_gap_16_nested_overlapping_fields() {
         struct Inner {
             a: i32,
             b: i32,
-        }
+        };
         struct Outer {
             inner: Inner,
             c: i32,
-        }
+        };
         
         export fn main() {
             dec rw o = Outer { inner: Inner { a: 1, b: 2 }, c: 3 };
@@ -170,7 +170,7 @@ fn test_sem_gap_16_unknown_alias_conservative_conflict() {
         struct Point {
             x: int,
             y: int,
-        }
+        };
         
         fn danger(ref1: &rw Point, ref2: &rw Point) {
             dec r = &ref1.x;

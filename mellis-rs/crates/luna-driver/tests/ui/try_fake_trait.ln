@@ -2,7 +2,7 @@
 
 struct Fake<T> {
     value: T,
-}
+};
 
 trait FakeTry<R> {
     fn branch(self: Self) -> ControlFlow<R, Self>;

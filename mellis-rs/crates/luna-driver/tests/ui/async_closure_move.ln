@@ -1,6 +1,6 @@
 struct Data {
     val: i32,
-}
+};
 
 async fn helper() -> i32 {
     return 10;

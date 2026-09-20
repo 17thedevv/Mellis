@@ -2,11 +2,11 @@
 struct Pair<A, B> {
     first: A,
     second: B,
-}
+};
 
 struct Wrapper<T> {
     value: T,
-}
+};
 
 type Nested<A, B> = Wrapper<Pair<A, B>>;
 

@@ -1,5 +1,5 @@
 use crate::Parser;
-use luna_ast::{Annotation, AnnotationArg, Decl, DeclId, Item, Visibility, GenericParam, GenericParamKind, FnLifetimeSignature, LifetimeExpr, LifetimeConstraint};
+use luna_ast::{Annotation, AnnotationArg, Decl, DeclId, Item, Visibility, GenericParam, GenericParamKind, FnLifetimeSignature, LifetimeExpr, LifetimeTargetAst, LifetimeConstraintAst};
 use luna_lexer::{Token, TokenKind};
 use luna_common::ids::Span;
 
@@ -338,13 +338,59 @@ impl<'a> Parser<'a> {
             }
         }
         self.consume(TokenKind::RBrace, "Expected '}'")?;
+        let lifetime_contract = if self.check(TokenKind::KwRequires) {
+            Some(self.parse_struct_lifetime_contracts()?)
+        } else {
+            None
+        };
+        self.consume(TokenKind::Semi, "Expected ';' after struct declaration")?;
         Ok(self.arena.alloc_decl(Decl::Struct {
             annotations,
             visibility,
             name,
             generic_params,
             fields,
+            lifetime_contract,
         }))
+    }
+
+    fn parse_struct_lifetime_contracts(&mut self) -> Result<luna_ast::StructLifetimeContractAst, ()> {
+        let mut constraints = Vec::new();
+        while self.match_token(TokenKind::KwRequires) {
+            loop {
+                let start_span = self.peek().span;
+                let lhs = self.parse_lifetime_target()?;
+
+                let is_gte = if self.match_token(TokenKind::GreaterThanEqual) {
+                    true
+                } else if self.match_token(TokenKind::LessThanEqual) {
+                    false
+                } else {
+                    let span = self.peek().span;
+                    self.error_at_current("Expected '>=' or '<=' in lifetime constraint", span);
+                    return Err(());
+                };
+
+                let rhs = self.parse_lifetime_target()?;
+                let (longer, shorter) = if is_gte {
+                    (lhs, rhs)
+                } else {
+                    (rhs, lhs)
+                };
+                let end_span = self.previous().span;
+                let constraint_span = Span::new(start_span.file_id, start_span.start, end_span.end);
+                constraints.push(luna_ast::LifetimeConstraintAst::new(
+                    longer,
+                    shorter,
+                    constraint_span,
+                ));
+
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
+        }
+        Ok(luna_ast::StructLifetimeContractAst::new(constraints))
     }
 
     fn parse_generic_params(&mut self) -> Vec<GenericParam> {
@@ -1091,69 +1137,135 @@ impl<'a> Parser<'a> {
         }))
     }
 
-    /// Parse lifetime signature: `life_from(...)` and `where outlives(...)` clauses.
+    /// Parse a lifetime target: `life(self)`, `life(return)`, `life(ident)`, or `life(base.field)`.
+    fn parse_lifetime_target(&mut self) -> Result<LifetimeTargetAst, ()> {
+        self.consume(TokenKind::KwLife, "Expected 'life'")?;
+        self.consume(TokenKind::LParen, "Expected '(' after 'life'")?;
+
+        let mut target = if self.match_token(TokenKind::KwSelfVal) {
+            LifetimeTargetAst::SelfVal(self.previous().span)
+        } else if self.match_token(TokenKind::KwReturn) {
+            LifetimeTargetAst::Return(self.previous().span)
+        } else if self.check(TokenKind::Identifier) {
+            let tok = self.advance();
+            let name = self.get_token_text(tok.span).to_string();
+            LifetimeTargetAst::Named { name, span: tok.span }
+        } else {
+            let span = self.peek().span;
+            self.error_at_current("Expected 'self', 'return', or parameter name in 'life(...)'", span);
+            return Err(());
+        };
+
+        while self.match_token(TokenKind::Dot) {
+            let field_tok = self.consume(TokenKind::Identifier, "Expected field name after '.' in lifetime target")?;
+            let field_name = self.get_token_text(field_tok.span).to_string();
+            let span = Span::new(
+                target.span().file_id,
+                target.span().start,
+                field_tok.span.end,
+            );
+            target = LifetimeTargetAst::Projection {
+                base: Box::new(target),
+                field: field_name,
+                span,
+            };
+        }
+
+        self.consume(TokenKind::RParen, "Expected ')' after lifetime target")?;
+        Ok(target)
+    }
+
+    /// Parse lifetime signature: `life_from(...)` and `requires ...` clauses in any order.
     ///
     /// Grammar:
     /// ```ebnf
-    /// lifetime_signature := (life_from '(' ident ('|' ident)* ')' )?
-    ///                       (where outlives '(' IDENT ',' IDENT ')' )*
+    /// lifetime_signature := ( life_from_clause | requires_clause )*
+    /// life_from_clause   := 'life_from' '(' ident ('|' ident)* ')'
+    /// requires_clause    := 'requires' lifetime_constraint (',' lifetime_constraint)*
+    /// lifetime_constraint:= 'life' '(' target ')' ('>=' | '<=') 'life' '(' target ')'
     /// ```
     fn parse_lifetime_signature(&mut self) -> Result<FnLifetimeSignature, ()> {
         let mut signature = FnLifetimeSignature::new();
 
-        // Parse optional `life_from(...)`
-        if self.match_token(TokenKind::KwLifeFrom) {
-            self.consume(TokenKind::LParen, "Expected '(' after 'life_from'")?;
+        loop {
+            if self.check(TokenKind::KwWhere) || self.check(TokenKind::KwOutlives) {
+                let span = self.peek().span;
+                self.error_at_current(
+                    "'where outlives(...)' has been removed; use canonical 'requires life(a) >= life(b)'",
+                    span,
+                );
+                return Err(());
+            } else if self.match_token(TokenKind::KwLifeFrom) {
+                if signature.provenance.is_some() {
+                    let span = self.previous().span;
+                    self.error_at_current("duplicate 'life_from' clause in function signature", span);
+                    return Err(());
+                }
 
-            let first_ident = if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {
-                self.advance()
-            } else {
-                self.consume(TokenKind::Identifier, "Expected identifier in 'life_from'")?
-            };
-            let mut idents = vec![first_ident.span];
+                self.consume(TokenKind::LParen, "Expected '(' after 'life_from'")?;
 
-            // Parse additional alternatives with `|`
-            while self.match_token(TokenKind::BitOr) {
-                let ident = if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {
+                let first_ident = if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {
                     self.advance()
                 } else {
-                    self.consume(TokenKind::Identifier, "Expected identifier after '|'")?
+                    self.consume(TokenKind::Identifier, "Expected identifier in 'life_from'")?
                 };
-                idents.push(ident.span);
+                let mut idents = vec![first_ident.span];
+
+                // Parse additional alternatives with `|`
+                while self.match_token(TokenKind::BitOr) {
+                    let ident = if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {
+                        self.advance()
+                    } else {
+                        self.consume(TokenKind::Identifier, "Expected identifier after '|'")?
+                    };
+                    idents.push(ident.span);
+                }
+
+                self.consume(TokenKind::RParen, "Expected ')' after 'life_from' arguments")?;
+
+                // Create provenance expression
+                let provenance = if idents.len() == 1 {
+                    LifetimeExpr::Provenance(idents.remove(0))
+                } else {
+                    LifetimeExpr::ProvenanceSet(idents)
+                };
+                signature.provenance = Some(provenance);
+            } else if self.match_token(TokenKind::KwRequires) {
+                loop {
+                    let start_span = self.peek().span;
+                    let lhs = self.parse_lifetime_target()?;
+
+                    let is_gte = if self.match_token(TokenKind::GreaterThanEqual) {
+                        true
+                    } else if self.match_token(TokenKind::LessThanEqual) {
+                        false
+                    } else {
+                        let span = self.peek().span;
+                        self.error_at_current("Expected '>=' or '<=' in lifetime constraint", span);
+                        return Err(());
+                    };
+
+                    let rhs = self.parse_lifetime_target()?;
+                    let (longer, shorter) = if is_gte {
+                        (lhs, rhs)
+                    } else {
+                        (rhs, lhs)
+                    };
+                    let end_span = self.previous().span;
+                    let constraint_span = Span::new(start_span.file_id, start_span.start, end_span.end);
+                    signature.constraints.push(LifetimeConstraintAst::new(
+                        longer,
+                        shorter,
+                        constraint_span,
+                    ));
+
+                    if !self.match_token(TokenKind::Comma) {
+                        break;
+                    }
+                }
+            } else {
+                break;
             }
-
-            self.consume(TokenKind::RParen, "Expected ')' after 'life_from' arguments")?;
-
-            // Create provenance expression
-            let provenance = if idents.len() == 1 {
-                LifetimeExpr::Provenance(idents.remove(0))
-            } else {
-                LifetimeExpr::ProvenanceSet(idents)
-            };
-            signature.provenance = Some(provenance);
-        }
-
-        // Parse zero or more `where outlives(...)` constraints
-        while self.match_token(TokenKind::KwWhere) {
-            // Expect `outlives(IDENT, IDENT)`
-            let _ = self.match_token(TokenKind::KwOutlives);
-            self.consume(TokenKind::LParen, "Expected '(' after 'outlives'")?;
-
-            let first = if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {
-                self.advance()
-            } else {
-                self.consume(TokenKind::Identifier, "Expected first identifier in outlives constraint")?
-            };
-            self.consume(TokenKind::Comma, "Expected ',' between identifiers in outlives constraint")?;
-            let second = if self.check(TokenKind::Identifier) || self.check(TokenKind::KwSelfVal) {
-                self.advance()
-            } else {
-                self.consume(TokenKind::Identifier, "Expected second identifier in outlives constraint")?
-            };
-
-            self.consume(TokenKind::RParen, "Expected ')' after outlives constraint")?;
-
-            signature.constraints.push(LifetimeConstraint::outlives(first.span, second.span));
         }
 
         Ok(signature)

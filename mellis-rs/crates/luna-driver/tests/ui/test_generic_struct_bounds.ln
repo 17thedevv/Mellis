@@ -5,7 +5,7 @@ trait Clone {
 struct Point {
     x: i32,
     y: i32,
-}
+};
 
 impl Clone for Point {
     fn clone(self: &rw Point) -> Point {
@@ -15,9 +15,9 @@ impl Clone for Point {
 
 struct Unclonable {
     z: i32,
-}
+};
 
-struct Node<T> {}
+struct Node<T> {};
 
 impl<T> Node<T> {
     fn duplicate<U: Clone>(self: &rw Node<T>, item: &rw U) -> U {

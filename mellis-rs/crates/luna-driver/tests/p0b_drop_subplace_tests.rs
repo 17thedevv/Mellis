@@ -48,7 +48,8 @@ fn test_p0b_whole_place_move() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct HasDrop { val: i32 }
+        struct HasDrop { val: i32 };
+
         impl Drop for HasDrop {
             fn drop(self: &rw Self) {}
         }
@@ -74,7 +75,8 @@ fn test_p0b_subplace_borrow() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct HasDrop { val: i32 }
+        struct HasDrop { val: i32 };
+
         impl Drop for HasDrop {
             fn drop(self: &rw Self) {}
         }
@@ -101,8 +103,10 @@ fn test_p0b_proper_subplace_move_field() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct Inner { v: i32 }
-        struct HasDrop { val: Inner }
+        struct Inner { v: i32 };
+
+        struct HasDrop { val: Inner };
+
         impl Drop for HasDrop {
             fn drop(self: &rw Self) {}
         }
@@ -128,9 +132,12 @@ fn test_p0b_proper_subplace_move_nested_field() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct Bottom { v: i32 }
-        struct Middle { b: Bottom }
-        struct TopDrop { m: Middle }
+        struct Bottom { v: i32 };
+
+        struct Middle { b: Bottom };
+
+        struct TopDrop { m: Middle };
+
         impl Drop for TopDrop {
             fn drop(self: &rw Self) {}
         }
@@ -156,8 +163,10 @@ fn test_p0b_proper_subplace_move_tuple_field() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct Inner { v: i32 }
-        struct TupleDrop { t: (Inner, i32) }
+        struct Inner { v: i32 };
+
+        struct TupleDrop { t: (Inner, i32) };
+
         impl Drop for TupleDrop {
             fn drop(self: &rw Self) {}
         }
@@ -183,7 +192,8 @@ fn test_p0b_proper_subplace_move_enum_payload() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct Inner { v: i32 }
+        struct Inner { v: i32 };
+
         enum DropEnum {
             A(Inner),
             B
@@ -216,8 +226,10 @@ fn test_p0b_proper_subplace_move_pattern_matching() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct Inner { v: i32 }
-        struct HasDrop { val: Inner }
+        struct Inner { v: i32 };
+
+        struct HasDrop { val: Inner };
+
         impl Drop for HasDrop {
             fn drop(self: &rw Self) {}
         }
@@ -250,8 +262,10 @@ fn test_p0b_proper_subplace_move_function_argument() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct Inner { v: i32 }
-        struct HasDrop { val: Inner }
+        struct Inner { v: i32 };
+
+        struct HasDrop { val: Inner };
+
         impl Drop for HasDrop {
             fn drop(self: &rw Self) {}
         }
@@ -278,8 +292,10 @@ fn test_p0b_generic_instantiated_drop_type() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct Inner { v: i32 }
-        struct Wrapper<T> { val: T }
+        struct Inner { v: i32 };
+
+        struct Wrapper<T> { val: T };
+
         impl<T> Drop for Wrapper<T> {
             fn drop(self: &rw Self) {}
         }
@@ -305,8 +321,10 @@ fn test_p0b_field_reassignment() {
         import <ptr>;
         import <iter_adapters>;
         import <iter_consumers>;
-        struct Inner { v: i32 }
-        struct HasDrop { val: Inner }
+        struct Inner { v: i32 };
+
+        struct HasDrop { val: Inner };
+
         impl Drop for HasDrop {
             fn drop(self: &rw Self) {}
         }

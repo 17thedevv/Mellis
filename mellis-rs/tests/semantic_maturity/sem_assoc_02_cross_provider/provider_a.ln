@@ -6,7 +6,7 @@ export trait Producer {
 
 export struct Num {
     value: i32,
-}
+};
 
 impl Producer for Num {
     type Output = i32;

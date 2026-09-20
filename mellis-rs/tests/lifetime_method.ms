@@ -1,6 +1,6 @@
 struct List {
     data: i32,
-}
+};
 
 impl List {
     fn get(self: &List, i: u64) -> &i32 {

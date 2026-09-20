@@ -512,7 +512,7 @@ fn test_public_by_default_data_struct_cross_module() {
             export struct Point {
                 x: i32,
                 y: i32,
-            }
+            };
 
             export fn make_point(x: i32, y: i32) -> Point {
                 return Point { x: x, y: y };
@@ -560,7 +560,7 @@ fn test_mixed_visibility_struct_encapsulation() {
                 user_id: u64,
                 display_name: i32,
                 private secret_hash: u64,
-            }
+            };
 
             export fn create_user(id: u64, name_id: i32, hash: u64) -> UserAccount {
                 return UserAccount {
@@ -595,7 +595,7 @@ fn test_mixed_visibility_struct_encapsulation() {
                 user_id: u64,
                 display_name: i32,
                 private secret_hash: u64,
-            }
+            };
 
             export fn create_user(id: u64, name_id: i32, hash: u64) -> UserAccount {
                 return UserAccount {

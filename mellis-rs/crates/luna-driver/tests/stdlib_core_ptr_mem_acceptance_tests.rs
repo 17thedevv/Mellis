@@ -269,7 +269,7 @@ fn test_p11_generic_struct_ptr_copy() {
         export struct Point {
             export x: i32,
             export y: i32,
-        }
+        };
         fn main() {
             dec p1 = Point { x: 10, y: 20 };
             dec rw p2 = Point { x: 0, y: 0 };
@@ -307,7 +307,7 @@ fn test_p14_p15_size_of_align_of() {
         export struct Packet {
             export header: u32,
             export payload: u64,
-        }
+        };
         fn main() -> i32 {
             dec sz_i32 = mem::size_of<i32>();
             dec sz_pkt = mem::size_of<Packet>();

@@ -35,7 +35,7 @@ fn test_vis_struct_2_removed_private_struct_public_field_allowed() {
         struct Secret {
             export x: i32,
             y: i32,
-        }
+        };
 
         fn get_secret() -> Secret {
             return Secret { x: 1, y: 2 };
@@ -59,7 +59,7 @@ fn test_path_1_field_read() {
         export struct User {
             name: i32,              // Visibility-02: implicit public
             private password: i32,  // Visibility-02: explicit private
-        }
+        };
 
         export fn create_user() -> User {
             return User {
@@ -109,7 +109,7 @@ fn test_path_2_field_write() {
         export struct User {
             name: i32,
             private password: i32,
-        }
+        };
 
         export fn create_user() -> User {
             return User {
@@ -159,7 +159,7 @@ fn test_path_3_field_borrow() {
         export struct User {
             name: i32,
             private password: i32,
-        }
+        };
 
         export fn create_user() -> User {
             return User {
@@ -227,7 +227,7 @@ fn test_path_4_struct_literal_construction() {
         export struct User {
             name: i32,
             private password: i32,
-        }
+        };
 
         export fn create_user() -> User {
             return User {
@@ -285,7 +285,7 @@ fn test_path_5_destructuring_match() {
         export struct User {
             name: i32,
             private password: i32,
-        }
+        };
 
         export fn create_user() -> User {
             return User {
@@ -347,11 +347,11 @@ fn test_path_6_nested_field_projection() {
         export struct Credential {
             id: i32,
             private secret: i32,
-        }
+        };
 
         export struct Account {
             cred: Credential,
-        }
+        };
 
         export fn make_account() -> Account {
             return Account {
@@ -401,7 +401,7 @@ fn test_vis_struct_1_same_module_internal_access() {
         export struct User {
             name: i32,
             private password: i32,
-        }
+        };
 
         fn check_password(u: &User) -> i32 {
             return u.password;
@@ -432,7 +432,7 @@ fn test_compiled_mlib_parity() {
         export struct User {
             name: i32,
             private password: i32,
-        }
+        };
 
         export fn create_user() -> User {
             return User {

@@ -3,12 +3,12 @@
 module test {
     export struct Box {
         val: int,
-    }
+    };
 
     export struct Wrapper {
         b1: Box,
         b2: Box,
-    }
+    };
 
     export fn test_destructure(w: Wrapper) -> int {
         // partial move semantics check

@@ -5,7 +5,7 @@ trait Calculator {
 
 struct SimpleCalc {
     base: i32,
-}
+};
 
 impl Calculator for SimpleCalc {
     fn add(self: &SimpleCalc, x: i32) -> i32 {

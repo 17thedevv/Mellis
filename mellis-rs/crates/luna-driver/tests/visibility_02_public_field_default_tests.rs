@@ -54,7 +54,7 @@ fn test_tc_vis_02_1_implicit_public_field_access() {
         export struct Point {
             x: i32,
             y: i32,
-        }
+        };
 
         export fn create_point() -> Point {
             return Point { x: 1, y: 2 };
@@ -83,7 +83,7 @@ fn test_tc_vis_02_1_implicit_public_field_write() {
         export struct Point {
             x: i32,
             y: i32,
-        }
+        };
 
         export fn create_point() -> Point {
             return Point { x: 1, y: 2 };
@@ -114,7 +114,7 @@ fn test_tc_vis_02_1_implicit_public_field_borrow() {
         export struct Point {
             x: i32,
             y: i32,
-        }
+        };
 
         export fn create_point() -> Point {
             return Point { x: 1, y: 2 };
@@ -152,7 +152,7 @@ fn test_tc_vis_02_2_explicit_private_field_rejected() {
         export struct BankAccount {
             balance: i32,
             private pin: u32,
-        }
+        };
 
         export fn create_account() -> BankAccount {
             return BankAccount { balance: 1000, pin: 1234 as u32 };
@@ -205,7 +205,7 @@ fn test_tc_vis_02_3_private_struct_internal_access() {
         struct Internal {
             x: i32,
             y: i32,
-        }
+        };
 
         fn get_internal() -> Internal {
             return Internal { x: 1, y: 2 };
@@ -229,7 +229,7 @@ fn test_tc_vis_02_3_explicit_private_in_private_struct() {
         struct Config {
             name: str,
             private secret: str,
-        }
+        };
 
         fn get_config() -> Config {
             return Config { name: "app", secret: "xyz" };
@@ -254,7 +254,7 @@ fn test_tc_vis_02_3_public_field_in_private_struct_external_rejected() {
             struct Secret {
                 value: i32,           // declared Public, but struct is private
                 private hidden: str, // declared Private
-            }
+            };
 
             export fn create_secret() -> Secret {
                 return Secret { value: 42, hidden: "secret" };
@@ -301,7 +301,7 @@ fn test_tc_vis_02_4_nested_module_access() {
         module outer {
             struct OuterData {
                 value: i32,
-            }
+            };
 
             module inner {
                 export fn get_value() -> i32 {
@@ -334,7 +334,7 @@ fn test_tc_vis_02_4_cross_module_access_public_field() {
                 export struct TypeA {
                     value: i32,
                     private secret: i32,
-                }
+                };
 
                 export fn create_a() -> TypeA {
                     return TypeA { value: 1, secret: 2 };
@@ -371,7 +371,7 @@ fn test_tc_vis_02_5_source_mlib_parity() {
             x: i32,
             y: i32,
             private z: i32,
-        }
+        };
 
         export fn create_data() -> Data {
             return Data { x: 1, y: 2, z: 3 };
@@ -442,7 +442,7 @@ fn test_tc_vis_02_6_destructuring_implicit_public() {
         export struct Point {
             x: i32,
             y: i32,
-        }
+        };
 
         export fn origin() -> Point {
             return Point { x: 0, y: 0 };
@@ -473,7 +473,7 @@ fn test_tc_vis_02_6_destructuring_with_rest() {
             x: i32,
             y: i32,
             private z: i32,
-        }
+        };
 
         export fn create() -> Point {
             return Point { x: 1, y: 2, z: 3 };
@@ -507,7 +507,7 @@ fn test_tc_vis_02_7_all_access_paths() {
     let prov = r#"
         export struct Data {
             value: i32,
-        }
+        };
 
         export fn create() -> Data {
             return Data { value: 42 };
@@ -556,11 +556,11 @@ fn test_tc_vis_02_7_nested_projection() {
     let prov = r#"
         export struct Inner {
             x: i32,
-        }
+        };
 
         export struct Outer {
             inner: Inner,
-        }
+        };
 
         export fn create() -> Outer {
             return Outer { inner: Inner { x: 1 } };
@@ -595,7 +595,7 @@ fn test_tc_vis_02_8_external_construction_requires_all_fields() {
         export struct Config {
             name: str,
             private secret: str,
-        }
+        };
     "#;
     fs::write(dir.join("config_mod.ln"), prov).unwrap();
 
@@ -642,7 +642,7 @@ fn test_tc_vis_02_8_constructor_function_provides_private() {
         export struct Config {
             name: str,
             private secret: str,
-        }
+        };
 
         export fn create_config(n: str) -> Config {
             return Config { name: n, secret: "default" };
@@ -694,7 +694,7 @@ fn test_backward_compat_explicit_export() {
         export struct Point {
             export x: i32,
             export y: i32,
-        }
+        };
 
         export fn create() -> Point {
             return Point { x: 1, y: 2 };
@@ -728,7 +728,7 @@ fn test_mixed_visibility() {
             email_len: i32,          // implicit public
             export id: u64,          // explicit public
             private password_hash: i32, // explicit private
-        }
+        };
 
         export fn create_user() -> User {
             return User {
@@ -787,7 +787,7 @@ fn test_vis_struct_2_removed_private_struct_public_field_allowed() {
     let src = r#"
         struct Inner {
             export value: i32,
-        }
+        };
 
         fn get_inner() -> Inner {
             return Inner { value: 42 };

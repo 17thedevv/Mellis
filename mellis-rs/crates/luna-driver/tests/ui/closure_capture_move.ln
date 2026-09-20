@@ -1,4 +1,4 @@
-struct NonCopy { val: i32 }
+struct NonCopy { val: i32 };
 
 export fn main() -> i32 {
     dec x = NonCopy { val: 42 };

@@ -11,7 +11,7 @@ export struct Vec<T> {
     private ptr: *rw T,
     private len: u64,
     private cap: u64,
-}
+};
 
 export fn vec_new<T>() -> Vec<T> {
     return Vec<T> {
@@ -46,7 +46,7 @@ export struct VecIntoIter<T> {
     private len: u64,
     private cap: u64,
     private index: u64,
-}
+};
 
 impl<T> Iterator<T> for VecIntoIter<T> {
     fn next(self: &rw Self) -> Option<T> {

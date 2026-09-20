@@ -107,7 +107,7 @@ fn test_a3_local_via_field_rejected() {
 struct Point {
     x: i32,
     y: i32,
-}
+};
 
 fn bad(a: &i32) -> &i32 life_from(a) {
     dec pt = Point { x: 1, y: 2 };
@@ -245,7 +245,7 @@ fn test_a9a_nested_intraprocedural_projection_accepted() {
     let src = r#"
 struct Wrapper {
     r: &i32,
-}
+};
 
 fn wrap_and_project(a: &i32) -> &i32 life_from(a) {
     dec w = Wrapper { r: a };

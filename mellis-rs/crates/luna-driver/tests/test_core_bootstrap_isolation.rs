@@ -91,7 +91,8 @@ fn test_try_operator_works_through_explicit_try_contract_provider() {
 #[test]
 fn test_drop_contract_is_available_without_ordinary_core_imports() {
     let source = r#"
-        struct Handle { id: i32, }
+        struct Handle { id: i32, };
+
         impl Drop for Handle {
             fn drop(self: &rw Handle) {}
         }
@@ -213,7 +214,7 @@ fn test_explicit_standard_providers_negative_matrix() {
         provider: &'static str,
         bad_snippet: &'static str,
         good_snippet: &'static str,
-    }
+    };
 
     let cases = [
         Case {

@@ -196,6 +196,8 @@ pub struct SemanticTables {
     pub unsafe_functions: HashSet<SymbolId>,
     pub unsafe_function_types: HashSet<SemanticTypeId>,
     pub fn_lifetime_contracts: HashMap<SymbolId, crate::CanonicalLifetimeContract>,
+    pub type_lifetime_contracts: HashMap<SymbolId, crate::CanonicalTypeLifetimeContract>,
+    pub resolved_type_lifetime_contracts: HashMap<SymbolId, crate::ResolvedTypeLifetimeContract>,
 }
 
 impl SemanticTables {
@@ -291,6 +293,8 @@ impl SemanticTables {
             unsafe_functions: HashSet::new(),
             unsafe_function_types: HashSet::new(),
             fn_lifetime_contracts: HashMap::new(),
+            type_lifetime_contracts: HashMap::new(),
+            resolved_type_lifetime_contracts: HashMap::new(),
         }
     }
 }

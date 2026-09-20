@@ -70,6 +70,8 @@ pub struct ExportedSymbol {
     #[serde(default)]
     pub lifetime_contract: Option<luna_semantic::CanonicalLifetimeContract>,
     #[serde(default)]
+    pub type_lifetime_contract: Option<luna_semantic::CanonicalTypeLifetimeContract>,
+    #[serde(default)]
     pub is_unsafe: bool,
 }
 

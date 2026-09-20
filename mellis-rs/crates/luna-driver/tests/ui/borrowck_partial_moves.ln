@@ -1,11 +1,11 @@
 struct String {
     len: i32,
-}
+};
 
 struct Point {
     x: String,
     y: String,
-}
+};
 
 fn consume_string(val: String) {}
 fn consume_point(p: Point) {}

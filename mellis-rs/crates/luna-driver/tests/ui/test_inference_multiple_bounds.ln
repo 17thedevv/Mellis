@@ -1,10 +1,10 @@
 trait A {}
 trait B {}
 
-struct DummyA {}
+struct DummyA {};
 impl A for DummyA {}
 
-struct DummyAB {}
+struct DummyAB {};
 impl A for DummyAB {}
 impl B for DummyAB {}
 

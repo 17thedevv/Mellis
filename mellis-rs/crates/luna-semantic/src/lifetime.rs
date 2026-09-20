@@ -451,6 +451,11 @@ pub enum LifetimeError {
         constraint: String,
         span: Span,
     },
+    /// Unsupported contract relation in the current version.
+    UnsupportedContractRelation {
+        reason: String,
+        span: Span,
+    },
 }
 
 impl LifetimeError {
@@ -487,6 +492,12 @@ impl LifetimeError {
                 luna_common::Diagnostic::error(format!(
                     "function '{}' requires {}, but condition not satisfied",
                     callee, constraint
+                )).with_span(span)
+            }
+            LifetimeError::UnsupportedContractRelation { reason, span } => {
+                luna_common::Diagnostic::error(format!(
+                    "unsupported lifetime contract relation: {}",
+                    reason
                 )).with_span(span)
             }
         }
@@ -572,21 +583,39 @@ impl<'a> LifetimeValidator<'a> {
         constraint: &LifetimeConstraint,
         solver: &mut LifetimeSolver,
     ) -> Result<(), LifetimeError> {
-        let first_name = extract_name_from_span(&constraint.first, self.source_manager);
-        let second_name = extract_name_from_span(&constraint.second, self.source_manager);
+        let resolve_target = |target: &luna_ast::LifetimeTargetAst| -> Result<LifetimeIdent, LifetimeError> {
+            match target {
+                luna_ast::LifetimeTargetAst::Named { name, span } => {
+                    self.name_to_lifetime.get(name)
+                        .copied()
+                        .ok_or_else(|| LifetimeError::UnresolvedLifetime { name: name.clone(), span: *span })
+                }
+                luna_ast::LifetimeTargetAst::SelfVal(span) => {
+                    self.name_to_lifetime.get("self")
+                        .copied()
+                        .ok_or_else(|| LifetimeError::UnresolvedLifetime { name: "self".to_string(), span: *span })
+                }
+                luna_ast::LifetimeTargetAst::Return(span) => {
+                    Err(LifetimeError::UnsupportedContractRelation {
+                        reason: "generic Return outlives relations in 'requires' are not supported in Lifetime Contract v1; use 'life_from(...)' for return provenance".to_string(),
+                        span: *span,
+                    })
+                }
+                luna_ast::LifetimeTargetAst::Projection { base, field, span } => {
+                    Err(LifetimeError::UnsupportedContractRelation {
+                        reason: format!("lifetime projection '{}.{}' in 'requires' is not supported in Lifetime Contract v1", base, field),
+                        span: *span,
+                    })
+                }
+            }
+        };
 
-        let first_lifetime = self.name_to_lifetime.get(&first_name)
-            .copied()
-            .ok_or_else(|| LifetimeError::UnresolvedLifetime { name: first_name.clone(), span: constraint.first })?;
-        let second_lifetime = self.name_to_lifetime.get(&second_name)
-            .copied()
-            .ok_or_else(|| LifetimeError::UnresolvedLifetime { name: second_name.clone(), span: constraint.second })?;
+        let longer = resolve_target(&constraint.longer)?;
+        let shorter = resolve_target(&constraint.shorter)?;
 
-        // outlives(a, b) → lifetime(a) ≥ lifetime(b) ('a outlives 'b)
-        // That means: longer = first_lifetime ('a), shorter = second_lifetime ('b)
         solver.add_constraint(LifetimeConstraintExpr {
-            longer: first_lifetime,
-            shorter: second_lifetime,
+            longer,
+            shorter,
         });
 
         Ok(())
@@ -669,14 +698,19 @@ pub fn check_fn_call_constraints(
     };
 
     for constraint in &lifetime_signature.constraints {
-        let first_name = extract_name_from_span(&constraint.first, source_manager);
-        let second_name = extract_name_from_span(&constraint.second, source_manager);
+        let get_name = |target: &luna_ast::LifetimeTargetAst| match target {
+            luna_ast::LifetimeTargetAst::Named { name, .. } => Some(name.clone()),
+            luna_ast::LifetimeTargetAst::SelfVal(_) => Some("self".to_string()),
+            _ => None,
+        };
+        let Some(first_name) = get_name(&constraint.longer) else { continue; };
+        let Some(second_name) = get_name(&constraint.shorter) else { continue; };
 
         let Some(first_param_idx) = find_param_index(&first_name) else {
-            return Err(LifetimeError::UnresolvedLifetime { name: first_name, span: constraint.first });
+            return Err(LifetimeError::UnresolvedLifetime { name: first_name, span: constraint.longer.span() });
         };
         let Some(second_param_idx) = find_param_index(&second_name) else {
-            return Err(LifetimeError::UnresolvedLifetime { name: second_name, span: constraint.second });
+            return Err(LifetimeError::UnresolvedLifetime { name: second_name, span: constraint.shorter.span() });
         };
 
         let first_arg = caller_args.get(first_param_idx).copied();
@@ -769,28 +803,49 @@ impl<'a> LifetimeVerifier<'a> {
     }
 
     fn verify_constraint(&self, constraint: &LifetimeConstraint) -> Result<(), LifetimeError> {
-        let first_name = extract_name_from_span(&constraint.first, self.source_manager);
-        let second_name = extract_name_from_span(&constraint.second, self.source_manager);
+        let verify_target = |target: &luna_ast::LifetimeTargetAst| -> Result<(), LifetimeError> {
+            match target {
+                luna_ast::LifetimeTargetAst::Named { name, span } => {
+                    if !self.is_valid_parameter(name) {
+                        return Err(LifetimeError::UnresolvedLifetime {
+                            name: name.clone(),
+                            span: *span,
+                        });
+                    }
+                }
+                luna_ast::LifetimeTargetAst::SelfVal(span) => {
+                    if !self.is_valid_parameter("self") {
+                        return Err(LifetimeError::UnresolvedLifetime {
+                            name: "self".to_string(),
+                            span: *span,
+                        });
+                    }
+                }
+                luna_ast::LifetimeTargetAst::Return(span) => {
+                    return Err(LifetimeError::UnsupportedContractRelation {
+                        reason: "generic Return outlives relations in 'requires' are not supported in Lifetime Contract v1; use 'life_from(...)' for return provenance".to_string(),
+                        span: *span,
+                    });
+                }
+                luna_ast::LifetimeTargetAst::Projection { base, field, span } => {
+                    return Err(LifetimeError::UnsupportedContractRelation {
+                        reason: format!("lifetime projection '{}.{}' in 'requires' is not supported in Lifetime Contract v1", base, field),
+                        span: *span,
+                    });
+                }
+            }
+            Ok(())
+        };
 
-        if !self.is_valid_parameter(&first_name) {
-            return Err(LifetimeError::UnresolvedLifetime {
-                name: first_name,
-                span: constraint.first,
-            });
-        }
-        if !self.is_valid_parameter(&second_name) {
-            return Err(LifetimeError::UnresolvedLifetime {
-                name: second_name,
-                span: constraint.second,
-            });
-        }
+        verify_target(&constraint.longer)?;
+        verify_target(&constraint.shorter)?;
         Ok(())
     }
 
     fn is_valid_parameter(&self, name: &str) -> bool {
         self.params.iter().any(|&param_id| {
-            if let luna_ast::Decl::Param { name: p_name, .. } = &self.arena.decls[param_id.0 as usize] {
-                extract_name_from_span(p_name, self.source_manager) == name
+            if let luna_ast::Decl::Param { name: p_name, is_self, .. } = &self.arena.decls[param_id.0 as usize] {
+                (*is_self && name == "self") || extract_name_from_span(p_name, self.source_manager) == name
             } else {
                 false
             }
@@ -862,26 +917,70 @@ impl CanonicalProvenance {
     }
 }
 
-/// Canonical representation of an outlives constraint between two parameter lifetimes:
-/// `where outlives(longer, shorter)`
+/// A canonical semantic subject participating in an API contract.
+///
+/// Invariants:
+/// - Distinguishes receiver `SelfVal` from positional parameters `Param(u16)`.
+/// - Never collapses `SelfVal` into a parameter index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum CanonicalContractSubject {
+    /// Positional parameter by 0-based index.
+    Param(u16),
+    /// The implicit or explicit `self` receiver.
+    SelfVal,
+}
+
+impl CanonicalContractSubject {
+    /// Converts this contract subject into a strongly-typed `LifetimeSubject`.
+    pub fn to_subject(&self) -> crate::region::LifetimeSubject {
+        match self {
+            Self::Param(idx) => crate::region::LifetimeSubject::param(*idx),
+            Self::SelfVal => crate::region::LifetimeSubject::self_val(),
+        }
+    }
+}
+
+impl From<u16> for CanonicalContractSubject {
+    fn from(idx: u16) -> Self {
+        CanonicalContractSubject::Param(idx)
+    }
+}
+
+impl std::fmt::Display for CanonicalContractSubject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CanonicalContractSubject::Param(idx) => write!(f, "Param({})", idx),
+            CanonicalContractSubject::SelfVal => write!(f, "SelfVal"),
+        }
+    }
+}
+
+/// Canonical representation of an outlives constraint between two parameter/receiver lifetimes:
+/// `where outlives(longer, shorter)` or `requires life(longer) >= life(shorter)`
 ///
 /// Direction semantics:
-/// - `longer` parameter outlives `shorter` parameter: `lifetime(longer) >= lifetime(shorter)`
+/// - `longer` subject outlives `shorter` subject: `lifetime(longer) >= lifetime(shorter)`
 ///   (the memory region of `longer` is valid at least as long as `shorter`).
 ///
 /// Invariants:
 /// - `longer != shorter` (reflexive constraints are redundant and filtered during normalization).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CanonicalOutlivesConstraint {
-    /// 0-indexed position of the parameter that must outlive `shorter`.
-    pub longer: u16,
-    /// 0-indexed position of the parameter that is outlived by `longer`.
-    pub shorter: u16,
+    /// Canonical subject that must outlive `shorter`.
+    pub longer: CanonicalContractSubject,
+    /// Canonical subject that is outlived by `longer`.
+    pub shorter: CanonicalContractSubject,
 }
 
 impl CanonicalOutlivesConstraint {
-    pub fn new(longer: u16, shorter: u16) -> Self {
-        Self { longer, shorter }
+    pub fn new(
+        longer: impl Into<CanonicalContractSubject>,
+        shorter: impl Into<CanonicalContractSubject>,
+    ) -> Self {
+        Self {
+            longer: longer.into(),
+            shorter: shorter.into(),
+        }
     }
 }
 
@@ -891,7 +990,7 @@ impl CanonicalOutlivesConstraint {
 /// It encapsulates:
 /// 1. ABI contract version (`version`)
 /// 2. Return reference provenance (`return_provenance`), if any
-/// 3. Outlives relations between parameters (`outlives_constraints`)
+/// 3. Outlives relations between parameters/receiver (`outlives_constraints`)
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
 pub struct CanonicalLifetimeContract {
     /// Version of the lifetime relation model.
@@ -924,50 +1023,114 @@ impl CanonicalLifetimeContract {
     }
 
     /// Builds a canonical lifetime contract from AST declarations and source manager.
-    /// Maps parameter names in `life_from(...)` and `where outlives(...)` to 0-indexed positions.
+    /// Maps parameter names in `life_from(...)` and `requires life(...) >= life(...)` to canonical subjects.
     pub fn from_ast(
         sig: &FnLifetimeSignature,
         params: &[luna_ast::DeclId],
         arena: &luna_ast::AstArena,
         source_manager: &luna_common::source::SourceManager,
     ) -> Result<Self, LifetimeError> {
-        let find_param_index = |target_span: &Span| -> Result<u16, LifetimeError> {
-            let target_name = extract_name_from_span(target_span, source_manager);
-            for (i, &param_id) in params.iter().enumerate() {
-                if let luna_ast::Decl::Param { name, .. } = &arena.decls[param_id.0 as usize] {
-                    if extract_name_from_span(name, source_manager) == target_name {
-                        return Ok(i as u16);
-                    }
+        // Identify receiver and map non-self parameter names to 0-indexed positions
+        let mut has_receiver = false;
+        let mut non_self_param_map: HashMap<String, u16> = HashMap::new();
+        let mut non_self_count = 0u16;
+
+        for &param_id in params {
+            if let luna_ast::Decl::Param { name, is_self, .. } = &arena.decls[param_id.0 as usize] {
+                if *is_self {
+                    has_receiver = true;
+                } else {
+                    let param_name = extract_name_from_span(name, source_manager);
+                    non_self_param_map.insert(param_name, non_self_count);
+                    non_self_count += 1;
                 }
             }
-            Err(LifetimeError::UnresolvedLifetime {
-                name: target_name,
-                span: *target_span,
-            })
+        }
+
+        let resolve_target = |target: &luna_ast::LifetimeTargetAst| -> Result<CanonicalContractSubject, LifetimeError> {
+            match target {
+                luna_ast::LifetimeTargetAst::SelfVal(span) => {
+                    if has_receiver {
+                        Ok(CanonicalContractSubject::SelfVal)
+                    } else {
+                        Err(LifetimeError::UnresolvedLifetime {
+                            name: "self".to_string(),
+                            span: *span,
+                        })
+                    }
+                }
+                luna_ast::LifetimeTargetAst::Named { name, span } => {
+                    if let Some(&idx) = non_self_param_map.get(name) {
+                        Ok(CanonicalContractSubject::Param(idx))
+                    } else {
+                        Err(LifetimeError::UnresolvedLifetime {
+                            name: name.to_string(),
+                            span: *span,
+                        })
+                    }
+                }
+                luna_ast::LifetimeTargetAst::Return(span) => {
+                    Err(LifetimeError::UnsupportedContractRelation {
+                        reason: "generic Return lifetime relations in 'requires' are not supported in Lifetime Contract v1; if the intended contract describes return provenance, use 'life_from(...)'".to_string(),
+                        span: *span,
+                    })
+                }
+                luna_ast::LifetimeTargetAst::Projection { base, field, span } => {
+                    Err(LifetimeError::UnsupportedContractRelation {
+                        reason: format!("lifetime projection '{}.{}' in 'requires' is not supported in Lifetime Contract v1", base, field),
+                        span: *span,
+                    })
+                }
+            }
         };
 
         // 1. Resolve return provenance
+        let find_provenance_index = |target_name: &str, span: &Span| -> Result<u16, LifetimeError> {
+            if target_name == "self" {
+                if has_receiver {
+                    return Ok(0);
+                } else {
+                    return Err(LifetimeError::UnresolvedLifetime {
+                        name: "self".to_string(),
+                        span: *span,
+                    });
+                }
+            }
+            if let Some(&idx) = non_self_param_map.get(target_name) {
+                let pos = if has_receiver { idx + 1 } else { idx };
+                Ok(pos)
+            } else {
+                Err(LifetimeError::UnresolvedLifetime {
+                    name: target_name.to_string(),
+                    span: *span,
+                })
+            }
+        };
+
         let return_provenance = match &sig.provenance {
             Some(LifetimeExpr::Provenance(span)) => {
-                let idx = find_param_index(span)?;
+                let name = extract_name_from_span(span, source_manager);
+                let idx = find_provenance_index(&name, span)?;
                 Some(CanonicalProvenance::Param(idx))
             }
             Some(LifetimeExpr::ProvenanceSet(spans)) => {
                 let mut indices = Vec::with_capacity(spans.len());
                 for span in spans {
-                    indices.push(find_param_index(span)?);
+                    let name = extract_name_from_span(span, source_manager);
+                    indices.push(find_provenance_index(&name, span)?);
                 }
                 CanonicalProvenance::from_indices(indices)
             }
             None => None,
         };
 
-        // 2. Resolve outlives constraints: where outlives(longer, shorter)
-        // Semantics: lifetime(longer) >= lifetime(shorter)
+        // 2. Resolve outlives constraints: requires life(longer) >= life(shorter)
+        // Multiple requires clauses contribute direct canonical relations.
+        // Transitive entailment is derived exclusively by RegionSolution.
         let mut outlives_constraints = Vec::with_capacity(sig.constraints.len());
         for constraint in &sig.constraints {
-            let longer = find_param_index(&constraint.first)?;
-            let shorter = find_param_index(&constraint.second)?;
+            let longer = resolve_target(&constraint.longer)?;
+            let shorter = resolve_target(&constraint.shorter)?;
             outlives_constraints.push(CanonicalOutlivesConstraint::new(longer, shorter));
         }
 
@@ -980,8 +1143,8 @@ impl CanonicalLifetimeContract {
     }
 
     /// Returns the transitive closure of outlives relationships (longer, shorter)
-    /// where (a, b) means parameter `a` outlives parameter `b` (lifetime(a) >= lifetime(b)).
-    pub fn transitive_outlives(&self) -> std::collections::HashSet<(u16, u16)> {
+    /// where (a, b) means subject `a` outlives subject `b` (lifetime(a) >= lifetime(b)).
+    pub fn transitive_outlives(&self) -> std::collections::HashSet<(CanonicalContractSubject, CanonicalContractSubject)> {
         use std::collections::HashSet;
         let mut closure = HashSet::new();
 
@@ -994,7 +1157,7 @@ impl CanonicalLifetimeContract {
         let mut changed = true;
         while changed {
             changed = false;
-            let current: Vec<(u16, u16)> = closure.iter().copied().collect();
+            let current: Vec<(CanonicalContractSubject, CanonicalContractSubject)> = closure.iter().copied().collect();
             for &(a, b) in &current {
                 for &(c, d) in &current {
                     if b == c && closure.insert((a, d)) {
@@ -1007,12 +1170,179 @@ impl CanonicalLifetimeContract {
         closure
     }
 
-    /// Checks whether parameter `longer` outlives parameter `shorter` under this contract.
-    pub fn outlives_holds(&self, longer: u16, shorter: u16) -> bool {
+    /// Checks whether subject `longer` outlives subject `shorter` under this contract.
+    pub fn outlives_holds(
+        &self,
+        longer: impl Into<CanonicalContractSubject>,
+        shorter: impl Into<CanonicalContractSubject>,
+    ) -> bool {
+        let (longer, shorter) = (longer.into(), shorter.into());
         if longer == shorter {
             return true;
         }
         self.transitive_outlives().contains(&(longer, shorter))
+    }
+
+    /// Returns all input/input preconditions as `(longer, shorter)` subject pairs.
+    /// Strictly excludes return relations.
+    pub fn input_preconditions(&self) -> Vec<(crate::region::LifetimeSubject, crate::region::LifetimeSubject)> {
+        self.outlives_constraints
+            .iter()
+            .map(|c| (c.longer.to_subject(), c.shorter.to_subject()))
+            .collect()
+    }
+
+    /// Returns return provenance guarantees (`life_from(...)`).
+    pub fn return_guarantees(&self) -> Vec<crate::region::LifetimeSubject> {
+        match &self.return_provenance {
+            Some(CanonicalProvenance::Param(idx)) => vec![crate::region::LifetimeSubject::param(*idx)],
+            Some(CanonicalProvenance::ParamSet(indices)) => {
+                indices.iter().map(|&idx| crate::region::LifetimeSubject::param(idx)).collect()
+            }
+            None => Vec::new(),
+        }
+    }
+
+    /// Instantiates call-site preconditions as `LifetimeObligation`s.
+    pub fn instantiate_call_preconditions(&self, _is_method: bool) -> Vec<LifetimeObligation> {
+        self.outlives_constraints
+            .iter()
+            .map(|c| LifetimeObligation {
+                longer_subject: c.longer.to_subject(),
+                shorter_subject: c.shorter.to_subject(),
+            })
+            .collect()
+    }
+}
+
+/// A call-site proof obligation requiring `longer` to outlive `shorter`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LifetimeObligation {
+    pub longer_subject: crate::region::LifetimeSubject,
+    pub shorter_subject: crate::region::LifetimeSubject,
+}
+
+// =========================================================================
+// Type Lifetime Contract Definitions (Struct Invariants)
+// =========================================================================
+
+/// Subject of a resolved type lifetime constraint.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ResolvedTypeLifetimeSubject {
+    /// Field of the struct by its declared SymbolId.
+    Field(SymbolId),
+    /// The struct instance itself (`self`).
+    SelfVal,
+}
+
+/// An outlives constraint in a resolved struct type contract:
+/// `longer >= shorter` (longer outlives shorter).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ResolvedTypeOutlivesConstraint {
+    pub longer: ResolvedTypeLifetimeSubject,
+    pub shorter: ResolvedTypeLifetimeSubject,
+    pub span: Span,
+}
+
+/// A resolved struct type lifetime contract.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct ResolvedTypeLifetimeContract {
+    pub constraints: Vec<ResolvedTypeOutlivesConstraint>,
+}
+
+/// Canonical field path indexing into a struct.
+/// Single-element `[idx]` represents field index `idx` in declaration order.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct CanonicalFieldPath(pub Vec<u16>);
+
+impl CanonicalFieldPath {
+    pub fn single(idx: u16) -> Self {
+        Self(vec![idx])
+    }
+}
+
+impl std::fmt::Display for CanonicalFieldPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, p) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, ".")?;
+            }
+            write!(f, "{}", p)?;
+        }
+        Ok(())
+    }
+}
+
+/// Subject in a canonical type lifetime contract.
+///
+/// Invariants:
+/// - Strictly decoupled from function parameter subjects (`Param(u16)`).
+/// - `Field(CanonicalFieldPath)` represents an indexed field projection.
+/// - `SelfVal` represents the instance itself.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum CanonicalTypeLifetimeSubject {
+    Field(CanonicalFieldPath),
+    SelfVal,
+}
+
+impl std::fmt::Display for CanonicalTypeLifetimeSubject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Field(path) => write!(f, "Field({})", path),
+            Self::SelfVal => write!(f, "SelfVal"),
+        }
+    }
+}
+
+/// Canonical outlives constraint for a struct type contract.
+/// Semantics: `longer` outlives `shorter` (lifetime(longer) >= lifetime(shorter)).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct CanonicalTypeOutlivesConstraint {
+    pub longer: CanonicalTypeLifetimeSubject,
+    pub shorter: CanonicalTypeLifetimeSubject,
+}
+
+impl CanonicalTypeOutlivesConstraint {
+    pub fn new(
+        longer: CanonicalTypeLifetimeSubject,
+        shorter: CanonicalTypeLifetimeSubject,
+    ) -> Self {
+        Self { longer, shorter }
+    }
+}
+
+/// Canonical struct type lifetime contract.
+/// This is the Single Source of Truth (SSOT) across compiler phases and `.llib` serialization.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct CanonicalTypeLifetimeContract {
+    pub version: u32,
+    pub outlives_constraints: Vec<CanonicalTypeOutlivesConstraint>,
+}
+
+impl CanonicalTypeLifetimeContract {
+    pub const CURRENT_VERSION: u32 = 1;
+
+    pub fn new(mut outlives_constraints: Vec<CanonicalTypeOutlivesConstraint>) -> Self {
+        outlives_constraints.retain(|c| c.longer != c.shorter);
+        outlives_constraints.sort_unstable();
+        outlives_constraints.dedup();
+        Self {
+            version: Self::CURRENT_VERSION,
+            outlives_constraints,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.outlives_constraints.is_empty()
+    }
+}
+
+impl Default for CanonicalTypeLifetimeContract {
+    fn default() -> Self {
+        Self {
+            version: Self::CURRENT_VERSION,
+            outlives_constraints: Vec::new(),
+        }
     }
 }
 
@@ -1145,4 +1475,49 @@ mod tests {
         assert!(!contract.outlives_holds(0, 2));
         assert!(!contract.outlives_holds(1, 2));
     }
+
+    #[test]
+    fn test_canonical_type_lifetime_contract_normalization() {
+        let default_contract = CanonicalTypeLifetimeContract::default();
+        assert_eq!(default_contract.version, 1);
+        assert!(default_contract.is_empty());
+
+        let constraints = vec![
+            CanonicalTypeOutlivesConstraint::new(
+                CanonicalTypeLifetimeSubject::Field(CanonicalFieldPath::single(1)),
+                CanonicalTypeLifetimeSubject::SelfVal,
+            ),
+            CanonicalTypeOutlivesConstraint::new(
+                CanonicalTypeLifetimeSubject::SelfVal,
+                CanonicalTypeLifetimeSubject::SelfVal, // Reflexive, pruned
+            ),
+            CanonicalTypeOutlivesConstraint::new(
+                CanonicalTypeLifetimeSubject::Field(CanonicalFieldPath::single(0)),
+                CanonicalTypeLifetimeSubject::SelfVal,
+            ),
+            CanonicalTypeOutlivesConstraint::new(
+                CanonicalTypeLifetimeSubject::Field(CanonicalFieldPath::single(1)),
+                CanonicalTypeLifetimeSubject::SelfVal, // Duplicate, deduped
+            ),
+        ];
+
+        let contract = CanonicalTypeLifetimeContract::new(constraints);
+        assert_eq!(contract.version, CanonicalTypeLifetimeContract::CURRENT_VERSION);
+        assert_eq!(contract.outlives_constraints.len(), 2);
+        assert_eq!(
+            contract.outlives_constraints[0],
+            CanonicalTypeOutlivesConstraint::new(
+                CanonicalTypeLifetimeSubject::Field(CanonicalFieldPath::single(0)),
+                CanonicalTypeLifetimeSubject::SelfVal,
+            )
+        );
+        assert_eq!(
+            contract.outlives_constraints[1],
+            CanonicalTypeOutlivesConstraint::new(
+                CanonicalTypeLifetimeSubject::Field(CanonicalFieldPath::single(1)),
+                CanonicalTypeLifetimeSubject::SelfVal,
+            )
+        );
+    }
 }
+

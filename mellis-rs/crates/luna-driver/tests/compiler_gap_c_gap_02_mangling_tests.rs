@@ -55,7 +55,7 @@ import <iter_consumers>;
 module foo {
     export struct i32_B {
         export v: i32,
-    }
+    };
 
     export fn A_B<T>(x: T) -> i32 {
         return 10;
@@ -69,7 +69,7 @@ module foo {
 module foo_A {
     export struct B<T> {
         export val: T,
-    }
+    };
 
     export fn process<T>(b: B<T>) -> i32 {
         return 30;
@@ -144,7 +144,7 @@ import <iter_consumers>;
 
 struct TypeA<T> {
     val: T,
-}
+};
 
 impl<T> TypeA<T> {
     export fn calc(self: &Self) -> i32 {
@@ -154,7 +154,7 @@ impl<T> TypeA<T> {
 
 struct TypeB<T> {
     val: T,
-}
+};
 
 impl<T> TypeB<T> {
     export fn calc(self: &Self) -> i32 {
@@ -191,7 +191,7 @@ import <iter_consumers>;
 module foo {
     export struct Box<T> {
         export val: T,
-    }
+    };
 
     export fn get_val<T>(b: Box<T>) -> i32 {
         return 50;
@@ -201,7 +201,7 @@ module foo {
 module bar {
     export struct Box<T> {
         export val: T,
-    }
+    };
 
     export fn get_val<T>(b: Box<T>) -> i32 {
         return 70;
@@ -236,15 +236,15 @@ import <iter_consumers>;
 
 struct Inner<T> {
     val: T,
-}
+};
 
 struct Middle<T> {
     inner: Inner<T>,
-}
+};
 
 struct Outer<T> {
     middle: Middle<T>,
-}
+};
 
 fn extract<T>(o: Outer<T>) -> i32 {
     return 999;
@@ -329,7 +329,7 @@ import <iter_collect>;
 module mod_a {
     export struct TrackA {
         export counter: *rw i32,
-    }
+    };
 
     impl Drop for TrackA {
         fn drop(self: &rw Self) {
@@ -343,7 +343,7 @@ module mod_a {
 module mod_b {
     export struct TrackB {
         export counter: *rw i32,
-    }
+    };
 
     impl Drop for TrackB {
         fn drop(self: &rw Self) {

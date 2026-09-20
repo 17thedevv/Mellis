@@ -111,7 +111,7 @@ fn test_negative_control_d() {
 struct Point {
     x: i32,
     y: i32,
-}
+};
 
 fn test_neg_d() -> i32 {
     dec rw obj = Point { x: 1, y: 2 };
@@ -203,7 +203,7 @@ fn test_method_call_genuine_conflict_control() {
     let src = r#"
 struct Container {
     val: i32,
-}
+};
 
 impl Container {
     fn mutate_with(self: &rw Self, arg: &rw i32) {
@@ -235,7 +235,7 @@ fn test_evaluation_order_sequence() {
     let src = r#"
 struct OrderTracker {
     seq: i32,
-}
+};
 
 impl OrderTracker {
     fn step(self: &rw Self, val: i32) -> i32 {
@@ -246,7 +246,7 @@ impl OrderTracker {
 
 struct Target {
     dummy: i32,
-}
+};
 
 impl Target {
     fn run_mut(self: &rw Self, a: i32, b: i32) -> i32 {

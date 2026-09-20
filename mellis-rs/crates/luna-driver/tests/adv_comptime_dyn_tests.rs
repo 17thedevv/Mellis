@@ -1,4 +1,4 @@
-﻿use luna_driver::{check, CompilerOptions};
+use luna_driver::{check, CompilerOptions};
 use luna_driver::sysroot::Sysroot;
 use luna_mvir::interp::MvirInterpreter;
 use luna_mvir::mvir::*;
@@ -59,7 +59,7 @@ fn test_adv_comptime_01_dyn_virtual_call_success() {
 
         struct Polite {
             val: i32,
-        }
+        };
 
         impl Greeter for Polite {
             fn greet(self: &Polite) -> i32 {
@@ -239,7 +239,7 @@ fn test_adv_comptime_03_dyn_pointer_escape_rejected() {
 
         struct Polite {
             val: i32,
-        }
+        };
 
         impl Greeter for Polite {
             fn greet(self: &Polite) -> i32 {
@@ -293,7 +293,7 @@ fn test_adv_comptime_05_smuggled_fat_pointer_in_struct_rejected() {
 
         struct Polite {
             val: i32,
-        }
+        };
 
         impl Greeter for Polite {
             fn greet(self: &Polite) -> i32 {
@@ -304,7 +304,7 @@ fn test_adv_comptime_05_smuggled_fat_pointer_in_struct_rejected() {
         struct Smuggler {
             tag: i32,
             ptr: &dyn Greeter,
-        }
+        };
 
         const SMUGGLED: Smuggler = comptime {
             dec p = Polite { val: 42 };
@@ -334,7 +334,7 @@ fn test_adv_comptime_06_const_associated_type_projection() {
             type Output;
         }
 
-        struct Config {}
+        struct Config {};
 
         impl HasType for Config {
             type Output = i32;
@@ -358,7 +358,7 @@ fn test_adv_comptime_07_const_topological_eval_with_associated_type() {
             type Result;
         }
 
-        struct Math {}
+        struct Math {};
 
         impl Compute for Math {
             type Result = i32;
@@ -390,7 +390,7 @@ fn test_adv_comptime_08_comptime_function_with_associated_type() {
 
         struct Producer {
             dummy: i32,
-        }
+        };
 
         impl ValueProducer for Producer {
             type Item = i32;
@@ -718,7 +718,7 @@ fn test_adv_comptime_15_array_size_from_comptime_associated_type() {
             type SizeType;
         }
 
-        struct S {}
+        struct S {};
 
         impl Sizer for S {
             type SizeType = i32;
@@ -746,7 +746,7 @@ fn test_adv_comptime_16_runtime_reachable_fat_pointer_escape_invariant() {
 
         struct SimpleWorker {
             id: i32,
-        }
+        };
 
         impl Worker for SimpleWorker {
             fn work(self: &SimpleWorker) -> i32 {
@@ -756,7 +756,7 @@ fn test_adv_comptime_16_runtime_reachable_fat_pointer_escape_invariant() {
 
         struct DeepContainer {
             workers: [&dyn Worker; 1],
-        }
+        };
 
         const ESCAPED_CONTAINER: DeepContainer = comptime {
             dec w = SimpleWorker { id: 7 };

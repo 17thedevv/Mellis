@@ -6,7 +6,7 @@ import <__lang_drop>;
 module std {
     export struct Box<T> {
         private ptr: *rw T,
-    }
+    };
 
     export fn box_new<T>(val: T) -> Box<T> {
         dec size = mem::size_of<T>();

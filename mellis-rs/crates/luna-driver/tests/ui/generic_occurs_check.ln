@@ -6,7 +6,7 @@ enum Result<T, E> {
 struct Vec<T> {
     len: i32,
     cap: i32,
-}
+};
 
 fn create_cycle<T>(a: T, b: Vec<Result<T, T> >) {}
 

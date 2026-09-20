@@ -8,7 +8,7 @@ import <__lang_iterator>;
 export struct Map<I, Item, Out> {
     private iter: I,
     private f: fn(Item) -> Out,
-}
+};
 
 impl<I: Iterator<Item>, Item, Out> Iterator<Out> for Map<I, Item, Out> {
     fn next(self: &rw Self) -> Option<Out> {
@@ -29,7 +29,7 @@ export struct Filter<I, Item> {
     private iter: I,
     // Predicate takes Item directly (borrowed iterators: Item=&T, owned: Item=T)
     private pred: fn(Item) -> bool,
-}
+};
 
 impl<I: Iterator<Item>, Item> Iterator<Item> for Filter<I, Item> {
     fn next(self: &rw Self) -> Option<Item> {
@@ -55,7 +55,7 @@ impl<I: Iterator<Item>, Item> Iterator<Item> for Filter<I, Item> {
 export struct Enumerate<I, Item> {
     private iter: I,
     private count: u64,
-}
+};
 
 impl<I: Iterator<Item>, Item> Iterator<(u64, Item)> for Enumerate<I, Item> {
     fn next(self: &rw Self) -> Option<(u64, Item)> {
@@ -76,7 +76,7 @@ impl<I: Iterator<Item>, Item> Iterator<(u64, Item)> for Enumerate<I, Item> {
 export struct Take<I, Item> {
     private iter: I,
     private remaining: u64,
-}
+};
 
 impl<I: Iterator<Item>, Item> Iterator<Item> for Take<I, Item> {
     fn next(self: &rw Self) -> Option<Item> {
@@ -99,7 +99,7 @@ impl<I: Iterator<Item>, Item> Iterator<Item> for Take<I, Item> {
 export struct Skip<I, Item> {
     private iter: I,
     private to_skip: u64,
-}
+};
 
 impl<I: Iterator<Item>, Item> Iterator<Item> for Skip<I, Item> {
     fn next(self: &rw Self) -> Option<Item> {
@@ -120,7 +120,7 @@ impl<I: Iterator<Item>, Item> Iterator<Item> for Skip<I, Item> {
 export struct Zip<A, B, ItemA, ItemB> {
     private a: A,
     private b: B,
-}
+};
 
 impl<A: Iterator<ItemA>, B: Iterator<ItemB>, ItemA, ItemB> Iterator<(ItemA, ItemB)> for Zip<A, B, ItemA, ItemB> {
     fn next(self: &rw Self) -> Option<(ItemA, ItemB)> {

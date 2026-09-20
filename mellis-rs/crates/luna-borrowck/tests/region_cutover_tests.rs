@@ -486,15 +486,12 @@ fn cutover_08_source_and_llib_parity_after_cutover() {
     // results whether from source representation or .llib CanonicalLifetimeContract
     let contract = CanonicalLifetimeContract::new(
         Some(CanonicalProvenance::Param(0)),
-        vec![CanonicalOutlivesConstraint {
-            longer: 0,
-            shorter: 1,
-        }],
+        vec![CanonicalOutlivesConstraint::new(0, 1)],
     );
 
     let allowed = contract.return_provenance.as_ref().unwrap().indices();
     assert_eq!(allowed, &[0]);
-    assert!(contract.outlives_constraints.iter().any(|c| c.longer == 0 && c.shorter == 1));
+    assert!(contract.outlives_constraints.iter().any(|c| c.longer == 0.into() && c.shorter == 1.into()));
 }
 
 #[test]

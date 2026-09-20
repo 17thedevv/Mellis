@@ -28,7 +28,10 @@
 use std::collections::{HashMap, HashSet};
 use luna_common::{Diagnostic, DiagnosticCode, Span};
 use luna_mvir::{Function, Instruction, Operand, Terminator, ValueId, ValueOrigin};
-use luna_semantic::{CaptureMode, CanonicalLifetimeContract, SemanticContext, SemanticType};
+use luna_semantic::{
+    CanonicalFieldPath, CanonicalLifetimeContract, CanonicalTypeLifetimeContract,
+    CanonicalTypeLifetimeSubject, CaptureMode, SemanticContext,
+};
 use luna_semantic::region::{
     CfgEdgeId, ConstraintKind, ConstraintOrigin, ProgramPointId, RealizationError, RealizationFacts,
     RegionGraph, RegionId, RegionKind, RegionRealization, RegionSolution,
@@ -88,6 +91,17 @@ pub enum ReturnEscapeReason {
 pub enum ContractViolationReason {
     ParameterNotContracted { param_index: u16 },
     DirectReturnWithoutProvenance,
+    OutlivesPreconditionFailed {
+        longer_subject: luna_semantic::region::LifetimeSubject,
+        shorter_subject: luna_semantic::region::LifetimeSubject,
+        longer_region: RegionId,
+        shorter_region: RegionId,
+    },
+    TypeContractOutlivesFailed {
+        field_path: luna_semantic::CanonicalFieldPath,
+        longer_region: RegionId,
+        shorter_region: RegionId,
+    },
 }
 
 impl RegionFailure {
@@ -136,7 +150,47 @@ impl RegionFailure {
                             "error[E2016]: LifetimeConstraintViolation: return expression does not satisfy declared lifetime contract",
                         )
                     }
+                    ContractViolationReason::OutlivesPreconditionFailed {
+                        longer_subject,
+                        shorter_subject,
+                        ..
+                    } => {
+                        let longer_desc = match longer_subject {
+                            luna_semantic::region::LifetimeSubject::Root(
+                                luna_semantic::region::LifetimeSubjectRoot::Param(idx),
+                            ) => format!("parameter (index {})", idx),
+                            luna_semantic::region::LifetimeSubject::Root(
+                                luna_semantic::region::LifetimeSubjectRoot::SelfVal,
+                            ) => "receiver 'self'".to_string(),
+                            _ => format!("{:?}", longer_subject),
+                        };
+                        let shorter_desc = match shorter_subject {
+                            luna_semantic::region::LifetimeSubject::Root(
+                                luna_semantic::region::LifetimeSubjectRoot::Param(idx),
+                            ) => format!("parameter (index {})", idx),
+                            luna_semantic::region::LifetimeSubject::Root(
+                                luna_semantic::region::LifetimeSubjectRoot::SelfVal,
+                            ) => "receiver 'self'".to_string(),
+                            _ => format!("{:?}", shorter_subject),
+                        };
+                        Diagnostic::error(format!(
+                            "error[E2016]: LifetimeConstraintViolation: argument for {} does not outlive {}",
+                            longer_desc, shorter_desc
+                        ))
+                    }
+                    ContractViolationReason::TypeContractOutlivesFailed { field_path, .. } => {
+                        let field_desc = if let Some(&first) = field_path.0.first() {
+                            format!("field (index {})", first)
+                        } else {
+                            "field".to_string()
+                        };
+                        Diagnostic::error(format!(
+                            "error[E2016]: LifetimeConstraintViolation: {} does not outlive container instance",
+                            field_desc
+                        ))
+                    }
                 };
+                diag.code = Some(DiagnosticCode::LifetimeConstraintViolation);
                 diag.span = span;
                 diag
             }
@@ -204,6 +258,99 @@ pub struct RegionBorrowContext {
     pub value_origins: HashMap<ValueId, ValueOrigin>,
     pub value_spans: HashMap<ValueId, Option<Span>>,
     pub is_param_ref: HashMap<u16, bool>,
+    pub func_values: Vec<luna_mvir::ValueData>,
+}
+
+/// Computes the concrete storage / validity extent (set of ProgramPointIds)
+/// for each local variable in `func`.
+///
+/// # Canonical Structural Invariant
+/// A local variable's storage extent begins at its introduction point (e.g. `Instruction::Alloca`)
+/// and terminates at its explicit drop point (`Instruction::Drop`, `Instruction::DropVirt`), or
+/// at the end of its enclosing lexical block/scope if not explicitly dropped earlier.
+fn compute_local_storage_extents(func: &Function) -> HashMap<ValueId, HashSet<ProgramPointId>> {
+    let mut extents: HashMap<ValueId, HashSet<ProgramPointId>> = HashMap::new();
+
+    for (vid, val_data) in func.values.iter().enumerate() {
+        let val_id = ValueId(vid as u32);
+        if matches!(val_data.origin, ValueOrigin::Local) {
+            let mut def_location = None;
+            for (b_idx, block) in func.blocks.iter().enumerate() {
+                if let Some(pos) = block.insts.iter().position(|&v| v == val_id) {
+                    def_location = Some((b_idx, pos));
+                    break;
+                }
+            }
+
+            let Some((def_b_idx, def_pos)) = def_location else {
+                continue;
+            };
+
+            // Invariant: If a local is allocated in the block's allocation preamble
+            // (consecutive Alloca instructions starting from index 0), its storage extent
+            // begins at the start of the block. Locals sharing the preamble have identical
+            // introduction points unless dropped earlier or defined in a sub-scope.
+            let is_in_alloca_preamble = func.blocks[def_b_idx].insts[..def_pos]
+                .iter()
+                .all(|&v| matches!(func.value(v).inst, Instruction::Alloca));
+
+            let effective_start_pos = if is_in_alloca_preamble { 0 } else { def_pos };
+
+            // Search for an explicit Drop instruction targeting this local variable
+            let mut drop_location = None;
+            'outer: for (b_idx, block) in func.blocks.iter().enumerate().skip(def_b_idx) {
+                let start_pos = if b_idx == def_b_idx { def_pos + 1 } else { 0 };
+                for (pos, &v) in block.insts.iter().enumerate().skip(start_pos) {
+                    let inst = &func.value(v).inst;
+                    let drops_this_local = match inst {
+                        Instruction::Drop { value: Operand::Value(target), .. } => *target == val_id,
+                        Instruction::DropVirt { obj: Operand::Value(target) } => *target == val_id,
+                        Instruction::HeapFree { value: Operand::Value(target) } => *target == val_id,
+                        _ => false,
+                    };
+                    if drops_this_local {
+                        drop_location = Some((b_idx, pos));
+                        break 'outer;
+                    }
+                }
+            }
+
+            let mut pts = HashSet::new();
+            if let Some((drop_b_idx, drop_pos)) = drop_location {
+                if def_b_idx == drop_b_idx {
+                    for &inst_v in &func.blocks[def_b_idx].insts[effective_start_pos..=drop_pos] {
+                        pts.insert(ProgramPointId::from_raw(inst_v.0));
+                    }
+                } else {
+                    for &inst_v in &func.blocks[def_b_idx].insts[effective_start_pos..] {
+                        pts.insert(ProgramPointId::from_raw(inst_v.0));
+                    }
+                    for b in &func.blocks[(def_b_idx + 1)..drop_b_idx] {
+                        for &inst_v in &b.insts {
+                            pts.insert(ProgramPointId::from_raw(inst_v.0));
+                        }
+                    }
+                    for &inst_v in &func.blocks[drop_b_idx].insts[..=drop_pos] {
+                        pts.insert(ProgramPointId::from_raw(inst_v.0));
+                    }
+                }
+            } else {
+                // No explicit drop: local lives to the end of the block (or all reachable blocks)
+                for &inst_v in &func.blocks[def_b_idx].insts[effective_start_pos..] {
+                    pts.insert(ProgramPointId::from_raw(inst_v.0));
+                }
+                for b in &func.blocks[(def_b_idx + 1)..] {
+                    for &inst_v in &b.insts {
+                        pts.insert(ProgramPointId::from_raw(inst_v.0));
+                    }
+                }
+            }
+
+            extents.insert(val_id, pts);
+        }
+    }
+
+    extents
 }
 
 impl RegionBorrowContext {
@@ -244,19 +391,50 @@ impl RegionBorrowContext {
                         ConstraintOrigin::structural(),
                         val_data.span.clone(),
                     );
-
-                    let is_ref = if let Some(c) = ctx {
-                        matches!(c.types.get(val_data.ty), SemanticType::Reference(..))
-                    } else {
-                        false
-                    };
-                    is_param_ref.insert(*p_idx as u16, is_ref);
+                    if let Some(ctx) = ctx {
+                        if let luna_semantic::SemanticType::Reference(..) = ctx.types.get(val_data.ty) {
+                            is_param_ref.insert(*p_idx as u16, true);
+                        }
+                    }
                 }
                 ValueOrigin::Global => {
                     val_to_region.insert(vid, graph.program_region());
                 }
                 _ => {}
             }
+        }
+
+        // 1c. Seed caller's declared input preconditions as assumptions before solve (REGION-02A)
+        // Architectural Invariant: Only declared input preconditions are seeded as assumptions.
+        // Return guarantees are NEVER seeded into the caller graph.
+        let caller_sym_id = func.name.symbol_id.or_else(|| {
+            ctx.and_then(|c| c.symbol_table.lookup(&func.name.name, luna_semantic::symbol::ScopeId(0)))
+        });
+        let caller_contract = caller_sym_id.and_then(|sym| {
+            ctx.and_then(|c| c.tables.fn_lifetime_contracts.get(&sym))
+        });
+
+        if let Some(contract) = caller_contract {
+            let mut bindings = luna_semantic::region::LifetimeRegionBindings::new();
+            for (&p_idx, &r_param) in &param_regions {
+                bindings.insert(luna_semantic::region::LifetimeSubject::param(p_idx), r_param);
+            }
+            if let Some(&r_self) = param_regions.get(&0) {
+                bindings.insert(luna_semantic::region::LifetimeSubject::self_val(), r_self);
+            }
+
+            let resolved = luna_semantic::region::ResolvedFunctionContract::from_canonical_preconditions(contract);
+            let generator = luna_semantic::region::ContractConstraintGenerator::new();
+            let _ = generator.lower_function_contract(
+                &mut graph,
+                &bindings,
+                &resolved,
+                false, // is_extern
+                &[],   // input_ref_subjects (suppress LLE)
+                false, // has_return_ref (no return elision)
+                luna_semantic::region::ConstraintTransport::Source,
+                None,
+            );
         }
 
         // 2. Loop iteration regions
@@ -284,6 +462,7 @@ impl RegionBorrowContext {
         // 3. Instruction points and value validity regions
         let mut all_points = HashSet::new();
         let mut loop_points: HashMap<String, HashSet<ProgramPointId>> = HashMap::new();
+        let mut scope_counter: u32 = 1;
 
         for block in &func.blocks {
             for nl in &loop_info.natural_loops {
@@ -298,38 +477,78 @@ impl RegionBorrowContext {
                 }
             }
 
+            let enclosing_loop = loop_info
+                .natural_loops
+                .iter()
+                .filter(|nl| nl.body_blocks.contains(&block.label.name))
+                .min_by_key(|nl| nl.blocks.len());
+
+            let block_parent_reg = if let Some(nl) = enclosing_loop {
+                loop_to_region.get(&nl.header).copied().unwrap_or(func_scope_region)
+            } else {
+                func_scope_region
+            };
+
             for &val_id in &block.insts {
                 let point_id = ProgramPointId::from_raw(val_id.0);
                 val_to_point.insert(val_id, point_id);
                 all_points.insert(point_id);
 
                 // If value is not yet mapped (not parameter or global), assign its validity region.
-                // In nested loops, the lifetime is bounded by the innermost enclosing loop.
-                // NOTE(REGION-HARDENING): `min_by_key(|nl| nl.blocks.len())` safely identifies the
-                // innermost natural loop under current loop discovery invariants (blocks(inner) ⊂ blocks(outer)).
-                // Targeted for future hardening: replace block-count heuristic with explicit canonical LoopTree
-                // nesting depth (`max_by_key(|nl| nl.depth)`).
                 if !val_to_region.contains_key(&val_id) {
-                    let enclosing_loop = loop_info
-                        .natural_loops
-                        .iter()
-                        .filter(|nl| nl.local_values.contains(&val_id))
-                        .min_by_key(|nl| nl.blocks.len());
+                    let val_data = func.value(val_id);
+                    if matches!(val_data.origin, ValueOrigin::Local) {
+                        let r_local = graph
+                            .add_region(RegionKind::Lexical {
+                                scope: scope_counter,
+                            })
+                            .unwrap();
+                        scope_counter += 1;
+                        val_to_region.insert(val_id, r_local);
 
-                    if let Some(nl) = enclosing_loop {
-                        if let Some(&loop_reg) = loop_to_region.get(&nl.header) {
-                            val_to_region.insert(val_id, loop_reg);
-                        } else {
-                            val_to_region.insert(val_id, func_scope_region);
-                        }
+                        // Block parent outlives this local: block_parent_reg ⪰ r_local
+                        let _ = graph.add_constraint(
+                            ConstraintKind::Outlives {
+                                sup: block_parent_reg,
+                                sub: r_local,
+                            },
+                            ConstraintOrigin::structural(),
+                            val_data.span.clone(),
+                        );
                     } else {
-                        val_to_region.insert(val_id, func_scope_region);
+                        val_to_region.insert(val_id, block_parent_reg);
                     }
                 }
             }
         }
 
-        // 4. Set allowed domains for lexical and iteration regions
+        // 4. Compute concrete storage / validity extents for all local variables.
+        // Canonical Rule: Local A ⪰ Local B IFF AllowedPoints(R_B) ⊆ AllowedPoints(R_A).
+        let local_extents = compute_local_storage_extents(func);
+        for (&val_id, extent) in &local_extents {
+            if let Some(&r_local) = val_to_region.get(&val_id) {
+                facts.set_allowed_domain(r_local, extent.clone());
+            }
+        }
+
+        for (v_a, extent_a) in &local_extents {
+            for (v_b, extent_b) in &local_extents {
+                if v_a != v_b && !extent_b.is_empty() && extent_b.is_subset(extent_a) {
+                    if let (Some(&r_a), Some(&r_b)) = (val_to_region.get(v_a), val_to_region.get(v_b)) {
+                        let _ = graph.add_constraint(
+                            ConstraintKind::Outlives {
+                                sup: r_a,
+                                sub: r_b,
+                            },
+                            ConstraintOrigin::structural(),
+                            func.value(*v_b).span.clone(),
+                        );
+                    }
+                }
+            }
+        }
+
+        // Set allowed domains for function and iteration regions
         facts.set_allowed_domain(func_scope_region, all_points);
         for (header, points) in loop_points {
             if let Some(&loop_reg) = loop_to_region.get(&header) {
@@ -413,6 +632,7 @@ impl RegionBorrowContext {
             value_origins,
             value_spans,
             is_param_ref,
+            func_values: func.values.clone(),
         }
     }
 }
@@ -457,6 +677,11 @@ impl<'a> RegionBorrowBridge<'a> {
             }
         }
         current
+    }
+
+    /// Computes the canonical `PlaceDesc` for an operand using the context's MVIR function values and alias map.
+    pub fn compute_place_desc(&self, op: &Operand) -> crate::borrow_analysis::PlaceDesc {
+        crate::borrow_analysis::compute_place_desc(op, &self.context.func_values, Some(&self.aliases))
     }
 
     /// Evaluates whether a live carrier holding provenance `provenance` is legally valid
@@ -805,6 +1030,155 @@ impl<'a> RegionBorrowBridge<'a> {
         }
     }
 
+    /// Resolves the validity RegionIds of all provenance sources that `arg` can depend on at call-site.
+    ///
+    /// # Three-Tier Decoupling Invariant
+    /// The call-site outlives verification queries the validity region of the *provenance source*,
+    /// not the carrier's temporary inference region.
+    pub fn resolve_argument_dependency_regions(
+        &self,
+        arg: &Operand,
+        state: &crate::borrow_analysis::BorrowStateData,
+    ) -> Result<HashSet<RegionId>, ShadowGap> {
+        let mut regions = HashSet::new();
+        let resolved_op = self.resolve_operand(arg);
+
+        match resolved_op {
+            Operand::Global(_) => {
+                regions.insert(self.context.graph.program_region());
+                return Ok(regions);
+            }
+            Operand::Value(val) => {
+                let mut loans = HashSet::new();
+                if let Some(prov) = state.direct_provenance.get(val) {
+                    loans.extend(prov.iter().cloned());
+                }
+                if let Some(prov) = state.carried_provenance.get(val) {
+                    loans.extend(prov.iter().cloned());
+                }
+
+                // Follow alias chain for loans
+                let mut curr = *val;
+                while let Some(alias) = state.aliases.get(&curr) {
+                    if let Operand::Value(av) = alias {
+                        if let Some(prov) = state.direct_provenance.get(av) {
+                            loans.extend(prov.iter().cloned());
+                        }
+                        if let Some(prov) = state.carried_provenance.get(av) {
+                            loans.extend(prov.iter().cloned());
+                        }
+                        curr = *av;
+                    } else {
+                        break;
+                    }
+                }
+
+                for loan in &loans {
+                    let resolved_place = self.resolve_operand(&loan.place);
+                    match resolved_place {
+                        Operand::Global(_) => {
+                            regions.insert(self.context.graph.program_region());
+                        }
+                        Operand::Value(pv) => {
+                            if let Some(&reg) = self.context.val_to_region.get(pv) {
+                                regions.insert(reg);
+                            } else {
+                                return Err(ShadowGap::UnmappedVariable(*pv));
+                            }
+                        }
+                        other => {
+                            return Err(ShadowGap::UnsupportedOperand(other.clone()));
+                        }
+                    }
+                }
+
+                // If no loans were registered (e.g. passing a parameter value directly, or raw value)
+                if regions.is_empty() {
+                    if let Some(&reg) = self.context.val_to_region.get(val) {
+                        regions.insert(reg);
+                    } else {
+                        return Err(ShadowGap::UnmappedVariable(*val));
+                    }
+                }
+            }
+            other => {
+                return Err(ShadowGap::UnsupportedOperand(other.clone()));
+            }
+        }
+
+        if regions.is_empty() {
+            return Err(ShadowGap::UnsupportedOperand(arg.clone()));
+        }
+
+        Ok(regions)
+    }
+
+    /// Evaluates whether the call-site outlives precondition `longer_subject >= shorter_subject`
+    /// holds between actual arguments `longer_op` and `shorter_op`.
+    pub fn check_call_outlives(
+        &self,
+        longer_subject: &luna_semantic::region::LifetimeSubject,
+        longer_op: &Operand,
+        shorter_subject: &luna_semantic::region::LifetimeSubject,
+        shorter_op: &Operand,
+        state: &crate::borrow_analysis::BorrowStateData,
+        span: Option<Span>,
+    ) -> ShadowRegionVerdict {
+        let longer_regions = match self.resolve_argument_dependency_regions(longer_op, state) {
+            Ok(regs) => regs,
+            Err(gap) => return ShadowRegionVerdict::Incomplete(gap),
+        };
+
+        let shorter_regions = match self.resolve_argument_dependency_regions(shorter_op, state) {
+            Ok(regs) => regs,
+            Err(gap) => return ShadowRegionVerdict::Incomplete(gap),
+        };
+
+        // Use the most path/edge-sensitive provenance facts currently available.
+        // Where correlation has already been lost, Cartesian universal checking is the conservative fallback.
+        for &r_long in &longer_regions {
+            for &r_short in &shorter_regions {
+                if !self.solution.outlives(r_long, r_short) {
+                    let carrier = match longer_op {
+                        Operand::Value(v) => *v,
+                        _ => match shorter_op {
+                            Operand::Value(v) => *v,
+                            _ => ValueId(0),
+                        },
+                    };
+                    return ShadowRegionVerdict::Invalid(RegionFailure::UnsatisfiedContract {
+                        carrier,
+                        reason: ContractViolationReason::OutlivesPreconditionFailed {
+                            longer_subject: longer_subject.clone(),
+                            shorter_subject: shorter_subject.clone(),
+                            longer_region: r_long,
+                            shorter_region: r_short,
+                        },
+                        span,
+                    });
+                }
+            }
+        }
+
+        ShadowRegionVerdict::Valid
+    }
+
+    /// Authoritative diagnostic adapter for call-site outlives verification.
+    pub fn diagnose_call_outlives(
+        &self,
+        longer_subject: &luna_semantic::region::LifetimeSubject,
+        longer_op: &Operand,
+        shorter_subject: &luna_semantic::region::LifetimeSubject,
+        shorter_op: &Operand,
+        state: &crate::borrow_analysis::BorrowStateData,
+        span: Option<Span>,
+    ) -> Option<Diagnostic> {
+        match self.check_call_outlives(longer_subject, longer_op, shorter_subject, shorter_op, state, span) {
+            ShadowRegionVerdict::Invalid(failure) => Some(failure.into_diagnostic()),
+            _ => None,
+        }
+    }
+
     /// Evaluates and classifies the comparison between the shadow Region verdict and legacy verdict.
     pub fn evaluate_comparison(
         &self,
@@ -856,6 +1230,251 @@ impl<'a> RegionBorrowBridge<'a> {
             shadow_verdict: shadow,
             legacy_verdict: legacy,
             classification,
+        }
+    }
+
+    /// Resolves the destination instance RegionId(s) for a container place `dest_place`.
+    ///
+    /// # Dynamic Destination Identity Invariant
+    /// The contract's `self` lifetime requirement is grounded in the concrete destination
+    /// instance region(s) where the carrier is being established.
+    /// NEVER falls back to source carrier region! Returns `ShadowGap::UnmappedVariable` if unmapped.
+    pub fn resolve_destination_instance_regions(
+        &self,
+        dest_place: &Operand,
+        state: &crate::borrow_analysis::BorrowStateData,
+    ) -> Result<HashSet<RegionId>, ShadowGap> {
+        let mut regions = HashSet::new();
+        let resolved_op = self.resolve_operand(dest_place);
+
+        match resolved_op {
+            Operand::Global(_) => {
+                regions.insert(self.context.graph.program_region());
+                return Ok(regions);
+            }
+            Operand::Value(val) => {
+                if let Some(&reg) = self.context.val_to_region.get(val) {
+                    regions.insert(reg);
+                } else {
+                    return Err(ShadowGap::UnmappedVariable(*val));
+                }
+
+                // Follow alias chain to find other possible destination aliases
+                let mut curr = *val;
+                while let Some(alias) = state.aliases.get(&curr) {
+                    if let Operand::Value(av) = alias {
+                        if let Some(&reg) = self.context.val_to_region.get(av) {
+                            regions.insert(reg);
+                        }
+                        curr = *av;
+                    } else if let Operand::Global(_) = alias {
+                        regions.insert(self.context.graph.program_region());
+                        break;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            other => {
+                return Err(ShadowGap::UnsupportedOperand(other.clone()));
+            }
+        }
+
+        if regions.is_empty() {
+            return Err(ShadowGap::UnsupportedOperand(dest_place.clone()));
+        }
+
+        Ok(regions)
+    }
+
+    /// Resolves the validity RegionIds for a specific field path `field_path` on `aggregate_place`.
+    ///
+    /// # Specific Field Provenance vs Whole-Aggregate Invariant
+    /// Checkers MUST resolve provenance of the specific field, NEVER whole-aggregate provenance.
+    /// Uses canonical `PlaceDesc` and `ProvenanceSet` (sets of referent PlaceDescs, not Loans).
+    /// If no provenance source exists for the reference field, returns `ShadowGap::UnsupportedOperand`
+    /// to trigger `Incomplete` (anti-vacuous gate; empty provenance never vacuously satisfies).
+    pub fn resolve_field_dependency_regions(
+        &self,
+        aggregate_place: &Operand,
+        field_path: &CanonicalFieldPath,
+        state: &crate::borrow_analysis::BorrowStateData,
+    ) -> Result<HashSet<RegionId>, ShadowGap> {
+        let field_idx = match field_path.0.first() {
+            Some(&idx) => idx as u32,
+            None => return Err(ShadowGap::UnsupportedOperand(aggregate_place.clone())),
+        };
+
+        // 1. Compute canonical PlaceDesc for this specific field
+        let mut field_place_desc = self.compute_place_desc(aggregate_place);
+        field_place_desc.projections.push(crate::borrow_analysis::Projection::Field(field_idx));
+
+        let mut sources = HashSet::new();
+
+        // 2. Query Place-based field_provenance
+        if let Some(prov_set) = state.field_provenance.get(&field_place_desc) {
+            sources.extend(prov_set.sources.iter().cloned());
+        }
+
+        // Anti-vacuous gate: reference field has no resolvable provenance sources -> Incomplete
+        if sources.is_empty() {
+            return Err(ShadowGap::UnsupportedOperand(aggregate_place.clone()));
+        }
+
+        let mut regions = HashSet::new();
+        for source_place in &sources {
+            let resolved_root = self.resolve_operand(&source_place.root);
+            match resolved_root {
+                Operand::Global(_) => {
+                    regions.insert(self.context.graph.program_region());
+                }
+                Operand::Value(pv) => {
+                    if let Some(&reg) = self.context.val_to_region.get(pv) {
+                        regions.insert(reg);
+                    } else {
+                        return Err(ShadowGap::UnmappedVariable(*pv));
+                    }
+                }
+                other => {
+                    return Err(ShadowGap::UnsupportedOperand(other.clone()));
+                }
+            }
+        }
+
+        if regions.is_empty() {
+            return Err(ShadowGap::UnsupportedOperand(aggregate_place.clone()));
+        }
+
+        Ok(regions)
+    }
+
+    /// Evaluates whether the type contract instance invariant holds when storing/moving `value_operand`
+    /// into destination place `dest_place`.
+    pub fn check_type_contract_instance(
+        &self,
+        contract: &CanonicalTypeLifetimeContract,
+        value_operand: &Operand,
+        dest_place: &Operand,
+        state: &crate::borrow_analysis::BorrowStateData,
+        span: Option<Span>,
+    ) -> ShadowRegionVerdict {
+        let dest_regions = match self.resolve_destination_instance_regions(dest_place, state) {
+            Ok(regs) => regs,
+            Err(gap) => return ShadowRegionVerdict::Incomplete(gap),
+        };
+
+        for constraint in &contract.outlives_constraints {
+            let field_path = match &constraint.longer {
+                CanonicalTypeLifetimeSubject::Field(fp) => fp,
+                CanonicalTypeLifetimeSubject::SelfVal => continue,
+            };
+
+            let field_regions = match self.resolve_field_dependency_regions(value_operand, field_path, state) {
+                Ok(regs) => regs,
+                Err(gap) => return ShadowRegionVerdict::Incomplete(gap),
+            };
+
+            // Cartesian universal check: for all field regions and destination regions
+            for &r_field in &field_regions {
+                for &r_dest in &dest_regions {
+                    if !self.solution.outlives(r_field, r_dest) {
+                        let carrier = match dest_place {
+                            Operand::Value(v) => *v,
+                            _ => match value_operand {
+                                Operand::Value(v) => *v,
+                                _ => ValueId(0),
+                            },
+                        };
+                        return ShadowRegionVerdict::Invalid(RegionFailure::UnsatisfiedContract {
+                            carrier,
+                            reason: ContractViolationReason::TypeContractOutlivesFailed {
+                                field_path: field_path.clone(),
+                                longer_region: r_field,
+                                shorter_region: r_dest,
+                            },
+                            span,
+                        });
+                    }
+                }
+            }
+        }
+
+        ShadowRegionVerdict::Valid
+    }
+
+    /// Authoritative diagnostic adapter for type contract instance invariant.
+    pub fn diagnose_type_contract_instance(
+        &self,
+        contract: &CanonicalTypeLifetimeContract,
+        value_operand: &Operand,
+        dest_place: &Operand,
+        state: &crate::borrow_analysis::BorrowStateData,
+        span: Option<Span>,
+    ) -> Option<Diagnostic> {
+        match self.check_type_contract_instance(contract, value_operand, dest_place, state, span) {
+            ShadowRegionVerdict::Invalid(failure) => Some(failure.into_diagnostic()),
+            _ => None,
+        }
+    }
+
+    /// Evaluates whether writing `value_op` into `container_dest_op`'s field `field_idx`
+    /// satisfies the instance invariant (i.e. `value_op` outlives container `self`).
+    pub fn check_field_store_outlives(
+        &self,
+        field_idx: u32,
+        value_op: &Operand,
+        container_dest_op: &Operand,
+        state: &crate::borrow_analysis::BorrowStateData,
+        span: Option<Span>,
+    ) -> ShadowRegionVerdict {
+        let dest_regions = match self.resolve_destination_instance_regions(container_dest_op, state) {
+            Ok(regs) => regs,
+            Err(gap) => return ShadowRegionVerdict::Incomplete(gap),
+        };
+
+        let val_regions = match self.resolve_argument_dependency_regions(value_op, state) {
+            Ok(regs) => regs,
+            Err(gap) => return ShadowRegionVerdict::Incomplete(gap),
+        };
+
+        for &r_val in &val_regions {
+            for &r_dest in &dest_regions {
+                if !self.solution.outlives(r_val, r_dest) {
+                    let carrier = match container_dest_op {
+                        Operand::Value(v) => *v,
+                        _ => match value_op {
+                            Operand::Value(v) => *v,
+                            _ => ValueId(0),
+                        },
+                    };
+                    return ShadowRegionVerdict::Invalid(RegionFailure::UnsatisfiedContract {
+                        carrier,
+                        reason: ContractViolationReason::TypeContractOutlivesFailed {
+                            field_path: CanonicalFieldPath::single(field_idx as u16),
+                            longer_region: r_val,
+                            shorter_region: r_dest,
+                        },
+                        span,
+                    });
+                }
+            }
+        }
+
+        ShadowRegionVerdict::Valid
+    }
+
+    /// Authoritative diagnostic adapter for field store outlives invariant.
+    pub fn diagnose_field_store_outlives(
+        &self,
+        field_idx: u32,
+        value_op: &Operand,
+        container_dest_op: &Operand,
+        state: &crate::borrow_analysis::BorrowStateData,
+        span: Option<Span>,
+    ) -> Option<Diagnostic> {
+        match self.check_field_store_outlives(field_idx, value_op, container_dest_op, state, span) {
+            ShadowRegionVerdict::Invalid(failure) => Some(failure.into_diagnostic()),
+            _ => None,
         }
     }
 }

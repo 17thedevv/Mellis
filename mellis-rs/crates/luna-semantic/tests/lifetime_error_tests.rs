@@ -1,4 +1,4 @@
-﻿use luna_ast::AstArena;
+use luna_ast::AstArena;
 use luna_common::ids::FileId;
 use luna_lexer::Lexer;
 use luna_parser::Parser;
@@ -58,7 +58,7 @@ fn test_unresolved_lifetime_in_provenance() {
 #[test]
 fn test_unresolved_lifetime_in_constraint() {
     let source = r#"
-        fn bar(a: &i32) where outlives(b, a) {}
+        fn bar(a: &i32) requires life(b) >= life(a) {}
     "#;
     let result = check_code(source);
     assert!(result.is_err(), "Expected an error");
@@ -66,4 +66,19 @@ fn test_unresolved_lifetime_in_constraint() {
     println!("Errors: {:#?}", errs);
     assert_eq!(errs.len(), 1);
     assert!(errs[0].message.contains("lifetime 'b' does not refer to any parameter in scope"));
+}
+
+#[test]
+fn test_legacy_where_outlives_diagnostic() {
+    let mut source_manager = luna_common::source::SourceManager::new();
+    let file_id = source_manager.add_file("test.ms".to_string(), "fn foo(a: &i32, b: &i32) where outlives(a, b) {}".to_string());
+    let mut arena = AstArena::new();
+    let lexer = Lexer::new("fn foo(a: &i32, b: &i32) where outlives(a, b) {}", file_id);
+    let mut parser = Parser::new(lexer, &mut arena, file_id);
+    let _ = parser.parse_file();
+    assert!(
+        parser.diagnostics.iter().any(|d| d.message.contains("'where outlives(...)' has been removed; use canonical 'requires life(a) >= life(b)'")),
+        "Expected migration diagnostic, got: {:?}",
+        parser.diagnostics
+    );
 }

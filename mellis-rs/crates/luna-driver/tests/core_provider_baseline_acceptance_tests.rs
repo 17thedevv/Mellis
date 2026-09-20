@@ -86,7 +86,7 @@ fn component_sources_do_not_create_provider_namespaces() {
 #[test]
 fn language_contracts_are_auto_loaded_for_user_types() {
     let source = r#"
-        struct UserIter { current: i32 }
+        struct UserIter { current: i32 };
 
         impl Iterator<i32> for UserIter {
             fn next(self: &rw Self) -> Option<i32> {

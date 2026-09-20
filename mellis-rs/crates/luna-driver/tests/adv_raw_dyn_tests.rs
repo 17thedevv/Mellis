@@ -71,7 +71,7 @@ fn test_adv_01_unsized_pointer_arithmetic_dyn_trait_rejected() {
         trait Calc {
             fn value(self: &Self) -> i32;
         }
-        struct A { val: i32, }
+        struct A { val: i32, };
         impl Calc for A {
             fn value(self: &Self) -> i32 { return self.val; }
         }
@@ -133,7 +133,7 @@ fn test_adv_03_unsized_pointer_subtraction_rejected() {
         import <iter_adapters>;
         import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
-        struct S { x: i32, }
+        struct S { x: i32, };
         impl Foo for S {
             fn bar(self: &Self) -> i32 { return self.x; }
         }
@@ -175,7 +175,7 @@ fn test_adv_04_fat_pointer_integrity_across_copy_move_and_calls() {
         trait Calc {
             fn value(self: &Self) -> i32;
         }
-        struct A { val: i32, }
+        struct A { val: i32, };
         impl Calc for A {
             fn value(self: &Self) -> i32 { return self.val; }
         }
@@ -238,7 +238,7 @@ fn test_adv_06_dyn_trait_dispatch_correctness() {
         trait Calc {
             fn value(self: &Self) -> i32;
         }
-        struct A { val: i32, }
+        struct A { val: i32, };
         impl Calc for A {
             fn value(self: &Self) -> i32 { return self.val; }
         }
@@ -298,7 +298,7 @@ fn test_adv_09_cast_fat_to_thin_rejected() {
         import <iter_adapters>;
         import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
-        struct S { x: i32, }
+        struct S { x: i32, };
         impl Foo for S {
             fn bar(self: &Self) -> i32 { return self.x; }
         }
@@ -328,7 +328,7 @@ fn test_adv_10_cast_to_unsized_value_rejected() {
         import <iter_adapters>;
         import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
-        struct S { x: i32, }
+        struct S { x: i32, };
         impl Foo for S {
             fn bar(self: &Self) -> i32 { return self.x; }
         }
@@ -362,7 +362,7 @@ fn test_adv_11_immutable_raw_dyn_trait_write_rejected() {
         import <iter_adapters>;
         import <iter_consumers>;
         trait Foo { fn bar(self: &Self) -> i32; }
-        struct S { x: i32, }
+        struct S { x: i32, };
         impl Foo for S {
             fn bar(self: &Self) -> i32 { return self.x; }
         }
@@ -398,7 +398,7 @@ fn test_adv_12_immutable_dyn_trait_mutable_method_rejected() {
             fn inc(self: &rw Self);
             fn get(self: &Self) -> i32;
         }
-        struct MyCounter { val: i32, }
+        struct MyCounter { val: i32, };
         impl Counter for MyCounter {
             fn inc(self: &rw Self) {
                 self.val = self.val + 1;
@@ -434,7 +434,7 @@ fn test_adv_13_mutable_dyn_trait_mutable_method_allowed() {
             fn inc(self: &rw Self);
             fn get(self: &Self) -> i32;
         }
-        struct MyCounter { val: i32, }
+        struct MyCounter { val: i32, };
         impl Counter for MyCounter {
             fn inc(self: &rw Self) {
                 self.val = self.val + 1;
@@ -528,11 +528,11 @@ fn test_adv_15_end_to_end_runtime_adversarial_pipeline() {
         trait Shape {
             fn area(self: &Self) -> i32;
         }
-        struct Circle { radius: i32, }
+        struct Circle { radius: i32, };
         impl Shape for Circle {
             fn area(self: &Self) -> i32 { return self.radius * self.radius * 3; }
         }
-        struct Square { side: i32, }
+        struct Square { side: i32, };
         impl Shape for Square {
             fn area(self: &Self) -> i32 { return self.side * self.side; }
         }

@@ -51,7 +51,7 @@ fn test_case_01_unawaited_future_dropped_at_state_0() {
 
         struct Resource {
             id: i32,
-        }
+        };
 
         impl Drop for Resource {
             fn drop(self: &rw Self) {}
@@ -296,10 +296,12 @@ fn test_case_06_multiple_await_points_with_state_specific_cleanup() {
         import <iter_adapters>;
         import <iter_consumers>;
 
-        struct ResourceA { id: i32 }
+        struct ResourceA { id: i32 };
+
         impl Drop for ResourceA { fn drop(self: &rw Self) {} }
 
-        struct ResourceB { id: i32 }
+        struct ResourceB { id: i32 };
+
         impl Drop for ResourceB { fn drop(self: &rw Self) {} }
 
         async fn step() -> i32 { return 1; }
@@ -334,7 +336,8 @@ fn test_case_07_drop_type_parameters_cleaned_when_cancelled_early() {
         import <iter_adapters>;
         import <iter_consumers>;
 
-        struct Resource { id: i32 }
+        struct Resource { id: i32 };
+
         impl Drop for Resource { fn drop(self: &rw Self) {} }
 
         async fn other() -> i32 { return 0; }
@@ -367,7 +370,8 @@ fn test_case_08_moved_resource_is_not_double_dropped_on_cancellation() {
         import <iter_adapters>;
         import <iter_consumers>;
 
-        struct Resource { id: i32 }
+        struct Resource { id: i32 };
+
         impl Drop for Resource { fn drop(self: &rw Self) {} }
 
         async fn other() -> i32 { return 1; }
@@ -417,10 +421,12 @@ fn test_case_10_branching_awaits_distinct_cleanup_sets() {
         import <iter_adapters>;
         import <iter_consumers>;
 
-        struct LeftRes { id: i32 }
+        struct LeftRes { id: i32 };
+
         impl Drop for LeftRes { fn drop(self: &rw Self) {} }
 
-        struct RightRes { id: i32 }
+        struct RightRes { id: i32 };
+
         impl Drop for RightRes { fn drop(self: &rw Self) {} }
 
         async fn step() -> i32 { return 1; }
@@ -483,7 +489,8 @@ fn test_case_12_partial_initialization_dropped_correctly() {
         import <iter_adapters>;
         import <iter_consumers>;
 
-        struct Resource { id: i32 }
+        struct Resource { id: i32 };
+
         impl Drop for Resource { fn drop(self: &rw Self) {} }
 
         async fn step() -> i32 { return 1; }

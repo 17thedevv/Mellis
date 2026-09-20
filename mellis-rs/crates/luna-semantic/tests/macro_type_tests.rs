@@ -1,4 +1,4 @@
-﻿use luna_ast::AstArena;
+use luna_ast::AstArena;
 use luna_common::ids::FileId;
 use luna_lexer::Lexer;
 use luna_parser::Parser;
@@ -140,7 +140,7 @@ fn test_macro_generating_generic_struct() {
         (@name: ident) => {
             struct @name<T> {
                 val: T,
-            }
+            };
         }
     }
 

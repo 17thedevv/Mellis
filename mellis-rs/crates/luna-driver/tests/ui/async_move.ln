@@ -1,6 +1,6 @@
 struct Resource {
     val: i32,
-}
+};
 
 fn consume(r: Resource) -> i32 {
     return r.val;

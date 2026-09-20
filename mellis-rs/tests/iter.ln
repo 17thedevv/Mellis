@@ -1,10 +1,10 @@
 struct Vec {
     data: &i32,
-}
+};
 
 struct VecIter {
     ptr: &i32,
-}
+};
 
 impl Vec {
     fn iter(self: &Vec) -> VecIter {

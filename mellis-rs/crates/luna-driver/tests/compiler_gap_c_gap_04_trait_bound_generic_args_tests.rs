@@ -51,7 +51,7 @@ trait Transformer<In, Out> {
 
 struct IntToLongWorker {
     factor: i64,
-}
+};
 
 impl Transformer<i32, i64> for IntToLongWorker {
     fn transform(self: &Self, val: i32) -> i64 {
@@ -61,7 +61,7 @@ impl Transformer<i32, i64> for IntToLongWorker {
 
 struct Pipeline<In, Out, Tr: Transformer<In, Out>> {
     worker: Tr,
-}
+};
 
 impl<In, Out, Tr: Transformer<In, Out>> Pipeline<In, Out, Tr> {
     pub fn process(self: &Self, val: In) -> Out {
@@ -97,7 +97,7 @@ trait Converter<FromTy, ToTy> {
 
 struct Doubler {
     base: i32,
-}
+};
 
 impl Converter<i32, i32> for Doubler {
     fn convert(self: &Self, from: i32) -> i32 {

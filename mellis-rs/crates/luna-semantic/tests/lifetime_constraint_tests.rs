@@ -1,4 +1,4 @@
-﻿use luna_ast::AstArena;
+use luna_ast::AstArena;
 use luna_common::ids::FileId;
 use luna_lexer::Lexer;
 use luna_parser::Parser;
@@ -13,6 +13,10 @@ fn check_code(source: &str) -> Result<(), Vec<luna_common::Diagnostic>> {
     let lexer = Lexer::new(source, file_id);
     let mut parser = Parser::new(lexer, &mut arena, file_id);
     let items = parser.parse_file().expect("parse_file failed");
+
+    if !parser.diagnostics.is_empty() {
+        return Err(parser.diagnostics);
+    }
 
     let mut ctx = SemanticContext::new();
     let mut resolver = Resolver::new(&mut ctx, &arena, &source_manager);
@@ -34,7 +38,7 @@ fn check_code(source: &str) -> Result<(), Vec<luna_common::Diagnostic>> {
 #[test]
 fn test_simple_outlives() {
     let source = r#"
-        fn foo(a: &i32, b: &i32) where outlives(b, a) {}
+        fn foo(a: &i32, b: &i32) requires life(b) >= life(a) {}
     "#;
     let result = check_code(source);
     assert!(result.is_ok(), "Expected OK, got: {:?}", result.err());
@@ -43,7 +47,7 @@ fn test_simple_outlives() {
 #[test]
 fn test_multi_outlives() {
     let source = r#"
-        fn bar(a: &i32, b: &i32, c: &i32) where outlives(b, a), outlives(c, b) {}
+        fn bar(a: &i32, b: &i32, c: &i32) requires life(b) >= life(a), life(c) >= life(b) {}
     "#;
     let result = check_code(source);
     assert!(result.is_ok(), "Expected OK, got: {:?}", result.err());
@@ -52,7 +56,7 @@ fn test_multi_outlives() {
 #[test]
 fn test_provenance_and_constraints() {
     let source = r#"
-        fn combined(a: &i32, b: &i32) -> &i32 life_from(a | b) where outlives(a, b) {
+        fn combined(a: &i32, b: &i32) -> &i32 life_from(a | b) requires life(a) >= life(b) {
             return b;
         }
     "#;

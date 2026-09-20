@@ -2,7 +2,7 @@ macro make_container {
     (@name: ident) => {
         struct @name<T> {
             val: T,
-        }
+        };
     }
 }
 

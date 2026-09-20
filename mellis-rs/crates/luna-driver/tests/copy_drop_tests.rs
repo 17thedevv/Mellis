@@ -42,7 +42,7 @@ fn test_mutual_exclusivity_copy_drop() {
         import <iter_consumers>;
         struct MyStruct {
             x: i32,
-        }
+        };
 
         impl Drop for MyStruct {
             fn drop(self: &rw Self) {}
@@ -75,7 +75,7 @@ fn test_transitive_copy_drop_conflict() {
         import <iter_consumers>;
         struct Inner {
             x: i32,
-        }
+        };
 
         impl Drop for Inner {
             fn drop(self: &rw Self) {}
@@ -83,7 +83,7 @@ fn test_transitive_copy_drop_conflict() {
 
         struct Outer {
             inner: Inner,
-        }
+        };
 
         // Implementing Copy for Outer should fail because its field `inner` needs drop
         impl Copy for Outer {}
@@ -113,7 +113,7 @@ fn test_valid_copy() {
         import <iter_consumers>;
         struct ValidStruct {
             x: i32,
-        }
+        };
 
         impl Copy for ValidStruct {}
 
@@ -137,7 +137,7 @@ fn test_derive_copy_drop_conflict() {
         import <iter_consumers>;
         struct Resource {
             x: i32,
-        }
+        };
 
         impl Drop for Resource {
             fn drop(self: &rw Self) {}
@@ -146,7 +146,7 @@ fn test_derive_copy_drop_conflict() {
         #[derive(Copy)]
         struct Bad {
             resource: Resource,
-        }
+        };
 
         fn main() -> i32 { return 0; }
     "#;
@@ -173,7 +173,7 @@ fn test_generic_instantiation_copy_drop() {
         import <iter_consumers>;
         struct Resource {
             x: i32,
-        }
+        };
 
         impl Drop for Resource {
             fn drop(self: &rw Self) {}
@@ -181,7 +181,7 @@ fn test_generic_instantiation_copy_drop() {
 
         struct Wrapper<T> {
             value: T,
-        }
+        };
 
         impl<T> Copy for Wrapper<T> {}
 

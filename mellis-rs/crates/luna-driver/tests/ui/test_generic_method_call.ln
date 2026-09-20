@@ -2,7 +2,7 @@ trait Writer {
     fn write(self: &rw Self) -> i32;
 }
 
-struct FileWriter {}
+struct FileWriter {};
 
 impl Writer for FileWriter {
     fn write(self: &rw FileWriter) -> i32 {
@@ -10,11 +10,11 @@ impl Writer for FileWriter {
     }
 }
 
-struct BadWriter {}
+struct BadWriter {};
 
 struct Box<T> {
     value: T
-}
+};
 
 impl<T> Box<T> {
     fn write_to_box<W: Writer>(self: &rw Box<T>, writer: &rw W) -> i32 {

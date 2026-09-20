@@ -1,4 +1,4 @@
-﻿use luna_driver::{check, compile, CompilerOptions};
+use luna_driver::{check, compile, CompilerOptions};
 
 #[test]
 fn test_macro_full_pipeline_arithmetic() {
@@ -48,7 +48,7 @@ fn test_macro_full_pipeline_struct_and_impl() {
             struct @name {
                 x: i32,
                 y: i32,
-            }
+            };
         }
     }
 

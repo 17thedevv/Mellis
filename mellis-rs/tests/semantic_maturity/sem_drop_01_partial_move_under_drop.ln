@@ -1,11 +1,11 @@
 // SEM-DROP-01: invalid partial move from a user-defined value implementing Drop.
 struct Token {
     marker: i32,
-}
+};
 
 struct Owner {
     token: Token,
-}
+};
 
 impl Drop for Owner {
     fn drop(self: &rw Self) {}

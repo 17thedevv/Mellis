@@ -264,7 +264,7 @@ fn test_case_09_suspended_future_drop_generation() {
 
         struct Resource {
             id: i32,
-        }
+        };
 
         impl Drop for Resource {
             fn drop(self: &rw Self) {}

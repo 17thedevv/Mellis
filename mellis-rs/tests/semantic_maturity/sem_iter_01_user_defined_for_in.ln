@@ -2,7 +2,7 @@
 struct CounterIter<T> {
     current: i32,
     limit: i32,
-}
+};
 
 impl<T> Iterator<i32> for CounterIter<T> {
     fn next(self: &rw Self) -> Option<i32> {

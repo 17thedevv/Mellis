@@ -13,12 +13,12 @@ struct Vec<T> {
     data: *rw T,
     len: i32,
     cap: i32,
-}
+};
 
 
 struct VecIter<T> {
     ptr: *rw T,
-}
+};
 
 enum Option<T> {
     None,

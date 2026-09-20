@@ -154,7 +154,8 @@ fn test_gate_invalid_main_signature() {
 #[test]
 fn test_gate_explicit_drop_call() {
     let src = r#"
-        struct Foo { x: i32 }
+        struct Foo { x: i32 };
+
         impl Drop for Foo {
             fn drop(self: &rw Self) {}
         }
@@ -224,7 +225,8 @@ fn test_gate_unresolved_symbol() {
 #[test]
 fn test_gate_unknown_method() {
     let src = r#"
-        struct UserType { value: i32 }
+        struct UserType { value: i32 };
+
         fn main() -> i32 {
             dec value = UserType { value: 7 };
             return value.missing_method();
@@ -440,13 +442,13 @@ fn test_adversarial_negative_corpus() {
         ("mut_immutable_ptr", "fn main() { dec x = 1; dec p: *i32 = &x as *i32; unsafe { *p = 2; } }", "E_CANNOT_MUTATE_IMMUTABLE_POINTER"),
         ("mut_immutable_var", "fn main() { dec x = 1; x = 2; }", "Cannot mutate immutable variable"),
         ("range_operator", "fn main() { dec r = 0..10; }", "E_UNSUPPORTED_FEATURE"),
-        ("explicit_drop", "struct S { x: i32 } impl Drop for S { fn drop(self: &rw Self) {} } fn main() { dec s = S { x: 1 }; s.drop(); }", "Explicit calls to drop() are forbidden"),
+        ("explicit_drop", "struct S { x: i32 }; impl Drop for S { fn drop(self: &rw Self) {} } fn main() { dec s = S { x: 1 }; s.drop(); }", "Explicit calls to drop() are forbidden"),
         ("async_main", "async fn main() {}", "E_INVALID_MAIN_SIGNATURE"),
         ("main_args_void", "fn main(args: [str]) -> void {}", "E_INVALID_MAIN_SIGNATURE"),
         ("comptime_div_zero", "const X: i32 = comptime { 10 / 0 }; fn main() {}", "attempt to divide by zero"),
         ("type_mismatch_var", "fn main() { dec x: i32 = true; }", "type mismatch"),
         ("unresolved_sym", "fn main() { missing_fn_call(); }", "not found"),
-        ("copy_drop_conflict", "import <copy>; struct S { x: i32 } impl Copy for S {} impl Drop for S { fn drop(self: &rw Self) {} } fn main() {}", "E_COPY_DROP_CONFLICT"),
+        ("copy_drop_conflict", "import <copy>; struct S { x: i32 }; impl Copy for S {} impl Drop for S { fn drop(self: &rw Self) {} } fn main() {}", "E_COPY_DROP_CONFLICT"),
     ];
 
     for (name, src, expected_err) in corpus {

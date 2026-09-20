@@ -3,7 +3,7 @@ trait Factory {
     fn make() -> i32;
 }
 
-struct BoolFactory {}
+struct BoolFactory {};
 
 impl Factory for BoolFactory {
     fn make() -> i32 {

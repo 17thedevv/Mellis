@@ -150,7 +150,7 @@ fn test_case_02_foreign_trait_local_type_pass() {
     let source = r#"
         struct MyStruct {
             val: i32,
-        }
+        };
         impl core::Clone for MyStruct {
             fn clone(self: &Self) -> MyStruct { return *self; }
         }
@@ -167,7 +167,7 @@ fn test_case_03_foreign_trait_local_generic_struct_pass() {
     let source = r#"
         struct MyBox<T> {
             val: T,
-        }
+        };
         impl<T> core::Clone for MyBox<T> {
             fn clone(self: &Self) -> MyBox<T> { return *self; }
         }
@@ -184,7 +184,7 @@ fn test_case_04_local_inherent_impl_pass() {
     let source = r#"
         struct MyStruct {
             val: i32,
-        }
+        };
         impl MyStruct {
             fn get_val(self: &Self) -> i32 { return self.val; }
         }
@@ -247,7 +247,7 @@ fn test_case_08_orphan_generic_args_no_locality_fail() {
     let source = r#"
         struct LocalType {
             x: i32,
-        }
+        };
         impl core::Clone for core::Result {
             fn clone(self: &Self) -> core::Result { return *self; }
         }
@@ -269,7 +269,7 @@ fn test_case_09_coherence_duplicate_exact_fail() {
         }
         struct S {
             x: i32,
-        }
+        };
         impl Foo for S {
             fn f(self: &Self) -> i32 { return 1; }
         }
@@ -291,7 +291,7 @@ fn test_case_10_coherence_local_vs_imported_duplicate_fail() {
     let source = r#"
         struct S {
             x: i32,
-        }
+        };
         impl core::Clone for S {
             fn clone(self: &Self) -> S { return *self; }
         }
@@ -382,7 +382,7 @@ fn test_case_13_coherence_generic_vs_concrete_overlap_fail() {
         }
         struct Box<T> {
             val: T,
-        }
+        };
         impl<T> Foo for Box<T> {
             fn f(self: &Self) -> i32 { return 1; }
         }
@@ -407,7 +407,7 @@ fn test_case_14_coherence_two_generics_overlap_fail() {
         }
         struct S<T> {
             val: T,
-        }
+        };
         impl<T> Foo for S<T> {
             fn f(self: &Self) -> i32 { return 1; }
         }
@@ -432,7 +432,7 @@ fn test_case_15_coherence_non_overlapping_generics_pass() {
         }
         struct S<T> {
             val: T,
-        }
+        };
         impl Foo for S<i32> {
             fn f(self: &Self) -> i32 { return 1; }
         }
@@ -448,7 +448,7 @@ fn test_case_15_coherence_non_overlapping_generics_pass() {
 #[test]
 fn test_case_16_orphan_reference_head_fail() {
     let source = r#"
-        struct LocalType {}
+        struct LocalType {};
         impl core::Clone for &LocalType {}
     "#;
     let (ctx, success) = run_semantic_with_setup(source, |ctx| {
@@ -470,7 +470,7 @@ fn test_case_16_orphan_reference_head_fail() {
 #[test]
 fn test_case_17_orphan_pointer_head_fail() {
     let source = r#"
-        struct LocalType {}
+        struct LocalType {};
         impl core::Clone for *LocalType {}
     "#;
     let (ctx, success) = run_semantic_with_setup(source, |ctx| {
@@ -493,7 +493,7 @@ fn test_case_17_orphan_pointer_head_fail() {
 fn test_case_18_local_trait_reference_head_pass() {
     let source = r#"
         trait LocalTrait {}
-        struct LocalType {}
+        struct LocalType {};
         impl LocalTrait for &LocalType {}
     "#;
     let (ctx, success) = run_semantic(source);

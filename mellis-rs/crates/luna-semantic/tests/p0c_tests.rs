@@ -1,4 +1,4 @@
-﻿use luna_ast::AstArena;
+use luna_ast::AstArena;
 use luna_common::ids::FileId;
 use luna_lexer::Lexer;
 use luna_parser::Parser;
@@ -40,7 +40,7 @@ fn test_concrete_normalization() {
         }
         struct MyIter {
             val: i32,
-        }
+        };
         impl Iterator for MyIter {
             type Item = i32;
             fn next(self: &rw Self) -> Self::Item {
@@ -100,7 +100,7 @@ fn test_missing_impl_rejection() {
         }
         struct Foo {
             x: i32,
-        }
+        };
         fn f(x: Foo) -> Foo::Item {
             return 0;
         }
@@ -120,7 +120,7 @@ fn test_missing_definition_rejection() {
         }
         struct Foo {
             x: i32,
-        }
+        };
         impl TraitA for Foo {
             // omits type Item
         }
@@ -178,7 +178,7 @@ fn test_projection_cycle_detection() {
         trait Loop {
             type Item;
         }
-        struct Cycler {}
+        struct Cycler {};
         impl Loop for Cycler {
             type Item = Cycler::Item;
         }
@@ -200,7 +200,7 @@ fn test_associated_equality_constraint() {
         }
         struct IntIter {
             val: i32,
-        }
+        };
         impl Iterator for IntIter {
             type Item = i32;
             fn next(self: &rw Self) -> Self::Item {
@@ -225,7 +225,7 @@ fn test_associated_equality_constraint() {
         }
         struct BoolIter {
             val: bool,
-        }
+        };
         impl Iterator for BoolIter {
             type Item = bool;
             fn next(self: &rw Self) -> Self::Item {
@@ -254,7 +254,7 @@ fn test_generic_substitution_deep() {
         }
         struct Wrapper<T> {
             val: T,
-        }
+        };
         impl<T> Container for Wrapper<T> {
             type Elem = T;
         }

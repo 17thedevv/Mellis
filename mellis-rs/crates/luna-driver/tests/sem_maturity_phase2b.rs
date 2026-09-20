@@ -87,7 +87,7 @@ mod mutable_references {
         let src = r#"
             struct Counter {
                 value: i32,
-            }
+            };
 
             fn increment(c: &rw Counter) {
                 c.value = c.value + 1;
@@ -109,7 +109,7 @@ mod mutable_references {
             struct Pair {
                 first: i32,
                 second: i32,
-            }
+            };
 
             fn double_first(p: &rw Pair) {
                 p.first = p.first * 2;
@@ -130,7 +130,7 @@ mod mutable_references {
         let src = r#"
             struct Counter {
                 value: i32,
-            }
+            };
 
             fn increment(c: &Counter) {
                 c.value = c.value + 1;
@@ -246,7 +246,7 @@ mod move_in_loops {
         let src = r#"
             struct Data {
                 id: i32,
-            }
+            };
 
             fn process(d: Data) -> i32 {
                 return d.id;
@@ -271,7 +271,7 @@ mod move_in_loops {
         let src = r#"
             struct Data {
                 id: i32,
-            }
+            };
 
             fn consume(d: Data) -> i32 {
                 return d.id;
@@ -296,7 +296,7 @@ mod move_in_loops {
         let src = r#"
             struct Item {
                 val: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw i = 0;
@@ -316,7 +316,7 @@ mod move_in_loops {
         let src = r#"
             struct Item {
                 val: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw cond = true;
@@ -339,7 +339,7 @@ mod move_in_loops {
         let src = r#"
             struct Item {
                 val: i32,
-            }
+            };
 
             fn consume(i: Item) {}
 
@@ -364,7 +364,7 @@ mod move_in_loops {
         let src = r#"
             struct Item {
                 val: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw i = 0;
@@ -387,7 +387,7 @@ mod move_in_loops {
         let src = r#"
             struct Data {
                 value: i32,
-            }
+            };
 
             fn use_data(d: Data) -> i32 {
                 return d.value;
@@ -438,7 +438,7 @@ mod move_through_match {
 
             struct Data {
                 value: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec mode = Mode::A;
@@ -468,7 +468,7 @@ mod move_through_match {
 
             struct Data {
                 value: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec mode = Mode::B;
@@ -499,7 +499,7 @@ mod move_through_match {
 
             struct Data {
                 value: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec mode = Mode::A;
@@ -528,7 +528,7 @@ mod move_through_match {
 
             struct Payload {
                 data: i32,
-            }
+            };
 
             fn process(p: Payload) -> i32 {
                 return p.data;
@@ -557,7 +557,7 @@ mod move_through_match {
             struct Pair {
                 first: i32,
                 second: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec pair = Pair { first: 10, second: 20 };
@@ -579,7 +579,7 @@ mod move_through_match {
 
             struct Data {
                 value: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec mode = Mode::A;
@@ -608,7 +608,7 @@ mod move_through_match {
 
             struct Data {
                 value: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec mode = Mode::B;
@@ -974,7 +974,7 @@ mod borrow_through_aggregate_fields {
             struct Point {
                 x: i32,
                 y: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw p = Point { x: 1, y: 2 };
@@ -993,7 +993,7 @@ mod borrow_through_aggregate_fields {
             struct Point {
                 x: i32,
                 y: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw p = Point { x: 1, y: 2 };
@@ -1013,7 +1013,7 @@ mod borrow_through_aggregate_fields {
             struct Point {
                 x: i32,
                 y: i32,
-            }
+            };
 
             fn get_x(p: &Point) -> i32 {
                 return p.x;
@@ -1035,7 +1035,7 @@ mod borrow_through_aggregate_fields {
             struct Point {
                 x: i32,
                 y: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw p = Point { x: 1, y: 2 };
@@ -1055,7 +1055,7 @@ mod borrow_through_aggregate_fields {
         let src = r#"
             struct Container {
                 data: i32,
-            }
+            };
 
             fn use_container(c: &Container) -> i32 {
                 return c.data;
@@ -1078,11 +1078,11 @@ mod borrow_through_aggregate_fields {
         let src = r#"
             struct Inner {
                 value: i32,
-            }
+            };
 
             struct Outer {
                 inner: Inner,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw o = Outer { inner: Inner { value: 10 } };
@@ -1102,7 +1102,7 @@ mod borrow_through_aggregate_fields {
             struct Pair {
                 first: i32,
                 second: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec pair = Pair { first: 10, second: 20 };
@@ -1262,7 +1262,7 @@ mod borrow_across_loops {
         let src_valid = r#"
             struct RefBox {
                 ptr: &i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw x = 10;
@@ -1281,7 +1281,7 @@ mod borrow_across_loops {
         let src_escape = r#"
             struct RefBox {
                 ptr: &i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw x = 0;
@@ -1435,7 +1435,7 @@ mod shared_borrow_after_ended_mutable {
         let src_valid = r#"
             struct MutBox {
                 ptr: &rw i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw x = 10;
@@ -1453,7 +1453,7 @@ mod shared_borrow_after_ended_mutable {
         let src_conflict = r#"
             struct MutBox {
                 ptr: &rw i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw x = 10;
@@ -1469,7 +1469,7 @@ mod shared_borrow_after_ended_mutable {
         let src_transfer_conflict = r#"
             struct MutBox {
                 ptr: &rw i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw x = 10;
@@ -1489,7 +1489,7 @@ mod shared_borrow_after_ended_mutable {
         let src_transfer_valid = r#"
             struct MutBox {
                 ptr: &rw i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw x = 10;
@@ -1533,7 +1533,7 @@ mod shared_borrow_after_ended_mutable {
             struct PairHolder {
                 target: &rw i32,
                 counter: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw val = 100;
@@ -1552,7 +1552,7 @@ mod shared_borrow_after_ended_mutable {
             struct PairHolder {
                 target: &rw i32,
                 counter: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw val = 100;
@@ -1570,7 +1570,7 @@ mod shared_borrow_after_ended_mutable {
             struct PairHolder {
                 target: &rw i32,
                 counter: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw val = 100;
@@ -1591,7 +1591,7 @@ mod shared_borrow_after_ended_mutable {
             struct PairHolder {
                 target: &rw i32,
                 counter: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec rw val = 100;
@@ -1624,7 +1624,7 @@ mod regression_controls {
         let src = r#"
             struct Data {
                 value: i32,
-            }
+            };
 
             fn main() -> i32 {
                 dec data = Data { value: 42 };
@@ -1641,7 +1641,7 @@ mod regression_controls {
         let src = r#"
             struct Data {
                 value: i32,
-            }
+            };
 
             fn consume(d: Data) {}
 
@@ -1739,7 +1739,7 @@ mod compiler_gaps {
         let src = r#"
             struct Counter {
                 value: i32,
-            }
+            };
 
             fn increment(c: &Counter) {
                 c.value = c.value + 1;
@@ -1782,8 +1782,10 @@ mod phase2c_controls {
     #[test]
     fn test_ctrl_gap14_nested_projection_rejected() {
         let src = r#"
-            struct Inner { y: i32, }
-            struct Outer { inner: Inner, }
+            struct Inner { y: i32, };
+
+            struct Outer { inner: Inner, };
+
             fn mutate_nested(o: &Outer) {
                 o.inner.y = 10;
             }
@@ -1800,8 +1802,10 @@ mod phase2c_controls {
     #[test]
     fn test_ctrl_gap14_nested_projection_mutref_valid() {
         let src = r#"
-            struct Inner { y: i32, }
-            struct Outer { inner: Inner, }
+            struct Inner { y: i32, };
+
+            struct Outer { inner: Inner, };
+
             fn mutate_nested(o: &rw Outer) {
                 o.inner.y = 10;
             }
@@ -1818,8 +1822,10 @@ mod phase2c_controls {
     #[test]
     fn test_ctrl_gap14_owned_rw_mutation_valid() {
         let src = r#"
-            struct Inner { y: i32, }
-            struct Outer { inner: Inner, }
+            struct Inner { y: i32, };
+
+            struct Outer { inner: Inner, };
+
             fn main() -> i32 {
                 dec rw o = Outer { inner: Inner { y: 0 } };
                 o.inner.y = 10;
@@ -1833,8 +1839,10 @@ mod phase2c_controls {
     #[test]
     fn test_ctrl_gap14_shared_read_valid() {
         let src = r#"
-            struct Inner { y: i32, }
-            struct Outer { inner: Inner, }
+            struct Inner { y: i32, };
+
+            struct Outer { inner: Inner, };
+
             fn read_nested(o: &Outer) -> i32 {
                 return o.inner.y;
             }
@@ -1870,7 +1878,7 @@ mod phase2c_controls {
         let src = r#"
             struct RefWrap {
                 ptr: &rw i32,
-            }
+            };
             fn wrap(x: &rw i32) -> RefWrap life_from(x) {
                 return RefWrap { ptr: x };
             }
@@ -1920,10 +1928,11 @@ mod phase2c_controls {
     #[test]
     fn test_ctrl_zero_field_struct_no_provenance() {
         let src = r#"
-            struct Marker {}
+            struct Marker {};
+
             struct Container {
                 marker: Marker,
-            }
+            };
             fn get_marker(c: &Container) -> Marker {
                 return c.marker;
             }

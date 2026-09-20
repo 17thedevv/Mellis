@@ -5,7 +5,7 @@ trait Convert<T> {
 
 struct Meter {
     value: i32,
-}
+};
 
 impl Convert<i32> for Meter {
     fn convert(self: &Self) -> i32 {

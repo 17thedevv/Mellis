@@ -1,4 +1,4 @@
-﻿use crate::token::{BuiltinKind, Token, TokenKind};
+use crate::token::{BuiltinKind, Token, TokenKind};
 use luna_common::ids::{FileId, Span};
 
 pub struct Lexer<'a> {
@@ -168,6 +168,8 @@ impl<'a> Lexer<'a> {
             "self" => TokenKind::KwSelfVal,
             "Self" => TokenKind::KwSelfTyp,
             "life_from" => TokenKind::KwLifeFrom,
+            "requires" => TokenKind::KwRequires,
+            "life" => TokenKind::KwLife,
             "where" => TokenKind::KwWhere,
             "outlives" => TokenKind::KwOutlives,
             "pub" => TokenKind::KwPub,

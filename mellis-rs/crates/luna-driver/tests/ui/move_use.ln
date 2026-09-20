@@ -1,4 +1,4 @@
-struct S { a: i32 }
+struct S { a: i32 };
 fn consume(s: S) {}
 
 fn main() {

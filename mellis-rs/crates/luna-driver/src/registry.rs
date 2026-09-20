@@ -118,6 +118,7 @@ pub struct ProviderInterface {
     pub expr_member_indices: HashMap<luna_ast::ExprId, u32>,
     pub raw_generic_param_symbols: HashMap<(luna_ast::DeclId, usize), luna_common::ids::SymbolId>,
     pub symbol_lifetime_contracts: HashMap<luna_common::ids::SymbolId, luna_semantic::CanonicalLifetimeContract>,
+    pub symbol_type_lifetime_contracts: HashMap<luna_common::ids::SymbolId, luna_semantic::CanonicalTypeLifetimeContract>,
     pub symbol_ffi_sync_noescape: HashMap<luna_common::ids::SymbolId, Vec<bool>>,
     pub trait_methods: HashMap<CanonicalSymbolId, Vec<CanonicalSymbolId>>,
     pub unsafe_functions: HashSet<luna_common::ids::SymbolId>,
@@ -428,6 +429,12 @@ impl ModuleRegistry {
             for (&old_sym_id, contract) in &interface.symbol_lifetime_contracts {
                 let new_sym_id = lookup_sym(old_sym_id);
                 ctx.tables.fn_lifetime_contracts.insert(new_sym_id, contract.clone());
+            }
+
+            // Inject type lifetime contracts
+            for (&old_sym_id, contract) in &interface.symbol_type_lifetime_contracts {
+                let new_sym_id = lookup_sym(old_sym_id);
+                ctx.tables.type_lifetime_contracts.insert(new_sym_id, contract.clone());
             }
 
             // Inject ffi_sync_noescape
@@ -1215,6 +1222,7 @@ impl ModuleRegistry {
             expr_member_indices,
             raw_generic_param_symbols,
             symbol_lifetime_contracts: ctx.tables.fn_lifetime_contracts.clone(),
+            symbol_type_lifetime_contracts: ctx.tables.type_lifetime_contracts.clone(),
             symbol_ffi_sync_noescape: ctx.tables.ffi_sync_noescape.clone(),
             trait_methods,
             unsafe_functions: ctx.tables.unsafe_functions.clone(),

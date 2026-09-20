@@ -324,23 +324,32 @@ Borrow Integration
     - *"Loop nesting identity is semantic/compiler-structural metadata. Block-set size is never a lifetime semantic."*
     - Hardening must preserve 100% of observable lifetime behavior and pass complete maturity + Region suites.
 
-### Next Semantic Milestone
-- **REGION-02: User Contract Pipeline Alignment & Call-Site Authority Completion**
-  - **REGION-02A: Call-Site Outlives Authority Cutover** *(Priority 1)*
-    - Eliminate `BorrowAnalyzer::root_outlives` and the lexical heuristic `v_long.0 <= v_short.0`.
-    - Realize pipeline:
+### Completed Semantic Milestones
+- **REGION-02: User Contract Pipeline Alignment & Call-Site Authority Completion — COMPLETE & FROZEN ✅**
+  - **REGION-02A: Call-Site Outlives Authority Cutover — COMPLETE & FROZEN ✅**
+    - Eliminated `BorrowAnalyzer::root_outlives` and the lexical heuristic `v_long.0 <= v_short.0`.
+    - Realized pipeline:
       $$\text{CanonicalLifetimeContract} \longrightarrow \text{LifetimeSubject} \longrightarrow \text{Argument RegionIds} \longrightarrow \text{RegionGraph / RegionSolution} \longrightarrow \text{Outlives Verdict} \longrightarrow \text{Diagnostic E2016}$$
-    - **Invariant:** *"Reordering unrelated ValueIds MUST NOT change outlives contract satisfaction."*
-  - **REGION-02B: Canonical Surface Syntax Alignment**
-    - Canonical syntax: `requires life(a) >= life(b)`.
-    - Legacy compatibility syntax: `where outlives(a, b)` (both lower to identical semantic relation $R_a \succeq R_b$).
-    - `life(return)`: `requires life(source) >= life(return)` (parser syntax node -> resolver `LifetimeSubject::Return`).
-  - **REGION-02C: Resolved Contract IR / Struct Contract Completion**
-    - Complete struct contracts in parser and AST (`Decl::Struct`): `struct Holder { value: &T } requires life(value) >= life(self)`.
+    - Verified by `CALLSITE-01..12` (12/12 passing).
+  - **REGION-02B: Canonical Surface Syntax Alignment — COMPLETE & FROZEN ✅**
+    - Canonical syntax: `requires life(a) >= life(b);` and `requires life(a) <= life(b);` with mandatory `;` terminator.
+    - Deterministic rejection of legacy `where outlives` with migration diagnostic (`E1032`).
+    - Semantic receiver mapping `life(self)` via canonical `SelfVal` identity.
+    - Verified by `SYNTAX-01..12` (12/12 passing).
+  - **REGION-02C: Struct / Resolved Contract Completion — COMPLETE & FROZEN ✅**
+    - Parser & AST: `struct S { field: &T } requires life(field) >= life(self);` with mandatory `;` terminator.
+    - Admissibility Gate: v1 admits only reference fields (`&T`, `&rw T`) outliving `SelfVal`; raw pointers (`*T`, `*rw T`) and non-reference values strictly rejected.
     - Pipeline: $\text{Parser AST} \longrightarrow \text{Resolver} \longrightarrow \text{ResolvedLifetimeContract} \longrightarrow \text{CanonicalLifetimeContract}$.
-    - Semantic boundary: *"source spelling $\ne$ semantic identity"* (field projections resolve to symbolic identities, not strings).
-  - **REGION-02D: End-to-End Contract Parity & Legacy Compatibility**
-    - Cross-verify `where outlives` and `requires life() >= life()`.
-    - Verify identical `CanonicalLifetimeContract` and call-site Region verdicts across source and `.llib` providers.
-    - Guarantee struct contracts survive `.llib` metadata serialization.
+    - Verification in borrowck: Projected `PlaceDesc`-keyed `ProvenanceSet` decoupled from loans; dynamic destination `Place(s)` instance regions.
+    - Verified by `STRUCT-SYNTAX-01..05` (5/5) and `STRUCT-LIFE-01..21` (21/21 passing).
+  - **REGION-02D: End-to-End Contract Parity & Legacy Compatibility — 100% ABSORBED & FROZEN ✅**
+    - *Scope Absorption Audit:*
+      - Legacy `where outlives` removal & migration diagnostic $\longrightarrow$ Absorbed in **02B** (`SYNTAX-08`).
+      - Canonical syntax source behavior & `SelfVal` canonical identity $\longrightarrow$ Absorbed in **02B** (`SYNTAX-01..03, 11`).
+      - Function `.llib` parity $\longrightarrow$ Absorbed in **02A / 02B** (`test_syntax_10_llib_contract_parity`, `cutover_08_source_and_llib_parity_after_cutover`).
+      - Struct `.llib` parity $\longrightarrow$ Absorbed in **02C** (`STRUCT-LIFE-09`).
+      - Artifact format version bump & deterministic mismatch rejection $\longrightarrow$ Absorbed in **02C** (`STRUCT-LIFE-17`, `LLIB_FORMAT_VERSION = 1`).
+      - Type field canonical identity $\longrightarrow$ Absorbed in **02C** (`CanonicalFieldPath`, 0-based indexing, `STRUCT-LIFE-02`).
+    - All requirements independently and rigorously verified with zero remaining debt. Standalone phase superseded.
+
 

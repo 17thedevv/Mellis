@@ -5,7 +5,7 @@ trait Increment {
 
 struct Counter {
     value: i32,
-}
+};
 
 impl Increment for Counter {
     fn increment(self: &rw Counter) {

@@ -1,7 +1,7 @@
 struct Source {
     current: i32,
     limit: i32,
-}
+};
 
 impl Source {
     fn take(self: &rw Self) -> Option<i32> {

@@ -48,7 +48,7 @@ fn manifest_maps_logical_identity_to_physical_source() {
 fn llib_candidate_precedes_source_for_registered_provider() {
     let ext_dir = create_temp_dir("llib_over_source");
     fs::create_dir_all(ext_dir.join("alloc")).unwrap();
-    fs::write(ext_dir.join("alloc/vec.ln"), "struct Vec {}").unwrap();
+    fs::write(ext_dir.join("alloc/vec.ln"), "struct Vec {};").unwrap();
     fs::write(ext_dir.join("alloc/vec.llib"), b"candidate").unwrap();
     let manifest = manifest_for(&ext_dir, "vec", "alloc/vec", "public");
 
@@ -87,7 +87,7 @@ fn source_is_selected_only_when_artifact_is_absent() {
 fn unregistered_physical_path_is_not_a_logical_alias() {
     let ext_dir = create_temp_dir("physical_path_not_alias");
     fs::create_dir_all(ext_dir.join("alloc")).unwrap();
-    fs::write(ext_dir.join("alloc/vec.ln"), "struct Vec {}").unwrap();
+    fs::write(ext_dir.join("alloc/vec.ln"), "struct Vec {};").unwrap();
     let manifest = manifest_for(&ext_dir, "vec", "alloc/vec", "public");
 
     let err = ExternalComponentDiscovery::discover(
@@ -104,7 +104,7 @@ fn unregistered_physical_path_is_not_a_logical_alias() {
 fn internal_visibility_depends_on_requester_provenance() {
     let ext_dir = create_temp_dir("internal_provenance");
     fs::create_dir_all(ext_dir.join("alloc")).unwrap();
-    fs::write(ext_dir.join("alloc/raw_table.ln"), "struct RawTable {}").unwrap();
+    fs::write(ext_dir.join("alloc/raw_table.ln"), "struct RawTable {};").unwrap();
     let manifest = manifest_for(&ext_dir, "__raw_table", "alloc/raw_table", "internal");
 
     assert!(

@@ -12,7 +12,7 @@ import <string>;
 
 struct SideEffect {
     counter: i32,
-}
+};
 
 impl SideEffect {
     fn run(self: &rw Self, val: i32) -> i32 {
@@ -23,7 +23,7 @@ impl SideEffect {
 
 struct Logger {
     log: Vec<i32>,
-}
+};
 
 impl Logger {
     fn record(self: &rw Self, val: i32) -> i32 {

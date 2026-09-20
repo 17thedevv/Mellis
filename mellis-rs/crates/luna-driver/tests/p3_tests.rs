@@ -73,7 +73,8 @@ fn test_case_01_unsized_dyn_trait_in_let_rejected() {
         trait Foo {
             fn f(self: &Self) -> i32;
         }
-        struct S { x: i32 }
+        struct S { x: i32 };
+
         impl Foo for S {
             fn f(self: &Self) -> i32 { return self.x; }
         }
@@ -174,7 +175,7 @@ fn test_case_05_unsized_struct_field_rejected() {
         }
         struct BadStruct {
             f: dyn Foo,
-        }
+        };
         fn main() -> i32 { return 0; }
     "#;
     let (success, diags) = run_compiler("test_05", src);
@@ -204,7 +205,7 @@ fn test_case_06_ref_dyn_trait_creation_and_dispatch() {
         }
         struct S {
             val: i32,
-        }
+        };
         impl Foo for S {
             fn f(self: &Self) -> i32 {
                 return self.val;
@@ -240,7 +241,7 @@ fn test_case_07_raw_pointer_dyn_trait_unsafe() {
         }
         struct S {
             val: i32,
-        }
+        };
         impl Foo for S {
             fn f(self: &Self) -> i32 {
                 return self.val;
@@ -490,7 +491,7 @@ fn test_case_18_vtable_layout_drop_glue_concrete_called() {
         }
         struct Resource {
             id: i32,
-        }
+        };
         impl Drop for Resource {
             fn drop(self: &rw Self) {
                 self.id = 0;
@@ -528,7 +529,7 @@ fn test_case_19_vtable_layout_drop_glue_null_noop() {
         }
         struct Trivial {
             val: i32,
-        }
+        };
         impl Action for Trivial {
             fn act(self: &Self) -> i32 {
                 return self.val;
@@ -563,7 +564,7 @@ fn test_case_20_vtable_method_order_stability() {
         }
         struct Calc {
             base: i32,
-        }
+        };
         impl Multi for Calc {
             fn alpha(self: &Self) -> i32 { return self.base + 1; }
             fn beta(self: &Self) -> i32 { return self.base + 2; }
@@ -597,8 +598,10 @@ fn test_case_21_multi_concrete_types_dispatch() {
         trait Greeter {
             fn greet(self: &Self) -> i32;
         }
-        struct A { code: i32 }
-        struct B { code: i32 }
+        struct A { code: i32 };
+
+        struct B { code: i32 };
+
         impl Greeter for A { fn greet(self: &Self) -> i32 { return self.code; } }
         impl Greeter for B { fn greet(self: &Self) -> i32 { return self.code * 2; } }
         fn dispatch(g: &dyn Greeter) -> i32 {
@@ -632,7 +635,7 @@ fn test_case_22_ref_mut_dyn_trait_mutable_dispatch() {
         }
         struct MyCounter {
             val: i32,
-        }
+        };
         impl Counter for MyCounter {
             fn inc(self: &rw Self) {
                 self.val = self.val + 1;

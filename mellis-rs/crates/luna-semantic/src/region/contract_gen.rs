@@ -50,6 +50,18 @@ impl ResolvedFunctionContract {
             .iter()
             .any(|(_, sub)| matches!(sub, LifetimeSubject::Root(super::subject::LifetimeSubjectRoot::Return)))
     }
+
+    /// Constructs a resolved contract containing ONLY input preconditions from a canonical contract.
+    ///
+    /// # Architectural Invariant
+    /// Return guarantees (`life_from`, return outlives) are strictly excluded to avoid circular proof premises.
+    pub fn from_canonical_preconditions(contract: &crate::CanonicalLifetimeContract) -> Self {
+        let mut resolved = Self::new();
+        for (longer, shorter) in contract.input_preconditions() {
+            resolved = resolved.with_outlives(longer, shorter);
+        }
+        resolved
+    }
 }
 
 /// The generator responsible for lowering API contracts to canonical region constraints.

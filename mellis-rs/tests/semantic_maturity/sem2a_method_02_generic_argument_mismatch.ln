@@ -1,7 +1,7 @@
 // SEM-GAP-13: an explicit generic method argument constrains its value.
 struct Holder<T> {
     value: T,
-}
+};
 
 impl<T> Holder<T> {
     fn replace<U>(self: &Self, other: U) -> U {

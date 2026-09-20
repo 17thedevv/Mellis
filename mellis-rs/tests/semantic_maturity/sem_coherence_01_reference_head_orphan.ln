@@ -1,5 +1,5 @@
 // SEM-COHERENCE-01: invalid orphan impl; `&` is not a local nominal head.
-struct LocalItem {}
+struct LocalItem {};
 
 impl Iterator<LocalItem> for &LocalItem {
     fn next(self: &rw Self) -> Option<LocalItem> {

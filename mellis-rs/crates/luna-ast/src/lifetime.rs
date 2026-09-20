@@ -1,4 +1,4 @@
-﻿//! Lifetime expression AST nodes for Mellis.
+//! Lifetime expression AST nodes for Mellis.
 //!
 //! This module defines the AST representation for lifetime expressions,
 //! following the Implementation Contract specification.
@@ -40,50 +40,88 @@ impl LifetimeExpr {
     }
 }
 
-/// A lifetime constraint clause.
+/// A lifetime target in an explicit outlives constraint or projection.
 ///
-/// This represents the `where outlives(a, b)` syntax, which generates
-/// the constraint `'b ≤ 'a` (b outlives a, i.e., region(b) ⊆ region(a)).
-///
-/// # Examples
-/// ```mellis
-/// fn example(a: &i32, b: &i32) -> &i32
-///     life_from(a)
-///     where outlives(a, b)
-/// ```
+/// Syntax examples:
+/// - `life(a)` -> `LifetimeTargetAst::Named { name: "a", span }`
+/// - `life(self)` -> `LifetimeTargetAst::SelfVal(span)`
+/// - `life(return)` -> `LifetimeTargetAst::Return(span)`
+/// - `life(holder.field)` -> `LifetimeTargetAst::Projection { base, field: "field", span }`
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct LifetimeConstraint {
-    /// The first identifier: `outlives(a, b)` means 'b ≤ 'a
-    pub first: Span,
-    /// The second identifier: `outlives(a, b)` means 'b ≤ 'a
-    pub second: Span,
+pub enum LifetimeTargetAst {
+    Named { name: String, span: Span },
+    SelfVal(Span),
+    Return(Span),
+    Projection {
+        base: Box<LifetimeTargetAst>,
+        field: String,
+        span: Span,
+    },
 }
 
-impl LifetimeConstraint {
-    /// Creates a new outlives constraint: `outlives(first, second)` → `'second ≤ 'first`
-    pub fn outlives(first: Span, second: Span) -> Self {
-        Self { first, second }
+impl LifetimeTargetAst {
+    pub fn span(&self) -> Span {
+        match self {
+            LifetimeTargetAst::Named { span, .. } => *span,
+            LifetimeTargetAst::SelfVal(span) => *span,
+            LifetimeTargetAst::Return(span) => *span,
+            LifetimeTargetAst::Projection { span, .. } => *span,
+        }
     }
 }
+
+impl std::fmt::Display for LifetimeTargetAst {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LifetimeTargetAst::Named { name, .. } => write!(f, "{}", name),
+            LifetimeTargetAst::SelfVal(_) => write!(f, "self"),
+            LifetimeTargetAst::Return(_) => write!(f, "return"),
+            LifetimeTargetAst::Projection { base, field, .. } => write!(f, "{}.{}", base, field),
+        }
+    }
+}
+
+/// A lifetime constraint clause.
+///
+/// Canonical syntax:
+/// ```mellis
+/// requires life(longer) >= life(shorter)
+/// requires life(shorter) <= life(longer)
+/// ```
+/// Both forms normalize to `longer` outliving `shorter` (i.e. region(shorter) ⊆ region(longer)).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct LifetimeConstraintAst {
+    pub longer: LifetimeTargetAst,
+    pub shorter: LifetimeTargetAst,
+    pub span: Span,
+}
+
+impl LifetimeConstraintAst {
+    pub fn new(longer: LifetimeTargetAst, shorter: LifetimeTargetAst, span: Span) -> Self {
+        Self { longer, shorter, span }
+    }
+}
+
+pub type LifetimeConstraint = LifetimeConstraintAst;
 
 /// A function's lifetime signature combining provenance and constraints.
 ///
 /// This is attached to function declarations that use explicit lifetime
-/// annotations via `life_from` and `where outlives` clauses.
+/// annotations via `life_from` and `requires` clauses.
 ///
 /// # Examples
 /// ```mellis
 /// fn foo(x: &i32) -> &i32 life_from(x)
 /// fn bar(a: &i32, b: &i32) -> &i32
 ///     life_from(a | b)
-///     where outlives(a, b)
+///     requires life(a) >= life(b)
 /// ```
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct FnLifetimeSignature {
     /// The provenance expression (life_from)
     pub provenance: Option<LifetimeExpr>,
-    /// Additional lifetime constraints (where outlives clauses)
-    pub constraints: Vec<LifetimeConstraint>,
+    /// Additional lifetime constraints (requires clauses)
+    pub constraints: Vec<LifetimeConstraintAst>,
 }
 
 impl FnLifetimeSignature {
@@ -101,9 +139,28 @@ impl FnLifetimeSignature {
     }
 
     /// Adds an outlives constraint.
-    pub fn with_constraint(mut self, constraint: LifetimeConstraint) -> Self {
+    pub fn with_constraint(mut self, constraint: LifetimeConstraintAst) -> Self {
         self.constraints.push(constraint);
         self
+    }
+}
+
+/// A struct's lifetime contract containing postfix outlives constraints.
+///
+/// Canonical syntax:
+/// ```mellis
+/// struct Holder {
+///     value: &T,
+/// } requires life(value) >= life(self);
+/// ```
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct StructLifetimeContractAst {
+    pub constraints: Vec<LifetimeConstraintAst>,
+}
+
+impl StructLifetimeContractAst {
+    pub fn new(constraints: Vec<LifetimeConstraintAst>) -> Self {
+        Self { constraints }
     }
 }
 
@@ -127,8 +184,14 @@ mod tests {
 
     #[test]
     fn test_constraint_creation() {
-        let c = LifetimeConstraint::outlives(dummy_span(), dummy_span());
-        assert_eq!(c.first.file_id.0, 0);
+        let c = LifetimeConstraintAst::new(
+            LifetimeTargetAst::Named { name: "a".into(), span: dummy_span() },
+            LifetimeTargetAst::Named { name: "b".into(), span: dummy_span() },
+            dummy_span(),
+        );
+        assert_eq!(c.span.file_id.0, 0);
+        assert_eq!(c.longer.to_string(), "a");
+        assert_eq!(c.shorter.to_string(), "b");
     }
 
     #[test]
@@ -141,7 +204,11 @@ mod tests {
         assert!(sig.provenance.is_some());
         assert!(sig.constraints.is_empty());
 
-        let sig = sig.with_constraint(LifetimeConstraint::outlives(dummy_span(), dummy_span()));
+        let sig = sig.with_constraint(LifetimeConstraintAst::new(
+            LifetimeTargetAst::Named { name: "a".into(), span: dummy_span() },
+            LifetimeTargetAst::Named { name: "b".into(), span: dummy_span() },
+            dummy_span(),
+        ));
         assert_eq!(sig.constraints.len(), 1);
     }
 }

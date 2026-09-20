@@ -1,5 +1,5 @@
 trait Animal {}
-struct Dog {}
+struct Dog {};
 impl Animal for Dog {}
 impl Animal for Dog {} //~ ERROR conflicting implementations for trait
 

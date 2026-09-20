@@ -8,7 +8,7 @@ module custom_try_mod {
 
     export struct MyResidual<E> {
         err: E,
-    }
+    };
 
     impl<T, E> Try for MyResult<T, E> {
         type Output = T;

@@ -3,7 +3,7 @@ import <ptr>;
 
 struct Tracker {
     count: *rw u64,
-}
+};
 
 impl Drop for Tracker {
     fn drop(self: &rw Self) {

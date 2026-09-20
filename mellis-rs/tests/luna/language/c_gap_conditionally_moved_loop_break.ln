@@ -1,4 +1,4 @@
-struct Dummy<T> {}
+struct Dummy<T> {};
 
 trait MyIntoIterator<T> {
     fn into_iter(self) -> DummyIter<T>;
@@ -10,7 +10,7 @@ impl<T> MyIntoIterator<T> for Dummy<T> {
     }
 }
 
-struct DummyIter<T> {}
+struct DummyIter<T> {};
 
 trait MyIterator<Item> {
     fn next(self: &rw Self) -> Option<Item>;

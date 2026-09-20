@@ -1,3 +1,3 @@
 module std {
-    export struct Option {}
+    export struct Option {};
 }

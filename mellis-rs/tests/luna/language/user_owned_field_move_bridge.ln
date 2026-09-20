@@ -2,7 +2,7 @@ import <ptr>;
 
 struct Tracker {
     drops: *rw u64,
-}
+};
 
 impl Drop for Tracker {
     fn drop(self: &rw Self) {
@@ -15,11 +15,11 @@ impl Drop for Tracker {
 
 struct Container {
     private value: Tracker,
-}
+};
 
 struct Wrapper {
     private value: Tracker,
-}
+};
 
 fn wrap(value: Tracker) -> Wrapper {
     return Wrapper { value: value };

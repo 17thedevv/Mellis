@@ -56,7 +56,7 @@ fn test_cross_provider_module_scoped_symbol_identity_preserved_in_llib() {
         module mod_a {
             export struct Item {
                 x: i32,
-            }
+            };
 
             export fn make_a(v: i32) -> Item {
                 return Item { x: v };
@@ -71,7 +71,7 @@ fn test_cross_provider_module_scoped_symbol_identity_preserved_in_llib() {
             export struct Item {
                 y: i32,
                 z: i32,
-            }
+            };
 
             export fn make_b(v: i32) -> Item {
                 return Item { y: v, z: v * 2 };
@@ -198,7 +198,7 @@ fn test_cross_provider_same_local_name_disambiguation() {
         module mod_x {
             export struct Item {
                 x_val: i32,
-            }
+            };
 
             export fn make_x(v: i32) -> Item {
                 return Item { x_val: v };
@@ -229,7 +229,7 @@ fn test_cross_provider_same_local_name_disambiguation() {
         module mod_y {
             export struct Item {
                 y_val: i32,
-            }
+            };
 
             export fn make_y(v: i32) -> Item {
                 return Item { y_val: v };

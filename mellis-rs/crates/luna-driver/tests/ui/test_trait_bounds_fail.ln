@@ -2,7 +2,7 @@ trait Printable {
     fn print(self);
 }
 
-struct Unprintable {}
+struct Unprintable {};
 
 fn print_it<T: Printable>(val: T) {
     val.print();

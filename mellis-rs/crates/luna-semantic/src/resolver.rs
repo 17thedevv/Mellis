@@ -19,7 +19,11 @@ impl<'a> ModuleNamespaceProvider<'a> for ModuleNamespaceMap {
     }
 }
 
-use crate::{ScopeId, SemanticContext, SymbolKind};
+use crate::{
+    CanonicalFieldPath, CanonicalTypeLifetimeContract, CanonicalTypeLifetimeSubject,
+    CanonicalTypeOutlivesConstraint, ResolvedTypeLifetimeContract, ResolvedTypeLifetimeSubject,
+    ResolvedTypeOutlivesConstraint, ScopeId, SemanticContext, SymbolKind,
+};
 use luna_ast::{AstArena, Decl, Expr, Item, Pattern, Stmt, Visibility};
 use luna_common::ids::Span;
 use luna_common::DiagnosticCode;
@@ -670,6 +674,7 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                             }
                         }
                         
+                        self.resolve_struct_lifetime_contract(decl_id);
                         self.current_scope = prev_scope;
                     }
                     Decl::Extern { func, .. } => {
@@ -1982,11 +1987,16 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
         // Map parameter names to their symbol IDs
         let mut param_names: std::collections::HashMap<String, luna_common::ids::SymbolId> =
             std::collections::HashMap::new();
+        let mut has_receiver = false;
         for param_id in params {
-            if let Decl::Param { name, .. } = &self.arena.decls[param_id.0 as usize] {
-                let name_str = self.get_span_text(*name).to_string();
-                if let Some(&sym_id) = self.ctx.tables.decl_symbols.get(param_id) {
-                    param_names.insert(name_str, sym_id);
+            if let Decl::Param { name, is_self, .. } = &self.arena.decls[param_id.0 as usize] {
+                if *is_self {
+                    has_receiver = true;
+                } else {
+                    let name_str = self.get_span_text(*name).to_string();
+                    if let Some(&sym_id) = self.ctx.tables.decl_symbols.get(param_id) {
+                        param_names.insert(name_str, sym_id);
+                    }
                 }
             }
         }
@@ -1996,7 +2006,12 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
             match provenance {
                 luna_ast::LifetimeExpr::Provenance(span) => {
                     let name = self.get_span_text(*span).to_string();
-                    if !param_names.contains_key(&name) {
+                    let valid = if name == "self" {
+                        has_receiver
+                    } else {
+                        param_names.contains_key(&name)
+                    };
+                    if !valid {
                         self.ctx.diagnostics.push(
                             luna_common::Diagnostic::error(format!(
                                 "lifetime '{}' does not refer to any parameter in scope",
@@ -2009,7 +2024,12 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                 luna_ast::LifetimeExpr::ProvenanceSet(idents) => {
                     for span in idents {
                         let name = self.get_span_text(*span).to_string();
-                        if !param_names.contains_key(&name) {
+                        let valid = if name == "self" {
+                            has_receiver
+                        } else {
+                            param_names.contains_key(&name)
+                        };
+                        if !valid {
                             self.ctx.diagnostics.push(
                                 luna_common::Diagnostic::error(format!(
                                     "lifetime '{}' does not refer to any parameter in scope",
@@ -2025,27 +2045,50 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
 
         // Resolve outlives constraints
         for constraint in &lifetime_signature.constraints {
-            let first_name = self.get_span_text(constraint.first).to_string();
-            let second_name = self.get_span_text(constraint.second).to_string();
-
-            if !param_names.contains_key(&first_name) {
-                self.ctx.diagnostics.push(
-                    luna_common::Diagnostic::error(format!(
-                        "lifetime '{}' does not refer to any parameter in scope",
-                        first_name
-                    ))
-                    .with_span(constraint.first),
-                );
-            }
-            if !param_names.contains_key(&second_name) {
-                self.ctx.diagnostics.push(
-                    luna_common::Diagnostic::error(format!(
-                        "lifetime '{}' does not refer to any parameter in scope",
-                        second_name
-                    ))
-                    .with_span(constraint.second),
-                );
-            }
+            let mut check_target = |target: &luna_ast::LifetimeTargetAst| {
+                match target {
+                    luna_ast::LifetimeTargetAst::Named { name, span } => {
+                        if !param_names.contains_key(name) {
+                            self.ctx.diagnostics.push(
+                                luna_common::Diagnostic::error(format!(
+                                    "lifetime '{}' does not refer to any parameter in scope",
+                                    name
+                                ))
+                                .with_span(*span),
+                            );
+                        }
+                    }
+                    luna_ast::LifetimeTargetAst::SelfVal(span) => {
+                        if !has_receiver {
+                            self.ctx.diagnostics.push(
+                                luna_common::Diagnostic::error(
+                                    "lifetime 'self' does not refer to any parameter in scope",
+                                )
+                                .with_span(*span),
+                            );
+                        }
+                    }
+                    luna_ast::LifetimeTargetAst::Return(span) => {
+                        self.ctx.diagnostics.push(
+                            luna_common::Diagnostic::error(
+                                "unsupported lifetime contract relation: generic Return lifetime relations in 'requires' are not supported in Lifetime Contract v1; if the intended contract describes return provenance, use 'life_from(...)'",
+                            )
+                            .with_span(*span),
+                        );
+                    }
+                    luna_ast::LifetimeTargetAst::Projection { base, field, span } => {
+                        self.ctx.diagnostics.push(
+                            luna_common::Diagnostic::error(format!(
+                                "unsupported lifetime contract relation: lifetime projection '{}.{}' in 'requires' is not supported in Lifetime Contract v1",
+                                base, field
+                            ))
+                            .with_span(*span),
+                        );
+                    }
+                }
+            };
+            check_target(&constraint.longer);
+            check_target(&constraint.shorter);
         }
 
         // Build canonical lifetime contract if valid
@@ -2059,6 +2102,153 @@ impl<'a, 'b, 'c> Resolver<'a, 'b, 'c> {
                 if let Some(&fn_sym_id) = self.ctx.tables.decl_symbols.get(decl_id) {
                     self.ctx.tables.fn_lifetime_contracts.insert(fn_sym_id, contract);
                 }
+            }
+        }
+    }
+
+    /// Resolves and validates lifetime contracts on struct definitions.
+    /// In v1, struct contracts strictly admit: Field(path) ⪰ SelfVal.
+    pub fn resolve_struct_lifetime_contract(&mut self, decl_id: &luna_ast::DeclId) {
+        let decl = &self.arena.decls[decl_id.0 as usize];
+        let Decl::Struct {
+            name,
+            fields,
+            lifetime_contract,
+            ..
+        } = decl
+        else {
+            return;
+        };
+
+        let Some(contract_ast) = lifetime_contract else {
+            return;
+        };
+
+        let struct_name = self.get_span_text(*name).to_string();
+        let struct_sym = match self.ctx.tables.decl_symbols.get(decl_id).copied() {
+            Some(sym) => sym,
+            None => return,
+        };
+
+        // Map field name -> (field_index, symbol_id, field_span)
+        let mut field_map: std::collections::HashMap<String, (usize, luna_common::ids::SymbolId, Span)> =
+            std::collections::HashMap::new();
+        if let Some(field_sym_ids) = self.ctx.tables.struct_fields.get(&struct_sym) {
+            for (idx, field) in fields.iter().enumerate() {
+                let f_name = self.get_span_text(field.name).to_string();
+                if let Some(&f_sym) = field_sym_ids.get(idx) {
+                    field_map.insert(f_name, (idx, f_sym, field.name));
+                }
+            }
+        }
+
+        let mut resolved_constraints = Vec::new();
+        let mut canonical_constraints = Vec::new();
+        let mut has_error = false;
+
+        for constraint in &contract_ast.constraints {
+            let mut resolve_target = |target: &luna_ast::LifetimeTargetAst| -> Option<ResolvedTypeLifetimeSubject> {
+                match target {
+                    luna_ast::LifetimeTargetAst::SelfVal(_) => {
+                        Some(ResolvedTypeLifetimeSubject::SelfVal)
+                    }
+                    luna_ast::LifetimeTargetAst::Named { name: f_name, span } => {
+                        if let Some(&(_, f_sym, _)) = field_map.get(f_name) {
+                            Some(ResolvedTypeLifetimeSubject::Field(f_sym))
+                        } else {
+                            self.ctx.diagnostics.push(
+                                luna_common::Diagnostic::error(format!(
+                                    "field '{}' not found in struct '{}'",
+                                    f_name, struct_name
+                                ))
+                                .with_span(*span),
+                            );
+                            None
+                        }
+                    }
+                    luna_ast::LifetimeTargetAst::Return(span) => {
+                        self.ctx.diagnostics.push(
+                            luna_common::Diagnostic::error(
+                                "unsupported lifetime contract relation: generic Return lifetime relations in 'requires' are not supported in struct lifetime contracts",
+                            )
+                            .with_span(*span),
+                        );
+                        None
+                    }
+                    luna_ast::LifetimeTargetAst::Projection { base, field, span } => {
+                        self.ctx.diagnostics.push(
+                            luna_common::Diagnostic::error(format!(
+                                "unsupported lifetime contract relation: lifetime projection '{}.{}' in 'requires' is not supported in Lifetime Contract v1",
+                                base, field
+                            ))
+                            .with_span(*span),
+                        );
+                        None
+                    }
+                }
+            };
+
+            let longer = resolve_target(&constraint.longer);
+            let shorter = resolve_target(&constraint.shorter);
+
+            let (Some(longer_subj), Some(shorter_subj)) = (longer, shorter) else {
+                has_error = true;
+                continue;
+            };
+
+            // V1 Relation Admissibility Gate:
+            // Struct contracts strictly admit: Field(path) ⪰ SelfVal
+            match (&longer_subj, &shorter_subj) {
+                (ResolvedTypeLifetimeSubject::Field(field_sym), ResolvedTypeLifetimeSubject::SelfVal) => {
+                    resolved_constraints.push(ResolvedTypeOutlivesConstraint {
+                        longer: longer_subj.clone(),
+                        shorter: shorter_subj.clone(),
+                        span: constraint.span,
+                    });
+
+                    let f_name = self.ctx.symbol_table.get_symbol(*field_sym).name.clone();
+                    if let Some(&(f_idx, _, _)) = field_map.get(&f_name) {
+                        canonical_constraints.push(CanonicalTypeOutlivesConstraint::new(
+                            CanonicalTypeLifetimeSubject::Field(CanonicalFieldPath::single(f_idx as u16)),
+                            CanonicalTypeLifetimeSubject::SelfVal,
+                        ));
+                    }
+                }
+                (ResolvedTypeLifetimeSubject::SelfVal, ResolvedTypeLifetimeSubject::Field(_)) => {
+                    self.ctx.diagnostics.push(
+                        luna_common::Diagnostic::error(
+                            "unsupported lifetime contract relation: struct lifetime contract does not admit 'SelfVal >= Field' in Lifetime Contract v1 (only 'Field >= Self' is supported)",
+                        )
+                        .with_span(constraint.span),
+                    );
+                    has_error = true;
+                }
+                (ResolvedTypeLifetimeSubject::Field(_), ResolvedTypeLifetimeSubject::Field(_)) => {
+                    self.ctx.diagnostics.push(
+                        luna_common::Diagnostic::error(
+                            "unsupported lifetime contract relation: field-to-field lifetime relations are not supported in Lifetime Contract v1",
+                        )
+                        .with_span(constraint.span),
+                    );
+                    has_error = true;
+                }
+                (ResolvedTypeLifetimeSubject::SelfVal, ResolvedTypeLifetimeSubject::SelfVal) => {
+                    // Reflexive constraint is redundant, filtered out
+                }
+            }
+        }
+
+        self.ctx.tables.resolved_type_lifetime_contracts.insert(
+            struct_sym,
+            ResolvedTypeLifetimeContract {
+                constraints: resolved_constraints,
+            },
+        );
+
+        if !has_error {
+            let canonical_contract = CanonicalTypeLifetimeContract::new(canonical_constraints);
+            if !canonical_contract.is_empty() {
+                self.ctx.tables.type_lifetime_contracts.insert(struct_sym, canonical_contract);
             }
         }
     }

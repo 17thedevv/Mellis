@@ -272,6 +272,10 @@ impl<'a> MetadataBuilder<'a> {
             .or_else(|| sym.merged_ids.first().and_then(|(_, msid)| self.provider.symbol_lifetime_contracts.get(msid)))
             .cloned();
 
+        let type_lifetime_contract = self.provider.symbol_type_lifetime_contracts.get(&sid)
+            .or_else(|| sym.merged_ids.first().and_then(|(_, msid)| self.provider.symbol_type_lifetime_contracts.get(msid)))
+            .cloned();
+
         let is_unsafe = self.provider.unsafe_functions.contains(&sid)
             || sym.merged_ids.iter().any(|(_, msid)| self.provider.unsafe_functions.contains(msid));
 
@@ -295,6 +299,7 @@ impl<'a> MetadataBuilder<'a> {
             },
             children: children.into_iter().collect(),
             lifetime_contract,
+            type_lifetime_contract,
             is_unsafe,
         }
     }

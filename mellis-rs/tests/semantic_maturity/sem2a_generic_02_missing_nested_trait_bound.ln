@@ -1,13 +1,13 @@
 // SEM2A-GENERIC-02: a missing nested generic trait bound rejects explicitly.
 struct Wrapper<T> {
     value: T,
-}
+};
 
 trait Mapper<A, B> {
     fn map(self: &Self, input: A) -> B;
 }
 
-struct NotAMapper {}
+struct NotAMapper {};
 
 fn apply<M: Mapper<Wrapper<i32>, Wrapper<bool>>>(
     mapper: &M,
