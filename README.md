@@ -1,6 +1,6 @@
 # Luna Compiler & Toolchain
 
-**Luna** (trước đây có định danh lịch sử là *Mellis* / *fdlang*) là ngôn ngữ lập trình hệ thống hiện đại, hướng tới hiệu năng cao, an toàn bộ nhớ tĩnh và khả năng kiểm soát chặt chẽ tài nguyên. Trình biên dịch canonical của Luna được hiện thực hoàn toàn bằng **Rust** (nằm tại `mellis-rs/`), sinh mã trung gian MVIR và dịch sang mã máy native thông qua **LLVM**.
+**Luna** là ngôn ngữ lập trình hệ thống hiện đại, hướng tới hiệu năng cao, an toàn bộ nhớ tĩnh và khả năng kiểm soát chặt chẽ tài nguyên. Trình biên dịch canonical của Luna được hiện thực hoàn toàn bằng **Rust** (nằm tại `mellis-rs/`), sinh mã trung gian MVIR và dịch sang mã máy native thông qua **LLVM**.
 
 ## ✨ Kiến trúc cốt lõi
 
