@@ -96,7 +96,7 @@ fn test_canonical_dag_integrity() {
         }
     }
 
-    assert_eq!(all_edges.len(), 64, "Expected exactly 64 dependency edges in canonical DAG");
+    assert_eq!(all_edges.len(), 82, "Expected exactly 82 dependency edges in canonical DAG");
 }
 
 /// Helper: extract provider imports from source content
@@ -256,6 +256,9 @@ fn test_sysroot_builder_execution_isolated() {
 
     // Write minimal manifest for isolated test
     let manifest_content = r#"
+[sysroot]
+runtime_abi_version = 1
+
 [[provider]]
 name = "ptr"
 path = "core/ptr"

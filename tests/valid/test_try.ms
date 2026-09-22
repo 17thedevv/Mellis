@@ -2,7 +2,7 @@
 // Tests for the ? (try) operator on Option
 // Uses ONLY existing Mellis syntax confirmed from lib/core and e2e tests.
 
-extern fn __mellis_panic();
+extern fn __luna_panic_default();
 
 enum Option<T> {
     None,
@@ -25,7 +25,7 @@ impl<T> Option<T> {
         match self {
             Option::Some(val) -> val,
             Option::None -> {
-                __mellis_panic()
+                __luna_panic_default()
             }
         }
     }

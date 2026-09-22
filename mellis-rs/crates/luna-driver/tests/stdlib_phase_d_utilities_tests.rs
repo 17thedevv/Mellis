@@ -221,7 +221,7 @@ fn main() -> i32 {
     if sum_i != 15 { return 7; }
 
     // 4. Collect range into Vec<i32> via iter_collect_vec
-    dec collected_vec = iter_collect_vec<Range, i32>(range(10, 14));
+    dec collected_vec = iter_collect_vec<Range<i32>, i32>(range(10, 14));
     if collected_vec.len() != (4 as u64) { return 8; }
     dec s = collected_vec.as_slice();
     if s[0] != 10 { return 9; }
@@ -314,7 +314,7 @@ fn main() -> i32 {
 
     // 5. Iterator fold consumer integration
     dec r_fold = range(1, 6); // 1, 2, 3, 4, 5
-    dec folded_sum = iter_fold<Range, i32, i32>(r_fold, 0, add_fold);
+    dec folded_sum = iter_fold<Range<i32>, i32, i32>(r_fold, 0, add_fold);
     if folded_sum != 15 { return 15; }
 
     return 0;
@@ -323,3 +323,260 @@ fn main() -> i32 {
     let (code, _, stderr) = compile_and_run("test_slice_adversarial_and_negative_ranges_e2e", src);
     assert_eq!(code, 0, "test_slice_adversarial_and_negative_ranges_e2e failed with code {}, stderr: {}", code, stderr);
 }
+
+/// 4. CORE-GAP-07: Exhaustive Range & RangeInclusive coverage across all 10 integer types
+#[test]
+fn test_range_all_10_integer_types_e2e() {
+    let src = r#"
+import <core/panic>;
+import <mem>;
+import <slice>;
+import <iter_adapters>;
+
+fn main() -> i32 {
+    // 1. u8
+    dec rw r_u8 = range(1 as u8, 4 as u8); // 1, 2, 3 -> sum 6
+    dec rw sum_u8: u8 = 0 as u8;
+    while true {
+        dec item = r_u8.next();
+        match item {
+            Option::Some(v) -> { sum_u8 = sum_u8 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_u8 != (6 as u8) { return 1; }
+
+    dec rw ri_u8 = range_inclusive(1 as u8, 3 as u8); // 1, 2, 3 -> sum 6
+    dec rw sum_i_u8: u8 = 0 as u8;
+    while true {
+        dec item = ri_u8.next();
+        match item {
+            Option::Some(v) -> { sum_i_u8 = sum_i_u8 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_u8 != (6 as u8) { return 2; }
+
+    // 2. u16
+    dec rw r_u16 = range(10 as u16, 13 as u16); // 10, 11, 12 -> sum 33
+    dec rw sum_u16: u16 = 0 as u16;
+    while true {
+        dec item = r_u16.next();
+        match item {
+            Option::Some(v) -> { sum_u16 = sum_u16 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_u16 != (33 as u16) { return 3; }
+
+    dec rw ri_u16 = range_inclusive(10 as u16, 12 as u16); // 10, 11, 12 -> sum 33
+    dec rw sum_i_u16: u16 = 0 as u16;
+    while true {
+        dec item = ri_u16.next();
+        match item {
+            Option::Some(v) -> { sum_i_u16 = sum_i_u16 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_u16 != (33 as u16) { return 4; }
+
+    // 3. u32
+    dec rw r_u32 = range(100 as u32, 103 as u32); // 100, 101, 102 -> sum 303
+    dec rw sum_u32: u32 = 0 as u32;
+    while true {
+        dec item = r_u32.next();
+        match item {
+            Option::Some(v) -> { sum_u32 = sum_u32 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_u32 != (303 as u32) { return 5; }
+
+    dec rw ri_u32 = range_inclusive(100 as u32, 102 as u32); // 100, 101, 102 -> sum 303
+    dec rw sum_i_u32: u32 = 0 as u32;
+    while true {
+        dec item = ri_u32.next();
+        match item {
+            Option::Some(v) -> { sum_i_u32 = sum_i_u32 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_u32 != (303 as u32) { return 6; }
+
+    // 4. u64
+    dec rw r_u64 = range(1000 as u64, 1003 as u64); // 1000, 1001, 1002 -> sum 3003
+    dec rw sum_u64: u64 = 0 as u64;
+    while true {
+        dec item = r_u64.next();
+        match item {
+            Option::Some(v) -> { sum_u64 = sum_u64 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_u64 != (3003 as u64) { return 7; }
+
+    dec rw ri_u64 = range_inclusive(1000 as u64, 1002 as u64); // 1000, 1001, 1002 -> sum 3003
+    dec rw sum_i_u64: u64 = 0 as u64;
+    while true {
+        dec item = ri_u64.next();
+        match item {
+            Option::Some(v) -> { sum_i_u64 = sum_i_u64 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_u64 != (3003 as u64) { return 8; }
+
+    // 5. usize
+    dec rw r_usize = range(10 as usize, 13 as usize); // 10, 11, 12 -> sum 33
+    dec rw sum_usize: usize = 0 as usize;
+    while true {
+        dec item = r_usize.next();
+        match item {
+            Option::Some(v) -> { sum_usize = sum_usize + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_usize != (33 as usize) { return 9; }
+
+    dec rw ri_usize = range_inclusive(10 as usize, 12 as usize); // 10, 11, 12 -> sum 33
+    dec rw sum_i_usize: usize = 0 as usize;
+    while true {
+        dec item = ri_usize.next();
+        match item {
+            Option::Some(v) -> { sum_i_usize = sum_i_usize + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_usize != (33 as usize) { return 10; }
+
+    // 6. i8
+    dec rw r_i8 = range(-3 as i8, 1 as i8); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i8: i8 = 0 as i8;
+    while true {
+        dec item = r_i8.next();
+        match item {
+            Option::Some(v) -> { sum_i8 = sum_i8 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i8 != (-6 as i8) { return 11; }
+
+    dec rw ri_i8 = range_inclusive(-3 as i8, 0 as i8); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i_i8: i8 = 0 as i8;
+    while true {
+        dec item = ri_i8.next();
+        match item {
+            Option::Some(v) -> { sum_i_i8 = sum_i_i8 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_i8 != (-6 as i8) { return 12; }
+
+    // 7. i16
+    dec rw r_i16 = range(-3 as i16, 1 as i16); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i16: i16 = 0 as i16;
+    while true {
+        dec item = r_i16.next();
+        match item {
+            Option::Some(v) -> { sum_i16 = sum_i16 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i16 != (-6 as i16) { return 13; }
+
+    dec rw ri_i16 = range_inclusive(-3 as i16, 0 as i16); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i_i16: i16 = 0 as i16;
+    while true {
+        dec item = ri_i16.next();
+        match item {
+            Option::Some(v) -> { sum_i_i16 = sum_i_i16 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_i16 != (-6 as i16) { return 14; }
+
+    // 8. i32
+    dec rw r_i32 = range(-3 as i32, 1 as i32); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i32: i32 = 0 as i32;
+    while true {
+        dec item = r_i32.next();
+        match item {
+            Option::Some(v) -> { sum_i32 = sum_i32 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i32 != (-6 as i32) { return 15; }
+
+    dec rw ri_i32 = range_inclusive(-3 as i32, 0 as i32); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i_i32: i32 = 0 as i32;
+    while true {
+        dec item = ri_i32.next();
+        match item {
+            Option::Some(v) -> { sum_i_i32 = sum_i_i32 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_i32 != (-6 as i32) { return 16; }
+
+    // 9. i64
+    dec rw r_i64 = range(-3 as i64, 1 as i64); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i64: i64 = 0 as i64;
+    while true {
+        dec item = r_i64.next();
+        match item {
+            Option::Some(v) -> { sum_i64 = sum_i64 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i64 != (-6 as i64) { return 17; }
+
+    dec rw ri_i64 = range_inclusive(-3 as i64, 0 as i64); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i_i64: i64 = 0 as i64;
+    while true {
+        dec item = ri_i64.next();
+        match item {
+            Option::Some(v) -> { sum_i_i64 = sum_i_i64 + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_i64 != (-6 as i64) { return 18; }
+
+    // 10. isize
+    dec rw r_isize = range(-3 as isize, 1 as isize); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_isize: isize = 0 as isize;
+    while true {
+        dec item = r_isize.next();
+        match item {
+            Option::Some(v) -> { sum_isize = sum_isize + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_isize != (-6 as isize) { return 19; }
+
+    dec rw ri_isize = range_inclusive(-3 as isize, 0 as isize); // -3, -2, -1, 0 -> sum -6
+    dec rw sum_i_isize: isize = 0 as isize;
+    while true {
+        dec item = ri_isize.next();
+        match item {
+            Option::Some(v) -> { sum_i_isize = sum_i_isize + v; },
+            Option::None -> { break; },
+        }
+    }
+    if sum_i_isize != (-6 as isize) { return 20; }
+
+    // Boundary: u8 max inclusive without overflow
+    dec rw max_ri = range_inclusive(254 as u8, 255 as u8);
+    dec m1 = max_ri.next();
+    dec m2 = max_ri.next();
+    dec m3 = max_ri.next();
+    match m1 { Option::Some(v) -> { if v != (254 as u8) { return 21; } }, Option::None -> { return 22; } }
+    match m2 { Option::Some(v) -> { if v != (255 as u8) { return 23; } }, Option::None -> { return 24; } }
+    match m3 { Option::Some(_) -> { return 25; }, Option::None -> { } }
+
+    return 0;
+}
+"#;
+    let (code, _, stderr) = compile_and_run("test_range_all_10_integer_types_e2e", src);
+    assert_eq!(code, 0, "test_range_all_10_integer_types_e2e failed with code {}, stderr: {}", code, stderr);
+}
+

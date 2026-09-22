@@ -1,0 +1,392 @@
+Module {
+    functions: [
+        Function {
+            name: GlobalId {
+                name: "_MFN10test_modelE",
+                symbol_id: Some(
+                    SymbolId(
+                        135,
+                    ),
+                ),
+            },
+            is_extern: false,
+            is_async: false,
+            arg_count: 0,
+            link_name: None,
+            param_types: [],
+            ret_ty: SemanticTypeId(
+                3,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                        ValueId(
+                            1,
+                        ),
+                        ValueId(
+                            2,
+                        ),
+                        ValueId(
+                            3,
+                        ),
+                        ValueId(
+                            4,
+                        ),
+                        ValueId(
+                            5,
+                        ),
+                        ValueId(
+                            6,
+                        ),
+                        ValueId(
+                            7,
+                        ),
+                        ValueId(
+                            8,
+                        ),
+                        ValueId(
+                            9,
+                        ),
+                    ],
+                    terminator: Some(
+                        Ret {
+                            value: Some(
+                                Value(
+                                    ValueId(
+                                        9,
+                                    ),
+                                ),
+                            ),
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 37,
+                            end: 38,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Local,
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                        value: Number(
+                            "1",
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 37,
+                            end: 38,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Temporary,
+                },
+                ValueData {
+                    inst: Borrow {
+                        is_rw: true,
+                        base: Value(
+                            ValueId(
+                                0,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        86,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 60,
+                            end: 61,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Temporary,
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        86,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 52,
+                            end: 53,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Local,
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                3,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                2,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        86,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 52,
+                            end: 53,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Temporary,
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                3,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        86,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 76,
+                            end: 77,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Temporary,
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                5,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 76,
+                            end: 77,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Temporary,
+                },
+                ValueData {
+                    inst: Alloca,
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 71,
+                            end: 72,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Local,
+                },
+                ValueData {
+                    inst: Store {
+                        ptr: Value(
+                            ValueId(
+                                7,
+                            ),
+                        ),
+                        value: Value(
+                            ValueId(
+                                6,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 71,
+                            end: 72,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Temporary,
+                },
+                ValueData {
+                    inst: Load {
+                        ptr: Value(
+                            ValueId(
+                                7,
+                            ),
+                        ),
+                    },
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 90,
+                            end: 91,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Temporary,
+                },
+            ],
+        },
+        Function {
+            name: GlobalId {
+                name: "main",
+                symbol_id: Some(
+                    SymbolId(
+                        136,
+                    ),
+                ),
+            },
+            is_extern: false,
+            is_async: false,
+            arg_count: 0,
+            link_name: None,
+            param_types: [],
+            ret_ty: SemanticTypeId(
+                3,
+            ),
+            blocks: [
+                BasicBlock {
+                    label: LabelId {
+                        name: "entry0",
+                    },
+                    insts: [
+                        ValueId(
+                            0,
+                        ),
+                    ],
+                    terminator: Some(
+                        Ret {
+                            value: Some(
+                                Value(
+                                    ValueId(
+                                        0,
+                                    ),
+                                ),
+                            ),
+                        },
+                    ),
+                },
+            ],
+            values: [
+                ValueData {
+                    inst: CallDirect {
+                        callee: GlobalId {
+                            name: "_MFN10test_modelE",
+                            symbol_id: Some(
+                                SymbolId(
+                                    135,
+                                ),
+                            ),
+                        },
+                        args: [],
+                    },
+                    ty: SemanticTypeId(
+                        3,
+                    ),
+                    span: Some(
+                        Span {
+                            file_id: FileId(
+                                0,
+                            ),
+                            start: 125,
+                            end: 135,
+                            ctxt: SyntaxContext(
+                                0,
+                            ),
+                        },
+                    ),
+                    origin: Temporary,
+                },
+            ],
+        },
+    ],
+}

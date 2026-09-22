@@ -172,7 +172,7 @@ import <iter_collect>;
     assert!(res_valid.is_ok(), "Valid box_into_inner must compile: {:?}", res_valid.err());
 }
 
-/// B4: Drop lifecycle order: DropInPlace(T) executes before __mellis_dealloc storage.
+/// B4: Drop lifecycle order: DropInPlace(T) executes before __luna_dealloc storage.
 #[test]
 fn test_b4_box_lifecycle_order() {
     let sysroot = Sysroot::discover_for_test().expect("sysroot required");

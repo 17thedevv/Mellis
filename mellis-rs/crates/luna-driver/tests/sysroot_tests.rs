@@ -16,7 +16,12 @@ fn create_temp_dir(name: &str) -> PathBuf {
 fn write_manifest(root: &std::path::Path, body: &str) {
     let ext = root.join("libs").join("external");
     fs::create_dir_all(&ext).unwrap();
-    fs::write(ext.join("sysroot.toml"), body).unwrap();
+    let content = if !body.contains("[sysroot]") {
+        format!("{}\n[sysroot]\nruntime_abi_version = 1\n", body)
+    } else {
+        body.to_string()
+    };
+    fs::write(ext.join("sysroot.toml"), content).unwrap();
 }
 
 #[test]
@@ -210,4 +215,21 @@ fn test_external_component_identity_stable() {
         .get("Drop")
         .expect("Drop contract provider must export Drop");
     assert_eq!(drop_sym.sym.provider_id, Some(core_id));
+}
+
+#[test]
+fn test_sysroot_runtime_abi_version_mismatch_diagnostic() {
+    let temp = create_temp_dir("abi_version_mismatch");
+    let ext = temp.join("libs").join("external");
+    fs::create_dir_all(&ext).unwrap();
+    fs::write(ext.join("sysroot.toml"), "provider = []\n\n[sysroot]\nruntime_abi_version = 999\n").unwrap();
+
+    let sysroot = Sysroot::from_root(temp).expect("sysroot should load from root");
+    let err = sysroot.validate().unwrap_err();
+    let diags = err.into_diagnostics();
+    assert!(
+        diags.iter().any(|d| d.message.contains("runtime ABI version mismatch")),
+        "Expected runtime ABI version mismatch, got: {:?}",
+        diags
+    );
 }

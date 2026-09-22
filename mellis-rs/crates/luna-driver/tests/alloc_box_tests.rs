@@ -58,7 +58,7 @@ fn test_allocator_ln_is_valid() {
 }
 
 /// Verify that `box.ln` passes semantic check when `core` is available.
-/// Note: box.ln depends on __mellis_alloc/__mellis_dealloc which are normally
+/// Note: box.ln depends on __luna_alloc/__luna_dealloc which are normally
 /// provided by allocator.ln. We prepend extern declarations so the file
 /// can be checked in isolation.
 #[test]
@@ -160,7 +160,7 @@ import <iter_collect>;
 // Phase 3: Verify memory lifecycle primitives in MVIR
 // =============================================================================
 
-/// Verify that __mellis_alloc / __mellis_dealloc FFI declarations
+/// Verify that __luna_alloc / __luna_dealloc FFI declarations
 /// are accepted in Luna source without errors.
 #[test]
 fn test_alloc_dealloc_ffi_declarations() {
@@ -168,8 +168,8 @@ fn test_alloc_dealloc_ffi_declarations() {
     let temp = create_temp_dir("alloc_ffi_decl");
     let main_path = temp.join("main.ln");
     let src = r#"
-        export extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
-        export extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
+        export extern fn __luna_alloc(size: u64, align: u64) -> *rw u8;
+        export extern fn __luna_dealloc(ptr: *rw u8, size: u64, align: u64);
 
         fn main() -> i32 {
             return 0;
@@ -180,7 +180,7 @@ fn test_alloc_dealloc_ffi_declarations() {
     let result = check(main_path.to_str().unwrap(), src.to_string(), &options);
     assert!(
         result.is_ok(),
-        "__mellis_alloc/dealloc FFI decls should compile. Diags: {:?}",
+        "__luna_alloc/dealloc FFI decls should compile. Diags: {:?}",
         result.unwrap_err()
     );
 }
@@ -197,15 +197,15 @@ fn test_alloc_dealloc_roundtrip_compiles() {
     // Use a wrapper function that accepts pre-typed u64 args
     // to avoid integer literal inference barriers with extern FFI
     let src = r#"
-        export extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
-        export extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
+        export extern fn __luna_alloc(size: u64, align: u64) -> *rw u8;
+        export extern fn __luna_dealloc(ptr: *rw u8, size: u64, align: u64);
 
         fn do_alloc(size: u64, align: u64) -> *rw u8 {
-            return __mellis_alloc(size, align);
+            return __luna_alloc(size, align);
         }
 
         fn do_dealloc(ptr: *rw u8, size: u64, align: u64) {
-            __mellis_dealloc(ptr, size, align);
+            __luna_dealloc(ptr, size, align);
         }
 
         fn main() -> i32 {

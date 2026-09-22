@@ -523,12 +523,12 @@ fn sem_extern_10_extern_return_value() {
 #[test]
 fn sem_extern_11_extern_return_raw_ptr() {
     let src = r#"
-        extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
-        extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
+        extern fn __luna_alloc(size: u64, align: u64) -> *rw u8;
+        extern fn __luna_dealloc(ptr: *rw u8, size: u64, align: u64);
 
         fn main() -> i32 {
-            dec p = __mellis_alloc(8 as u64, 8 as u64);
-            __mellis_dealloc(p, 8 as u64, 8 as u64);
+            dec p = __luna_alloc(8 as u64, 8 as u64);
+            __luna_dealloc(p, 8 as u64, 8 as u64);
             return 0;
         }
     "#;

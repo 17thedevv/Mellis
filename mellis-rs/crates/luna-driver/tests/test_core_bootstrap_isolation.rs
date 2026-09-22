@@ -186,23 +186,23 @@ fn test_result_type_resolved_with_explicit_import_result() {
 fn test_transitive_bootstrap_panic_not_globally_visible() {
     let bad = r#"
         fn main() -> i32 {
-            __mellis_panic();
+            __luna_panic_default();
         }
     "#;
     assert!(
         check_with_sysroot("panic_not_globally_visible", bad).is_err(),
-        "__mellis_panic must not be globally visible despite core/panic being transitively loaded during bootstrap"
+        "__luna_panic_default must not be globally visible despite core/panic being transitively loaded during bootstrap"
     );
 
     let good = r#"
         import <core/panic>;
         fn main() -> i32 {
-            __mellis_panic();
+            __luna_panic_default();
         }
     "#;
     assert!(
         check_with_sysroot("panic_with_explicit_import", good).is_ok(),
-        "__mellis_panic must be available with explicit import <core/panic>"
+        "__luna_panic_default must be available with explicit import <core/panic>"
     );
 }
 

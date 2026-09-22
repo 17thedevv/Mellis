@@ -798,8 +798,8 @@ fn test_iter_find_owned_droptracker() {
             }
         }
 
-        extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
-        extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
+        extern fn __luna_alloc(size: u64, align: u64) -> *rw u8;
+        extern fn __luna_dealloc(ptr: *rw u8, size: u64, align: u64);
 
         struct OwnedPairIter {
             buf: *rw TrackedItem,
@@ -855,8 +855,8 @@ fn test_iter_find_owned_droptracker() {
         import <iter_adapters>;
         import <iter_consumers>;
 
-        extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
-        extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
+        extern fn __luna_alloc(size: u64, align: u64) -> *rw u8;
+        extern fn __luna_dealloc(ptr: *rw u8, size: u64, align: u64);
 
         struct OwnedCopyIter {
             buf: *rw i32,
@@ -867,7 +867,7 @@ fn test_iter_find_owned_droptracker() {
         impl Drop for OwnedCopyIter {
             fn drop(self: &rw Self) {
                 dec size = self.len * (sizeof(i32) as u64);
-                __mellis_dealloc(self.buf as *rw u8, size, 4 as u64);
+                __luna_dealloc(self.buf as *rw u8, size, 4 as u64);
             }
         }
 
@@ -890,7 +890,7 @@ fn test_iter_find_owned_droptracker() {
 
         fn main() -> i32 {
             dec size = 3 as u64 * (sizeof(i32) as u64);
-            dec raw_buf = __mellis_alloc(size, 4 as u64) as *rw i32;
+            dec raw_buf = __luna_alloc(size, 4 as u64) as *rw i32;
             unsafe {
                 ptr::write<i32>(ptr::add_mut<i32>(raw_buf, 0 as u64), 10);
                 ptr::write<i32>(ptr::add_mut<i32>(raw_buf, 1 as u64), 20);
@@ -959,8 +959,8 @@ fn test_iter_any_owned_droptracker() {
             }
         }
 
-        extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
-        extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
+        extern fn __luna_alloc(size: u64, align: u64) -> *rw u8;
+        extern fn __luna_dealloc(ptr: *rw u8, size: u64, align: u64);
 
         struct OwnedTripleIter {
             buf: *rw TrackedItem,
@@ -978,7 +978,7 @@ fn test_iter_any_owned_droptracker() {
                     i = i + (1 as u64);
                 }
                 dec size = self.len * (sizeof(TrackedItem) as u64);
-                __mellis_dealloc(self.buf as *rw u8, size, 8 as u64);
+                __luna_dealloc(self.buf as *rw u8, size, 8 as u64);
             }
         }
 
@@ -1008,7 +1008,7 @@ fn test_iter_any_owned_droptracker() {
                     (*c_ptr).created = (*c_ptr).created + (3 as u64);
                 }
                 dec size = 3 as u64 * (sizeof(TrackedItem) as u64);
-                dec raw_buf = __mellis_alloc(size, 8 as u64) as *rw TrackedItem;
+                dec raw_buf = __luna_alloc(size, 8 as u64) as *rw TrackedItem;
                 unsafe {
                     ptr::write<TrackedItem>(ptr::add_mut<TrackedItem>(raw_buf, 0 as u64), TrackedItem { val: 10, counter: c_ptr });
                     ptr::write<TrackedItem>(ptr::add_mut<TrackedItem>(raw_buf, 1 as u64), TrackedItem { val: 20, counter: c_ptr });
@@ -1085,8 +1085,8 @@ fn test_iter_all_owned_droptracker() {
             }
         }
 
-        extern fn __mellis_alloc(size: u64, align: u64) -> *rw u8;
-        extern fn __mellis_dealloc(ptr: *rw u8, size: u64, align: u64);
+        extern fn __luna_alloc(size: u64, align: u64) -> *rw u8;
+        extern fn __luna_dealloc(ptr: *rw u8, size: u64, align: u64);
 
         struct OwnedTripleIter {
             buf: *rw TrackedItem,
@@ -1104,7 +1104,7 @@ fn test_iter_all_owned_droptracker() {
                     i = i + (1 as u64);
                 }
                 dec size = self.len * (sizeof(TrackedItem) as u64);
-                __mellis_dealloc(self.buf as *rw u8, size, 8 as u64);
+                __luna_dealloc(self.buf as *rw u8, size, 8 as u64);
             }
         }
 
@@ -1134,7 +1134,7 @@ fn test_iter_all_owned_droptracker() {
                     (*c_ptr).created = (*c_ptr).created + (3 as u64);
                 }
                 dec size = 3 as u64 * (sizeof(TrackedItem) as u64);
-                dec raw_buf = __mellis_alloc(size, 8 as u64) as *rw TrackedItem;
+                dec raw_buf = __luna_alloc(size, 8 as u64) as *rw TrackedItem;
                 unsafe {
                     ptr::write<TrackedItem>(ptr::add_mut<TrackedItem>(raw_buf, 0 as u64), TrackedItem { val: 11, counter: c_ptr });
                     ptr::write<TrackedItem>(ptr::add_mut<TrackedItem>(raw_buf, 1 as u64), TrackedItem { val: 20, counter: c_ptr });

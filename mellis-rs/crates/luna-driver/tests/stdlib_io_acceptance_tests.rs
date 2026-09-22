@@ -123,8 +123,8 @@ fn test_0_sysroot_builder_rebuilds_nested_io_artifacts() {
         .expect("MlibReader must successfully parse canonical io/io.llib");
     let manifest = manifest.expect("canonical io/io.llib must contain a manifest");
     assert!(
-        manifest.dependencies.deps.is_empty(),
-        "IO must have zero stdlib provider dependencies"
+        !manifest.dependencies.deps.is_empty(),
+        "IO now records stdlib dependencies (result, string, vec, etc.)"
     );
 }
 
