@@ -79,6 +79,7 @@ impl<'a> MvirGenerator<'a> {
             pat_types: std::collections::HashMap::new(),
             mono_calls: std::collections::HashMap::new(),
             mono_for_loops: std::collections::HashMap::new(),
+            mono_try_ops: std::collections::HashMap::new(),
             closure_capture_bindings: Vec::new(),
             closure_env_type: None,
             closure_env_ptr_type: None,
@@ -2792,31 +2793,44 @@ impl<'a> MvirGenerator<'a> {
             }
             Expr::Try { expr: inner, .. } => {
                 let inner_op = self.generate_expr(inner);
-                let inner_ty_id = self.ctx.tables.expr_types.get(inner).copied().unwrap_or(luna_semantic::SemanticTypeId(0));
+                let mono_try = self.current_instance.and_then(|inst_ptr| {
+                    let inst = unsafe { &*inst_ptr };
+                    inst.mono_try_ops.get(expr_id).cloned()
+                });
                 
                 // 1. Get the branch method
                 let branch_decl = self.ctx.tables.try_branch_methods.get(expr_id).copied().unwrap();
-                let branch_ret_ty = if let Some(luna_semantic::SemanticType::Function { return_type, .. }) = self.ctx.tables.symbol_types.get(&self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap()).map(|&t| self.ctx.types.get(t).clone()) {
-                    return_type
+                let branch_sym = self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap();
+                
+                let (branch_callee, branch_ret_ty) = if let Some(mono_try) = &mono_try {
+                    (
+                        self.mono_instance_global(branch_sym, &mono_try.branch),
+                        mono_try.branch_ret_ty,
+                    )
                 } else {
-                    luna_semantic::SemanticTypeId(0)
+                    let branch_base_name = self.ctx.symbol_table.get_symbol(branch_sym).name.clone();
+                    let canonical_branch_id = luna_semantic::CanonicalInstanceIdentity {
+                        kind: luna_semantic::CanonicalInstanceKind::Decl(branch_decl),
+                        subst: Vec::new(),
+                    };
+                    let branch_fn_name = canonical_branch_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &branch_base_name);
+                    let branch_ret_ty = if let Some(luna_semantic::SemanticType::Function { return_type, .. }) = self.ctx.tables.symbol_types.get(&branch_sym).map(|&t| self.ctx.types.get(t).clone()) {
+                        return_type
+                    } else {
+                        luna_semantic::SemanticTypeId(0)
+                    };
+                    (
+                        GlobalId {
+                            name: branch_fn_name,
+                            symbol_id: Some(branch_sym),
+                        },
+                        branch_ret_ty,
+                    )
                 };
                 
-                // Call `branch`
-                let branch_sym = self.ctx.tables.decl_symbols.get(&branch_decl).copied().unwrap();
-                let branch_base_name = self.ctx.symbol_table.get_symbol(branch_sym).name.clone();
-                let canonical_branch_id = luna_semantic::CanonicalInstanceIdentity {
-                    kind: luna_semantic::CanonicalInstanceKind::Decl(branch_decl),
-                    subst: Vec::new(),
-                };
-                let branch_fn_name = canonical_branch_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &branch_base_name);
                 let flow_val = self.push_inst(Instruction::CallDirect {
-                    callee: GlobalId {
-                        name: branch_fn_name,
-                        symbol_id: Some(branch_sym),
-                    },
-                    args: vec![inner_op.clone()],
-                    
+                    callee: branch_callee,
+                    args: vec![inner_op],
                 }, branch_ret_ty);
                 
                 // Get ControlFlow's Break and Continue variants from LangItem!
@@ -2870,21 +2884,31 @@ impl<'a> MvirGenerator<'a> {
                 // Call `FromResidual::from_residual`
                 let from_residual_decl = self.ctx.tables.try_from_residual_methods.get(expr_id).copied().unwrap();
                 let from_residual_sym = self.ctx.tables.decl_symbols.get(&from_residual_decl).copied().unwrap();
-                let from_residual_base_name = self.ctx.symbol_table.get_symbol(from_residual_sym).name.clone();
-                let canonical_fr_id = luna_semantic::CanonicalInstanceIdentity {
-                    kind: luna_semantic::CanonicalInstanceKind::Decl(from_residual_decl),
-                    subst: Vec::new(),
+                let (from_residual_callee, expected_ret_ty) = if let Some(mono_try) = &mono_try {
+                    (
+                        self.mono_instance_global(from_residual_sym, &mono_try.from_residual),
+                        mono_try.expected_ret_ty,
+                    )
+                } else {
+                    let from_residual_base_name = self.ctx.symbol_table.get_symbol(from_residual_sym).name.clone();
+                    let canonical_fr_id = luna_semantic::CanonicalInstanceIdentity {
+                        kind: luna_semantic::CanonicalInstanceKind::Decl(from_residual_decl),
+                        subst: Vec::new(),
+                    };
+                    let from_residual_fn_name = canonical_fr_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &from_residual_base_name);
+                    let expected_ret_ty = self.current_function.as_ref().unwrap().ret_ty;
+                    (
+                        GlobalId {
+                            name: from_residual_fn_name,
+                            symbol_id: Some(from_residual_sym),
+                        },
+                        expected_ret_ty,
+                    )
                 };
-                let from_residual_fn_name = canonical_fr_id.symbol_name_with_tables(&self.ctx.types, &self.ctx.symbol_table, &self.ctx.tables, &from_residual_base_name);
-                let expected_ret_ty = self.current_function.as_ref().unwrap().ret_ty;
                 
                 let ret_val = self.push_inst(Instruction::CallDirect {
-                    callee: GlobalId {
-                        name: from_residual_fn_name,
-                        symbol_id: Some(from_residual_sym),
-                    },
+                    callee: from_residual_callee,
                     args: vec![Operand::Value(residual_val)],
-                    
                 }, expected_ret_ty);
                 
                 self.emit_drops_up_to(0, None);

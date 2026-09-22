@@ -4,9 +4,11 @@ use std::collections::BTreeMap;
 use luna_semantic::ty::{BuiltinType, Mutability};
 use crate::format::{InterfaceFingerprint, Fingerprint};
 
+pub const SEMANTIC_METADATA_VERSION: u16 = 2;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticMetadata {
-    pub metadata_version: u16,        // Always 1 for v1
+    pub metadata_version: u16,        // Version 2: Complete ImplHeader identity with instantiated trait_args and self_ty
     pub language_version: u16,        // Core language version compatibility
     pub target_triple: String,        // Target architecture
     pub interface_fingerprint: InterfaceFingerprint,

@@ -29,7 +29,24 @@ impl Mangler {
         symbol_table: &SymbolTable,
         ty_id: SemanticTypeId,
     ) -> String {
+        Self::mangle_type_with_subst(types, symbol_table, ty_id, &[])
+    }
+
+    /// Recursively encode a semantic type with generic parameter substitutions applied.
+    pub fn mangle_type_with_subst(
+        types: &TypeContext,
+        symbol_table: &SymbolTable,
+        ty_id: SemanticTypeId,
+        subst: &[(SymbolId, SemanticTypeId)],
+    ) -> String {
         let ty_id = types.resolve(ty_id);
+        if let SemanticType::GenericParam(gp) = types.get(ty_id) {
+            for &(s, sub_ty) in subst {
+                if s == *gp {
+                    return Self::mangle_type_with_subst(types, symbol_table, sub_ty, subst);
+                }
+            }
+        }
         match types.get(ty_id) {
             SemanticType::Void => "v".to_string(),
             SemanticType::Never => "n".to_string(),
@@ -61,7 +78,7 @@ impl Mangler {
                 } else {
                     let mut args_enc = String::new();
                     for &arg in generic_args {
-                        args_enc.push_str(&Self::mangle_type(types, symbol_table, arg));
+                        args_enc.push_str(&Self::mangle_type_with_subst(types, symbol_table, arg, subst));
                     }
                     format!("T{}G{}EE", path_enc, args_enc)
                 }
@@ -74,38 +91,38 @@ impl Mangler {
                 } else {
                     let mut args_enc = String::new();
                     for &arg in generic_args {
-                        args_enc.push_str(&Self::mangle_type(types, symbol_table, arg));
+                        args_enc.push_str(&Self::mangle_type_with_subst(types, symbol_table, arg, subst));
                     }
                     format!("T{}G{}EE", path_enc, args_enc)
                 }
             }
             SemanticType::Pointer(mutability, inner) => {
                 let m = if *mutability == Mutability::Mutable { "m" } else { "c" };
-                format!("P{}{}", m, Self::mangle_type(types, symbol_table, *inner))
+                format!("P{}{}", m, Self::mangle_type_with_subst(types, symbol_table, *inner, subst))
             }
             SemanticType::Reference(_, mutability, inner) => {
                 let m = if *mutability == Mutability::Mutable { "m" } else { "c" };
-                format!("R{}{}", m, Self::mangle_type(types, symbol_table, *inner))
+                format!("R{}{}", m, Self::mangle_type_with_subst(types, symbol_table, *inner, subst))
             }
             SemanticType::Array(elem, len) => {
-                format!("A{}_{}", len, Self::mangle_type(types, symbol_table, *elem))
+                format!("A{}_{}", len, Self::mangle_type_with_subst(types, symbol_table, *elem, subst))
             }
             SemanticType::Slice(elem) => {
-                format!("S{}", Self::mangle_type(types, symbol_table, *elem))
+                format!("S{}", Self::mangle_type_with_subst(types, symbol_table, *elem, subst))
             }
             SemanticType::Tuple(elems) => {
                 let mut elems_enc = String::new();
                 for &e in elems {
-                    elems_enc.push_str(&Self::mangle_type(types, symbol_table, e));
+                    elems_enc.push_str(&Self::mangle_type_with_subst(types, symbol_table, e, subst));
                 }
                 format!("U{}E", elems_enc)
             }
             SemanticType::Function { params, return_type } => {
                 let mut params_enc = String::new();
                 for &p in params {
-                    params_enc.push_str(&Self::mangle_type(types, symbol_table, p));
+                    params_enc.push_str(&Self::mangle_type_with_subst(types, symbol_table, p, subst));
                 }
-                let ret_enc = Self::mangle_type(types, symbol_table, *return_type);
+                let ret_enc = Self::mangle_type_with_subst(types, symbol_table, *return_type, subst);
                 format!("W{}E{}", params_enc, ret_enc)
             }
             _ => {
@@ -142,6 +159,18 @@ impl Mangler {
         method_name: &str,
         substs: &[SemanticTypeId],
     ) -> String {
+        Self::mangle_method_with_subst(types, symbol_table, self_path, method_name, substs, &[])
+    }
+
+    /// Mangle an inherent method symbol with substitutions applied.
+    pub fn mangle_method_with_subst(
+        types: &TypeContext,
+        symbol_table: &SymbolTable,
+        self_path: &[String],
+        method_name: &str,
+        substs: &[SemanticTypeId],
+        subst: &[(SymbolId, SemanticTypeId)],
+    ) -> String {
         let self_path_enc = Self::encode_path(self_path);
         let meth_ident = Self::encode_ident(method_name);
         if substs.is_empty() {
@@ -149,7 +178,7 @@ impl Mangler {
         } else {
             let mut substs_enc = String::new();
             for &s in substs {
-                substs_enc.push_str(&Self::mangle_type(types, symbol_table, s));
+                substs_enc.push_str(&Self::mangle_type_with_subst(types, symbol_table, s, subst));
             }
             format!("_MM{}{}G{}E", self_path_enc, meth_ident, substs_enc)
         }
@@ -165,24 +194,47 @@ impl Mangler {
         method_name: &str,
         method_substs: &[SemanticTypeId],
     ) -> String {
+        Self::mangle_trait_method_with_subst(
+            types,
+            symbol_table,
+            trait_path,
+            trait_substs,
+            self_ty,
+            method_name,
+            method_substs,
+            &[],
+        )
+    }
+
+    /// Mangle a trait method symbol with substitutions applied.
+    pub fn mangle_trait_method_with_subst(
+        types: &TypeContext,
+        symbol_table: &SymbolTable,
+        trait_path: &[String],
+        trait_args: &[SemanticTypeId],
+        self_ty: SemanticTypeId,
+        method_name: &str,
+        method_substs: &[SemanticTypeId],
+        subst: &[(SymbolId, SemanticTypeId)],
+    ) -> String {
         let trait_path_enc = Self::encode_path(trait_path);
         let mut trait_substs_enc = String::new();
-        if !trait_substs.is_empty() {
+        if !trait_args.is_empty() {
             trait_substs_enc.push('G');
-            for &s in trait_substs {
-                trait_substs_enc.push_str(&Self::mangle_type(types, symbol_table, s));
+            for &s in trait_args {
+                trait_substs_enc.push_str(&Self::mangle_type_with_subst(types, symbol_table, s, subst));
             }
             trait_substs_enc.push('E');
         }
 
-        let self_ty_enc = Self::mangle_type(types, symbol_table, self_ty);
+        let self_ty_enc = Self::mangle_type_with_subst(types, symbol_table, self_ty, subst);
         let meth_ident = Self::encode_ident(method_name);
 
         let mut method_substs_enc = String::new();
         if !method_substs.is_empty() {
             method_substs_enc.push('G');
             for &s in method_substs {
-                method_substs_enc.push_str(&Self::mangle_type(types, symbol_table, s));
+                method_substs_enc.push_str(&Self::mangle_type_with_subst(types, symbol_table, s, subst));
             }
             method_substs_enc.push('E');
         }
@@ -193,13 +245,13 @@ impl Mangler {
         )
     }
 
-    /// Mangle a drop glue symbol: `__mellis_drop_glue_<mangled_concrete_type>`.
+    /// Mangle a drop glue symbol: `__luna_drop_glue_<mangled_concrete_type>`.
     pub fn mangle_drop_glue(
         types: &TypeContext,
         symbol_table: &SymbolTable,
         concrete_ty: SemanticTypeId,
     ) -> String {
         let type_enc = Self::mangle_type(types, symbol_table, concrete_ty);
-        format!("__mellis_drop_glue_{}", type_enc)
+        format!("__luna_drop_glue_{}", type_enc)
     }
 }

@@ -77,27 +77,42 @@ impl SemanticContext {
     pub fn check_impl_coherence(
         &mut self,
         trait_sym: SymbolId,
+        trait_args: &[SemanticTypeId],
         self_ty: SemanticTypeId,
         generic_params: &[SymbolId],
         span: Span,
     ) -> Result<(), ()> {
         for entry in &self.tables.trait_impl_entries {
             if entry.trait_id == trait_sym {
-                if self.types_overlap(entry.self_type, &entry.generic_params, self_ty, generic_params) {
-                    let trait_name = self.symbol_table.get_symbol(trait_sym).name.clone();
-                    let self_ty_res = self.types.resolve(self_ty);
-                    let self_type_str = match self.types.get(self_ty_res) {
-                        SemanticType::Struct(s, _, _) => self.symbol_table.get_symbol(*s).name.clone(),
-                        SemanticType::Enum(e, _, _) => self.symbol_table.get_symbol(*e).name.clone(),
-                        _ => format!("{:?}", self.types.get(self_ty_res)),
-                    };
-                    self.diagnostics.push(
-                        Diagnostic::error(format!(
-                            "E_CONFLICTING_TRAIT_IMPL: conflicting implementations for trait `{}` for `{}`",
-                            trait_name, self_type_str
-                        )).with_span(span)
-                    );
-                    return Err(());
+                let mut shared_subst = HashMap::new();
+                let mut can_unify = true;
+                if entry.trait_args.len() != trait_args.len() {
+                    can_unify = false;
+                } else {
+                    for (&a1, &a2) in entry.trait_args.iter().zip(trait_args.iter()) {
+                        if !self.can_unify_patterns(a1, a2, &entry.generic_params, generic_params, &mut shared_subst) {
+                            can_unify = false;
+                            break;
+                        }
+                    }
+                }
+                if can_unify {
+                    if self.can_unify_patterns(entry.self_type, self_ty, &entry.generic_params, generic_params, &mut shared_subst) {
+                        let trait_name = self.symbol_table.get_symbol(trait_sym).name.clone();
+                        let self_ty_res = self.types.resolve(self_ty);
+                        let self_type_str = match self.types.get(self_ty_res) {
+                            SemanticType::Struct(s, _, _) => self.symbol_table.get_symbol(*s).name.clone(),
+                            SemanticType::Enum(e, _, _) => self.symbol_table.get_symbol(*e).name.clone(),
+                            _ => format!("{:?}", self.types.get(self_ty_res)),
+                        };
+                        self.diagnostics.push(
+                            Diagnostic::error(format!(
+                                "E_CONFLICTING_TRAIT_IMPL: conflicting implementations for trait `{}` for `{}`",
+                                trait_name, self_type_str
+                            )).with_span(span)
+                        );
+                        return Err(());
+                    }
                 }
             }
         }
@@ -152,7 +167,7 @@ impl SemanticContext {
             SemanticType::Struct(_, args, _) | SemanticType::Enum(_, args, _) | SemanticType::Tuple(args) => {
                 args.iter().any(|&a| self.occurs_in_pattern(target, a, generics_1, generics_2, subst))
             }
-            SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) | SemanticType::Slice(inner) => {
+            SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) | SemanticType::Slice(inner) | SemanticType::Array(inner, _) => {
                 self.occurs_in_pattern(target, *inner, generics_1, generics_2, subst)
             }
             _ => false,
@@ -237,6 +252,9 @@ impl SemanticContext {
             (SemanticType::Slice(inner1), SemanticType::Slice(inner2)) => {
                 self.can_unify_patterns(*inner1, *inner2, generics_1, generics_2, subst)
             }
+            (SemanticType::Array(inner1, len1), SemanticType::Array(inner2, len2)) => {
+                len1 == len2 && self.can_unify_patterns(*inner1, *inner2, generics_1, generics_2, subst)
+            }
             (SemanticType::GenericParam(gp1), SemanticType::GenericParam(gp2)) => gp1 == gp2,
             _ => false,
         }
@@ -288,6 +306,9 @@ impl SemanticContext {
             }
             (&SemanticType::Slice(inner1), &SemanticType::Slice(inner2)) => {
                 self.matches_impl_pattern(inner1, inner2, generic_params, subst)
+            }
+            (&SemanticType::Array(inner1, len1), &SemanticType::Array(inner2, len2)) => {
+                len1 == len2 && self.matches_impl_pattern(inner1, inner2, generic_params, subst)
             }
             (&SemanticType::GenericParam(gp1), &SemanticType::GenericParam(gp2)) => gp1 == gp2,
             _ => false,

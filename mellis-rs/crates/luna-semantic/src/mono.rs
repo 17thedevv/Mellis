@@ -39,7 +39,7 @@ impl CanonicalInstanceIdentity {
     ) -> String {
         match self.kind {
             CanonicalInstanceKind::Decl(decl_id) => {
-                if nominal_name == "main" || nominal_name.starts_with("__mellis_") {
+                if nominal_name == "main" || nominal_name.starts_with("__luna_") {
                     return nominal_name.to_string();
                 }
                 let mut found_sym = None;
@@ -51,6 +51,43 @@ impl CanonicalInstanceIdentity {
                 }
                 let subst_types: Vec<_> = self.subst.iter().map(|&(_, ty)| ty).collect();
                 if let Some(s) = found_sym {
+                    if let Some(&impl_id) = tables.method_to_impl.get(&s.id) {
+                        if let Some(impl_head) = tables.impl_heads.get(&impl_id) {
+                            if let Some(ref tr) = impl_head.trait_ref {
+                                let trait_path = symbol_table.get_full_logical_path(tr.trait_id);
+                                let method_substs: Vec<SemanticTypeId> = self.subst.iter()
+                                    .filter(|(sym, _)| !impl_head.generic_params.contains(sym))
+                                    .map(|(_, ty)| *ty)
+                                    .collect();
+                                return crate::Mangler::mangle_trait_method_with_subst(
+                                    types,
+                                    symbol_table,
+                                    &trait_path,
+                                    &tr.args,
+                                    impl_head.self_ty,
+                                    &s.name,
+                                    &method_substs,
+                                    &self.subst,
+                                );
+                            } else {
+                                let self_path = match types.get(types.resolve(impl_head.self_ty)) {
+                                    crate::ty::SemanticType::Struct(sym, ..) | crate::ty::SemanticType::Enum(sym, ..) => {
+                                        symbol_table.get_full_logical_path(*sym)
+                                    }
+                                    crate::ty::SemanticType::Primitive(b) => vec![format!("{:?}", b).to_lowercase()],
+                                    _ => vec![nominal_name.to_string()],
+                                };
+                                return crate::Mangler::mangle_method_with_subst(
+                                    types,
+                                    symbol_table,
+                                    &self_path,
+                                    &s.name,
+                                    &subst_types,
+                                    &self.subst,
+                                );
+                            }
+                        }
+                    }
                     if let Some(impl_key) = tables.method_impls.get(&s.id) {
                         let self_path = match impl_key.self_type_def {
                             crate::semantic_tables::ImplSelfTypeKey::Nominal(sym) => symbol_table.get_full_logical_path(sym),
@@ -93,7 +130,7 @@ impl CanonicalInstanceIdentity {
     pub fn symbol_name(&self, types: &crate::ty::TypeContext, symbol_table: &crate::SymbolTable, nominal_name: &str) -> String {
         match self.kind {
             CanonicalInstanceKind::Decl(decl_id) => {
-                if nominal_name == "main" || nominal_name.starts_with("__mellis_") {
+                if nominal_name == "main" || nominal_name.starts_with("__luna_") {
                     return nominal_name.to_string();
                 }
                 let mut full_path = Vec::new();
@@ -124,6 +161,7 @@ pub struct InstantiatedFunction {
     pub pat_types: HashMap<luna_ast::PatId, SemanticTypeId>,
     pub mono_calls: HashMap<ExprId, MonoInstance>,
     pub mono_for_loops: HashMap<StmtId, MonoForLoop>,
+    pub mono_try_ops: HashMap<ExprId, MonoTryOp>,
     pub closure_capture_bindings: Vec<crate::semantic_tables::CaptureBinding>,
     pub closure_env_type: Option<SemanticTypeId>,
     pub closure_env_ptr_type: Option<SemanticTypeId>,
@@ -139,6 +177,14 @@ pub struct MonoForLoop {
     pub next_receiver_type: SemanticTypeId,
 }
 
+#[derive(Debug, Clone)]
+pub struct MonoTryOp {
+    pub branch: MonoInstance,
+    pub from_residual: MonoInstance,
+    pub branch_ret_ty: SemanticTypeId,
+    pub expected_ret_ty: SemanticTypeId,
+}
+
 pub struct MonoCollector<'a> {
     ctx: &'a mut SemanticContext,
     arena: &'a AstArena,
@@ -151,11 +197,13 @@ pub struct MonoCollector<'a> {
     
     // Temporary state
     current_instance: Option<MonoInstance>,
+    current_return_type: Option<SemanticTypeId>,
     current_expr_types: HashMap<ExprId, SemanticTypeId>,
     current_symbol_types: HashMap<SymbolId, SemanticTypeId>,
     current_pat_types: HashMap<luna_ast::PatId, SemanticTypeId>,
     current_mono_calls: HashMap<ExprId, MonoInstance>,
     current_mono_for_loops: HashMap<StmtId, MonoForLoop>,
+    current_mono_try_ops: HashMap<ExprId, MonoTryOp>,
     current_subst: Substitution,
 }
 
@@ -174,11 +222,13 @@ impl<'a> MonoCollector<'a> {
             drop_glues: Vec::new(),
             visited_drop_types: HashSet::new(),
             current_instance: None,
+            current_return_type: None,
             current_expr_types: HashMap::new(),
             current_symbol_types: HashMap::new(),
             current_pat_types: HashMap::new(),
             current_mono_calls: HashMap::new(),
             current_mono_for_loops: HashMap::new(),
+            current_mono_try_ops: HashMap::new(),
             current_subst: Substitution::new(),
         }
     }
@@ -428,11 +478,13 @@ impl<'a> MonoCollector<'a> {
             closure_id: None,
         };
         self.current_instance = Some(dummy_instance);
+        self.current_return_type = None;
         self.current_expr_types.clear();
         self.current_symbol_types.clear();
         self.current_pat_types.clear();
         self.current_mono_calls.clear();
         self.current_mono_for_loops.clear();
+        self.current_mono_try_ops.clear();
         self.current_subst.map.clear();
         
         self.visit_expr(&expr_id);
@@ -447,11 +499,13 @@ impl<'a> MonoCollector<'a> {
             closure_id: None,
         };
         self.current_instance = Some(dummy_instance);
+        self.current_return_type = None;
         self.current_expr_types.clear();
         self.current_symbol_types.clear();
         self.current_pat_types.clear();
         self.current_mono_calls.clear();
         self.current_mono_for_loops.clear();
+        self.current_mono_try_ops.clear();
         self.current_subst.map.clear();
         
         self.visit_stmt(&stmt_id);
@@ -472,11 +526,13 @@ impl<'a> MonoCollector<'a> {
             }
 
             self.current_instance = Some(instance.clone());
+            self.current_return_type = None;
             self.current_expr_types.clear();
             self.current_symbol_types.clear();
             self.current_pat_types.clear();
             self.current_mono_calls.clear();
             self.current_mono_for_loops.clear();
+            self.current_mono_try_ops.clear();
             self.current_subst.map.clear();
 
             for &(sym, ty) in &instance.subst {
@@ -546,10 +602,19 @@ impl<'a> MonoCollector<'a> {
                 if let Some(&ty) = self.ctx.tables.symbol_types.get(&sym_id) {
                     let sub_ty = self.substitute(ty);
                     self.current_symbol_types.insert(sym_id, sub_ty);
+                    if let SemanticType::Function { return_type, .. } = self.ctx.types.get(sub_ty) {
+                        self.current_return_type = Some(*return_type);
+                    }
                 }
             }
 
             if let Some(closure_id) = instance.closure_id {
+                if let Some(&ty) = self.ctx.tables.expr_types.get(&closure_id) {
+                    let sub_ty = self.substitute(ty);
+                    if let SemanticType::Function { return_type, .. } = self.ctx.types.get(sub_ty) {
+                        self.current_return_type = Some(*return_type);
+                    }
+                }
                 if let Expr::Lambda { body, params, .. } = &self.arena.exprs[closure_id.0 as usize] {
                     for param_id in params {
                         if let Some(&param_sym) = self.ctx.tables.decl_symbols.get(param_id) {
@@ -670,6 +735,7 @@ impl<'a> MonoCollector<'a> {
                 pat_types: current_pat_types,
                 mono_calls: std::mem::take(&mut self.current_mono_calls),
                 mono_for_loops: std::mem::take(&mut self.current_mono_for_loops),
+                mono_try_ops: std::mem::take(&mut self.current_mono_try_ops),
                 closure_capture_bindings,
                 closure_env_type: closure_env_type.map(|ty| self.substitute(ty)),
                 closure_env_ptr_type: closure_env_ptr_type.map(|ty| self.substitute(ty)),
@@ -889,8 +955,16 @@ impl<'a> MonoCollector<'a> {
         let mut ordered = Vec::new();
         let mut used = vec![false; subst.len()];
 
+        let effective_impl_id = impl_decl_id.or_else(|| {
+            self.ctx.tables.decl_symbols.get(&decl_id).and_then(|&sym_id| {
+                self.ctx.tables.method_impls.get(&sym_id).and_then(|key| {
+                    self.ctx.tables.trait_impls.get(key).and_then(|decls| decls.first().copied())
+                })
+            })
+        });
+
         let mut expected_symbols = Vec::new();
-        if let Some(impl_id) = impl_decl_id {
+        if let Some(impl_id) = effective_impl_id {
             let mut idx = 0;
             while let Some(&sym) = self.ctx.tables.generic_param_symbols.get(&(impl_id, idx)) {
                 expected_symbols.push(sym);
@@ -902,8 +976,6 @@ impl<'a> MonoCollector<'a> {
             expected_symbols.push(sym);
             idx += 1;
         }
-
-        eprintln!("[ORDER_SUBST] decl_id={:?}, impl_id={:?}, expected_symbols={:?}, input_subst={:?}", decl_id, impl_decl_id, expected_symbols, subst);
         for exp_sym in expected_symbols {
             let exp_name = if (exp_sym.0 as usize) < self.ctx.symbol_table.symbols.len() {
                 &self.ctx.symbol_table.symbols[exp_sym.0 as usize].name
@@ -957,8 +1029,57 @@ impl<'a> MonoCollector<'a> {
             }
         }
 
-        eprintln!("[ORDER_SUBST] decl_id={:?}, result_ordered={:?}", decl_id, ordered);
         ordered
+    }
+
+    fn resolve_try_method_instance(
+        &mut self,
+        method_decl: DeclId,
+        match_target_ty: SemanticTypeId,
+        extra_match: Option<(SemanticTypeId, SemanticTypeId)>,
+    ) -> Option<MonoInstance> {
+        let method_sym = self.ctx.tables.decl_symbols.get(&method_decl).copied()?;
+        let impl_key = self.ctx.tables.method_impls.get(&method_sym)?;
+        let pattern_ty = self.ctx.tables.impl_self_types.get(impl_key).copied()?;
+        let impl_decl_id = self.ctx.tables.trait_impls.get(impl_key).and_then(|decls| {
+            decls
+                .iter()
+                .find(|&&d| {
+                    if (d.0 as usize) < self.arena.decls.len() {
+                        if let Decl::Impl { methods, .. } = &self.arena.decls[d.0 as usize] {
+                            methods.contains(&method_decl)
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                })
+                .copied()
+                .or_else(|| decls.first().copied())
+        });
+
+        let peeled_target_ty = match self.ctx.types.get(match_target_ty) {
+            SemanticType::Reference(_, _, inner) | SemanticType::Pointer(_, inner) => *inner,
+            _ => match_target_ty,
+        };
+
+        let mut impl_subst = crate::ty::Substitution::new();
+        self.match_types(pattern_ty, peeled_target_ty, &mut impl_subst);
+        if let Some((extra_pat, extra_target)) = extra_match {
+            self.match_types(extra_pat, extra_target, &mut impl_subst);
+        }
+        let subst_pairs: Vec<(SymbolId, SemanticTypeId)> = impl_subst
+            .map
+            .into_iter()
+            .map(|(k, v)| (k, self.substitute(v)))
+            .collect();
+        let instance_subst = self.order_subst_for_decl(method_decl, impl_decl_id, subst_pairs);
+        Some(MonoInstance {
+            decl_id: method_decl,
+            subst: instance_subst,
+            closure_id: None,
+        })
     }
 
     fn substitute(&mut self, ty: SemanticTypeId) -> SemanticTypeId {
@@ -1319,13 +1440,40 @@ impl<'a> MonoCollector<'a> {
                                 eprintln!("CALLEE RESOLVE: sym={} sym_id={:?} -> decl_id={:?}, has_body={}, is_intrinsic={}", 
                                     sym_name, sym_id, decl_id, has_body, is_intr);
                             }
-                            if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id).cloned() {
+                            if let Some(resolved) = self.ctx.tables.resolved_impl_methods.get(expr_id).cloned() {
+                                let impl_head = self.ctx.tables.impl_heads.get(&resolved.impl_id);
+                                let target_impl_id = impl_head.and_then(|h| h.decl_id);
+                                let mut subst_pairs: Vec<(SymbolId, SemanticTypeId)> = Vec::new();
+                                for (k, v) in resolved.impl_subst.map {
+                                    subst_pairs.push((k, self.substitute(v)));
+                                }
+                                for (k, v) in resolved.method_subst.map {
+                                    subst_pairs.push((k, self.substitute(v)));
+                                }
+                                let instance_subst = self.order_subst_for_decl(decl_id, target_impl_id, subst_pairs);
+                                let instance = MonoInstance {
+                                    decl_id,
+                                    subst: instance_subst,
+                                    closure_id: None,
+                                };
+                                self.current_mono_calls.insert(*expr_id, instance.clone());
+                                if !self.instantiated.contains_key(&instance) {
+                                    self.worklist.push(instance);
+                                }
+                            } else if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id).cloned() {
                                 let mut instance_subst = Vec::new();
                                 for (sym, ty) in subst.map {
                                     let sub_ty = self.substitute(ty);
                                     instance_subst.push((sym, sub_ty));
                                 }
-                                let instance_subst = self.order_subst_for_decl(decl_id, None, instance_subst);
+                                let impl_decl_id = self.ctx.tables.decl_symbols.get(&decl_id)
+                                    .or(Some(&sym_id))
+                                    .and_then(|&s| {
+                                        self.ctx.tables.method_impls.get(&s).and_then(|key| {
+                                            self.ctx.tables.trait_impls.get(key).and_then(|decls| decls.first().copied())
+                                        })
+                                    });
+                                let instance_subst = self.order_subst_for_decl(decl_id, impl_decl_id, instance_subst);
                                 eprintln!("MONO CALL WITH EXPR_SUBST: callee sym={} decl_id={:?}, instance_subst={:?}",
                                     sym_name, decl_id,
                                     instance_subst.iter().map(|(s,t)| (s, format!("{:?}", self.ctx.types.get(*t)))).collect::<Vec<_>>());
@@ -1417,46 +1565,106 @@ impl<'a> MonoCollector<'a> {
                 };
 
                 // Handle instantiation for method calls (including generic trait calls)
-                if let Some(sym_id) = sym_id_opt {
+                if let Some(resolved) = self.ctx.tables.resolved_impl_methods.get(expr_id).cloned() {
+                    let impl_head = self.ctx.tables.impl_heads.get(&resolved.impl_id);
+                    let target_decl_id = self.ctx.tables.symbol_decls.get(&resolved.method_symbol).copied();
+                    let target_impl_id = impl_head.and_then(|h| h.decl_id);
+
+                    let mut subst_pairs: Vec<(SymbolId, SemanticTypeId)> = Vec::new();
+                    for (k, v) in resolved.impl_subst.map {
+                        subst_pairs.push((k, self.substitute(v)));
+                    }
+                    for (k, v) in resolved.method_subst.map {
+                        subst_pairs.push((k, self.substitute(v)));
+                    }
+
+                    if let Some(decl_id) = target_decl_id {
+                        let instance_subst = self.order_subst_for_decl(decl_id, target_impl_id, subst_pairs);
+                        let instance = MonoInstance {
+                            decl_id,
+                            subst: instance_subst,
+                            closure_id: None,
+                        };
+                        self.current_mono_calls.insert(*expr_id, instance.clone());
+                        if !self.instantiated.contains_key(&instance) {
+                            self.worklist.push(instance);
+                        }
+                    }
+                } else if let Some(sym_id) = sym_id_opt {
                     let trait_owner_opt = self.ctx.tables.trait_methods.iter()
                         .find(|(_, meths)| meths.contains(&sym_id))
                         .map(|(&t_sym, _)| t_sym)
                         .or_else(|| self.ctx.tables.method_impls.get(&sym_id).and_then(|k| k.trait_id));
 
                     let (target_decl_id, target_impl_id, instance_subst) = if let Some(trait_sym) = trait_owner_opt {
-                        let target_key = match self.ctx.types.get(peeled_sub_ty) {
-                            SemanticType::Struct(s, ..) | SemanticType::Enum(s, ..) => Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*s)),
-                            SemanticType::Primitive(b) => Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
-                            _ => None,
-                        };
                         let mut concrete_decl = None;
                         let mut concrete_impl = None;
                         let mut impl_subst = crate::ty::Substitution::new();
-                        if let Some(self_key) = target_key {
-                            let key = crate::semantic_tables::ImplKey {
-                                trait_id: Some(trait_sym),
-                                self_type_def: self_key,
-                            };
-                            if let Some(impl_decls) = self.ctx.tables.trait_impls.get(&key) {
-                                for &impl_decl_id in impl_decls {
-                                    if (impl_decl_id.0 as usize) < self.arena.decls.len() {
-                                        if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
-                                            let method_name = self.ctx.symbol_table.get_symbol(sym_id).name.clone();
-                                            for &m_decl_id in methods {
-                                                if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(&m_decl_id) {
-                                                    if self.ctx.symbol_table.get_symbol(m_sym).name == method_name {
-                                                        concrete_decl = Some(m_decl_id);
-                                                        concrete_impl = Some(impl_decl_id);
-                                                        if let Some(&pattern_ty) = self.ctx.tables.impl_self_types.get(&key) {
-                                                            self.match_types(pattern_ty, peeled_sub_ty, &mut impl_subst);
-                                                        }
-                                                        break;
-                                                    }
+
+                        // 1. Search impl_heads using whole-head pattern matching (C-GAP-10)
+                        let self_bucket = crate::semantic_tables::ImplSelfBucket::from_semantic_type(peeled_sub_ty, &self.ctx.types);
+                        let mut candidate_ids = Vec::new();
+                        for (b_key, ids) in &self.ctx.tables.impl_buckets {
+                            if b_key.self_bucket == self_bucket || b_key.self_bucket == crate::semantic_tables::ImplSelfBucket::Wildcard {
+                                candidate_ids.extend(ids);
+                            }
+                        }
+                        let method_name = self.ctx.symbol_table.get_symbol(sym_id).name.clone();
+                        for &cand_impl_id in &candidate_ids {
+                            if let Some(impl_head) = self.ctx.tables.impl_heads.get(&cand_impl_id) {
+                                if let Some(ref tr) = impl_head.trait_ref {
+                                    if tr.trait_id == trait_sym {
+                                        let mut test_subst = crate::ty::Substitution::new();
+                                        if self.ctx.matches_impl_pattern(impl_head.self_ty, peeled_sub_ty, &impl_head.generic_params, &mut test_subst) {
+                                            for &m_sym in &impl_head.methods {
+                                                if self.ctx.symbol_table.get_symbol(m_sym).name == method_name {
+                                                    concrete_decl = self.ctx.tables.symbol_decls.get(&m_sym).copied();
+                                                    concrete_impl = impl_head.decl_id;
+                                                    impl_subst = test_subst;
+                                                    break;
                                                 }
                                             }
                                         }
                                     }
-                                    if concrete_decl.is_some() { break; }
+                                }
+                            }
+                            if concrete_decl.is_some() {
+                                break;
+                            }
+                        }
+
+                        // 2. Fallback to legacy nominal trait_impls lookup if not found
+                        if concrete_decl.is_none() {
+                            let target_key = match self.ctx.types.get(peeled_sub_ty) {
+                                SemanticType::Struct(s, ..) | SemanticType::Enum(s, ..) => Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*s)),
+                                SemanticType::Primitive(b) => Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
+                                _ => None,
+                            };
+                            if let Some(self_key) = target_key {
+                                let key = crate::semantic_tables::ImplKey {
+                                    trait_id: Some(trait_sym),
+                                    self_type_def: self_key,
+                                };
+                                if let Some(impl_decls) = self.ctx.tables.trait_impls.get(&key) {
+                                    for &impl_decl_id in impl_decls {
+                                        if (impl_decl_id.0 as usize) < self.arena.decls.len() {
+                                            if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
+                                                for &m_decl_id in methods {
+                                                    if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(&m_decl_id) {
+                                                        if self.ctx.symbol_table.get_symbol(m_sym).name == method_name {
+                                                            concrete_decl = Some(m_decl_id);
+                                                            concrete_impl = Some(impl_decl_id);
+                                                            if let Some(&pattern_ty) = self.ctx.tables.impl_self_types.get(&key) {
+                                                                self.match_types(pattern_ty, peeled_sub_ty, &mut impl_subst);
+                                                            }
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if concrete_decl.is_some() { break; }
+                                    }
                                 }
                             }
                         }
@@ -1482,13 +1690,50 @@ impl<'a> MonoCollector<'a> {
                         }
                         (concrete_decl.or_else(|| self.ctx.tables.symbol_decls.get(&sym_id).copied()), concrete_impl.or_else(|| self.ctx.tables.method_impls.get(&sym_id).and_then(|k| self.ctx.tables.trait_impls.get(k).and_then(|decls| decls.first().copied()))), subst_pairs)
                     } else {
+                        let mut concrete_decl = self.ctx.tables.symbol_decls.get(&sym_id).copied();
+                        let mut inherent_impl = None;
                         let mut impl_subst = crate::ty::Substitution::new();
-                        let inherent_impl = self.ctx.tables.method_impls.get(&sym_id).and_then(|key| {
-                            if let Some(&pattern_ty) = self.ctx.tables.impl_self_types.get(key) {
-                                self.match_types(pattern_ty, peeled_sub_ty, &mut impl_subst);
+
+                        // 1. Search impl_heads for inherent matching
+                        let self_bucket = crate::semantic_tables::ImplSelfBucket::from_semantic_type(peeled_sub_ty, &self.ctx.types);
+                        let mut candidate_ids = Vec::new();
+                        for (b_key, ids) in &self.ctx.tables.impl_buckets {
+                            if b_key.self_bucket == self_bucket || b_key.self_bucket == crate::semantic_tables::ImplSelfBucket::Wildcard {
+                                candidate_ids.extend(ids);
                             }
-                            self.ctx.tables.trait_impls.get(key).and_then(|decls| decls.first().copied())
-                        });
+                        }
+                        let method_name = self.ctx.symbol_table.get_symbol(sym_id).name.clone();
+                        for &cand_impl_id in &candidate_ids {
+                            if let Some(impl_head) = self.ctx.tables.impl_heads.get(&cand_impl_id) {
+                                if impl_head.trait_ref.is_none() {
+                                    let mut test_subst = crate::ty::Substitution::new();
+                                    if self.ctx.matches_impl_pattern(impl_head.self_ty, peeled_sub_ty, &impl_head.generic_params, &mut test_subst) {
+                                        for &m_sym in &impl_head.methods {
+                                            if self.ctx.symbol_table.get_symbol(m_sym).name == method_name {
+                                                if let Some(m_decl) = self.ctx.tables.symbol_decls.get(&m_sym).copied() {
+                                                    concrete_decl = Some(m_decl);
+                                                }
+                                                inherent_impl = impl_head.decl_id;
+                                                impl_subst = test_subst;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if inherent_impl.is_some() {
+                                break;
+                            }
+                        }
+
+                        if inherent_impl.is_none() {
+                            inherent_impl = self.ctx.tables.method_impls.get(&sym_id).and_then(|key| {
+                                if let Some(&pattern_ty) = self.ctx.tables.impl_self_types.get(key) {
+                                    self.match_types(pattern_ty, peeled_sub_ty, &mut impl_subst);
+                                }
+                                self.ctx.tables.trait_impls.get(key).and_then(|decls| decls.first().copied())
+                            });
+                        }
                         let mut subst_pairs: Vec<(SymbolId, SemanticTypeId)> = impl_subst.map.into_iter().map(|(k, v)| (k, self.substitute(v))).collect();
                         if let Some(subst) = self.ctx.tables.expr_substs.get(expr_id).cloned() {
                             for (sym, ty) in subst.map {
@@ -1541,7 +1786,15 @@ impl<'a> MonoCollector<'a> {
                 self.visit_expr(object);
             }
             Expr::Lambda { body, .. } => {
+                let prev_ret_ty = self.current_return_type;
+                if let Some(&ty) = self.ctx.tables.expr_types.get(expr_id) {
+                    let sub_ty = self.substitute(ty);
+                    if let SemanticType::Function { return_type, .. } = self.ctx.types.get(sub_ty) {
+                        self.current_return_type = Some(*return_type);
+                    }
+                }
                 self.visit_stmt(body);
+                self.current_return_type = prev_ret_ty;
                 
                 let mut instance_subst = Vec::new();
                 for (&sym, &ty) in &self.current_subst.map {
@@ -1600,8 +1853,131 @@ impl<'a> MonoCollector<'a> {
                     self.visit_stmt(&arm.body);
                 }
             }
-            Expr::Try { expr: inner, .. } | Expr::Await { expr: inner } => {
+            Expr::Await { expr: inner } => {
                 self.visit_expr(inner);
+            }
+            Expr::Try { expr: inner, .. } => {
+                self.visit_expr(inner);
+
+                let inner_ty = self
+                    .current_expr_types
+                    .get(inner)
+                    .copied()
+                    .or_else(|| self.ctx.tables.expr_types.get(inner).copied())
+                    .unwrap_or(SemanticTypeId(0));
+                let sub_inner_ty = self.substitute(inner_ty);
+                let concrete_inner_ty = self.ctx.types.resolve(sub_inner_ty);
+
+                let current_ret_ty = self.current_return_type.unwrap_or(SemanticTypeId(0));
+                let concrete_ret_ty = self.ctx.types.resolve(current_ret_ty);
+
+                let branch_decl_opt = self.ctx.tables.try_branch_methods.get(expr_id).copied();
+                let from_residual_decl_opt =
+                    self.ctx.tables.try_from_residual_methods.get(expr_id).copied();
+
+                if let (Some(branch_decl), Some(from_residual_decl)) =
+                    (branch_decl_opt, from_residual_decl_opt)
+                {
+                    if let Some(branch_inst) =
+                        self.resolve_try_method_instance(branch_decl, concrete_inner_ty, None)
+                    {
+                        if !self.instantiated.contains_key(&branch_inst)
+                            && !self.worklist.contains(&branch_inst)
+                        {
+                            self.worklist.push(branch_inst.clone());
+                        }
+
+                        // Calculate concrete branch_ret_ty
+                        let branch_sym = self
+                            .ctx
+                            .tables
+                            .decl_symbols
+                            .get(&branch_decl)
+                            .copied()
+                            .unwrap();
+                        let branch_fn_ty = self
+                            .ctx
+                            .tables
+                            .symbol_types
+                            .get(&branch_sym)
+                            .copied()
+                            .unwrap();
+                        let branch_ret_ty = match self.ctx.types.get(branch_fn_ty) {
+                            SemanticType::Function { return_type, .. } => {
+                                let mut subst_map = crate::ty::Substitution::new();
+                                for &(sym, ty) in &branch_inst.subst {
+                                    subst_map.insert(sym, ty);
+                                }
+                                self.ctx.types.subst(*return_type, &subst_map)
+                            }
+                            _ => SemanticTypeId(0),
+                        };
+                        let branch_ret_ty = self.ctx.types.resolve(branch_ret_ty);
+
+                        // Extract residual type from Break variant of ControlFlow
+                        let break_sym = self
+                            .ctx
+                            .lang_items
+                            .get(crate::lang_item::LangItem::ControlFlowBreak);
+                        let break_idx = break_sym.and_then(|sym| {
+                            match self.ctx.symbol_table.get_symbol(sym).kind {
+                                crate::SymbolKind::EnumVariant(idx) => Some(idx),
+                                _ => None,
+                            }
+                        }).unwrap_or(1);
+
+                        let flow_sem_ty = self.ctx.types.get(branch_ret_ty).clone();
+                        let residual_ty = if let SemanticType::Enum(_, _, variant_tys) = &flow_sem_ty {
+                            if (break_idx as usize) < variant_tys.len() {
+                                variant_tys[break_idx as usize]
+                            } else {
+                                SemanticTypeId(0)
+                            }
+                        } else {
+                            SemanticTypeId(0)
+                        };
+
+                        let fr_sym = self
+                            .ctx
+                            .tables
+                            .decl_symbols
+                            .get(&from_residual_decl)
+                            .copied();
+                        let fr_param_pat = fr_sym.and_then(|sym| {
+                            if let Some(&fn_ty) = self.ctx.tables.symbol_types.get(&sym) {
+                                if let SemanticType::Function { params, .. } = self.ctx.types.get(fn_ty) {
+                                    return params.first().copied();
+                                }
+                            }
+                            None
+                        });
+                        let extra_match = fr_param_pat.map(|pat| (pat, residual_ty));
+
+                        if let Some(from_residual_inst) = self.resolve_try_method_instance(
+                            from_residual_decl,
+                            concrete_ret_ty,
+                            extra_match,
+                        ) {
+                            if !self.instantiated.contains_key(&from_residual_inst)
+                                && !self.worklist.contains(&from_residual_inst)
+                            {
+                                self.worklist.push(from_residual_inst.clone());
+                            }
+
+                            let mono_try = MonoTryOp {
+                                branch: branch_inst,
+                                from_residual: from_residual_inst,
+                                branch_ret_ty,
+                                expected_ret_ty: concrete_ret_ty,
+                            };
+                            self.current_mono_try_ops.insert(*expr_id, mono_try);
+                        }
+
+                        self.discover_drop_obligations(concrete_inner_ty);
+                        self.discover_drop_obligations(branch_ret_ty);
+                        self.discover_drop_obligations(concrete_ret_ty);
+                    }
+                }
             }
             Expr::Comptime { body } => {
                 self.visit_stmt(body);
@@ -1617,7 +1993,14 @@ impl<'a> MonoCollector<'a> {
                                     let sub_ty = self.substitute(ty);
                                     instance_subst.push((sym, sub_ty));
                                 }
-                                let instance_subst = self.order_subst_for_decl(decl_id, None, instance_subst);
+                                let impl_decl_id = self.ctx.tables.decl_symbols.get(&decl_id)
+                                    .or(Some(&sym_id))
+                                    .and_then(|&s| {
+                                        self.ctx.tables.method_impls.get(&s).and_then(|key| {
+                                            self.ctx.tables.trait_impls.get(key).and_then(|decls| decls.first().copied())
+                                        })
+                                    });
+                                let instance_subst = self.order_subst_for_decl(decl_id, impl_decl_id, instance_subst);
                                 let instance = MonoInstance {
                                     decl_id,
                                     subst: instance_subst,

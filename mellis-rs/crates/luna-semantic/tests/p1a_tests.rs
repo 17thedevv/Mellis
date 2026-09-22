@@ -343,7 +343,7 @@ fn test_case_11_coherence_cross_imported_providers_collision_fail() {
     });
 
     // Provider B attempts to also inject Clone for Option
-    let res = ctx.check_impl_coherence(clone_sym, opt_ty, &[], Span::default());
+    let res = ctx.check_impl_coherence(clone_sym, &[], opt_ty, &[], Span::default());
     assert!(res.is_err(), "Expected coherence check to reject overlapping cross-imported impl");
     let has_conflict = ctx.diagnostics.iter().any(|d| {
         d.message.contains("E_CONFLICTING_TRAIT_IMPL") || d.message.contains("conflicting implementations for trait")

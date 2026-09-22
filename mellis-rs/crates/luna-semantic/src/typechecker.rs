@@ -1391,7 +1391,7 @@ impl<'a> TypeChecker<'a> {
             if let Item::Decl(decl_id) = item {
                 let decl = &self.arena.decls[decl_id.0 as usize];
                 match decl {
-                    Decl::Impl { trait_type, self_type, associated_types, generic_params, .. } => {
+                    Decl::Impl { trait_type, self_type, associated_types, generic_params, methods, .. } => {
                     let impl_scope = *self.ctx.tables.decl_scopes.get(decl_id).unwrap_or(&self.current_scope);
                     let self_sym_opt = self.ctx.tables.type_symbols.get(self_type).copied().or_else(|| {
                         let self_ast_ty = &self.arena.types[self_type.0 as usize];
@@ -1523,9 +1523,38 @@ impl<'a> TypeChecker<'a> {
                             };
 
                             // Check coherence
-                            let coherence_res = self.ctx.check_impl_coherence(trait_sym, self_sem_ty, &gp_syms, span);
+                            let coherence_res = self.ctx.check_impl_coherence(trait_sym, &trait_args, self_sem_ty, &gp_syms, span);
 
                             if coherence_res.is_ok() {
+                                let impl_id = self.ctx.tables.allocate_impl_id();
+                                let mut method_syms = Vec::new();
+                                for method_id in methods {
+                                    if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(method_id) {
+                                        method_syms.push(m_sym);
+                                        self.ctx.tables.method_to_impl.insert(m_sym, impl_id);
+                                    }
+                                }
+
+                                let impl_head = crate::semantic_tables::ImplHead {
+                                    id: impl_id,
+                                    trait_ref: Some(crate::semantic_tables::TraitRefPattern {
+                                        trait_id: trait_sym,
+                                        args: trait_args.clone(),
+                                    }),
+                                    self_ty: self_sem_ty,
+                                    generic_params: gp_syms.clone(),
+                                    decl_id: Some(*decl_id),
+                                    methods: method_syms,
+                                };
+                                self.ctx.tables.impl_heads.insert(impl_id, impl_head);
+
+                                let bucket = crate::semantic_tables::ImplSelfBucket::from_semantic_type(self_sem_ty, &self.ctx.types);
+                                let bucket_key = crate::semantic_tables::ImplBucketKey {
+                                    trait_sym: Some(trait_sym),
+                                    self_bucket: bucket,
+                                };
+                                self.ctx.tables.impl_buckets.entry(bucket_key).or_default().push(impl_id);
+
                                 self.ctx.tables.trait_impl_entries.push(crate::semantic_tables::TraitImplEntry {
                                     decl_id: Some(*decl_id),
                                     trait_id: trait_sym,
@@ -1582,18 +1611,45 @@ impl<'a> TypeChecker<'a> {
                                 }
                             }
                         } else {
+                            let mut gp_syms = Vec::new();
+                            for idx in 0..generic_params.len() {
+                                if let Some(&gp_sym) = self.ctx.tables.generic_param_symbols.get(&(*decl_id, idx)) {
+                                    gp_syms.push(gp_sym);
+                                }
+                            }
+
+                            let impl_id = self.ctx.tables.allocate_impl_id();
+                            let mut method_syms = Vec::new();
+                            for method_id in methods {
+                                if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(method_id) {
+                                    method_syms.push(m_sym);
+                                    self.ctx.tables.method_to_impl.insert(m_sym, impl_id);
+                                }
+                            }
+
+                            let impl_head = crate::semantic_tables::ImplHead {
+                                id: impl_id,
+                                trait_ref: None,
+                                self_ty: self_sem_ty,
+                                generic_params: gp_syms.clone(),
+                                decl_id: Some(*decl_id),
+                                methods: method_syms,
+                            };
+                            self.ctx.tables.impl_heads.insert(impl_id, impl_head);
+
+                            let bucket = crate::semantic_tables::ImplSelfBucket::from_semantic_type(self_sem_ty, &self.ctx.types);
+                            let bucket_key = crate::semantic_tables::ImplBucketKey {
+                                trait_sym: None,
+                                self_bucket: bucket,
+                            };
+                            self.ctx.tables.impl_buckets.entry(bucket_key).or_default().push(impl_id);
+
                             let self_key_opt: Option<crate::semantic_tables::ImplSelfTypeKey> = match self.ctx.types.get(self_sem_ty) {
                                 SemanticType::Primitive(b) => Some(crate::semantic_tables::ImplSelfTypeKey::Primitive(*b)),
                                 SemanticType::Struct(s, ..) | SemanticType::Enum(s, ..) => Some(crate::semantic_tables::ImplSelfTypeKey::Nominal(*s)),
                                 _ => self_sym_opt.map(crate::semantic_tables::ImplSelfTypeKey::Nominal),
                             };
                             if let Some(self_key) = self_key_opt {
-                                let mut gp_syms = Vec::new();
-                                for idx in 0..generic_params.len() {
-                                    if let Some(&gp_sym) = self.ctx.tables.generic_param_symbols.get(&(*decl_id, idx)) {
-                                        gp_syms.push(gp_sym);
-                                    }
-                                }
                                 let key = crate::semantic_tables::ImplKey {
                                     trait_id: None,
                                     self_type_def: self_key,
@@ -3999,6 +4055,10 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
 
+                if let Some(resolved) = self.ctx.tables.resolved_impl_methods.get(callee).cloned() {
+                    self.ctx.tables.resolved_impl_methods.insert(*expr_id, resolved);
+                }
+
                 ret_ty_id
             }
             Expr::Assign { lvalue, value, .. } => {
@@ -4138,6 +4198,51 @@ impl<'a> TypeChecker<'a> {
                     }
 
                     // Look up methods on this struct (from local impl blocks)
+                    let peeled_ty_id = match &obj_ty {
+                        SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => *inner,
+                        _ => obj_ty_id,
+                    };
+                    let self_bucket = crate::semantic_tables::ImplSelfBucket::from_semantic_type(peeled_ty_id, &self.ctx.types);
+                    let mut candidate_ids = Vec::new();
+                    for (b_key, ids) in &self.ctx.tables.impl_buckets {
+                        if b_key.self_bucket == self_bucket || b_key.self_bucket == crate::semantic_tables::ImplSelfBucket::Wildcard {
+                            candidate_ids.extend(ids);
+                        }
+                    }
+                    for &impl_id in &candidate_ids {
+                        if let Some(impl_head) = self.ctx.tables.impl_heads.get(&impl_id) {
+                            let mut impl_subst = crate::ty::Substitution::new();
+                            if self.ctx.matches_impl_pattern(impl_head.self_ty, peeled_ty_id, &impl_head.generic_params, &mut impl_subst) {
+                                for &m_sym in &impl_head.methods {
+                                    let sym = self.ctx.symbol_table.get_symbol(m_sym);
+                                    if sym.name == member_name {
+                                        let is_accessible = if let Some(ref tr) = impl_head.trait_ref {
+                                            self.ctx.symbol_table.is_accessible(tr.trait_id, self.current_scope, self.ctx.current_provider)
+                                        } else {
+                                            self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
+                                        };
+                                        if !is_accessible {
+                                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*member));
+                                            return self.ctx.types.intern(SemanticType::Error);
+                                        }
+                                        if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
+                                            let inst_m_ty = self.ctx.types.subst(m_ty, &impl_subst);
+                                            self.ctx.tables.resolved_impl_methods.insert(*expr_id, crate::semantic_tables::ResolvedImplMethod {
+                                                impl_id,
+                                                method_symbol: m_sym,
+                                                impl_subst: impl_subst.clone(),
+                                                method_subst: crate::ty::Substitution::new(),
+                                            });
+                                            self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
+                                            self.ctx.tables.expr_types.insert(*expr_id, inst_m_ty);
+                                            return inst_m_ty;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     let target_key = crate::semantic_tables::ImplSelfTypeKey::Nominal(sym_id);
                     for (impl_key, impl_decl_ids) in &self.ctx.tables.trait_impls {
                         for &impl_decl_id in impl_decl_ids {
@@ -4740,233 +4845,312 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
 
-                let target_self_info = match &peeled_ty {
-                    SemanticType::Struct(sym_id, struct_args, _) => Some((crate::semantic_tables::ImplSelfTypeKey::Nominal(*sym_id), struct_args.clone(), Some(*sym_id))),
-                    SemanticType::Enum(sym_id, enum_args, _) => Some((crate::semantic_tables::ImplSelfTypeKey::Nominal(*sym_id), enum_args.clone(), Some(*sym_id))),
-                    SemanticType::Primitive(b) => Some((crate::semantic_tables::ImplSelfTypeKey::Primitive(*b), Vec::new(), None)),
-                    _ => None,
+                let peeled_ty_id = match &obj_ty {
+                    SemanticType::Pointer(_, inner) | SemanticType::Reference(_, _, inner) => *inner,
+                    _ => obj_ty_id,
                 };
 
-                if let Some((target_key, struct_args, nominal_sym_opt)) = target_self_info {
-                    let mut found_method = None;
-                    for (impl_key, impl_decl_ids) in &self.ctx.tables.trait_impls {
-                        for &impl_decl_id in impl_decl_ids {
-                            if impl_key.self_type_def == target_key && (impl_decl_id.0 as usize) < self.arena.decls.len() {
-                                if let Decl::Impl { methods, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
-                                    for &m_id in methods {
-                                        if (m_id.0 as usize) < self.arena.decls.len() {
-                                            if let Decl::Function { name, .. } = &self.arena.decls[m_id.0 as usize] {
-                                                if self.get_span_text(*name) == member_name {
-                                                    if let Some(&m_sym) = self.ctx.tables.decl_symbols.get(&m_id) {
-                                                        found_method = Some((m_sym, impl_key.clone(), Some(impl_decl_id)));
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if found_method.is_some() { break; }
-                        }
-                        if found_method.is_some() { break; }
-                    }
+                let self_bucket = crate::semantic_tables::ImplSelfBucket::from_semantic_type(peeled_ty_id, &self.ctx.types);
+                let obj_bucket = crate::semantic_tables::ImplSelfBucket::from_semantic_type(obj_ty_id, &self.ctx.types);
 
-                    if found_method.is_none() {
-                        for (impl_key, method_syms) in &self.ctx.tables.impl_methods {
-                            if impl_key.self_type_def == target_key {
-                                for &m_sym in method_syms {
-                                    let sym = self.ctx.symbol_table.get_symbol(m_sym);
-                                    if sym.name == member_name {
-                                        found_method = Some((m_sym, impl_key.clone(), None));
-                                        break;
-                                    }
-                                }
+                let mut candidate_impl_ids = Vec::new();
+                let mut seen_impl_ids = std::collections::HashSet::new();
+
+                for (b_key, ids) in &self.ctx.tables.impl_buckets {
+                    if b_key.self_bucket == self_bucket || b_key.self_bucket == obj_bucket || b_key.self_bucket == crate::semantic_tables::ImplSelfBucket::Wildcard {
+                        for &id in ids {
+                            if seen_impl_ids.insert(id) {
+                                candidate_impl_ids.push(id);
                             }
-                            if found_method.is_some() { break; }
                         }
                     }
+                }
 
-                    if let Some((m_sym, impl_key, impl_decl_id_opt)) = found_method {
-                        let is_accessible = if let Some(trait_id) = impl_key.trait_id {
-                            self.ctx.symbol_table.is_accessible(trait_id, self.current_scope, self.ctx.current_provider)
-                        } else {
-                            self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
-                        };
-                        if !is_accessible {
-                            self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*method_name));
-                            return self.ctx.types.intern(SemanticType::Error);
+                #[derive(Clone)]
+                struct FoundMethodCandidate {
+                    impl_id: crate::semantic_tables::ImplId,
+                    method_sym: luna_common::ids::SymbolId,
+                    impl_subst: crate::ty::Substitution,
+                    is_inherent: bool,
+                    decl_id: Option<luna_ast::DeclId>,
+                    trait_id: Option<luna_common::ids::SymbolId>,
+                }
+
+                let mut matching_candidates: Vec<FoundMethodCandidate> = Vec::new();
+
+                for &impl_id in &candidate_impl_ids {
+                    let Some(impl_head) = self.ctx.tables.impl_heads.get(&impl_id) else { continue };
+                    let mut found_m = None;
+                    for &m_sym in &impl_head.methods {
+                        let sym = self.ctx.symbol_table.get_symbol(m_sym);
+                        if sym.name == member_name {
+                            found_m = Some(m_sym);
+                            break;
                         }
-                        self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
-                        let is_nominal_drop = nominal_sym_opt.map_or(false, |sym_id| {
-                            self.ctx.tables.drop_impls.get(&sym_id) == Some(&m_sym)
-                        });
-                        if member_name == "drop"
-                            || Some(m_sym) == self.ctx.lang_items.get(crate::lang_item::LangItem::DropFn)
-                            || is_nominal_drop
-                            || self.ctx.tables.drop_impls.values().any(|&d_sym| d_sym == m_sym)
-                        {
-                            let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
-                            self.ctx.diagnostics.push(Diagnostic::error("Explicit calls to drop() are forbidden. Values are dropped automatically at end of scope.")
-                                .with_span(span));
-                        }
-                        if self.ctx.tables.unsafe_functions.contains(&m_sym) && !self.is_unsafe_context {
-                            let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
-                            self.ctx.diagnostics.push(Diagnostic::error("E_CALL_UNSAFE_FN_OUTSIDE_UNSAFE: Call to unsafe method requires an unsafe block")
-                                .with_span(span));
-                        }
-                        if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
-                            let semantic_ty = self.ctx.types.get(m_ty).clone();
-                            if let SemanticType::Function { params, return_type } = semantic_ty {
-                                let mut subst = crate::ty::Substitution::new();
-                                let mut m_has_generics = false;
-                                
-                                // 1. Bind impl generic params to struct_args
-                                if let Some(gp_syms) = self.ctx.tables.impl_generic_params.get(&impl_key) {
-                                    if !gp_syms.is_empty() {
-                                        m_has_generics = true;
-                                        for (gp_idx, &gp_sym) in gp_syms.iter().enumerate() {
-                                            if let Some(&arg_ty) = struct_args.get(gp_idx) {
-                                                subst.insert(gp_sym, arg_ty);
-                                            } else {
-                                                subst.insert(gp_sym, self.ctx.types.new_inference_var());
-                                            }
-                                        }
-                                    }
-                                } else if let Some(impl_decl_id) = impl_decl_id_opt {
-                                    if (impl_decl_id.0 as usize) < self.arena.decls.len() {
-                                        if let Decl::Impl { generic_params: impl_gps, .. } = &self.arena.decls[impl_decl_id.0 as usize] {
-                                            if !impl_gps.is_empty() {
-                                                m_has_generics = true;
-                                                for (gp_idx, _) in impl_gps.iter().enumerate() {
-                                                    if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(impl_decl_id, gp_idx)) {
-                                                        if let Some(&arg_ty) = struct_args.get(gp_idx) {
-                                                            subst.insert(*gp_sym, arg_ty);
-                                                        } else {
-                                                            subst.insert(*gp_sym, self.ctx.types.new_inference_var());
-                                                        }
-                                                    }
+                    }
+                    let Some(m_sym) = found_m else { continue };
+
+                    let mut impl_subst = crate::ty::Substitution::new();
+                    let mut matched = self.ctx.matches_impl_pattern(
+                        impl_head.self_ty,
+                        peeled_ty_id,
+                        &impl_head.generic_params,
+                        &mut impl_subst,
+                    );
+                    if !matched && peeled_ty_id != obj_ty_id {
+                        impl_subst.map.clear();
+                        matched = self.ctx.matches_impl_pattern(
+                            impl_head.self_ty,
+                            obj_ty_id,
+                            &impl_head.generic_params,
+                            &mut impl_subst,
+                        );
+                    }
+                    if !matched {
+                        continue;
+                    }
+
+                    matching_candidates.push(FoundMethodCandidate {
+                        impl_id,
+                        method_sym: m_sym,
+                        impl_subst,
+                        is_inherent: impl_head.trait_ref.is_none(),
+                        decl_id: impl_head.decl_id,
+                        trait_id: impl_head.trait_ref.as_ref().map(|tr| tr.trait_id),
+                    });
+                }
+
+                // If inherent candidate exists, prefer inherent candidates
+                if matching_candidates.iter().any(|c| c.is_inherent) {
+                    matching_candidates.retain(|c| c.is_inherent);
+                }
+
+                // If multiple candidates remain, disambiguate by argument compatibility
+                if matching_candidates.len() > 1 {
+                    let mut viable = Vec::new();
+                    let arg_tys: Vec<SemanticTypeId> = args.iter().map(|arg| self.typecheck_expr(&arg.value)).collect();
+                    for c in &matching_candidates {
+                        if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&c.method_sym) {
+                            if let SemanticType::Function { params, .. } = self.ctx.types.get(m_ty).clone() {
+                                let expected_params = if params.len() == args.len() + 1 {
+                                    &params[1..]
+                                } else if params.len() == args.len() {
+                                    &params[..]
+                                } else {
+                                    continue;
+                                };
+                                let mut matches_all = true;
+                                for (i, &arg_ty) in arg_tys.iter().enumerate() {
+                                    let exp_p = self.ctx.types.subst(expected_params[i], &c.impl_subst);
+                                    let exp_res = self.ctx.types.resolve(exp_p);
+                                    let arg_res = self.ctx.types.resolve(arg_ty);
+                                    if exp_res != arg_res {
+                                        match (self.ctx.types.get(arg_res), self.ctx.types.get(exp_res)) {
+                                            (SemanticType::Reference(_, m1, in1), SemanticType::Reference(_, m2, in2)) => {
+                                                if (m1 == m2 || (*m1 == crate::ty::Mutability::Mutable && *m2 == crate::ty::Mutability::Immutable))
+                                                    && self.ctx.types.resolve(*in1) == self.ctx.types.resolve(*in2) {
+                                                    // ok
+                                                } else {
+                                                    matches_all = false;
+                                                    break;
                                                 }
                                             }
-                                        }
-                                    }
-                                }
-
-                                // 1b. Also bind nominal struct/enum generic params to struct_args
-                                if let Some(sym_id) = nominal_sym_opt {
-                                    if let Some(decl_id) = self.ctx.tables.symbol_decls.get(&sym_id).copied() {
-                                        for (gp_idx, &arg_ty) in struct_args.iter().enumerate() {
-                                            if let Some(gp_sym) = self.ctx.tables.generic_param_symbols.get(&(decl_id, gp_idx)) {
-                                                m_has_generics = true;
-                                                subst.insert(*gp_sym, arg_ty);
+                                            _ => {
+                                                matches_all = false;
+                                                break;
                                             }
                                         }
                                     }
                                 }
-
-                                // 2. Method generic params. Explicit method
-                                // arguments constrain the substitution before
-                                // value arguments are checked; they must never
-                                // be replaced by inference from those values.
-                                let mut method_gp_syms = Vec::new();
-                                if let Some(&method_decl_id) = self.ctx.tables.symbol_decls.get(&m_sym) {
-                                    let mut gp_idx = 0;
-                                    while let Some(gp_sym) = self
-                                        .ctx
-                                        .tables
-                                        .generic_param_symbols
-                                        .get(&(method_decl_id, gp_idx))
-                                    {
-                                        method_gp_syms.push(*gp_sym);
-                                        gp_idx += 1;
-                                    }
+                                if matches_all {
+                                    viable.push(c.clone());
                                 }
-                                if !generic_args.is_empty()
-                                    && generic_args.len() != method_gp_syms.len()
+                            }
+                        }
+                    }
+                    if !viable.is_empty() {
+                        matching_candidates = viable;
+                    }
+                }
+
+                if matching_candidates.len() > 1 {
+                    let first_impl = matching_candidates[0].impl_id;
+                    if matching_candidates.iter().any(|c| c.impl_id != first_impl) {
+                        self.ctx.diagnostics.push(Diagnostic::error(format!(
+                            "E_AMBIGUOUS_METHOD_CALL: Multiple applicable implementations found for method `{}`",
+                            member_name
+                        )).with_span(*method_name));
+                        return self.ctx.types.intern(SemanticType::Error);
+                    }
+                }
+
+                let selected_opt = matching_candidates.into_iter().next();
+
+                if let Some(selected) = selected_opt {
+                    let impl_id = selected.impl_id;
+                    let m_sym = selected.method_sym;
+                    let mut impl_subst = selected.impl_subst;
+                    let impl_decl_id_opt = selected.decl_id;
+
+                    let is_accessible = if let Some(trait_id) = selected.trait_id {
+                        self.ctx.symbol_table.is_accessible(trait_id, self.current_scope, self.ctx.current_provider)
+                    } else {
+                        self.ctx.symbol_table.is_accessible(m_sym, self.current_scope, self.ctx.current_provider)
+                    };
+                    if !is_accessible {
+                        self.ctx.diagnostics.push(Diagnostic::error(format!("Method `{}` is private and cannot be accessed from this scope", member_name)).with_code(DiagnosticCode::PrivateSymbolAccess).with_span(*method_name));
+                        return self.ctx.types.intern(SemanticType::Error);
+                    }
+                    self.ctx.tables.expr_symbols.insert(*expr_id, m_sym);
+
+                    let nominal_sym_opt = match &peeled_ty {
+                        SemanticType::Struct(s, ..) | SemanticType::Enum(s, ..) => Some(*s),
+                        _ => None,
+                    };
+                    let is_nominal_drop = nominal_sym_opt.map_or(false, |sym_id| {
+                        self.ctx.tables.drop_impls.get(&sym_id) == Some(&m_sym)
+                    });
+                    if member_name == "drop"
+                        || Some(m_sym) == self.ctx.lang_items.get(crate::lang_item::LangItem::DropFn)
+                        || is_nominal_drop
+                        || self.ctx.tables.drop_impls.values().any(|&d_sym| d_sym == m_sym)
+                    {
+                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                        self.ctx.diagnostics.push(Diagnostic::error("Explicit calls to drop() are forbidden. Values are dropped automatically at end of scope.")
+                            .with_span(span));
+                    }
+                    if self.ctx.tables.unsafe_functions.contains(&m_sym) && !self.is_unsafe_context {
+                        let span = self.get_expr_span_for_diag(expr_id).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                        self.ctx.diagnostics.push(Diagnostic::error("E_CALL_UNSAFE_FN_OUTSIDE_UNSAFE: Call to unsafe method requires an unsafe block")
+                            .with_span(span));
+                    }
+                    if let Some(&m_ty) = self.ctx.tables.symbol_types.get(&m_sym) {
+                        let semantic_ty = self.ctx.types.get(m_ty).clone();
+                        if let SemanticType::Function { params, return_type } = semantic_ty {
+                            // Method generic params
+                            let mut method_subst = crate::ty::Substitution::new();
+                            let mut method_gp_syms = Vec::new();
+                            if let Some(&method_decl_id) = self.ctx.tables.symbol_decls.get(&m_sym) {
+                                let mut gp_idx = 0;
+                                while let Some(gp_sym) = self
+                                    .ctx
+                                    .tables
+                                    .generic_param_symbols
+                                    .get(&(method_decl_id, gp_idx))
                                 {
+                                    method_gp_syms.push(*gp_sym);
+                                    gp_idx += 1;
+                                }
+                            }
+                            if !generic_args.is_empty() && generic_args.len() != method_gp_syms.len() {
+                                self.ctx.diagnostics.push(
+                                    Diagnostic::error(format!(
+                                        "wrong number of generic arguments for method `{}`: expected {}, got {}",
+                                        member_name,
+                                        method_gp_syms.len(),
+                                        generic_args.len()
+                                    ))
+                                    .with_span(*method_name),
+                                );
+                            }
+                            for (gp_idx, gp_sym) in method_gp_syms.into_iter().enumerate() {
+                                let gp_ty = if let Some(ast_ty) = generic_args.get(gp_idx) {
+                                    self.lower_type(*ast_ty)
+                                } else {
+                                    self.ctx.types.new_inference_var()
+                                };
+                                method_subst.insert(gp_sym, gp_ty);
+                            }
+
+                            let mut combined_subst = impl_subst.clone();
+                            for (k, v) in &method_subst.map {
+                                combined_subst.insert(*k, *v);
+                            }
+                            let mut m_has_generics = !combined_subst.map.is_empty();
+
+                            if params.len() == args.len() + 1 {
+                                self.bind_matching_generics(params[0], obj_ty_id, &mut combined_subst, &mut m_has_generics);
+                                let receiver_p = if m_has_generics {
+                                    self.ctx.types.subst(params[0], &combined_subst)
+                                } else {
+                                    params[0]
+                                };
+                                let receiver_needs_rw = matches!(
+                                    self.ctx.types.get(receiver_p),
+                                    SemanticType::Reference(_, crate::ty::Mutability::Mutable, _)
+                                );
+                                let receiver_is_shared = matches!(
+                                    obj_ty,
+                                    SemanticType::Reference(_, crate::ty::Mutability::Immutable, _)
+                                        | SemanticType::Pointer(crate::ty::Mutability::Immutable, _)
+                                );
+                                if receiver_needs_rw && receiver_is_shared {
+                                    let span = self
+                                        .get_expr_span_for_diag(expr_id)
+                                        .unwrap_or_else(luna_common::Span::default);
                                     self.ctx.diagnostics.push(
-                                        Diagnostic::error(format!(
-                                            "wrong number of generic arguments for method `{}`: expected {}, got {}",
-                                            member_name,
-                                            method_gp_syms.len(),
-                                            generic_args.len()
-                                        ))
-                                        .with_span(*method_name),
+                                        Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_POINTER: Cannot call method requiring mutable receiver (&rw self) through immutable reference or pointer")
+                                            .with_span(span),
                                     );
                                 }
-                                for (gp_idx, gp_sym) in method_gp_syms.into_iter().enumerate() {
-                                    m_has_generics = true;
-                                    let gp_ty = if let Some(ast_ty) = generic_args.get(gp_idx) {
-                                        self.lower_type(*ast_ty)
-                                    } else {
-                                        self.ctx.types.new_inference_var()
-                                    };
-                                    subst.insert(gp_sym, gp_ty);
-                                }
+                                let _ = self.unify(receiver_p, obj_ty_id);
+                            }
 
-                                if params.len() == args.len() + 1 {
-                                    self.bind_matching_generics(params[0], obj_ty_id, &mut subst, &mut m_has_generics);
-                                    let receiver_p = if m_has_generics {
-                                        self.ctx.types.subst(params[0], &subst)
-                                    } else {
-                                        params[0]
-                                    };
-                                    let receiver_needs_rw = matches!(
-                                        self.ctx.types.get(receiver_p),
-                                        SemanticType::Reference(_, crate::ty::Mutability::Mutable, _)
-                                    );
-                                    let receiver_is_shared = matches!(
-                                        obj_ty,
-                                        SemanticType::Reference(_, crate::ty::Mutability::Immutable, _)
-                                            | SemanticType::Pointer(crate::ty::Mutability::Immutable, _)
-                                    );
-                                    if receiver_needs_rw && receiver_is_shared {
-                                        let span = self
-                                            .get_expr_span_for_diag(expr_id)
-                                            .unwrap_or_else(luna_common::Span::default);
-                                        self.ctx.diagnostics.push(
-                                            Diagnostic::error("E_CANNOT_MUTATE_IMMUTABLE_POINTER: Cannot call method requiring mutable receiver (&rw self) through immutable reference or pointer")
-                                                .with_span(span),
-                                        );
-                                    }
-                                    let _ = self.unify(receiver_p, obj_ty_id);
-                                }
-
-                                let mut return_type = if m_has_generics { self.ctx.types.subst(return_type, &subst) } else { return_type };
-                                let expected_params = if params.len() == args.len() + 1 { &params[1..] } else { &params[..] };
-                                for (i, arg) in args.iter().enumerate() {
-                                    let arg_ty = self.typecheck_expr(&arg.value);
-                                    if let Some(&expected_p) = expected_params.get(i) {
-                                        let expected_p = if m_has_generics { self.ctx.types.subst(expected_p, &subst) } else { expected_p };
-                                        if !self.try_coerce(arg.value, arg_ty, expected_p) {
-                                            if let Err(e) = self.unify(expected_p, arg_ty) {
-                                                let span = self.get_expr_span_for_diag(&arg.value).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
-                                                self.ctx.diagnostics.push(Diagnostic::error(e).with_span(span));
-                                            }
+                            let mut return_type = if m_has_generics { self.ctx.types.subst(return_type, &combined_subst) } else { return_type };
+                            let expected_params = if params.len() == args.len() + 1 { &params[1..] } else { &params[..] };
+                            for (i, arg) in args.iter().enumerate() {
+                                let arg_ty = self.typecheck_expr(&arg.value);
+                                if let Some(&expected_p) = expected_params.get(i) {
+                                    let expected_p = if m_has_generics { self.ctx.types.subst(expected_p, &combined_subst) } else { expected_p };
+                                    if !self.try_coerce(arg.value, arg_ty, expected_p) {
+                                        if let Err(e) = self.unify(expected_p, arg_ty) {
+                                            let span = self.get_expr_span_for_diag(&arg.value).unwrap_or(luna_common::Span::new(luna_common::ids::FileId(0), 0, 0));
+                                            self.ctx.diagnostics.push(Diagnostic::error(e).with_span(span));
                                         }
                                     }
                                 }
-
-                                if m_has_generics {
-                                    self.check_bounds_for_call(m_sym, &subst, *method_name);
-                                    
-                                    let empty = crate::ty::Substitution::new();
-                                    let mut resolved_subst = crate::ty::Substitution::new();
-                                    for (sym, ty) in subst.map {
-                                        let res_ty = self.ctx.types.resolve(ty);
-                                        resolved_subst.insert(sym, self.ctx.types.subst(res_ty, &empty));
-                                    }
-                                    if !resolved_subst.map.is_empty() {
-                                        self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst.clone());
-                                        return_type = self.ctx.types.subst(return_type, &resolved_subst);
-                                    }
-                                }
-
-                                let empty = crate::ty::Substitution::new();
-                                let return_type = self.ctx.types.subst(return_type, &empty);
-                                self.ctx.tables.expr_types.insert(*expr_id, return_type);
-                                return return_type;
                             }
+
+                            if m_has_generics {
+                                self.check_bounds_for_call(m_sym, &combined_subst, *method_name);
+                                
+                                let empty = crate::ty::Substitution::new();
+                                let mut resolved_subst = crate::ty::Substitution::new();
+                                for (sym, ty) in combined_subst.map.clone() {
+                                    let res_ty = self.ctx.types.resolve(ty);
+                                    resolved_subst.insert(sym, self.ctx.types.subst(res_ty, &empty));
+                                }
+                                if !resolved_subst.map.is_empty() {
+                                    self.ctx.tables.expr_substs.insert(*expr_id, resolved_subst.clone());
+                                    return_type = self.ctx.types.subst(return_type, &resolved_subst);
+                                }
+                            }
+
+                            let mut resolved_impl_subst = crate::ty::Substitution::new();
+                            for (sym, ty) in impl_subst.map {
+                                let res_ty = self.ctx.types.resolve(ty);
+                                resolved_impl_subst.insert(sym, res_ty);
+                            }
+                            let mut resolved_method_subst = crate::ty::Substitution::new();
+                            for (sym, ty) in method_subst.map {
+                                let res_ty = self.ctx.types.resolve(ty);
+                                resolved_method_subst.insert(sym, res_ty);
+                            }
+
+                            self.ctx.tables.resolved_impl_methods.insert(
+                                *expr_id,
+                                crate::semantic_tables::ResolvedImplMethod {
+                                    impl_id,
+                                    method_symbol: m_sym,
+                                    impl_subst: resolved_impl_subst,
+                                    method_subst: resolved_method_subst,
+                                },
+                            );
+
+                            let empty = crate::ty::Substitution::new();
+                            let return_type = self.ctx.types.subst(return_type, &empty);
+                            self.ctx.tables.expr_types.insert(*expr_id, return_type);
+                            return return_type;
                         }
                     }
                 }

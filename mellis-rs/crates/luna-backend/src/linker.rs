@@ -10,25 +10,26 @@ fn tool(name: &str) -> PathBuf {
 
 pub fn runtime_library() -> Result<PathBuf, String> {
     let mut candidates = Vec::new();
-    if let Some(home) = env::var_os("MELLIS_HOME") {
-        candidates.push(PathBuf::from(&home).join("runtime").join("mellis-runtime.lib"));
-        candidates.push(PathBuf::from(&home).join("build").join("runtime").join("Release").join("mellis-runtime.lib"));
+    if let Some(home) = env::var_os("LUNA_HOME") {
+        candidates.push(PathBuf::from(&home).join("runtime").join("luna-runtime.lib"));
+        candidates.push(PathBuf::from(&home).join("build").join("runtime").join("Release").join("luna-runtime.lib"));
     }
-    if let Some(path) = env::var_os("MELLIS_RUNTIME_LIB") {
+    if let Some(path) = env::var_os("LUNA_RUNTIME_LIB") {
         candidates.push(PathBuf::from(path));
     }
     
     if let Ok(exe_path) = env::current_exe() {
         if let Some(dir) = exe_path.parent() {
-            candidates.push(dir.join("mellis-runtime.lib"));
+            candidates.push(dir.join("luna-runtime.lib"));
         }
     }
     
-    candidates.push(PathBuf::from("runtime/mellis-runtime.lib"));
-    candidates.push(PathBuf::from("D:\\fdlang\\build\\runtime\\Release\\mellis-runtime.lib"));
+    candidates.push(PathBuf::from("runtime/luna-runtime.lib"));
+    candidates.push(PathBuf::from("D:\\fdlang\\runtime\\luna-runtime.lib"));
+    candidates.push(PathBuf::from("D:\\fdlang\\build\\runtime\\Release\\luna-runtime.lib"));
 
     candidates.into_iter().find(|path| path.is_file()).ok_or_else(||
-        "mellis runtime library not found; set MELLIS_HOME or MELLIS_RUNTIME_LIB or place it alongside the compiler".into())
+        "luna runtime library not found; set LUNA_HOME or LUNA_RUNTIME_LIB or place luna-runtime.lib alongside the compiler".into())
 }
 
 pub fn compile_ll_to_exe(ll_file: &str, obj_file: &str, exe_file: &str) -> Result<(), String> {

@@ -39,6 +39,37 @@ pub enum BackendError {
     InvariantViolation(String),
 }
 
+fn attach_comdat_if_needed(
+    module: &InkwellModule,
+    func: inkwell::values::FunctionValue,
+    name: &str,
+) {
+    let is_monomorphized = name.starts_with("__luna_drop_glue_")
+        || (name.contains('G') && (name.starts_with("_MFN") || name.starts_with("_MMN") || name.starts_with("_MIN")));
+
+    if is_monomorphized {
+        use inkwell::module::Linkage;
+        use inkwell::values::AsValueRef;
+        use std::ffi::CString;
+
+        func.set_linkage(Linkage::LinkOnceODR);
+
+        if let Ok(c_name) = CString::new(name) {
+            unsafe {
+                let comdat = llvm_sys::comdat::LLVMGetOrInsertComdat(
+                    module.as_mut_ptr(),
+                    c_name.as_ptr(),
+                );
+                llvm_sys::comdat::LLVMSetComdatSelectionKind(
+                    comdat,
+                    llvm_sys::comdat::LLVMComdatSelectionKind::LLVMAnyComdatSelectionKind,
+                );
+                llvm_sys::comdat::LLVMSetComdat(func.as_value_ref(), comdat);
+            }
+        }
+    }
+}
+
 
 pub struct TargetConfig {
     pub triple: String,
@@ -93,6 +124,10 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
     
     pub fn emit_ll(&self, path: &Path) -> Result<(), BackendError> {
         self.llvm_module.print_to_file(path).map_err(|e| BackendError::ObjectEmissionFailed(e.to_string()))
+    }
+
+    pub fn to_llvm_ir(&self) -> String {
+        self.llvm_module.print_to_string().to_string()
     }
     
     pub fn emit_object(&self, path: &Path, config: &TargetConfig) -> Result<(), BackendError> {
@@ -310,32 +345,143 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
 
     fn generate_model_b_entrypoint(&mut self, user_main: &MvirFunction) -> Result<(), BackendError> {
         let i32_type = self.context.i32_type();
+        let i64_type = self.context.i64_type();
         let ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
 
-        // 1. Emit @__mellis_start(i32 %argc, ptr %argv) -> i32
+        // 1. Emit @__luna_start(i32 %argc, ptr %argv) -> i32
         let start_fn_type = i32_type.fn_type(&[i32_type.into(), ptr_type.into()], false);
-        let start_fn = self.llvm_module.add_function("__mellis_start", start_fn_type, None);
+        let start_fn = self.llvm_module.add_function("__luna_start", start_fn_type, None);
         let start_bb = self.context.append_basic_block(start_fn, "entry");
         self.builder.position_at_end(start_bb);
 
-        let user_main_fn = self.get_function("__mellis_user_main")
-            .ok_or_else(|| BackendError::InvariantViolation("__mellis_user_main not found".into()))?;
+        let user_main_fn = self.get_function("__luna_user_main")
+            .ok_or_else(|| BackendError::InvariantViolation("__luna_user_main not found".into()))?;
 
-        let code = if user_main.arg_count == 0 {
+        if user_main.arg_count == 0 {
             let ret = self.builder.build_call(user_main_fn, &[], "user_ret").unwrap();
-            if user_main.ret_ty == self.semantic_ctx.types.void_id() {
+            let code = if user_main.ret_ty == self.semantic_ctx.types.void_id() {
                 i32_type.const_zero()
             } else {
                 ret.try_as_basic_value().left().unwrap().into_int_value()
-            }
+            };
+            self.builder.build_return(Some(&code)).unwrap();
         } else {
             // main(args: [str]) -> i32
-            let slice_type = self.context.struct_type(&[ptr_type.into(), self.context.i64_type().into()], false);
-            let slice_val = slice_type.const_zero();
-            let ret = self.builder.build_call(user_main_fn, &[slice_val.into()], "user_ret").unwrap();
-            ret.try_as_basic_value().left().unwrap().into_int_value()
-        };
-        self.builder.build_return(Some(&code)).unwrap();
+            let arg_count_fn = self.get_function("__luna_process_arg_count")
+                .ok_or_else(|| BackendError::InvariantViolation("__luna_process_arg_count declaration missing".into()))?;
+            let process_arg_fn = self.get_function("__luna_process_arg")
+                .ok_or_else(|| BackendError::InvariantViolation("__luna_process_arg declaration missing".into()))?;
+            let abort_fn = self.get_function("__luna_abort")
+                .ok_or_else(|| BackendError::InvariantViolation("__luna_abort declaration missing".into()))?;
+
+            let count_val = self.builder.build_call(arg_count_fn, &[], "arg_count")
+                .unwrap()
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+
+            let empty_bb = self.context.append_basic_block(start_fn, "args_empty");
+            let non_empty_bb = self.context.append_basic_block(start_fn, "args_non_empty");
+            let call_main_bb = self.context.append_basic_block(start_fn, "call_main");
+
+            let is_zero = self.builder.build_int_compare(
+                inkwell::IntPredicate::EQ,
+                count_val,
+                i64_type.const_zero(),
+                "is_zero",
+            ).unwrap();
+            self.builder.build_conditional_branch(is_zero, empty_bb, non_empty_bb).unwrap();
+
+            // BB: args_empty
+            self.builder.position_at_end(empty_bb);
+            let null_ptr = ptr_type.const_null();
+            self.builder.build_unconditional_branch(call_main_bb).unwrap();
+
+            // BB: args_non_empty
+            self.builder.position_at_end(non_empty_bb);
+            let args_array = self.builder.build_array_alloca(ptr_type, count_val, "args_array").unwrap();
+            let out_ptr_alloca = self.builder.build_alloca(ptr_type, "out_ptr").unwrap();
+            let out_len_alloca = self.builder.build_alloca(i64_type, "out_len").unwrap();
+
+            let loop_header = self.context.append_basic_block(start_fn, "loop_header");
+            let loop_body = self.context.append_basic_block(start_fn, "loop_body");
+            let loop_end = self.context.append_basic_block(start_fn, "loop_end");
+            let abort_bb = self.context.append_basic_block(start_fn, "arg_fail_abort");
+
+            self.builder.build_unconditional_branch(loop_header).unwrap();
+
+            // BB: loop_header
+            self.builder.position_at_end(loop_header);
+            let idx_phi = self.builder.build_phi(i64_type, "arg_idx").unwrap();
+            idx_phi.add_incoming(&[
+                (&i64_type.const_zero(), non_empty_bb),
+            ]);
+
+            let cond = self.builder.build_int_compare(
+                inkwell::IntPredicate::ULT,
+                idx_phi.as_basic_value().into_int_value(),
+                count_val,
+                "has_next",
+            ).unwrap();
+            self.builder.build_conditional_branch(cond, loop_body, loop_end).unwrap();
+
+            // BB: loop_body
+            self.builder.position_at_end(loop_body);
+            let curr_idx = idx_phi.as_basic_value().into_int_value();
+            let status = self.builder.build_call(
+                process_arg_fn,
+                &[curr_idx.into(), out_ptr_alloca.into(), out_len_alloca.into()],
+                "status",
+            ).unwrap().try_as_basic_value().left().unwrap().into_int_value();
+
+            let status_ok = self.builder.build_int_compare(
+                inkwell::IntPredicate::EQ,
+                status,
+                i32_type.const_zero(),
+                "status_ok",
+            ).unwrap();
+            let store_arg_bb = self.context.append_basic_block(start_fn, "store_arg");
+            self.builder.build_conditional_branch(status_ok, store_arg_bb, abort_bb).unwrap();
+
+            // BB: arg_fail_abort
+            self.builder.position_at_end(abort_bb);
+            self.builder.build_call(abort_fn, &[], "").unwrap();
+            self.builder.build_unreachable().unwrap();
+
+            // BB: store_arg
+            self.builder.position_at_end(store_arg_bb);
+            let loaded_arg_ptr = self.builder.build_load(ptr_type, out_ptr_alloca, "loaded_ptr").unwrap();
+            let elem_slot = unsafe {
+                self.builder.build_gep(ptr_type, args_array, &[curr_idx], "elem_slot").unwrap()
+            };
+            self.builder.build_store(elem_slot, loaded_arg_ptr).unwrap();
+
+            let next_idx = self.builder.build_int_add(curr_idx, i64_type.const_int(1, false), "next_idx").unwrap();
+            idx_phi.add_incoming(&[(&next_idx, store_arg_bb)]);
+            self.builder.build_unconditional_branch(loop_header).unwrap();
+
+            // BB: loop_end
+            self.builder.position_at_end(loop_end);
+            self.builder.build_unconditional_branch(call_main_bb).unwrap();
+
+            // BB: call_main
+            self.builder.position_at_end(call_main_bb);
+            let slice_ptr_phi = self.builder.build_phi(ptr_type, "slice_ptr").unwrap();
+            slice_ptr_phi.add_incoming(&[
+                (&null_ptr, empty_bb),
+                (&args_array, loop_end),
+            ]);
+
+            let slice_type = self.context.struct_type(&[ptr_type.into(), i64_type.into()], false);
+            let slice_val = slice_type.get_undef();
+            let slice_val = self.builder.build_insert_value(slice_val, slice_ptr_phi.as_basic_value(), 0, "slice_data").unwrap();
+            let slice_val = self.builder.build_insert_value(slice_val.into_struct_value(), count_val, 1, "slice_len").unwrap();
+
+            let ret = self.builder.build_call(user_main_fn, &[slice_val.into_struct_value().into()], "user_ret").unwrap();
+            let code = ret.try_as_basic_value().left().unwrap().into_int_value();
+            self.builder.build_return(Some(&code)).unwrap();
+        }
 
         // 2. Emit @main(i32 %argc, ptr %argv) -> i32
         let main_fn_type = i32_type.fn_type(&[i32_type.into(), ptr_type.into()], false);
@@ -346,8 +492,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
         let argc = main_fn.get_nth_param(0).unwrap();
         let argv = main_fn.get_nth_param(1).unwrap();
 
-        let startup_fn = self.get_function("__mellis_startup")
-            .ok_or_else(|| BackendError::InvariantViolation("__mellis_startup declaration missing".into()))?;
+        let startup_fn = self.get_function("__luna_startup")
+            .ok_or_else(|| BackendError::InvariantViolation("__luna_startup declaration missing".into()))?;
         self.builder.build_call(startup_fn, &[argc.into(), argv.into()], "").unwrap();
 
         let exit_code = self.builder.build_call(start_fn, &[argc.into(), argv.into()], "exit_code")
@@ -356,8 +502,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             .left()
             .unwrap();
 
-        let shutdown_fn = self.get_function("__mellis_shutdown")
-            .ok_or_else(|| BackendError::InvariantViolation("__mellis_shutdown declaration missing".into()))?;
+        let shutdown_fn = self.get_function("__luna_shutdown")
+            .ok_or_else(|| BackendError::InvariantViolation("__luna_shutdown declaration missing".into()))?;
         self.builder.build_call(shutdown_fn, &[exit_code.into()], "").unwrap();
         self.builder.build_unreachable().unwrap();
 
@@ -370,51 +516,73 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
         let ptr_type = self.context.ptr_type(inkwell::AddressSpace::default());
         let void_type = self.context.void_type();
 
-        // Declare `__mellis_alloc(i64, i64) -> ptr`
+        // Declare `__luna_alloc(i64, i64) -> ptr`
         let alloc_type = ptr_type.fn_type(&[i64_type.into(), i64_type.into()], false);
-        self.llvm_module.add_function("__mellis_alloc", alloc_type, None);
+        self.llvm_module.add_function("__luna_alloc", alloc_type, None);
 
-        // Declare `__mellis_dealloc(ptr, i64, i64) -> void`
+        // Declare `__luna_dealloc(ptr, i64, i64) -> void`
         let dealloc_type = void_type.fn_type(&[ptr_type.into(), i64_type.into(), i64_type.into()], false);
-        self.llvm_module.add_function("__mellis_dealloc", dealloc_type, None);
+        self.llvm_module.add_function("__luna_dealloc", dealloc_type, None);
 
-        // Declare `__mellis_realloc(ptr, i64, i64, i64) -> ptr`
+        // Declare `__luna_realloc(ptr, i64, i64, i64) -> ptr`
         let realloc_type = ptr_type.fn_type(&[ptr_type.into(), i64_type.into(), i64_type.into(), i64_type.into()], false);
-        self.llvm_module.add_function("__mellis_realloc", realloc_type, None);
+        self.llvm_module.add_function("__luna_realloc", realloc_type, None);
 
-        // Declare `__mellis_print(ptr, i64) -> void`
+        // Declare `__luna_print(ptr, i64) -> void`
         let print_type = void_type.fn_type(&[ptr_type.into(), i64_type.into()], false);
-        self.llvm_module.add_function("__mellis_print", print_type, None);
+        self.llvm_module.add_function("__luna_print", print_type, None);
 
-        // Declare `__mellis_println(ptr, i64) -> void`
-        self.llvm_module.add_function("__mellis_println", print_type, None);
+        // Declare `__luna_println(ptr, i64) -> void`
+        self.llvm_module.add_function("__luna_println", print_type, None);
 
-        // Declare `__mellis_eprintln(ptr, i64) -> void`
-        self.llvm_module.add_function("__mellis_eprintln", print_type, None);
+        // Declare `__luna_eprintln(ptr, i64) -> void`
+        self.llvm_module.add_function("__luna_eprintln", print_type, None);
 
-        // Declare `__mellis_bounds_fail(i64, i64, ptr, i64, i32, i32) -> void`
+        // Declare `__luna_bounds_fail(i64, i64, ptr, i64, i32, i32) -> void`
         let bounds_type = void_type.fn_type(&[
             i64_type.into(), i64_type.into(),
             ptr_type.into(), i64_type.into(),
             i32_type.into(), i32_type.into(),
         ], false);
-        self.llvm_module.add_function("__mellis_bounds_fail", bounds_type, None);
+        self.llvm_module.add_function("__luna_bounds_fail", bounds_type, None);
 
-        // Declare `__mellis_panic(ptr, i64, ptr, i64, i32, i32) -> void`
+        // Declare `__luna_panic(ptr, i64, ptr, i64, i32, i32) -> void`
         let panic_type = void_type.fn_type(&[
             ptr_type.into(), i64_type.into(),
             ptr_type.into(), i64_type.into(),
             i32_type.into(), i32_type.into(),
         ], false);
-        self.llvm_module.add_function("__mellis_panic", panic_type, None);
+        self.llvm_module.add_function("__luna_panic", panic_type, None);
 
-        // Declare `__mellis_startup(i32, ptr) -> void`
+        // Declare `__luna_panic_default() -> void`
+        let panic_default_type = void_type.fn_type(&[], false);
+        self.llvm_module.add_function("__luna_panic_default", panic_default_type, None);
+
+        // Declare `__luna_startup(i32, ptr) -> void`
         let startup_type = void_type.fn_type(&[i32_type.into(), ptr_type.into()], false);
-        self.llvm_module.add_function("__mellis_startup", startup_type, None);
+        self.llvm_module.add_function("__luna_startup", startup_type, None);
 
-        // Declare `__mellis_shutdown(i32) -> void`
+        // Declare `__luna_shutdown(i32) -> void`
         let shutdown_type = void_type.fn_type(&[i32_type.into()], false);
-        self.llvm_module.add_function("__mellis_shutdown", shutdown_type, None);
+        self.llvm_module.add_function("__luna_shutdown", shutdown_type, None);
+
+        // Declare `__luna_abort() -> void`
+        let abort_type = void_type.fn_type(&[], false);
+        if self.llvm_module.get_function("__luna_abort").is_none() {
+            self.llvm_module.add_function("__luna_abort", abort_type, None);
+        }
+
+        // Declare `__luna_process_arg_count() -> i64`
+        let arg_count_type = i64_type.fn_type(&[], false);
+        if self.llvm_module.get_function("__luna_process_arg_count").is_none() {
+            self.llvm_module.add_function("__luna_process_arg_count", arg_count_type, None);
+        }
+
+        // Declare `__luna_process_arg(i64, ptr, ptr) -> i32`
+        let process_arg_type = i32_type.fn_type(&[i64_type.into(), ptr_type.into(), ptr_type.into()], false);
+        if self.llvm_module.get_function("__luna_process_arg").is_none() {
+            self.llvm_module.add_function("__luna_process_arg", process_arg_type, None);
+        }
 
         // Declare all module functions
         for func in &self.module.functions {
@@ -435,20 +603,25 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             }
 
             let raw_name = func.link_name.as_deref().unwrap_or(&func.name.name);
-            let name = if raw_name == "main" { "__mellis_user_main" } else { raw_name };
-            let linkage = if !func.blocks.is_empty() && (name.starts_with("__mellis_drop_glue_") || name.contains('G')) {
-                Some(inkwell::module::Linkage::LinkOnceODR)
+            let name = if raw_name == "main" { "__luna_user_main" } else { raw_name };
+            let _llvm_fn = if let Some(existing) = self.llvm_module.get_function(name) {
+                existing
             } else {
-                None
+                let f = self.llvm_module.add_function(name, fn_type, None);
+                if !func.is_extern {
+                    attach_comdat_if_needed(&self.llvm_module, f, name);
+                }
+                f
             };
-            self.llvm_module.add_function(name, fn_type, linkage);
         }
         Ok(())
     }
 
     fn compile_function(&mut self, func: &'a MvirFunction) -> Result<(), BackendError> {
-        let fn_name = if func.name.name == "main" { "__mellis_user_main" } else { &func.name.name };
-        let llvm_func = self.get_function(fn_name)
+        let raw_name = func.link_name.as_deref().unwrap_or(&func.name.name);
+        let fn_name = if raw_name == "main" { "__luna_user_main" } else { raw_name };
+        let llvm_func = self.llvm_module.get_function(fn_name)
+            .or_else(|| self.get_function(fn_name))
             .ok_or_else(|| BackendError::InvariantViolation(format!("Function not found: {}", fn_name)))?;
 
         self.block_map.clear();
@@ -507,15 +680,33 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
         Ok(())
     }
 
-    fn generate_operand(&self, op: &Operand) -> Result<BasicValueEnum<'ctx>, BackendError> {
+    fn generate_typed_operand(
+        &self,
+        op: &Operand,
+        expected_ty: Option<inkwell::types::BasicTypeEnum<'ctx>>,
+        func: &MvirFunction,
+    ) -> Result<BasicValueEnum<'ctx>, BackendError> {
         match op {
             Operand::Value(val_id) => {
-                self.value_map.get(val_id)
+                let val = self.value_map.get(val_id)
                     .copied()
-                    .ok_or_else(|| BackendError::MissingMapping(*val_id))
+                    .ok_or_else(|| BackendError::MissingMapping(*val_id))?;
+                if let Some(expected) = expected_ty {
+                    if val.is_int_value() && expected.is_int_type() && val.get_type() != expected {
+                        let is_unsigned = self.is_unsigned_operand(op, func);
+                        let casted = self.builder.build_int_cast_sign_flag(
+                            val.into_int_value(),
+                            expected.into_int_type(),
+                            !is_unsigned,
+                            "typed_op_cast",
+                        ).unwrap();
+                        return Ok(casted.into());
+                    }
+                }
+                Ok(val)
             }
             Operand::Global(glb) => {
-                let name = if glb.name == "main" { "__mellis_user_main" } else { &glb.name };
+                let name = if glb.name == "main" { "__luna_user_main" } else { &glb.name };
                 if let Some(func) = self.get_function(name) {
                     Ok(func.as_global_value().as_pointer_value().into())
                 } else {
@@ -528,12 +719,45 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             Operand::Block(_) => Err(BackendError::InvariantViolation("Block operand unsupported as value".into())),
             Operand::Number(n) => {
                 if n == "null" {
-                    // Quick hack for strings just like before
-                    let str_val = self.builder.build_global_string_ptr("Hello, error Rust Mellis!", ".str").unwrap();
+                    if let Some(ty) = expected_ty {
+                        if ty.is_pointer_type() {
+                            return Ok(self.context.ptr_type(inkwell::AddressSpace::default()).const_null().into());
+                        }
+                    }
+                    let str_val = self.builder.build_global_string_ptr("Hello, error Rust Luna!", ".str").unwrap();
                     Ok(str_val.as_pointer_value().into())
                 } else {
-                    let parsed: i64 = n.parse().map_err(|_| BackendError::InvariantViolation(format!("Invalid number: {}", n)))?;
-                    Ok(self.context.i32_type().const_int(parsed as u64, false).into())
+                    // Canonical type-directed numeric literal parsing
+                    let parsed: u64 = if n.starts_with('-') {
+                        n.parse::<i64>().map_err(|_| BackendError::InvariantViolation(format!("Invalid signed number: {}", n)))? as u64
+                    } else {
+                        n.parse::<u64>().map_err(|_| BackendError::InvariantViolation(format!("Invalid unsigned number: {}", n)))?
+                    };
+
+                    if let Some(ty) = expected_ty {
+                        if ty.is_int_type() {
+                            return Ok(ty.into_int_type().const_int(parsed, false).into());
+                        } else if ty.is_float_type() {
+                            let f: f64 = n.parse().map_err(|_| BackendError::InvariantViolation(format!("Invalid float: {}", n)))?;
+                            return Ok(ty.into_float_type().const_float(f).into());
+                        }
+                    }
+
+                    // Fallback when no expected type is provided: determine bitwidth from value
+                    if n.starts_with('-') {
+                        let signed_val = parsed as i64;
+                        if signed_val >= i32::MIN as i64 && signed_val <= i32::MAX as i64 {
+                            Ok(self.context.i32_type().const_int(parsed, false).into())
+                        } else {
+                            Ok(self.context.i64_type().const_int(parsed, false).into())
+                        }
+                    } else {
+                        if parsed <= u32::MAX as u64 {
+                            Ok(self.context.i32_type().const_int(parsed, false).into())
+                        } else {
+                            Ok(self.context.i64_type().const_int(parsed, false).into())
+                        }
+                    }
                 }
             }
             Operand::Boolean(b) => {
@@ -547,7 +771,42 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
             }
             Operand::Char(c) => {
                 let ch = parse_char_literal(c);
+                if let Some(ty) = expected_ty {
+                    if ty.is_int_type() {
+                        return Ok(ty.into_int_type().const_int(ch as u64, false).into());
+                    }
+                }
                 Ok(self.context.i32_type().const_int(ch as u32 as u64, false).into())
+            }
+        }
+    }
+
+    fn generate_operand(&self, op: &Operand, func: &MvirFunction) -> Result<BasicValueEnum<'ctx>, BackendError> {
+        self.generate_typed_operand(op, None, func)
+    }
+
+    fn generate_comparison_operands(
+        &self,
+        left: &Operand,
+        right: &Operand,
+        _fallback_ty: SemanticTypeId,
+        _func: &MvirFunction,
+    ) -> Result<(BasicValueEnum<'ctx>, BasicValueEnum<'ctx>), BackendError> {
+        match (left, right) {
+            (Operand::Value(_), Operand::Number(_)) => {
+                let l_val = self.generate_operand(left, _func)?;
+                let r_val = self.generate_typed_operand(right, Some(l_val.get_type()), _func)?;
+                Ok((l_val, r_val))
+            }
+            (Operand::Number(_), Operand::Value(_)) => {
+                let r_val = self.generate_operand(right, _func)?;
+                let l_val = self.generate_typed_operand(left, Some(r_val.get_type()), _func)?;
+                Ok((l_val, r_val))
+            }
+            _ => {
+                let l_val = self.generate_operand(left, _func)?;
+                let r_val = self.generate_operand(right, _func)?;
+                Ok((l_val, r_val))
             }
         }
     }
@@ -560,26 +819,38 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(alloca.into())
             }
             Instruction::HeapAlloc => {
-                let alloc_fn = self.get_function("__mellis_alloc")
-                    .ok_or_else(|| BackendError::InvariantViolation("__mellis_alloc declaration missing".into()))?;
+                let alloc_fn = self.get_function("__luna_alloc")
+                    .ok_or_else(|| BackendError::InvariantViolation("__luna_alloc declaration missing".into()))?;
                 let size = self.context.i64_type().const_int(self.layout_size(data.ty), false);
                 let align = self.context.i64_type().const_int(self.layout_align(data.ty).max(1), false);
                 let call = self.builder.build_call(alloc_fn, &[size.into(), align.into()], &format!("v{}", id.0)).unwrap();
-                call.try_as_basic_value().left().ok_or_else(|| BackendError::InvariantViolation("__mellis_alloc returned void".into()))
+                call.try_as_basic_value().left().ok_or_else(|| BackendError::InvariantViolation("__luna_alloc returned void".into()))
             }
             Instruction::Assign(val_op) => {
-                self.generate_operand(val_op)
+                let expected_ty = self.map_type(data.ty).ok();
+                self.generate_typed_operand(val_op, expected_ty, _func)
             }
             Instruction::Store { ptr, value } => {
-                let llvm_ptr = self.generate_operand(ptr)?.into_pointer_value();
-                let llvm_val = self.generate_operand(value)?;
+                let llvm_ptr = self.generate_operand(ptr, _func)?.into_pointer_value();
+                let expected_val_ty = match ptr {
+                    Operand::Value(vid) => {
+                        let ptr_sem_ty = _func.values[vid.0 as usize].ty;
+                        let resolved = self.semantic_ctx.types.resolve(ptr_sem_ty);
+                        match self.semantic_ctx.types.get(resolved) {
+                            SemanticType::Pointer(_, elem) | SemanticType::Reference(_, _, elem) => self.map_type(*elem).ok(),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                };
+                let llvm_val = self.generate_typed_operand(value, expected_val_ty, _func)?;
                 self.builder.build_store(llvm_ptr, llvm_val).unwrap();
                 // Store doesn't return a value, but MVIR treats everything as a value.
                 // We'll return a dummy zero.
                 Ok(self.context.i32_type().const_zero().into())
             }
             Instruction::Load { ptr } => {
-                let llvm_ptr = self.generate_operand(ptr)?.into_pointer_value();
+                let llvm_ptr = self.generate_operand(ptr, _func)?.into_pointer_value();
                 let ty = if data.ty == SemanticTypeId(0) {
                     self.context.ptr_type(inkwell::AddressSpace::default()).into()
                 } else {
@@ -589,8 +860,9 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(load)
             }
             Instruction::Add { left, right } => {
-                let l_val = self.generate_operand(left)?;
-                let r_val = self.generate_operand(right)?;
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
                 if l_val.is_pointer_value() {
                     let elem_ty = match self.semantic_ctx.types.get(data.ty) {
                         SemanticType::Pointer(_, elem) => self.map_type(*elem)?,
@@ -601,14 +873,14 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     };
                     Ok(res.into())
                 } else {
-                    let l = l_val.into_int_value();
-                    let r = r_val.into_int_value();
+                    let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                    let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                     let res = self.builder.build_int_add(l, r, &format!("v{}", id.0)).unwrap();
                     Ok(res.into())
                 }
             }
             Instruction::Drop { value, callee, .. } => {
-                let val = self.generate_operand(value)?;
+                let val = self.generate_operand(value, _func)?;
                 if let Some(c_id) = callee {
                     if let Some(func_val) = self.get_function(&c_id.name) {
                         let _ = self.builder.build_call(func_val, &[val.into()], "");
@@ -617,8 +889,9 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(self.context.i32_type().const_int(0, false).into())
             }
             Instruction::Sub { left, right } => {
-                let l_val = self.generate_operand(left)?;
-                let r_val = self.generate_operand(right)?;
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
                 if l_val.is_pointer_value() && r_val.is_pointer_value() {
                     let elem_ty = match left {
                         Operand::Value(val) => {
@@ -643,22 +916,27 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     };
                     Ok(res.into())
                 } else {
-                    let l = l_val.into_int_value();
-                    let r = r_val.into_int_value();
+                    let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                    let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                     let res = self.builder.build_int_sub(l, r, &format!("v{}", id.0)).unwrap();
                     Ok(res.into())
                 }
             }
             Instruction::Mul { left, right } => {
-                let l = self.generate_operand(left)?.into_int_value();
-                let r = self.generate_operand(right)?.into_int_value();
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
+                let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = self.builder.build_int_mul(l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
             Instruction::Div { left, right } => {
-                let l = self.generate_operand(left)?.into_int_value();
-                let r = self.generate_operand(right)?.into_int_value();
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
                 let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = if is_unsigned {
                     self.builder.build_int_unsigned_div(l, r, &format!("v{}", id.0)).unwrap()
                 } else {
@@ -667,9 +945,11 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(res.into())
             }
             Instruction::Rem { left, right } => {
-                let l = self.generate_operand(left)?.into_int_value();
-                let r = self.generate_operand(right)?.into_int_value();
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
                 let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = if is_unsigned {
                     self.builder.build_int_unsigned_rem(l, r, &format!("v{}", id.0)).unwrap()
                 } else {
@@ -678,96 +958,92 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(res.into())
             }
             Instruction::Eq { left, right } => {
-                let l_val = self.generate_operand(left)?;
-                let r_val = self.generate_operand(right)?;
-                let (l, r) = if l_val.is_pointer_value() || r_val.is_pointer_value() {
-                    let l_int = if l_val.is_pointer_value() {
-                        self.builder.build_ptr_to_int(l_val.into_pointer_value(), self.context.i64_type(), &format!("l_ptr_cast_{}", id.0)).unwrap()
-                    } else {
-                        self.builder.build_int_cast(l_val.into_int_value(), self.context.i64_type(), &format!("l_int_cast_{}", id.0)).unwrap()
-                    };
-                    let r_int = if r_val.is_pointer_value() {
-                        self.builder.build_ptr_to_int(r_val.into_pointer_value(), self.context.i64_type(), &format!("r_ptr_cast_{}", id.0)).unwrap()
-                    } else {
-                        self.builder.build_int_cast(r_val.into_int_value(), self.context.i64_type(), &format!("r_int_cast_{}", id.0)).unwrap()
-                    };
-                    (l_int, r_int)
-                } else {
-                    let mut l_int = l_val.into_int_value();
-                    let mut r_int = r_val.into_int_value();
-                    if l_int.get_type() != r_int.get_type() {
-                        if l_int.get_type().get_bit_width() < r_int.get_type().get_bit_width() {
-                            l_int = self.builder.build_int_cast(l_int, r_int.get_type(), &format!("l_cast_{}", id.0)).unwrap();
-                        } else {
-                            r_int = self.builder.build_int_cast(r_int, l_int.get_type(), &format!("r_cast_{}", id.0)).unwrap();
-                        }
-                    }
-                    (l_int, r_int)
-                };
+                let (l_val, r_val) = self.generate_comparison_operands(left, right, data.ty, _func)?;
+                let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = self.builder.build_int_compare(inkwell::IntPredicate::EQ, l, r, &format!("v{}", id.0)).unwrap();
                 // Ensure the result is correctly represented (e.g., bool)
                 Ok(res.into())
             }
             Instruction::BitAnd { left, right } => {
-                let l = self.generate_operand(left)?.into_int_value();
-                let r = self.generate_operand(right)?.into_int_value();
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
+                let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = self.builder.build_and(l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
             Instruction::BitOr { left, right } => {
-                let l = self.generate_operand(left)?.into_int_value();
-                let r = self.generate_operand(right)?.into_int_value();
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
+                let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = self.builder.build_or(l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
             Instruction::BitXor { left, right } => {
-                let l = self.generate_operand(left)?.into_int_value();
-                let r = self.generate_operand(right)?.into_int_value();
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
+                let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = self.builder.build_xor(l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
             Instruction::Shl { left, right } => {
-                let l = self.generate_operand(left)?.into_int_value();
-                let r = self.generate_operand(right)?.into_int_value();
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
+                let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = self.builder.build_left_shift(l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
             Instruction::Shr { left, right } => {
-                let l = self.generate_operand(left)?.into_int_value();
-                let r = self.generate_operand(right)?.into_int_value();
+                let expected_ty = self.map_type(data.ty).ok();
+                let l_val = self.generate_typed_operand(left, expected_ty, _func)?;
+                let r_val = self.generate_typed_operand(right, expected_ty, _func)?;
                 let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = self.builder.build_right_shift(l, r, !is_unsigned, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
             Instruction::Borrow { base, .. } => {
-                self.generate_operand(base)
+                self.generate_operand(base, _func)
             }
             Instruction::CallDirect { callee, args } => {
-                let func_name = if callee.name == "main" {
-                    "__mellis_user_main".to_string()
+                let mut func_name = if callee.name == "main" {
+                    "__luna_user_main".to_string()
                 } else {
                     callee.name.clone()
                 };
 
+                let func_opt = self.get_function(&func_name);
+                let param_types_opt = func_opt.map(|f| f.get_type().get_param_types());
+
                 let mut llvm_args = Vec::new();
                 let mut param_types = Vec::new();
-                for arg in args {
-                    let val = self.generate_operand(arg)?;
+                for (i, arg) in args.iter().enumerate() {
+                    let expected_param_ty = param_types_opt.as_ref().and_then(|pts| pts.get(i).copied());
+                    let mut val = self.generate_typed_operand(arg, expected_param_ty, _func)?;
+                    if let Some(expected) = expected_param_ty {
+                        if val.is_int_value() && expected.is_int_type() && val.get_type() != expected {
+                            let is_unsigned = self.is_unsigned_operand(arg, _func);
+                            val = self.builder.build_int_cast_sign_flag(
+                                val.into_int_value(),
+                                expected.into_int_type(),
+                                !is_unsigned,
+                                "arg_cast",
+                            ).unwrap().into();
+                        }
+                    }
                     param_types.push(val.get_type().into());
                     llvm_args.push(val.into());
                 }
-                if func_name == "__mellis_panic" && llvm_args.is_empty() {
-                    let null_ptr = self.context.ptr_type(inkwell::AddressSpace::default()).const_null();
-                    let zero_i64 = self.context.i64_type().const_zero();
-                    let zero_i32 = self.context.i32_type().const_zero();
-                    llvm_args = vec![
-                        null_ptr.into(),
-                        zero_i64.into(),
-                        null_ptr.into(),
-                        zero_i64.into(),
-                        zero_i32.into(),
-                        zero_i32.into(),
-                    ];
+                if func_name == "__luna_panic" && llvm_args.is_empty() {
+                    func_name = "__luna_panic_default".to_string();
                 }
                 
                 let is_void = matches!(self.semantic_ctx.types.get(data.ty), SemanticType::Void | SemanticType::Never);
@@ -811,9 +1087,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 
                 if !args.is_empty() {
                     let payload_ptr = self.builder.build_struct_gep(ty, alloca, 1, "payload_ptr").unwrap();
-                    // In a real implementation we would gep into the union/array based on field_idx.
-                    // For now, assume a single primitive payload.
-                    let arg_val = self.generate_operand(&args[0])?;
+                    let payload_ty = ty.into_struct_type().get_field_type_at_index(1);
+                    let arg_val = self.generate_typed_operand(&args[0], payload_ty, _func)?;
                     self.builder.build_store(payload_ptr, arg_val).unwrap();
                 }
                 
@@ -821,13 +1096,13 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(load)
             }
             Instruction::Tag { value } => {
-                let llvm_val = self.generate_operand(value)?;
+                let llvm_val = self.generate_operand(value, _func)?;
                 // The value is the struct itself. We can use extractvalue
                 let tag = self.builder.build_extract_value(llvm_val.into_struct_value(), 0, "tag").unwrap();
                 Ok(tag)
             }
             Instruction::Extract { value, variant_idx: _, field_idx } => {
-                let llvm_val = self.generate_operand(value)?;
+                let llvm_val = self.generate_operand(value, _func)?;
                 
                 let mut is_enum = false;
                 if let Operand::Value(vid) = value {
@@ -855,38 +1130,14 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 }
             }
             Instruction::NotEq { left, right } => {
-                let l_val = self.generate_operand(left)?;
-                let r_val = self.generate_operand(right)?;
-                let (l, r) = if l_val.is_pointer_value() || r_val.is_pointer_value() {
-                    let l_int = if l_val.is_pointer_value() {
-                        self.builder.build_ptr_to_int(l_val.into_pointer_value(), self.context.i64_type(), &format!("l_ptr_cast_{}", id.0)).unwrap()
-                    } else {
-                        self.builder.build_int_cast(l_val.into_int_value(), self.context.i64_type(), &format!("l_int_cast_{}", id.0)).unwrap()
-                    };
-                    let r_int = if r_val.is_pointer_value() {
-                        self.builder.build_ptr_to_int(r_val.into_pointer_value(), self.context.i64_type(), &format!("r_ptr_cast_{}", id.0)).unwrap()
-                    } else {
-                        self.builder.build_int_cast(r_val.into_int_value(), self.context.i64_type(), &format!("r_int_cast_{}", id.0)).unwrap()
-                    };
-                    (l_int, r_int)
-                } else {
-                    let mut l_int = l_val.into_int_value();
-                    let mut r_int = r_val.into_int_value();
-                    if l_int.get_type() != r_int.get_type() {
-                        if l_int.get_type().get_bit_width() < r_int.get_type().get_bit_width() {
-                            l_int = self.builder.build_int_cast(l_int, r_int.get_type(), &format!("l_cast_{}", id.0)).unwrap();
-                        } else {
-                            r_int = self.builder.build_int_cast(r_int, l_int.get_type(), &format!("r_cast_{}", id.0)).unwrap();
-                        }
-                    }
-                    (l_int, r_int)
-                };
+                let (l_val, r_val) = self.generate_comparison_operands(left, right, data.ty, _func)?;
+                let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
+                let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let res = self.builder.build_int_compare(inkwell::IntPredicate::NE, l, r, &format!("v{}", id.0)).unwrap();
                 Ok(res.into())
             }
             Instruction::LessThan { left, right } => {
-                let l_val = self.generate_operand(left)?;
-                let r_val = self.generate_operand(right)?;
+                let (l_val, r_val) = self.generate_comparison_operands(left, right, data.ty, _func)?;
                 let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
                 let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let pred = if is_unsigned { inkwell::IntPredicate::ULT } else { inkwell::IntPredicate::SLT };
@@ -894,8 +1145,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(res.into())
             }
             Instruction::LessOrEq { left, right } => {
-                let l_val = self.generate_operand(left)?;
-                let r_val = self.generate_operand(right)?;
+                let (l_val, r_val) = self.generate_comparison_operands(left, right, data.ty, _func)?;
                 let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
                 let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let pred = if is_unsigned { inkwell::IntPredicate::ULE } else { inkwell::IntPredicate::SLE };
@@ -903,8 +1153,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(res.into())
             }
             Instruction::GreaterThan { left, right } => {
-                let l_val = self.generate_operand(left)?;
-                let r_val = self.generate_operand(right)?;
+                let (l_val, r_val) = self.generate_comparison_operands(left, right, data.ty, _func)?;
                 let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
                 let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let pred = if is_unsigned { inkwell::IntPredicate::UGT } else { inkwell::IntPredicate::SGT };
@@ -912,8 +1161,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(res.into())
             }
             Instruction::GreaterOrEq { left, right } => {
-                let l_val = self.generate_operand(left)?;
-                let r_val = self.generate_operand(right)?;
+                let (l_val, r_val) = self.generate_comparison_operands(left, right, data.ty, _func)?;
                 let is_unsigned = self.is_unsigned_operand(left, _func) || self.is_unsigned_operand(right, _func);
                 let (l, r) = self.coerce_int_pair(l_val, r_val, is_unsigned, id.0)?;
                 let pred = if is_unsigned { inkwell::IntPredicate::UGE } else { inkwell::IntPredicate::SGE };
@@ -921,7 +1169,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(res.into())
             }
             Instruction::FieldPtr { base, field_idx } => {
-                let base_value = self.generate_operand(base)?;
+                let base_value = self.generate_operand(base, _func)?;
                 let base_ptr = base_value.into_pointer_value();
                 let base_ty = match base {
                     Operand::Value(value) => {
@@ -952,7 +1200,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(field_ptr.into())
             }
             Instruction::MakeClosure { func, env_ptr, .. } => {
-                let env = self.generate_operand(env_ptr)?.into_pointer_value();
+                let env = self.generate_operand(env_ptr, _func)?.into_pointer_value();
                 let closure_ty = self.map_type(data.ty)?.into_struct_type();
                 let code = self.get_function(&func.name)
                     .ok_or_else(|| BackendError::InvariantViolation(format!("Closure function not found: {}", func.name)))?
@@ -965,12 +1213,12 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(value.into_struct_value().into())
             }
             Instruction::CallIndirect { callee, args } => {
-                let callee_val = self.generate_operand(callee)?;
+                let callee_val = self.generate_operand(callee, _func)?;
                 let fn_ptr = callee_val.into_pointer_value();
                 let mut llvm_args: Vec<inkwell::values::BasicMetadataValueEnum<'ctx>> = Vec::new();
                 let mut param_types: Vec<inkwell::types::BasicMetadataTypeEnum<'ctx>> = Vec::new();
                 for arg in args {
-                    let value = self.generate_operand(arg)?;
+                    let value = self.generate_operand(arg, _func)?;
                     param_types.push(value.get_type().into());
                     llvm_args.push(value.into());
                 }
@@ -997,7 +1245,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 }
             }
             Instruction::CallClosure { closure, args } => {
-                let closure_value = self.generate_operand(closure)?.into_struct_value();
+                let closure_value = self.generate_operand(closure, _func)?.into_struct_value();
                 let code = self.builder.build_extract_value(closure_value, 0, "closure_code")
                     .map_err(|_| BackendError::InvariantViolation("Invalid closure code field".into()))?
                     .into_pointer_value();
@@ -1006,7 +1254,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let mut llvm_args: Vec<inkwell::values::BasicMetadataValueEnum<'ctx>> = vec![env.into()];
                 let mut param_types: Vec<inkwell::types::BasicMetadataTypeEnum<'ctx>> = vec![self.context.ptr_type(inkwell::AddressSpace::default()).into()];
                 for arg in args {
-                    let value = self.generate_operand(arg)?;
+                    let value = self.generate_operand(arg, _func)?;
                     param_types.push(value.get_type().into());
                     llvm_args.push(value.into());
                 }
@@ -1016,7 +1264,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 call.try_as_basic_value().left().ok_or_else(|| BackendError::InvariantViolation("Closure call returned void".into()))
             }
             Instruction::MakeTraitObject { data_ptr, vtable, trait_sym, concrete_sym } => {
-                let data_val = self.generate_operand(data_ptr)?;
+                let data_val = self.generate_operand(data_ptr, _func)?;
                 let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
                 let data_ptr_val = if data_val.is_pointer_value() {
                     data_val.into_pointer_value()
@@ -1106,7 +1354,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(val.into_struct_value().into())
             }
             Instruction::CallVirt { obj, method_idx, args } => {
-                let obj_val = self.generate_operand(obj)?;
+                let obj_val = self.generate_operand(obj, _func)?;
                 let obj_struct = if obj_val.is_struct_value() {
                     obj_val.into_struct_value()
                 } else if obj_val.is_pointer_value() {
@@ -1135,7 +1383,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 let mut llvm_args: Vec<inkwell::values::BasicMetadataValueEnum<'ctx>> = vec![data_ptr.into()];
                 let mut param_types: Vec<inkwell::types::BasicMetadataTypeEnum<'ctx>> = vec![ptr_ty.into()];
                 for arg in args {
-                    let value = self.generate_operand(arg)?;
+                    let value = self.generate_operand(arg, _func)?;
                     param_types.push(value.get_type().into());
                     llvm_args.push(value.into());
                 }
@@ -1164,8 +1412,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 }
             }
             Instruction::MakeSlice { data_ptr, len } => {
-                let data_val = self.generate_operand(data_ptr)?;
-                let len_val = self.generate_operand(len)?;
+                let data_val = self.generate_operand(data_ptr, _func)?;
+                let len_val = self.generate_typed_operand(len, Some(self.context.i64_type().into()), _func)?;
                 let ptr_ty = self.context.ptr_type(inkwell::AddressSpace::default());
                 let data_ptr_val = if data_val.is_pointer_value() {
                     data_val.into_pointer_value()
@@ -1194,7 +1442,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(val.into_struct_value().into())
             }
             Instruction::DropVirt { obj } => {
-                let obj_val = self.generate_operand(obj)?;
+                let obj_val = self.generate_operand(obj, _func)?;
                 let obj_struct = if obj_val.is_struct_value() {
                     obj_val.into_struct_value()
                 } else if obj_val.is_pointer_value() {
@@ -1236,8 +1484,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(self.context.i32_type().const_zero().into())
             }
             Instruction::HeapFree { value } => {
-                if let Some(dealloc_fn) = self.get_function("__mellis_dealloc") {
-                    let ptr_val = self.generate_operand(value)?;
+                if let Some(dealloc_fn) = self.get_function("__luna_dealloc") {
+                    let ptr_val = self.generate_operand(value, _func)?;
                     let (size, align) = if let Operand::Value(val_id) = value {
                         if let Some(val_data) = _func.values.get(val_id.0 as usize) {
                             (self.layout_size(val_data.ty), self.layout_align(val_data.ty).max(1))
@@ -1258,8 +1506,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(null_ptr.into())
             }
             Instruction::PtrOffset { ptr, offset } => {
-                let ptr_val = self.generate_operand(ptr)?.into_pointer_value();
-                let offset_val = self.generate_operand(offset)?.into_int_value();
+                let ptr_val = self.generate_operand(ptr, _func)?.into_pointer_value();
+                let offset_val = self.generate_typed_operand(offset, Some(self.context.i64_type().into()), _func)?.into_int_value();
                 let elem_ty = match self.semantic_ctx.types.get(data.ty) {
                     SemanticType::Pointer(_, elem) | SemanticType::Reference(_, _, elem) => self.map_type(*elem)?,
                     _ if data.ty != SemanticTypeId(0) => self.map_type(data.ty)?,
@@ -1271,8 +1519,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(res.into())
             }
             Instruction::BoundsCheck { index, len } => {
-                let idx_val = self.generate_operand(index)?.into_int_value();
-                let len_val = self.generate_operand(len)?.into_int_value();
+                let idx_val = self.generate_typed_operand(index, Some(self.context.i64_type().into()), _func)?.into_int_value();
+                let len_val = self.generate_typed_operand(len, Some(self.context.i64_type().into()), _func)?.into_int_value();
 
                 let idx_i64 = if idx_val.get_type() != self.context.i64_type() {
                     self.builder.build_int_s_extend(idx_val, self.context.i64_type(), "idx_i64").unwrap()
@@ -1294,8 +1542,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 self.builder.build_conditional_branch(in_bounds, cont_bb, fail_bb).unwrap();
 
                 self.builder.position_at_end(fail_bb);
-                let bounds_fail_fn = self.get_function("__mellis_bounds_fail")
-                    .ok_or_else(|| BackendError::InvariantViolation("__mellis_bounds_fail declaration missing".into()))?;
+                let bounds_fail_fn = self.get_function("__luna_bounds_fail")
+                    .ok_or_else(|| BackendError::InvariantViolation("__luna_bounds_fail declaration missing".into()))?;
 
                 let file_name = self.llvm_module.get_name().to_str().unwrap_or("<unknown>");
                 let file_str = self.builder.build_global_string_ptr(file_name, "bounds_file").unwrap();
@@ -1317,11 +1565,14 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 Ok(self.context.i32_type().const_zero().into())
             }
             Instruction::Await { future } => {
-                self.generate_operand(future)
+                self.generate_operand(future, _func)
             }
             Instruction::Cast { value, target_ty } => {
-                let llvm_val = self.generate_operand(value)?;
                 let llvm_ty = self.map_type(*target_ty)?;
+                if let Operand::Number(_) = value {
+                    return self.generate_typed_operand(value, Some(llvm_ty), _func);
+                }
+                let llvm_val = self.generate_operand(value, _func)?;
                 
                 // Identity cast: source and target LLVM types are structurally identical.
                 // This handles representation-preserving casts like &dyn Foo → *dyn Foo
@@ -1352,9 +1603,11 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                     ).unwrap();
                     Ok(casted.into())
                 } else if llvm_val.is_int_value() && llvm_ty.is_int_type() {
-                    let casted = self.builder.build_int_cast(
+                    let is_unsigned = self.is_unsigned_operand(value, _func);
+                    let casted = self.builder.build_int_cast_sign_flag(
                         llvm_val.into_int_value(),
                         llvm_ty.into_int_type(),
+                        !is_unsigned,
                         &format!("cast_v{}", id.0)
                     ).unwrap();
                     Ok(casted.into())
@@ -1393,7 +1646,8 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
         match term {
             Terminator::Ret { value } => {
                 if let Some(val_op) = value {
-                    let mut val = self.generate_operand(val_op)?;
+                    let expected_ret_ty = self.map_type(_func.ret_ty).ok();
+                    let mut val = self.generate_typed_operand(val_op, expected_ret_ty, _func)?;
                     let ret_ty = self.semantic_ctx.types.get(_func.ret_ty);
                     if matches!(ret_ty, SemanticType::Pointer(..) | SemanticType::Primitive(BuiltinType::String)) {
                         if val.is_int_value() {
@@ -1401,9 +1655,10 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                             self.builder.build_return(Some(&null_ptr)).unwrap();
                             return Ok(());
                         }
-                    } else if let Ok(expected_ty) = self.map_type(_func.ret_ty) {
+                    } else if let Some(expected_ty) = expected_ret_ty {
                         if val.is_int_value() && expected_ty.is_int_type() && val.get_type() != expected_ty {
-                            let casted = self.builder.build_int_cast(val.into_int_value(), expected_ty.into_int_type(), "ret_cast").unwrap();
+                            let is_unsigned = self.is_unsigned_operand(val_op, _func);
+                            let casted = self.builder.build_int_cast_sign_flag(val.into_int_value(), expected_ty.into_int_type(), !is_unsigned, "ret_cast").unwrap();
                             val = casted.into();
                         }
                     }
@@ -1422,7 +1677,7 @@ impl<'a, 'ctx> LLVMBackend<'a, 'ctx> {
                 self.builder.build_unconditional_branch(*bb).unwrap();
             }
             Terminator::CondBr { condition, true_target, false_target } => {
-                let cond_val = self.generate_operand(condition)?.into_int_value();
+                let cond_val = self.generate_operand(condition, _func)?.into_int_value();
                 let cond_val = if cond_val.get_type() == self.context.i32_type() {
                     let zero = self.context.i32_type().const_zero();
                     self.builder.build_int_compare(inkwell::IntPredicate::NE, cond_val, zero, "condbr_cast").unwrap()

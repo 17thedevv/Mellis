@@ -283,13 +283,13 @@ impl MlibWriter {
             Instruction::BoundsCheck { index, len } => {
                 // Not supported in serialized format yet, or just map to dummy
                 MlibInstruction::CallDirect { 
-                    callee: "__mellis_bounds_fail".to_string(),
+                    callee: "__luna_bounds_fail".to_string(),
                     args: vec![Self::convert_operand(index), Self::convert_operand(len)]
                 }
             }
             Instruction::CallIntrinsic { kind, args } => {
                 MlibInstruction::CallDirect {
-                    callee: format!("__mellis_intrinsic_{:?}", kind),
+                    callee: format!("__luna_intrinsic_{:?}", kind),
                     args: args.iter().map(Self::convert_operand).collect()
                 }
             }

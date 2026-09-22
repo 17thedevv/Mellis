@@ -46,6 +46,69 @@ pub struct ImplKey {
     pub self_type_def: ImplSelfTypeKey,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ImplId(pub u32);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ImplSelfBucket {
+    Nominal(SymbolId),
+    Primitive(crate::ty::BuiltinType),
+    Array,
+    Slice,
+    Tuple,
+    Pointer,
+    Reference,
+    Wildcard,
+}
+
+impl ImplSelfBucket {
+    pub fn from_semantic_type(ty_id: SemanticTypeId, types: &crate::ty::TypeContext) -> Self {
+        match types.get(ty_id) {
+            crate::ty::SemanticType::Primitive(b) => ImplSelfBucket::Primitive(*b),
+            crate::ty::SemanticType::Struct(sym, ..) | crate::ty::SemanticType::Enum(sym, ..) => {
+                ImplSelfBucket::Nominal(*sym)
+            }
+            crate::ty::SemanticType::Array(..) => ImplSelfBucket::Array,
+            crate::ty::SemanticType::Slice(..) => ImplSelfBucket::Slice,
+            crate::ty::SemanticType::Tuple(..) => ImplSelfBucket::Tuple,
+            crate::ty::SemanticType::Pointer(..) => ImplSelfBucket::Pointer,
+            crate::ty::SemanticType::Reference(..) => ImplSelfBucket::Reference,
+            crate::ty::SemanticType::GenericParam(..) => ImplSelfBucket::Wildcard,
+            _ => ImplSelfBucket::Wildcard,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ImplBucketKey {
+    pub trait_sym: Option<SymbolId>,
+    pub self_bucket: ImplSelfBucket,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TraitRefPattern {
+    pub trait_id: SymbolId,
+    pub args: Vec<SemanticTypeId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImplHead {
+    pub id: ImplId,
+    pub trait_ref: Option<TraitRefPattern>,
+    pub self_ty: SemanticTypeId,
+    pub generic_params: Vec<SymbolId>,
+    pub decl_id: Option<DeclId>,
+    pub methods: Vec<SymbolId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedImplMethod {
+    pub impl_id: ImplId,
+    pub method_symbol: SymbolId,
+    pub impl_subst: crate::ty::Substitution,
+    pub method_subst: crate::ty::Substitution,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TraitBound {
     pub param: SymbolId,
@@ -189,6 +252,11 @@ pub struct SemanticTables {
     pub impl_generic_params: HashMap<ImplKey, Vec<SymbolId>>,
     pub trait_impl_entries: Vec<TraitImplEntry>,
     pub decl_associated_types: HashMap<(DeclId, SymbolId), SemanticTypeId>,
+    pub next_impl_id: u32,
+    pub impl_heads: HashMap<ImplId, ImplHead>,
+    pub impl_buckets: HashMap<ImplBucketKey, Vec<ImplId>>,
+    pub method_to_impl: HashMap<SymbolId, ImplId>,
+    pub resolved_impl_methods: HashMap<luna_ast::ExprId, ResolvedImplMethod>,
 
     pub macro_decls: HashMap<SymbolId, DeclId>,
     pub decl_macros: HashMap<DeclId, SymbolId>,
@@ -287,6 +355,11 @@ impl SemanticTables {
             impl_generic_params: HashMap::new(),
             trait_impl_entries: Vec::new(),
             decl_associated_types: HashMap::new(),
+            next_impl_id: 0,
+            impl_heads: HashMap::new(),
+            impl_buckets: HashMap::new(),
+            method_to_impl: HashMap::new(),
+            resolved_impl_methods: HashMap::new(),
             macro_decls: HashMap::new(),
             decl_macros: HashMap::new(),
             function_effects: HashMap::new(),
@@ -296,5 +369,11 @@ impl SemanticTables {
             type_lifetime_contracts: HashMap::new(),
             resolved_type_lifetime_contracts: HashMap::new(),
         }
+    }
+
+    pub fn allocate_impl_id(&mut self) -> ImplId {
+        let id = ImplId(self.next_impl_id);
+        self.next_impl_id += 1;
+        id
     }
 }
