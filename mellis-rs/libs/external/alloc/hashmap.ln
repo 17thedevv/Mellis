@@ -110,6 +110,18 @@ module std {
             return self.table.insert(key, val);
         }
 
+        export fn get_or_insert(self: &rw Self, key: K, default_val: V) -> &rw V life_from(self) {
+            return self.table.get_or_insert_entry(key, default_val);
+        }
+
+        export fn insert_if_absent(self: &rw Self, key: K, val: V) -> bool {
+            if self.contains_key(&key) {
+                return false;
+            }
+            self.insert(key, val);
+            return true;
+        }
+
         export fn get(self: &Self, key: &K) -> Option<&V> life_from(self) {
             return self.table.get(key);
         }

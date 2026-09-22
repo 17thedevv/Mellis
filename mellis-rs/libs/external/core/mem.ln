@@ -1,3 +1,5 @@
+import <ptr>;
+
 module mem {
     // NOTE: `slice_from_raw_parts` and `slice_from_raw_parts_mut` are unsafe intrinsic boundaries
     // bridging raw pointers to fat-pointer slices. They must NOT be treated as a precedent for safe
@@ -35,7 +37,20 @@ module mem {
     export fn align_of<T>() -> u64 {
         return alignof(T) as u64;
     }
-    
+
+    export fn swap<T>(x: &rw T, y: &rw T) {
+        unsafe {
+            ptr::swap<T>(x as *rw T, y as *rw T);
+        }
+    }
+
+    export fn replace<T>(dest: &rw T, src: T) -> T {
+        unsafe {
+            dec old = ptr::read<T>(dest as *T);
+            ptr::write<T>(dest as *rw T, src);
+            return old;
+        }
+    }
 }
 
 // NOTE: `slice_from_raw_parts` and `slice_from_raw_parts_mut` are unsafe intrinsic boundaries
@@ -43,3 +58,11 @@ module mem {
 // reference construction without explicit lifetime provenance contracts.
 export unsafe fn slice_from_raw_parts<T>(ptr: *T, len: u64) -> &[T];
 export unsafe fn slice_from_raw_parts_mut<T>(ptr: *rw T, len: u64) -> &rw [T];
+
+export fn swap<T>(x: &rw T, y: &rw T) {
+    mem::swap<T>(x, y);
+}
+
+export fn replace<T>(dest: &rw T, src: T) -> T {
+    return mem::replace<T>(dest, src);
+}

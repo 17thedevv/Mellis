@@ -5,6 +5,7 @@ import <__lang_option>;
 import <__lang_iterator>;
 import <__lang_into_iterator>;
 import <__lang_drop>;
+import <clone>;
 
 module std {
     export struct SetIntoIter<T> {
@@ -106,6 +107,98 @@ module std {
         }
     }
 
+    impl<T: Hash + Eq + Clone> HashSet<T> {
+        export fn union_owned(self: &Self, other: &Self) -> HashSet<T> {
+            return std::union_owned<T>(self, other);
+        }
+
+        export fn intersection_owned(self: &Self, other: &Self) -> HashSet<T> {
+            return std::intersection_owned<T>(self, other);
+        }
+
+        export fn difference_owned(self: &Self, other: &Self) -> HashSet<T> {
+            return std::difference_owned<T>(self, other);
+        }
+    }
+
+    export fn union_owned<T: Clone + Eq + Hash>(a: &HashSet<T>, b: &HashSet<T>) -> HashSet<T> {
+        dec rw result = hashset_new<T>();
+        dec rw it_a = a.iter();
+        while true {
+            dec opt = it_a.next();
+            match opt {
+                Option::Some(elem) -> {
+                    result.insert((*elem).clone());
+                },
+                Option::None -> {
+                    break;
+                },
+            }
+        }
+        dec rw it_b = b.iter();
+        while true {
+            dec opt = it_b.next();
+            match opt {
+                Option::Some(elem) -> {
+                    result.insert((*elem).clone());
+                },
+                Option::None -> {
+                    break;
+                },
+            }
+        }
+        return result;
+    }
+
+    export fn intersection_owned<T: Clone + Eq + Hash>(a: &HashSet<T>, b: &HashSet<T>) -> HashSet<T> {
+        dec rw result = hashset_new<T>();
+        dec rw it_a = a.iter();
+        while true {
+            dec opt = it_a.next();
+            match opt {
+                Option::Some(elem) -> {
+                    if b.contains(elem) {
+                        result.insert((*elem).clone());
+                    }
+                },
+                Option::None -> {
+                    break;
+                },
+            }
+        }
+        return result;
+    }
+
+    export fn difference_owned<T: Clone + Eq + Hash>(a: &HashSet<T>, b: &HashSet<T>) -> HashSet<T> {
+        dec rw result = hashset_new<T>();
+        dec rw it_a = a.iter();
+        while true {
+            dec opt = it_a.next();
+            match opt {
+                Option::Some(elem) -> {
+                    if b.contains(elem) == false {
+                        result.insert((*elem).clone());
+                    }
+                },
+                Option::None -> {
+                    break;
+                },
+            }
+        }
+        return result;
+    }
+}
+
+export fn hashset_union_owned<T: Clone + Eq + Hash>(a: &std::HashSet<T>, b: &std::HashSet<T>) -> std::HashSet<T> {
+    return std::union_owned<T>(a, b);
+}
+
+export fn hashset_intersection_owned<T: Clone + Eq + Hash>(a: &std::HashSet<T>, b: &std::HashSet<T>) -> std::HashSet<T> {
+    return std::intersection_owned<T>(a, b);
+}
+
+export fn hashset_difference_owned<T: Clone + Eq + Hash>(a: &std::HashSet<T>, b: &std::HashSet<T>) -> std::HashSet<T> {
+    return std::difference_owned<T>(a, b);
 }
 
 export type SetIter<T> = std::SetIter<T>;

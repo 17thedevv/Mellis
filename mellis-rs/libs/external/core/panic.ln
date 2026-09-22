@@ -1,1 +1,1 @@
-export extern fn __mellis_panic() -> !;
+export extern fn __luna_panic_default() -> !;

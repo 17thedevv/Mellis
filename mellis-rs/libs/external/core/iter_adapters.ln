@@ -1,5 +1,6 @@
 import <__lang_option>;
 import <__lang_iterator>;
+import <clone>;
 
 // =========================================================================
 // Iterator Adapters: Map, Filter, Enumerate, Take, Skip, Zip
@@ -187,74 +188,225 @@ export fn iter_zip<A: Iterator<ItemA>, B: Iterator<ItemB>, ItemA, ItemB>(a: A, b
 }
 
 // =========================================================================
-// Range & RangeInclusive Iterators
+// Chain, FilterMap, TakeWhile, Peekable
 // =========================================================================
 
-export struct Range {
-    export start: i32,
-    export end: i32,
+export struct Chain<A, B, Item> {
+    private a: A,
+    private b: B,
+    private in_first: bool,
 };
 
-export struct RangeInclusive {
-    export start: i32,
-    export end: i32,
+impl<A: Iterator<Item>, B: Iterator<Item>, Item> Iterator<Item> for Chain<A, B, Item> {
+    fn next(self: &rw Self) -> Option<Item> {
+        if self.in_first {
+            dec opt = self.a.next();
+            match opt {
+                Option::Some(x) -> {
+                    return Option::Some(x);
+                },
+                Option::None -> {
+                    self.in_first = false;
+                },
+            }
+        }
+        return self.b.next();
+    }
+}
+
+export fn iter_chain<A: Iterator<Item>, B: Iterator<Item>, Item>(a: A, b: B) -> Chain<A, B, Item> {
+    return Chain<A, B, Item> {
+        a: a,
+        b: b,
+        in_first: true,
+    };
+}
+
+export struct FilterMap<I, Item, Out> {
+    private iter: I,
+    private f: fn(Item) -> Option<Out>,
 };
 
-export fn range(start: i32, end: i32) -> Range {
-    return Range {
+impl<I: Iterator<Item>, Item, Out> Iterator<Out> for FilterMap<I, Item, Out> {
+    fn next(self: &rw Self) -> Option<Out> {
+        dec rw running = true;
+        while running {
+            dec opt = self.iter.next();
+            match opt {
+                Option::Some(x) -> {
+                    dec f_ptr = self.f;
+                    dec mapped = f_ptr(x);
+                    match mapped {
+                        Option::Some(y) -> {
+                            return Option::Some(y);
+                        },
+                        Option::None -> {},
+                    }
+                },
+                Option::None -> {
+                    running = false;
+                },
+            }
+        }
+        return Option::None;
+    }
+}
+
+export fn iter_filter_map<I: Iterator<Item>, Item, Out>(iter: I, f: fn(Item) -> Option<Out>) -> FilterMap<I, Item, Out> {
+    return FilterMap<I, Item, Out> {
+        iter: iter,
+        f: f,
+    };
+}
+
+export struct TakeWhile<I, Item> {
+    private iter: I,
+    private pred: fn(Item) -> bool,
+    private done: bool,
+};
+
+impl<I: Iterator<Item>, Item> Iterator<Item> for TakeWhile<I, Item> {
+    fn next(self: &rw Self) -> Option<Item> {
+        if self.done {
+            return Option::None;
+        }
+        dec opt = self.iter.next();
+        match opt {
+            Option::Some(x) -> {
+                dec p_ptr = self.pred;
+                if p_ptr(x) {
+                    return Option::Some(x);
+                } else {
+                    self.done = true;
+                    return Option::None;
+                }
+            },
+            Option::None -> {
+                self.done = true;
+                return Option::None;
+            },
+        }
+    }
+}
+
+export fn iter_take_while<I: Iterator<Item>, Item>(iter: I, pred: fn(Item) -> bool) -> TakeWhile<I, Item> {
+    return TakeWhile<I, Item> {
+        iter: iter,
+        pred: pred,
+        done: false,
+    };
+}
+
+export struct Peekable<I, Item> {
+    private iter: I,
+    private peeked: Option<Item>,
+    private has_peeked: bool,
+};
+
+impl<I: Iterator<Item>, Item> Iterator<Item> for Peekable<I, Item> {
+    fn next(self: &rw Self) -> Option<Item> {
+        if self.has_peeked {
+            self.has_peeked = false;
+            dec val = self.peeked;
+            self.peeked = Option::None;
+            return val;
+        }
+        return self.iter.next();
+    }
+}
+
+impl<I: Iterator<Item>, Item: Clone> Peekable<I, Item> {
+    export fn peek(self: &rw Self) -> Option<Item> {
+        if self.has_peeked == false {
+            dec opt = self.iter.next();
+            self.peeked = opt;
+            self.has_peeked = true;
+        }
+        match self.peeked {
+            Option::Some(val) -> {
+                dec copy_val = val.clone();
+                self.peeked = Option::Some(val);
+                return Option::Some(copy_val);
+            },
+            Option::None -> {
+                self.peeked = Option::None;
+                return Option::None;
+            },
+        }
+    }
+}
+
+impl<I: Iterator<Item>, Item> Peekable<I, Item> {
+    export fn has_next(self: &rw Self) -> bool {
+        if self.has_peeked == false {
+            dec opt = self.iter.next();
+            self.peeked = opt;
+            self.has_peeked = true;
+        }
+        return self.peeked.is_some();
+    }
+}
+
+export fn iter_peekable<I: Iterator<Item>, Item>(iter: I) -> Peekable<I, Item> {
+    return Peekable<I, Item> {
+        iter: iter,
+        peeked: Option::None,
+        has_peeked: false,
+    };
+}
+
+
+// =========================================================================
+// Generic Range & RangeInclusive Iterators across 10 Integer Types
+// =========================================================================
+
+export struct Range<T> {
+    export start: T,
+    export end: T,
+};
+
+export struct RangeInclusive<T> {
+    export start: T,
+    export end: T,
+    export done: bool,
+};
+
+export fn range<T>(start: T, end: T) -> Range<T> {
+    return Range<T> {
         start: start,
         end: end,
     };
 }
 
-export fn range_inclusive(start: i32, end: i32) -> RangeInclusive {
-    return RangeInclusive {
+export fn range_inclusive<T>(start: T, end: T) -> RangeInclusive<T> {
+    return RangeInclusive<T> {
         start: start,
         end: end,
+        done: false,
     };
 }
 
-impl Range {
-    export fn next(self: &rw Self) -> Option<i32> {
-        if self.start >= self.end {
-            return Option::None;
-        }
-        dec val = self.start;
-        self.start = self.start + 1;
-        return Option::Some(val);
-    }
-}
+// Iterator implementations for Range across 10 Integer Types
+impl Iterator<u8> for Range<u8> { fn next(self: &rw Self) -> Option<u8> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as u8); return Option::Some(val); } }
+impl Iterator<u16> for Range<u16> { fn next(self: &rw Self) -> Option<u16> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as u16); return Option::Some(val); } }
+impl Iterator<u32> for Range<u32> { fn next(self: &rw Self) -> Option<u32> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as u32); return Option::Some(val); } }
+impl Iterator<u64> for Range<u64> { fn next(self: &rw Self) -> Option<u64> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as u64); return Option::Some(val); } }
+impl Iterator<usize> for Range<usize> { fn next(self: &rw Self) -> Option<usize> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as usize); return Option::Some(val); } }
+impl Iterator<i8> for Range<i8> { fn next(self: &rw Self) -> Option<i8> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as i8); return Option::Some(val); } }
+impl Iterator<i16> for Range<i16> { fn next(self: &rw Self) -> Option<i16> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as i16); return Option::Some(val); } }
+impl Iterator<i32> for Range<i32> { fn next(self: &rw Self) -> Option<i32> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as i32); return Option::Some(val); } }
+impl Iterator<i64> for Range<i64> { fn next(self: &rw Self) -> Option<i64> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as i64); return Option::Some(val); } }
+impl Iterator<isize> for Range<isize> { fn next(self: &rw Self) -> Option<isize> { if self.start >= self.end { return Option::None; } dec val = self.start; self.start = self.start + (1 as isize); return Option::Some(val); } }
 
-impl RangeInclusive {
-    export fn next(self: &rw Self) -> Option<i32> {
-        if self.start > self.end {
-            return Option::None;
-        }
-        dec val = self.start;
-        self.start = self.start + 1;
-        return Option::Some(val);
-    }
-}
-
-impl Iterator<i32> for Range {
-    fn next(self: &rw Self) -> Option<i32> {
-        if self.start >= self.end {
-            return Option::None;
-        }
-        dec val = self.start;
-        self.start = self.start + 1;
-        return Option::Some(val);
-    }
-}
-
-impl Iterator<i32> for RangeInclusive {
-    fn next(self: &rw Self) -> Option<i32> {
-        if self.start > self.end {
-            return Option::None;
-        }
-        dec val = self.start;
-        self.start = self.start + 1;
-        return Option::Some(val);
-    }
-}
+// Iterator implementations for RangeInclusive across 10 Integer Types (with done flag to avoid MAX overflow)
+impl Iterator<u8> for RangeInclusive<u8> { fn next(self: &rw Self) -> Option<u8> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as u8); } return Option::Some(val); } }
+impl Iterator<u16> for RangeInclusive<u16> { fn next(self: &rw Self) -> Option<u16> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as u16); } return Option::Some(val); } }
+impl Iterator<u32> for RangeInclusive<u32> { fn next(self: &rw Self) -> Option<u32> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as u32); } return Option::Some(val); } }
+impl Iterator<u64> for RangeInclusive<u64> { fn next(self: &rw Self) -> Option<u64> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as u64); } return Option::Some(val); } }
+impl Iterator<usize> for RangeInclusive<usize> { fn next(self: &rw Self) -> Option<usize> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as usize); } return Option::Some(val); } }
+impl Iterator<i8> for RangeInclusive<i8> { fn next(self: &rw Self) -> Option<i8> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as i8); } return Option::Some(val); } }
+impl Iterator<i16> for RangeInclusive<i16> { fn next(self: &rw Self) -> Option<i16> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as i16); } return Option::Some(val); } }
+impl Iterator<i32> for RangeInclusive<i32> { fn next(self: &rw Self) -> Option<i32> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as i32); } return Option::Some(val); } }
+impl Iterator<i64> for RangeInclusive<i64> { fn next(self: &rw Self) -> Option<i64> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as i64); } return Option::Some(val); } }
+impl Iterator<isize> for RangeInclusive<isize> { fn next(self: &rw Self) -> Option<isize> { if self.done || self.start > self.end { return Option::None; } dec val = self.start; if self.start == self.end { self.done = true; } else { self.start = self.start + (1 as isize); } return Option::Some(val); } }
 

@@ -7,6 +7,8 @@ import <core/panic>;
 import <__lang_option>;
 import <__lang_iterator>;
 import <__lang_into_iterator>;
+import <clone>;
+import <cmp>;
 
 export struct Vec<T> {
     private ptr: *rw T,
@@ -28,7 +30,7 @@ export fn vec_with_capacity<T>(capacity: u64) -> Vec<T> {
     }
     dec size = capacity * (mem::size_of<T>() as u64);
     dec align = mem::align_of<T>() as u64;
-    dec ptr = __mellis_alloc(size, align) as u64 as *rw T;
+    dec ptr = __luna_alloc(size, align) as u64 as *rw T;
     return Vec<T> {
         ptr: ptr,
         len: 0 as u64,
@@ -76,7 +78,7 @@ impl<T> Drop for VecIntoIter<T> {
             dec size = self.cap * (mem::size_of<T>() as u64);
             dec align = mem::align_of<T>() as u64;
             unsafe {
-                __mellis_dealloc(self.ptr as *rw u8, size, align);
+                __luna_dealloc(self.ptr as *rw u8, size, align);
             }
             self.ptr = 0 as u64 as *rw T;
             self.cap = 0 as u64;
@@ -141,7 +143,7 @@ impl<T> Vec<T> {
 
     export fn insert(self: &rw Self, index: u64, item: T) {
         if index > self.len {
-            __mellis_panic();
+            __luna_panic_default();
         }
         if self.len == self.cap {
             self.grow();
@@ -162,7 +164,7 @@ impl<T> Vec<T> {
 
     export fn remove(self: &rw Self, index: u64) -> T {
         if index >= self.len {
-            __mellis_panic();
+            __luna_panic_default();
         }
         unsafe {
             dec target = ptr::add<T>(self.ptr as *T, index);
@@ -267,14 +269,14 @@ impl<T> Vec<T> {
         
         dec new_size = new_cap * (mem::size_of<T>() as u64);
         dec align = mem::align_of<T>() as u64;
-        dec new_ptr = __mellis_alloc(new_size, align) as u64 as *rw T;
+        dec new_ptr = __luna_alloc(new_size, align) as u64 as *rw T;
 
         if self.cap > (0 as u64) {
             unsafe {
                 ptr::copy<T>(self.ptr as *T, new_ptr, self.len);
             }
             dec old_size = self.cap * (mem::size_of<T>() as u64);
-            __mellis_dealloc(self.ptr as *rw u8, old_size, align);
+            __luna_dealloc(self.ptr as *rw u8, old_size, align);
         }
 
         self.ptr = new_ptr;
@@ -287,6 +289,144 @@ impl<T> Vec<T> {
 
     export fn iter_mut(self: &rw Self) -> SliceIterMut<T> life_from(self) {
         return slice_iter_mut<T>(self.as_mut_slice());
+    }
+
+    export fn swap_remove(self: &rw Self, index: u64) -> T {
+        if index >= self.len {
+            __luna_panic_default();
+        }
+        dec old_len = self.len;
+        dec last = old_len - (1 as u64);
+        unsafe {
+            dec target = ptr::add<T>(self.ptr as *T, index);
+            dec removed = ptr::read<T>(target);
+            if index != last {
+                dec tail = ptr::add<T>(self.ptr as *T, last);
+                dec val = ptr::read<T>(tail);
+                dec dst = ptr::add_mut<T>(self.ptr, index);
+                ptr::write<T>(dst, val);
+            }
+            self.len = last;
+            return removed;
+        }
+    }
+
+    export fn retain(self: &rw Self, f: fn(&T) -> bool) {
+        dec len = self.len;
+        dec rw r: u64 = 0 as u64;
+        dec rw w: u64 = 0 as u64;
+        dec f_ptr = f;
+        while r < len {
+            unsafe {
+                dec item_ptr = ptr::add<T>(self.ptr as *T, r);
+                if f_ptr(&*item_ptr) {
+                    if r != w {
+                        dec val = ptr::read<T>(item_ptr);
+                        dec dst = ptr::add_mut<T>(self.ptr, w);
+                        ptr::write<T>(dst, val);
+                    }
+                    w = w + (1 as u64);
+                } else {
+                    dec drop_ptr = ptr::add_mut<T>(self.ptr, r);
+                    ptr::drop_in_place<T>(drop_ptr);
+                }
+            }
+            r = r + (1 as u64);
+        }
+        self.len = w;
+    }
+}
+
+impl<T: Eq> Vec<T> {
+    export fn dedup(self: &rw Self) {
+        if self.len <= (1 as u64) {
+            return;
+        }
+        dec len = self.len;
+        dec rw r: u64 = 1 as u64;
+        dec rw w: u64 = 1 as u64;
+        while r < len {
+            unsafe {
+                dec curr_ptr = ptr::add<T>(self.ptr as *T, r);
+                dec prev_ptr = ptr::add<T>(self.ptr as *T, w - (1 as u64));
+                if (&*curr_ptr).eq(&*prev_ptr) {
+                    dec drop_ptr = ptr::add_mut<T>(self.ptr, r);
+                    ptr::drop_in_place<T>(drop_ptr);
+                } else {
+                    if r != w {
+                        dec val = ptr::read<T>(curr_ptr);
+                        dec dst = ptr::add_mut<T>(self.ptr, w);
+                        ptr::write<T>(dst, val);
+                    }
+                    w = w + (1 as u64);
+                }
+            }
+            r = r + (1 as u64);
+        }
+        self.len = w;
+    }
+}
+
+impl<T: Clone> Vec<T> {
+    export fn extend_from_slice(self: &rw Self, other: &[T]) {
+        dec other_len = other.len as u64;
+        dec rw i: u64 = 0 as u64;
+        while i < other_len {
+            self.push(other[i].clone());
+            i = i + (1 as u64);
+        }
+    }
+
+    export fn resize(self: &rw Self, new_len: u64, value: T) {
+        if new_len < self.len {
+            self.truncate(new_len);
+            return;
+        }
+        if new_len > self.len {
+            dec to_add = new_len - self.len;
+            dec rw i: u64 = 0 as u64;
+            while i + (1 as u64) < to_add {
+                self.push((&value).clone());
+                i = i + (1 as u64);
+            }
+            self.push(value);
+            return;
+        }
+    }
+}
+
+impl<T: Clone> Clone for Vec<T> {
+    fn clone(self: &Self) -> Self {
+        dec rw result = vec_with_capacity<T>(self.len);
+        dec rw i: u64 = 0 as u64;
+        while i < self.len {
+            unsafe {
+                dec elem = ptr::add<T>(self.ptr as *T, i);
+                result.push((&*elem).clone());
+            }
+            i = i + (1 as u64);
+        }
+        return result;
+    }
+}
+
+impl<T: Eq> Eq for Vec<T> {
+    fn eq(self: &Self, other: &Self) -> bool {
+        if self.len != other.len {
+            return false;
+        }
+        dec rw i: u64 = 0 as u64;
+        while i < self.len {
+            unsafe {
+                dec e1 = ptr::add<T>(self.ptr as *T, i);
+                dec e2 = ptr::add<T>(other.ptr as *T, i);
+                if (&*e1).eq(&*e2) == false {
+                    return false;
+                }
+            }
+            i = i + (1 as u64);
+        }
+        return true;
     }
 }
 
@@ -301,7 +441,7 @@ impl<T> Drop for Vec<T> {
         }
         if self.cap > (0 as u64) {
             dec old_size = self.cap * (mem::size_of<T>() as u64);
-            __mellis_dealloc(self.ptr as *rw u8, old_size, mem::align_of<T>() as u64);
+            __luna_dealloc(self.ptr as *rw u8, old_size, mem::align_of<T>() as u64);
         }
     }
 }

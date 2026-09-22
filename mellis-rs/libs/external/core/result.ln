@@ -38,21 +38,21 @@ impl<T, E> Result<T, E> {
     export fn unwrap(self: Self) -> T {
         match self {
             Result::Ok(val) -> val,
-            Result::Err(_) -> __mellis_panic(),
+            Result::Err(_) -> __luna_panic_default(),
         }
     }
 
     export fn expect(self: Self, _msg: str) -> T {
         match self {
             Result::Ok(val) -> val,
-            Result::Err(_) -> __mellis_panic(),
+            Result::Err(_) -> __luna_panic_default(),
         }
     }
 
     export fn unwrap_err(self: Self) -> E {
         match self {
             Result::Err(e) -> e,
-            Result::Ok(_) -> __mellis_panic(),
+            Result::Ok(_) -> __luna_panic_default(),
         }
     }
 
@@ -82,6 +82,68 @@ impl<T, E> Result<T, E> {
             Result::Ok(val) -> f(val),
             Result::Err(e) -> Result::Err(e),
         }
+    }
+
+    export fn unwrap_or_else(self: Self, f: fn(E) -> T) -> T {
+        match self {
+            Result::Ok(val) -> val,
+            Result::Err(e) -> f(e),
+        }
+    }
+
+    export fn or_else<F>(self: Self, f: fn(E) -> Result<T, F>) -> Result<T, F> {
+        match self {
+            Result::Ok(val) -> Result::Ok(val),
+            Result::Err(e) -> f(e),
+        }
+    }
+}
+
+impl<T, E> Result<Result<T, E>, E> {
+    export fn flatten(self: Self) -> Result<T, E> {
+        match self {
+            Result::Ok(inner) -> inner,
+            Result::Err(e) -> Result::Err(e),
+        }
+    }
+}
+
+export fn result_flatten<T, E>(res: Result<Result<T, E>, E>) -> Result<T, E> {
+    match res {
+        Result::Ok(inner) -> inner,
+        Result::Err(e) -> Result::Err(e),
+    }
+}
+
+impl<T, E> Result<Option<T>, E> {
+    export fn transpose(self: Self) -> Option<Result<T, E>> {
+        match self {
+            Result::Ok(opt) -> match opt {
+                Option::Some(val) -> Option::Some(Result::Ok(val)),
+                Option::None -> Option::None,
+            },
+            Result::Err(e) -> Option::Some(Result::Err(e)),
+        }
+    }
+}
+
+export fn result_transpose<T, E>(res: Result<Option<T>, E>) -> Option<Result<T, E>> {
+    match res {
+        Result::Ok(opt) -> match opt {
+            Option::Some(val) -> Option::Some(Result::Ok(val)),
+            Option::None -> Option::None,
+        },
+        Result::Err(e) -> Option::Some(Result::Err(e)),
+    }
+}
+
+export fn option_transpose<T, E>(opt: Option<Result<T, E>>) -> Result<Option<T>, E> {
+    match opt {
+        Option::Some(res) -> match res {
+            Result::Ok(val) -> Result::Ok(Option::Some(val)),
+            Result::Err(e) -> Result::Err(e),
+        },
+        Option::None -> Result::Ok(Option::None),
     }
 }
 

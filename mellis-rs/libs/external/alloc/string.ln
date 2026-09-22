@@ -2,6 +2,8 @@ import <vec>;
 import <core/panic>;
 import <ptr>;
 import <mem>;
+import <cmp>;
+import <hash>;
 import <__lang_option>;
 import <__lang_drop>;
 
@@ -152,7 +154,7 @@ module std {
             }
             dec slice = slice_from_raw_parts<u8>(s_ptr, len);
             if utf8::validate(slice) == false {
-                __mellis_panic();
+                __luna_panic_default();
             }
             dec rw v = vec_with_capacity<u8>(len);
             dec rw i: u64 = 0 as u64;
@@ -164,25 +166,55 @@ module std {
         }
     }
 
-    export fn string_from_i32(val: i32) -> String {
-        if val == 0 {
+    fn raw_str_len(p: *u8) -> u64 {
+        dec rw len: u64 = 0 as u64;
+        unsafe {
+            while (*(ptr::add<u8>(p, len))) != (0 as u8) {
+                len = len + (1 as u64);
+            }
+        }
+        return len;
+    }
+
+    fn is_ascii_whitespace(b: u8) -> bool {
+        return b == (32 as u8) || b == (9 as u8) || b == (10 as u8) || b == (13 as u8) || b == (11 as u8) || b == (12 as u8);
+    }
+
+    fn substring_vec(bytes: &[u8], start: u64, len: u64) -> String {
+        dec rw v = vec_with_capacity<u8>(len);
+        dec rw i: u64 = 0 as u64;
+        while i < len {
+            v.push(bytes[start + i]);
+            i = i + (1 as u64);
+        }
+        return String { vec: v };
+    }
+
+    export fn string_from_bool(val: bool) -> String {
+        if val {
+            return string_from_str("true");
+        }
+        return string_from_str("false");
+    }
+
+    export fn string_from_char(val: char) -> String {
+        dec rw s = string_new();
+        s.push_char(val);
+        return s;
+    }
+
+    export fn string_from_u64(val: u64) -> String {
+        if val == (0 as u64) {
             return string_from_str("0");
         }
-        if val == (0 - 2147483647 - 1) {
-            return string_from_str("-2147483648");
-        }
-        dec rw s = string_new();
-        dec rw n = val;
-        if n < 0 {
-            s.push_char('-');
-            n = 0 - n;
-        }
         dec rw digits = vec_new<u8>();
-        while n > 0 {
-            dec d = (n % 10) as u8;
+        dec rw n = val;
+        while n > (0 as u64) {
+            dec d = (n % (10 as u64)) as u8;
             digits.push(d + (48 as u8));
-            n = n / 10;
+            n = n / (10 as u64);
         }
+        dec rw s = string_with_capacity(digits.len());
         dec rw i = digits.len();
         while i > (0 as u64) {
             i = i - (1 as u64);
@@ -193,6 +225,56 @@ module std {
             s.push_char(b as char);
         }
         return s;
+    }
+
+    export fn string_from_u8(val: u8) -> String {
+        return string_from_u64(val as u64);
+    }
+
+    export fn string_from_u16(val: u16) -> String {
+        return string_from_u64(val as u64);
+    }
+
+    export fn string_from_u32(val: u32) -> String {
+        return string_from_u64(val as u64);
+    }
+
+    export fn string_from_usize(val: usize) -> String {
+        return string_from_u64(val as u64);
+    }
+
+    export fn string_from_i64(val: i64) -> String {
+        if val == (0 as i64) {
+            return string_from_str("0");
+        }
+        if val == ((0 as i64) - (9223372036854775807 as i64) - (1 as i64)) {
+            return string_from_str("-9223372036854775808");
+        }
+        dec rw s = string_new();
+        dec rw n = val;
+        if n < (0 as i64) {
+            s.push_char('-');
+            n = (0 as i64) - n;
+        }
+        dec unsigned_str = string_from_u64(n as u64);
+        s.push_string(&unsigned_str);
+        return s;
+    }
+
+    export fn string_from_i8(val: i8) -> String {
+        return string_from_i64(val as i64);
+    }
+
+    export fn string_from_i16(val: i16) -> String {
+        return string_from_i64(val as i64);
+    }
+
+    export fn string_from_i32(val: i32) -> String {
+        return string_from_i64(val as i64);
+    }
+
+    export fn string_from_isize(val: isize) -> String {
+        return string_from_i64(val as i64);
     }
 
     impl String {
@@ -229,13 +311,23 @@ module std {
                 }
                 dec slice = slice_from_raw_parts<u8>(s_ptr, len);
                 if utf8::validate(slice) == false {
-                    __mellis_panic();
+                    __luna_panic_default();
                 }
                 dec rw i: u64 = 0 as u64;
                 while i < len {
                     self.vec.push(*(ptr::add<u8>(s_ptr, i)));
                     i = i + (1 as u64);
                 }
+            }
+        }
+
+        export fn push_string(self: &rw Self, other: &String) {
+            dec bytes = other.as_bytes();
+            dec len = bytes.len as u64;
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                self.vec.push(bytes[i]);
+                i = i + (1 as u64);
             }
         }
 
@@ -248,7 +340,7 @@ module std {
                 return;
             }
             if utf8::is_char_boundary(self.as_bytes(), new_len) == false {
-                __mellis_panic();
+                __luna_panic_default();
             }
             self.vec.truncate(new_len);
         }
@@ -282,14 +374,520 @@ module std {
             return true;
         }
 
-        export fn parse_i32(self: &Self) -> Option<i32> {
+        export fn eq_str(self: &Self, other: str) -> bool {
+            dec o_ptr = other as *u8;
+            dec o_len = raw_str_len(o_ptr);
+            if self.len() != o_len {
+                return false;
+            }
+            dec s_bytes = self.as_bytes();
+            dec rw i: u64 = 0 as u64;
+            unsafe {
+                while i < o_len {
+                    if s_bytes[i] != *(ptr::add<u8>(o_ptr, i)) {
+                        return false;
+                    }
+                    i = i + (1 as u64);
+                }
+            }
+            return true;
+        }
+
+        export fn find(self: &Self, needle: str) -> Option<u64> {
+            dec n_ptr = needle as *u8;
+            dec n_len = raw_str_len(n_ptr);
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            if n_len == (0 as u64) {
+                return Option::Some(0 as u64);
+            }
+            if n_len > s_len {
+                return Option::None;
+            }
+            dec max_i = (s_len - n_len) + (1 as u64);
+            dec rw i: u64 = 0 as u64;
+            while i < max_i {
+                dec rw j: u64 = 0 as u64;
+                dec rw found: bool = true;
+                unsafe {
+                    while j < n_len {
+                        if s_bytes[i + j] != *(ptr::add<u8>(n_ptr, j)) {
+                            found = false;
+                            break;
+                        }
+                        j = j + (1 as u64);
+                    }
+                }
+                if found {
+                    return Option::Some(i);
+                }
+                i = i + (1 as u64);
+            }
+            return Option::None;
+        }
+
+        export fn find_string(self: &Self, needle: &String) -> Option<u64> {
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            dec n_bytes = needle.as_bytes();
+            dec n_len = n_bytes.len as u64;
+            if n_len == (0 as u64) {
+                return Option::Some(0 as u64);
+            }
+            if n_len > s_len {
+                return Option::None;
+            }
+            dec max_i = (s_len - n_len) + (1 as u64);
+            dec rw i: u64 = 0 as u64;
+            while i < max_i {
+                dec rw j: u64 = 0 as u64;
+                dec rw found: bool = true;
+                while j < n_len {
+                    if s_bytes[i + j] != n_bytes[j] {
+                        found = false;
+                        break;
+                    }
+                    j = j + (1 as u64);
+                }
+                if found {
+                    return Option::Some(i);
+                }
+                i = i + (1 as u64);
+            }
+            return Option::None;
+        }
+
+        export fn find_char(self: &Self, ch: char) -> Option<u64> {
+            dec rw encoded = vec_new<u8>();
+            utf8::encode_char(ch, &rw encoded);
+            dec n_bytes = encoded.as_slice();
+            dec n_len = n_bytes.len as u64;
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            if n_len == (0 as u64) {
+                return Option::Some(0 as u64);
+            }
+            if n_len > s_len {
+                return Option::None;
+            }
+            dec max_i = (s_len - n_len) + (1 as u64);
+            dec rw i: u64 = 0 as u64;
+            while i < max_i {
+                dec rw j: u64 = 0 as u64;
+                dec rw found: bool = true;
+                while j < n_len {
+                    if s_bytes[i + j] != n_bytes[j] {
+                        found = false;
+                        break;
+                    }
+                    j = j + (1 as u64);
+                }
+                if found {
+                    return Option::Some(i);
+                }
+                i = i + (1 as u64);
+            }
+            return Option::None;
+        }
+
+        export fn contains(self: &Self, needle: str) -> bool {
+            return match self.find(needle) {
+                Option::Some(_) -> true,
+                Option::None -> false,
+            };
+        }
+
+        export fn contains_string(self: &Self, needle: &String) -> bool {
+            return match self.find_string(needle) {
+                Option::Some(_) -> true,
+                Option::None -> false,
+            };
+        }
+
+        export fn contains_char(self: &Self, ch: char) -> bool {
+            return match self.find_char(ch) {
+                Option::Some(_) -> true,
+                Option::None -> false,
+            };
+        }
+
+        export fn starts_with(self: &Self, prefix: str) -> bool {
+            dec p_ptr = prefix as *u8;
+            dec p_len = raw_str_len(p_ptr);
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            if p_len == (0 as u64) {
+                return true;
+            }
+            if p_len > s_len {
+                return false;
+            }
+            dec rw i: u64 = 0 as u64;
+            unsafe {
+                while i < p_len {
+                    if s_bytes[i] != *(ptr::add<u8>(p_ptr, i)) {
+                        return false;
+                    }
+                    i = i + (1 as u64);
+                }
+            }
+            return true;
+        }
+
+        export fn starts_with_string(self: &Self, prefix: &String) -> bool {
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            dec p_bytes = prefix.as_bytes();
+            dec p_len = p_bytes.len as u64;
+            if p_len == (0 as u64) {
+                return true;
+            }
+            if p_len > s_len {
+                return false;
+            }
+            dec rw i: u64 = 0 as u64;
+            while i < p_len {
+                if s_bytes[i] != p_bytes[i] {
+                    return false;
+                }
+                i = i + (1 as u64);
+            }
+            return true;
+        }
+
+        export fn ends_with(self: &Self, suffix: str) -> bool {
+            dec suf_ptr = suffix as *u8;
+            dec suf_len = raw_str_len(suf_ptr);
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            if suf_len == (0 as u64) {
+                return true;
+            }
+            if suf_len > s_len {
+                return false;
+            }
+            dec offset = s_len - suf_len;
+            dec rw i: u64 = 0 as u64;
+            unsafe {
+                while i < suf_len {
+                    if s_bytes[offset + i] != *(ptr::add<u8>(suf_ptr, i)) {
+                        return false;
+                    }
+                    i = i + (1 as u64);
+                }
+            }
+            return true;
+        }
+
+        export fn ends_with_string(self: &Self, suffix: &String) -> bool {
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            dec suf_bytes = suffix.as_bytes();
+            dec suf_len = suf_bytes.len as u64;
+            if suf_len == (0 as u64) {
+                return true;
+            }
+            if suf_len > s_len {
+                return false;
+            }
+            dec offset = s_len - suf_len;
+            dec rw i: u64 = 0 as u64;
+            while i < suf_len {
+                if s_bytes[offset + i] != suf_bytes[i] {
+                    return false;
+                }
+                i = i + (1 as u64);
+            }
+            return true;
+        }
+
+        export fn split(self: &Self, delimiter: char) -> Vec<String> {
+            dec rw encoded = vec_new<u8>();
+            utf8::encode_char(delimiter, &rw encoded);
+            dec delim_bytes = encoded.as_slice();
+            dec delim_len = delim_bytes.len as u64;
+
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            dec rw res = vec_new<String>();
+
+            if delim_len == (0 as u64) {
+                res.push(self.clone());
+                return res;
+            }
+
+            dec rw start: u64 = 0 as u64;
+            dec rw i: u64 = 0 as u64;
+            if s_len >= delim_len {
+                dec max_i = (s_len - delim_len) + (1 as u64);
+                while i < max_i {
+                    dec rw j: u64 = 0 as u64;
+                    dec rw match_found: bool = true;
+                    while j < delim_len {
+                        if s_bytes[i + j] != delim_bytes[j] {
+                            match_found = false;
+                            break;
+                        }
+                        j = j + (1 as u64);
+                    }
+                    if match_found {
+                        res.push(substring_vec(s_bytes, start, i - start));
+                        start = i + delim_len;
+                        i = start;
+                    } else {
+                        i = i + (1 as u64);
+                    }
+                }
+            }
+            res.push(substring_vec(s_bytes, start, s_len - start));
+            return res;
+        }
+
+        export fn split_str(self: &Self, delimiter: str) -> Vec<String> {
+            dec delim_ptr = delimiter as *u8;
+            dec delim_len = raw_str_len(delim_ptr);
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            dec rw res = vec_new<String>();
+
+            if delim_len == (0 as u64) {
+                res.push(self.clone());
+                return res;
+            }
+
+            dec rw start: u64 = 0 as u64;
+            dec rw i: u64 = 0 as u64;
+            if s_len >= delim_len {
+                dec max_i = (s_len - delim_len) + (1 as u64);
+                while i < max_i {
+                    dec rw j: u64 = 0 as u64;
+                    dec rw match_found: bool = true;
+                    unsafe {
+                        while j < delim_len {
+                            if s_bytes[i + j] != *(ptr::add<u8>(delim_ptr, j)) {
+                                match_found = false;
+                                break;
+                            }
+                            j = j + (1 as u64);
+                        }
+                    }
+                    if match_found {
+                        res.push(substring_vec(s_bytes, start, i - start));
+                        start = i + delim_len;
+                        i = start;
+                    } else {
+                        i = i + (1 as u64);
+                    }
+                }
+            }
+            res.push(substring_vec(s_bytes, start, s_len - start));
+            return res;
+        }
+
+        export fn split_string(self: &Self, delimiter: &String) -> Vec<String> {
+            dec delim_bytes = delimiter.as_bytes();
+            dec delim_len = delim_bytes.len as u64;
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            dec rw res = vec_new<String>();
+
+            if delim_len == (0 as u64) {
+                res.push(self.clone());
+                return res;
+            }
+
+            dec rw start: u64 = 0 as u64;
+            dec rw i: u64 = 0 as u64;
+            if s_len >= delim_len {
+                dec max_i = (s_len - delim_len) + (1 as u64);
+                while i < max_i {
+                    dec rw j: u64 = 0 as u64;
+                    dec rw match_found: bool = true;
+                    while j < delim_len {
+                        if s_bytes[i + j] != delim_bytes[j] {
+                            match_found = false;
+                            break;
+                        }
+                        j = j + (1 as u64);
+                    }
+                    if match_found {
+                        res.push(substring_vec(s_bytes, start, i - start));
+                        start = i + delim_len;
+                        i = start;
+                    } else {
+                        i = i + (1 as u64);
+                    }
+                }
+            }
+            res.push(substring_vec(s_bytes, start, s_len - start));
+            return res;
+        }
+
+        export fn lines(self: &Self) -> Vec<String> {
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            dec rw res = vec_new<String>();
+            if s_len == (0 as u64) {
+                return res;
+            }
+            dec rw start: u64 = 0 as u64;
+            dec rw i: u64 = 0 as u64;
+            while i < s_len {
+                if s_bytes[i] == (10 as u8) {
+                    dec rw line_end = i;
+                    if line_end > start {
+                        if s_bytes[line_end - (1 as u64)] == (13 as u8) {
+                            line_end = line_end - (1 as u64);
+                        }
+                    }
+                    res.push(substring_vec(s_bytes, start, line_end - start));
+                    start = i + (1 as u64);
+                }
+                i = i + (1 as u64);
+            }
+            if start < s_len {
+                dec rw line_end = s_len;
+                if line_end > start {
+                    if s_bytes[line_end - (1 as u64)] == (13 as u8) {
+                        line_end = line_end - (1 as u64);
+                    }
+                }
+                res.push(substring_vec(s_bytes, start, line_end - start));
+            }
+            return res;
+        }
+
+        export fn split_whitespace(self: &Self) -> Vec<String> {
+            dec s_bytes = self.as_bytes();
+            dec s_len = s_bytes.len as u64;
+            dec rw res = vec_new<String>();
+            dec rw i: u64 = 0 as u64;
+            while i < s_len {
+                while i < s_len {
+                    if is_ascii_whitespace(s_bytes[i]) == false {
+                        break;
+                    }
+                    i = i + (1 as u64);
+                }
+                if i >= s_len {
+                    break;
+                }
+                dec start = i;
+                while i < s_len {
+                    if is_ascii_whitespace(s_bytes[i]) {
+                        break;
+                    }
+                    i = i + (1 as u64);
+                }
+                res.push(substring_vec(s_bytes, start, i - start));
+            }
+            return res;
+        }
+
+        export fn parse_bool(self: &Self) -> Option<bool> {
+            dec b = self.as_bytes();
+            dec len = b.len as u64;
+            if len == (4 as u64) {
+                if b[0] == (116 as u8) && b[1] == (114 as u8) && b[2] == (117 as u8) && b[3] == (101 as u8) {
+                    return Option::Some(true);
+                }
+            } else if len == (5 as u64) {
+                if b[0] == (102 as u8) && b[1] == (97 as u8) && b[2] == (108 as u8) && b[3] == (115 as u8) && b[4] == (101 as u8) {
+                    return Option::Some(false);
+                }
+            }
+            return Option::None;
+        }
+
+        export fn parse_u64(self: &Self) -> Option<u64> {
             dec bytes = self.as_bytes();
             dec len = bytes.len as u64;
             if len == (0 as u64) {
                 return Option::None;
             }
+            dec max_div_10: u64 = 1844674407370955161 as u64;
+            dec max_mod_10: u64 = 5 as u64;
+            dec rw acc: u64 = 0 as u64;
             dec rw i: u64 = 0 as u64;
+            while i < len {
+                dec b = bytes[i];
+                if b < (48 as u8) || b > (57 as u8) {
+                    return Option::None;
+                }
+                dec digit = (b - (48 as u8)) as u64;
+                if acc > max_div_10 {
+                    return Option::None;
+                }
+                if acc == max_div_10 && digit > max_mod_10 {
+                    return Option::None;
+                }
+                acc = (acc * (10 as u64)) + digit;
+                i = i + (1 as u64);
+            }
+            return Option::Some(acc);
+        }
+
+        export fn parse_u8(self: &Self) -> Option<u8> {
+            match self.parse_u64() {
+                Option::Some(v) -> {
+                    if v <= (255 as u64) {
+                        return Option::Some(v as u8);
+                    }
+                    return Option::None;
+                },
+                Option::None -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn parse_u16(self: &Self) -> Option<u16> {
+            match self.parse_u64() {
+                Option::Some(v) -> {
+                    if v <= (65535 as u64) {
+                        return Option::Some(v as u16);
+                    }
+                    return Option::None;
+                },
+                Option::None -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn parse_u32(self: &Self) -> Option<u32> {
+            match self.parse_u64() {
+                Option::Some(v) -> {
+                    if v <= (4294967295 as u64) {
+                        return Option::Some(v as u32);
+                    }
+                    return Option::None;
+                },
+                Option::None -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn parse_usize(self: &Self) -> Option<usize> {
+            match self.parse_u64() {
+                Option::Some(v) -> {
+                    return Option::Some(v as usize);
+                },
+                Option::None -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn parse_i64(self: &Self) -> Option<i64> {
+            dec bytes = self.as_bytes();
+            dec len = bytes.len as u64;
+            if len == (0 as u64) {
+                return Option::None;
+            }
             dec rw is_neg: bool = false;
+            dec rw i: u64 = 0 as u64;
             if bytes[0] == (45 as u8) {
                 is_neg = true;
                 i = 1 as u64;
@@ -297,20 +895,89 @@ module std {
                     return Option::None;
                 }
             }
-            dec rw acc: i32 = 0;
+            dec rw limit: u64 = 9223372036854775807 as u64;
+            if is_neg {
+                limit = limit + (1 as u64);
+            }
+            dec limit_div_10: u64 = limit / (10 as u64);
+            dec limit_mod_10: u64 = limit % (10 as u64);
+
+            dec rw acc: u64 = 0 as u64;
             while i < len {
                 dec b = bytes[i];
                 if b < (48 as u8) || b > (57 as u8) {
                     return Option::None;
                 }
-                dec digit = (b - (48 as u8)) as i32;
-                acc = (acc * 10) + digit;
+                dec digit = (b - (48 as u8)) as u64;
+                if acc > limit_div_10 {
+                    return Option::None;
+                }
+                if acc == limit_div_10 && digit > limit_mod_10 {
+                    return Option::None;
+                }
+                acc = (acc * (10 as u64)) + digit;
                 i = i + (1 as u64);
             }
             if is_neg {
-                return Option::Some(0 - acc);
+                if acc == ((9223372036854775807 as u64) + (1 as u64)) {
+                    return Option::Some((0 as i64) - (9223372036854775807 as i64) - (1 as i64));
+                }
+                return Option::Some((0 as i64) - (acc as i64));
             }
-            return Option::Some(acc);
+            return Option::Some(acc as i64);
+        }
+
+        export fn parse_i8(self: &Self) -> Option<i8> {
+            match self.parse_i64() {
+                Option::Some(v) -> {
+                    if v >= ((0 as i64) - (128 as i64)) && v <= (127 as i64) {
+                        return Option::Some(v as i8);
+                    }
+                    return Option::None;
+                },
+                Option::None -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn parse_i16(self: &Self) -> Option<i16> {
+            match self.parse_i64() {
+                Option::Some(v) -> {
+                    if v >= ((0 as i64) - (32768 as i64)) && v <= (32767 as i64) {
+                        return Option::Some(v as i16);
+                    }
+                    return Option::None;
+                },
+                Option::None -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn parse_i32(self: &Self) -> Option<i32> {
+            match self.parse_i64() {
+                Option::Some(v) -> {
+                    if v >= (((0 as i64) - (2147483647 as i64)) - (1 as i64)) && v <= (2147483647 as i64) {
+                        return Option::Some(v as i32);
+                    }
+                    return Option::None;
+                },
+                Option::None -> {
+                    return Option::None;
+                },
+            }
+        }
+
+        export fn parse_isize(self: &Self) -> Option<isize> {
+            match self.parse_i64() {
+                Option::Some(v) -> {
+                    return Option::Some(v as isize);
+                },
+                Option::None -> {
+                    return Option::None;
+                },
+            }
         }
 
         export fn trim(self: &Self) -> &[u8] life_from(self) {
@@ -345,6 +1012,97 @@ module std {
                 return slice_from_raw_parts<u8>(ptr_start, end - start);
             }
         }
+
+        export fn trim_string(self: &Self) -> String {
+            dec slice = self.trim();
+            dec len = slice.len as u64;
+            dec rw v = vec_with_capacity<u8>(len);
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                v.push(slice[i]);
+                i = i + (1 as u64);
+            }
+            return String { vec: v };
+        }
+
+        export fn trim_start(self: &Self) -> &[u8] life_from(self) {
+            dec bytes = self.as_bytes();
+            dec len = bytes.len as u64;
+            if len == (0 as u64) {
+                return bytes;
+            }
+            dec rw start: u64 = 0 as u64;
+            while start < len {
+                if is_ascii_whitespace(bytes[start]) == false {
+                    break;
+                }
+                start = start + (1 as u64);
+            }
+            unsafe {
+                dec ptr_start = ptr::add<u8>(self.as_ptr(), start);
+                return slice_from_raw_parts<u8>(ptr_start, len - start);
+            }
+        }
+
+        export fn trim_end(self: &Self) -> &[u8] life_from(self) {
+            dec bytes = self.as_bytes();
+            dec len = bytes.len as u64;
+            if len == (0 as u64) {
+                return bytes;
+            }
+            dec rw end: u64 = len;
+            while end > (0 as u64) {
+                if is_ascii_whitespace(bytes[end - (1 as u64)]) == false {
+                    break;
+                }
+                end = end - (1 as u64);
+            }
+            unsafe {
+                return slice_from_raw_parts<u8>(self.as_ptr(), end);
+            }
+        }
+
+        export fn eq_string(self: &Self, other: &Self) -> bool {
+            dec self_bytes = self.as_bytes();
+            dec other_bytes = other.as_bytes();
+            dec len = self_bytes.len as u64;
+            if len != (other_bytes.len as u64) {
+                return false;
+            }
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                if self_bytes[i] != other_bytes[i] {
+                    return false;
+                }
+                i = i + (1 as u64);
+            }
+            return true;
+        }
+
+        export fn hash_string(self: &Self) -> u64 {
+            dec bytes = self.as_bytes();
+            dec len = bytes.len as u64;
+            dec rw h: u64 = 5381 as u64;
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                dec b = bytes[i] as u64;
+                h = ((h << (5 as u64)) + h) + b;
+                i = i + (1 as u64);
+            }
+            return h;
+        }
+    }
+
+    impl Eq for String {
+        fn eq(self: &Self, other: &Self) -> bool {
+            return self.eq_string(other);
+        }
+    }
+
+    impl Hash for String {
+        fn hash(self: &Self) -> u64 {
+            return self.hash_string();
+        }
     }
 
 }
@@ -362,6 +1120,15 @@ export fn string_from_str(s: str) -> String {
 export fn string_from_bytes(bytes: &[u8]) -> Option<String> {
     return std::string_from_bytes(bytes);
 }
-export fn string_from_i32(val: i32) -> String {
-    return std::string_from_i32(val);
-}
+export fn string_from_bool(val: bool) -> String { return std::string_from_bool(val); }
+export fn string_from_char(val: char) -> String { return std::string_from_char(val); }
+export fn string_from_u8(val: u8) -> String { return std::string_from_u8(val); }
+export fn string_from_u16(val: u16) -> String { return std::string_from_u16(val); }
+export fn string_from_u32(val: u32) -> String { return std::string_from_u32(val); }
+export fn string_from_u64(val: u64) -> String { return std::string_from_u64(val); }
+export fn string_from_usize(val: usize) -> String { return std::string_from_usize(val); }
+export fn string_from_i8(val: i8) -> String { return std::string_from_i8(val); }
+export fn string_from_i16(val: i16) -> String { return std::string_from_i16(val); }
+export fn string_from_i32(val: i32) -> String { return std::string_from_i32(val); }
+export fn string_from_i64(val: i64) -> String { return std::string_from_i64(val); }
+export fn string_from_isize(val: isize) -> String { return std::string_from_isize(val); }

@@ -119,3 +119,194 @@ export fn iter_find<FindIter: Iterator<FindItem>, FindItem>(iter: FindIter, pred
     }
     return Option::None;
 }
+
+export fn iter_position<PosIter: Iterator<PosItem>, PosItem>(iter: PosIter, pred: fn(PosItem) -> bool) -> Option<u64> {
+    dec rw it = iter;
+    dec rw idx: u64 = 0 as u64;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                dec p_ptr = pred;
+                if p_ptr(x) {
+                    return Option::Some(idx);
+                }
+                idx = idx + (1 as u64);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return Option::None;
+}
+
+export fn iter_nth<NthIter: Iterator<NthItem>, NthItem>(iter: NthIter, n: u64) -> Option<NthItem> {
+    dec rw it = iter;
+    dec rw cur: u64 = 0 as u64;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                if cur == n {
+                    return Option::Some(x);
+                }
+                cur = cur + (1 as u64);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return Option::None;
+}
+
+export fn iter_last<LastIter: Iterator<LastItem>, LastItem>(iter: LastIter) -> Option<LastItem> {
+    dec rw it = iter;
+    dec rw last_val: Option<LastItem> = Option::None;
+    dec rw running = true;
+    while running {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> {
+                last_val = Option::Some(x);
+            },
+            Option::None -> {
+                running = false;
+            },
+        }
+    }
+    return last_val;
+}
+
+export fn iter_sum_u8<SumIter: Iterator<u8>>(iter: SumIter) -> u8 {
+    dec rw it = iter;
+    dec rw acc: u8 = 0 as u8;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_u16<SumIter: Iterator<u16>>(iter: SumIter) -> u16 {
+    dec rw it = iter;
+    dec rw acc: u16 = 0 as u16;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_u32<SumIter: Iterator<u32>>(iter: SumIter) -> u32 {
+    dec rw it = iter;
+    dec rw acc: u32 = 0 as u32;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_u64<SumIter: Iterator<u64>>(iter: SumIter) -> u64 {
+    dec rw it = iter;
+    dec rw acc: u64 = 0 as u64;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_usize<SumIter: Iterator<usize>>(iter: SumIter) -> usize {
+    dec rw it = iter;
+    dec rw acc: usize = 0 as usize;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_i8<SumIter: Iterator<i8>>(iter: SumIter) -> i8 {
+    dec rw it = iter;
+    dec rw acc: i8 = 0 as i8;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_i16<SumIter: Iterator<i16>>(iter: SumIter) -> i16 {
+    dec rw it = iter;
+    dec rw acc: i16 = 0 as i16;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_i32<SumIter: Iterator<i32>>(iter: SumIter) -> i32 {
+    dec rw it = iter;
+    dec rw acc: i32 = 0 as i32;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_i64<SumIter: Iterator<i64>>(iter: SumIter) -> i64 {
+    dec rw it = iter;
+    dec rw acc: i64 = 0 as i64;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}
+
+export fn iter_sum_isize<SumIter: Iterator<isize>>(iter: SumIter) -> isize {
+    dec rw it = iter;
+    dec rw acc: isize = 0 as isize;
+    while true {
+        dec opt = it.next();
+        match opt {
+            Option::Some(x) -> { acc = acc + x; },
+            Option::None -> { break; },
+        }
+    }
+    return acc;
+}

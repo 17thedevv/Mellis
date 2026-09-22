@@ -1,23 +1,274 @@
-extern fn __mellis_print(p: *u8, len: usize);
-extern fn __mellis_println(p: *u8, len: usize);
-extern fn __mellis_eprintln(p: *u8, len: usize);
+import <result>;
+import <string>;
+import <vec>;
+import <ptr>;
+import <mem>;
+
+extern fn __luna_print(p: *u8, len: usize);
+extern fn __luna_println(p: *u8, len: usize);
+extern fn __luna_eprintln(p: *u8, len: usize);
+
+extern fn __luna_read_file(
+    path_ptr: *u8,
+    path_len: usize,
+    out_ptr: *rw *u8,
+    out_len: *rw usize,
+    out_cap: *rw usize
+) -> i32;
+
+extern fn __luna_write_file(
+    path_ptr: *u8,
+    path_len: usize,
+    data_ptr: *u8,
+    data_len: usize
+) -> i32;
+
+extern fn __luna_read_line(
+    out_ptr: *rw *u8,
+    out_len: *rw usize,
+    out_cap: *rw usize
+) -> i32;
+
+extern fn __luna_buffer_free(ptr: *rw u8, cap: usize);
 
 module io {
+    export enum IoError {
+        NotFound,
+        PermissionDenied,
+        AlreadyExists,
+        InvalidInput,
+        InvalidData,
+        OutOfMemory,
+        Other(i32),
+    }
+
+    fn status_to_io_error(status: i32) -> IoError {
+        if status == (0 - 1) {
+            return IoError::NotFound;
+        }
+        if status == (0 - 2) {
+            return IoError::PermissionDenied;
+        }
+        if status == (0 - 3) {
+            return IoError::AlreadyExists;
+        }
+        if status == (0 - 4) {
+            return IoError::InvalidInput;
+        }
+        if status == (0 - 6) {
+            return IoError::OutOfMemory;
+        }
+        return IoError::Other(status);
+    }
+
     export fn print(bytes: &[u8]) {
         unsafe {
-            __mellis_print(bytes.data as *u8, bytes.len());
+            __luna_print(bytes.data as *u8, bytes.len());
         }
     }
 
     export fn println(bytes: &[u8]) {
         unsafe {
-            __mellis_println(bytes.data as *u8, bytes.len());
+            __luna_println(bytes.data as *u8, bytes.len());
         }
     }
 
     export fn eprintln(bytes: &[u8]) {
         unsafe {
-            __mellis_eprintln(bytes.data as *u8, bytes.len());
+            __luna_eprintln(bytes.data as *u8, bytes.len());
         }
     }
+
+    export fn print_string(s: &String) {
+        print(s.as_bytes());
+    }
+
+    export fn println_string(s: &String) {
+        println(s.as_bytes());
+    }
+
+    export fn eprintln_string(s: &String) {
+        eprintln(s.as_bytes());
+    }
+
+    export fn read(path: &String) -> Result<Vec<u8>, IoError> {
+        dec path_bytes = path.as_bytes();
+        dec rw out_ptr: *u8 = 0 as u64 as *u8;
+        dec rw out_len: usize = 0 as usize;
+        dec rw out_cap: usize = 0 as usize;
+        dec rw status: i32 = 0;
+
+        unsafe {
+            status = __luna_read_file(
+                path_bytes.data as *u8,
+                path_bytes.len(),
+                &rw out_ptr,
+                &rw out_len,
+                &rw out_cap
+            );
+        }
+
+        if status != 0 {
+            return Result::Err(status_to_io_error(status));
+        }
+
+        dec len = out_len as u64;
+        dec rw v = vec_with_capacity<u8>(len);
+        unsafe {
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                v.push(*(ptr::add<u8>(out_ptr, i)));
+                i = i + (1 as u64);
+            }
+            __luna_buffer_free(out_ptr as *rw u8, out_cap);
+        }
+
+        return Result::Ok(v);
+    }
+
+    export fn read_text(path: &String) -> Result<String, IoError> {
+        dec bytes_res = read(path);
+        match bytes_res {
+            Result::Ok(bytes_vec) -> {
+                dec slice = bytes_vec.as_slice();
+                dec opt_str = string_from_bytes(slice);
+                match opt_str {
+                    Option::Some(s) -> {
+                        return Result::Ok(s);
+                    },
+                    Option::None -> {
+                        return Result::Err(IoError::InvalidData);
+                    },
+                }
+            },
+            Result::Err(err) -> {
+                return Result::Err(err);
+            },
+        }
+    }
+
+    export fn write(path: &String, data: &[u8]) -> Result<(), IoError> {
+        dec path_bytes = path.as_bytes();
+        dec rw status: i32 = 0;
+        unsafe {
+            status = __luna_write_file(
+                path_bytes.data as *u8,
+                path_bytes.len(),
+                data.data as *u8,
+                data.len()
+            );
+        }
+
+        if status != 0 {
+            return Result::Err(status_to_io_error(status));
+        }
+
+        return Result::Ok(());
+    }
+
+    export fn write_text(path: &String, text: &String) -> Result<(), IoError> {
+        return write(path, text.as_bytes());
+    }
+
+    export fn read_line() -> Result<Option<String>, IoError> {
+        dec rw out_ptr: *u8 = 0 as u64 as *u8;
+        dec rw out_len: usize = 0 as usize;
+        dec rw out_cap: usize = 0 as usize;
+        dec rw status: i32 = 0;
+
+        unsafe {
+            status = __luna_read_line(
+                &rw out_ptr,
+                &rw out_len,
+                &rw out_cap
+            );
+        }
+
+        if status == 1 {
+            return Result::Ok(Option::None);
+        }
+
+        if status != 0 {
+            return Result::Err(status_to_io_error(status));
+        }
+
+        dec len = out_len as u64;
+        unsafe {
+            dec slice = slice_from_raw_parts<u8>(out_ptr, len);
+            dec opt_str = string_from_bytes(slice);
+            __luna_buffer_free(out_ptr as *rw u8, out_cap);
+
+            match opt_str {
+                Option::Some(s) -> {
+                    return Result::Ok(Option::Some(s));
+                },
+                Option::None -> {
+                    return Result::Err(IoError::InvalidData);
+                },
+            }
+        }
+    }
+
+    export fn read_to_string(path: str) -> Result<String, IoError> {
+        dec p = string_from_str(path);
+        return read_text(&p);
+    }
+
+    export fn write_file(path: str, data: &[u8]) -> Result<(), IoError> {
+        dec p = string_from_str(path);
+        return write(&p, data);
+    }
 }
+
+export fn io_print(bytes: &[u8]) {
+    io::print(bytes);
+}
+
+export fn io_println(bytes: &[u8]) {
+    io::println(bytes);
+}
+
+export fn io_eprintln(bytes: &[u8]) {
+    io::eprintln(bytes);
+}
+
+export fn io_print_string(s: &String) {
+    io::print_string(s);
+}
+
+export fn io_println_string(s: &String) {
+    io::println_string(s);
+}
+
+export fn io_eprintln_string(s: &String) {
+    io::eprintln_string(s);
+}
+
+export fn io_read(path: &String) -> Result<Vec<u8>, io::IoError> {
+    return io::read(path);
+}
+
+export fn io_read_text(path: &String) -> Result<String, io::IoError> {
+    return io::read_text(path);
+}
+
+export fn io_write(path: &String, data: &[u8]) -> Result<(), io::IoError> {
+    return io::write(path, data);
+}
+
+export fn io_write_text(path: &String, text: &String) -> Result<(), io::IoError> {
+    return io::write_text(path, text);
+}
+
+export fn io_read_line() -> Result<Option<String>, io::IoError> {
+    return io::read_line();
+}
+
+export fn io_read_to_string(path: str) -> Result<String, io::IoError> {
+    return io::read_to_string(path);
+}
+
+export fn io_write_file(path: str, data: &[u8]) -> Result<(), io::IoError> {
+    return io::write_file(path, data);
+}
+

@@ -1,6 +1,9 @@
 # Luna Canonical Sysroot Manifest
 # Single Source of Truth for logical provider identities and physical layout.
 
+[sysroot]
+runtime_abi_version = 1
+
 [[provider]]
 name = "result"
 path = "core/result"

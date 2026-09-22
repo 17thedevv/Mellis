@@ -37,8 +37,16 @@ module ptr {
                 write<T>(d, read<T>(s));
                 i = i + (1 as u64);
             }
-    }
+        }
     
+        export unsafe fn swap<T>(a: *rw T, b: *rw T) {
+            if (a as u64) == (b as u64) {
+                return;
+            }
+            dec tmp = read<T>(a as *T);
+            write<T>(a, read<T>(b as *T));
+            write<T>(b, tmp);
+        }
 }
 
 

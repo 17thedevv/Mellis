@@ -11,7 +11,7 @@ module std {
     export fn box_new<T>(val: T) -> Box<T> {
         dec size = mem::size_of<T>();
         dec align = mem::align_of<T>();
-        dec raw = __mellis_alloc(size, align) as *rw T;
+        dec raw = __luna_alloc(size, align) as *rw T;
         unsafe {
             ptr::write<T>(raw, val);
         }
@@ -26,7 +26,7 @@ module std {
         boxed.ptr = 0 as u64 as *rw T;
         unsafe {
             dec val = ptr::read<T>(raw as *T);
-            __mellis_dealloc(raw as *rw u8, mem::size_of<T>(), mem::align_of<T>());
+            __luna_dealloc(raw as *rw u8, mem::size_of<T>(), mem::align_of<T>());
             return val;
         }
     }
@@ -54,7 +54,7 @@ module std {
             if (self.ptr as u64) != (0 as u64) {
                 unsafe {
                     ptr::drop_in_place<T>(self.ptr);
-                    __mellis_dealloc(self.ptr as *rw u8, mem::size_of<T>(), mem::align_of<T>());
+                    __luna_dealloc(self.ptr as *rw u8, mem::size_of<T>(), mem::align_of<T>());
                 }
                 self.ptr = 0 as u64 as *rw T;
             }
