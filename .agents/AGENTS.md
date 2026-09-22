@@ -65,7 +65,7 @@
 
 13. Stdlib Architecture Routing:
    - For any task involving splitting core.ln / alloc.ln, component-level stdlib providers, lang/ core/ alloc/ io/, logical std module composition, language-contract auto-loading, or stdlib provider/artifact migration.
-   - Agents MUST read `luna-stdlib-architecture`, `luna-lang-contracts`, `luna-stdlib-migration`, `luna-stdlib-compiler-boundary`, and `luna-testing-strategy`.
+   - Agents MUST read `luna-stdlib-architecture`, `luna-stdlib-design`, `luna-lang-contracts`, `luna-stdlib-migration`, `luna-stdlib-compiler-boundary`, and `luna-testing-strategy`.
    - Migration must start with a strict audit mapping declaration -> component -> dependency -> artifact before any implementation plan is drafted.
 
 14. Adversarial Validation & Permanent Reproducer Policy:
@@ -73,3 +73,10 @@
      $$\text{Feature semantics/design} \longrightarrow \text{Implementation} \longrightarrow \text{Focused acceptance tests} \longrightarrow \text{Adversarial Luna programs} \longrightarrow \text{Cross-feature interaction tests} \longrightarrow \text{Full workspace regression} \longrightarrow \text{Freeze}$$
    - **Permanent User-Facing Reproducers:** Every compiler bug discovered after freeze MUST produce a permanent `.ln` reproducer fixture (in `tests/sem_stress/` or dedicated `C-GAP-*` test) demonstrating the defect from the user's perspective, rather than relying solely on internal Rust driver mocks.
    - **Stress Corpus Extensibility:** The initial `SEM-STRESS-01` 100-case baseline is immutable and frozen (`COMPLETE & FROZEN ✅`), while `tests/sem_stress/` serves as a living, extensible, append-only permanent regression asset.
+
+15. Standard Library Design Protocol (luna-stdlib-design):
+   - **Mandatory Alignment:** Agents MUST read and follow `luna-stdlib-design` before modifying, designing, or implementing any code in `libs/external/`, `sysroot`, public `std::*` APIs, runtime wrappers, collections, I/O, formatting, or filesystem.
+   - **Outward from Luna Semantics:** Design standard library features outward from Luna's own semantics, type system, and borrowck rules, NEVER by translating Rust, C++, or Swift APIs inward.
+   - **Provider != Namespace:** Physical provider paths (e.g. `alloc/vec.ln`, `io/io.ln`) do not define public namespaces. Stdlib declarations contribute to `module std` (`std::Vec`, `std::read`).
+   - **Architectural Preflight:** Agents MUST output the 9-line architectural preflight before editing any stdlib source file.
+
