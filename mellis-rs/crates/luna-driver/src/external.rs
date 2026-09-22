@@ -285,6 +285,18 @@ impl ExternalComponentLoader {
             }
         })?;
 
+        if semantic.metadata_version != luna_llib::metadata::SEMANTIC_METADATA_VERSION {
+            return Err(ExternalComponentError::InvalidLibraryInterface {
+                name: descriptor.name.clone(),
+                path: descriptor.entry_file.clone(),
+                reason: format!(
+                    "SemanticMetadata version mismatch: expected {}, got {}",
+                    luna_llib::metadata::SEMANTIC_METADATA_VERSION,
+                    semantic.metadata_version
+                ),
+            });
+        }
+
         let provider_id = driver_session.registry.allocate_id();
         let decoder = crate::metadata_decoder::InterfaceDecoder::new(
             provider_id,

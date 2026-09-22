@@ -17,13 +17,20 @@ pub struct ProviderEntry {
     pub lang_contract: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct SysrootMeta {
+    pub runtime_abi_version: Option<u32>,
+}
+
 #[derive(Debug, Deserialize)]
 struct SysrootManifestToml {
+    sysroot: Option<SysrootMeta>,
     provider: Vec<ProviderEntry>,
 }
 
 #[derive(Debug)]
 pub struct SysrootManifest {
+    runtime_abi_version: Option<u32>,
     providers_by_name: HashMap<String, ProviderEntry>,
     providers_by_contract: HashMap<String, String>, // contract -> name
 }
@@ -36,6 +43,7 @@ impl SysrootManifest {
         let toml_data: SysrootManifestToml = toml::from_str(&content)
             .map_err(|e| format!("Failed to parse sysroot manifest {}: {}", path.display(), e))?;
 
+        let runtime_abi_version = toml_data.sysroot.and_then(|s| s.runtime_abi_version);
         let mut providers_by_name = HashMap::new();
         let mut providers_by_contract = HashMap::new();
         let mut physical_paths = HashSet::new();
@@ -66,9 +74,14 @@ impl SysrootManifest {
         }
 
         Ok(Self {
+            runtime_abi_version,
             providers_by_name,
             providers_by_contract,
         })
+    }
+
+    pub fn runtime_abi_version(&self) -> Option<u32> {
+        self.runtime_abi_version
     }
 
     pub fn find_provider(&self, name: &str) -> Option<&ProviderEntry> {
@@ -88,6 +101,7 @@ impl SysrootManifest {
 impl Default for SysrootManifest {
     fn default() -> Self {
         Self {
+            runtime_abi_version: None,
             providers_by_name: std::collections::HashMap::new(),
             providers_by_contract: std::collections::HashMap::new(),
         }

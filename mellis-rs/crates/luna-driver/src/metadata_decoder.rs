@@ -91,6 +91,7 @@ impl InterfaceDecoder {
         }
 
         let mut trait_impl_entries = Vec::new();
+        let mut impl_heads = Vec::new();
         let mut impl_methods = HashMap::new();
         let mut impl_generic_params = HashMap::new();
         let mut impl_self_types = HashMap::new();
@@ -134,13 +135,13 @@ impl InterfaceDecoder {
             }
 
             let trait_args: Vec<_> = impl_header.trait_args.iter().map(|t_idx| self.type_map[t_idx]).collect();
-            if let Some(t_id) = trait_id {
+            if let Some(t_id) = trait_id.clone() {
                 trait_impl_entries.push(ExternalTraitImplEntry {
                     decl_id: None,
                     trait_id: t_id,
                     self_type,
                     generic_params: canon_gps.clone(),
-                    trait_args,
+                    trait_args: trait_args.clone(),
                 });
             }
 
@@ -171,11 +172,19 @@ impl InterfaceDecoder {
                 method_impls.insert(m_canon.clone(), key.clone());
                 method_canons.push(m_canon);
             }
-            impl_methods.entry(key.clone()).or_insert_with(Vec::new).extend(method_canons);
+            impl_methods.entry(key.clone()).or_insert_with(Vec::new).extend(method_canons.clone());
             if !canon_gps.is_empty() {
-                impl_generic_params.insert(key.clone(), canon_gps);
+                impl_generic_params.insert(key.clone(), canon_gps.clone());
             }
             impl_self_types.insert(key, self_type);
+
+            impl_heads.push(crate::registry::ExternalImplHead {
+                trait_id,
+                trait_args,
+                self_ty: self_type,
+                generic_params: canon_gps,
+                methods: method_canons,
+            });
         }
 
         ProviderInterface {
@@ -189,6 +198,7 @@ impl InterfaceDecoder {
             generic_param_symbols,
             trait_impls: HashMap::new(),
             trait_impl_entries,
+            impl_heads,
             impl_methods,
             method_impls,
             impl_method_symbols: self.impl_method_symbols,

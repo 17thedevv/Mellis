@@ -84,6 +84,15 @@ pub struct ExternalAssocTypeBound {
 }
 
 #[derive(Debug, Clone)]
+pub struct ExternalImplHead {
+    pub trait_id: Option<CanonicalSymbolId>,
+    pub trait_args: Vec<luna_semantic::ty::SemanticTypeId>,
+    pub self_ty: luna_semantic::ty::SemanticTypeId,
+    pub generic_params: Vec<CanonicalSymbolId>,
+    pub methods: Vec<CanonicalSymbolId>,
+}
+
+#[derive(Debug, Clone)]
 pub struct ProviderInterface {
     pub id: ProviderId,
     pub name: String,
@@ -96,6 +105,7 @@ pub struct ProviderInterface {
     pub generic_param_symbols: HashMap<CanonicalSymbolId, Vec<CanonicalSymbolId>>,
     pub trait_impls: HashMap<ExternalImplKey, Vec<luna_ast::DeclId>>,
     pub trait_impl_entries: Vec<ExternalTraitImplEntry>,
+    pub impl_heads: Vec<ExternalImplHead>,
     pub impl_methods: HashMap<ExternalImplKey, Vec<CanonicalSymbolId>>,
     pub method_impls: HashMap<CanonicalSymbolId, ExternalImplKey>,
     pub impl_method_symbols: Vec<ExternalSymbol>,
@@ -523,35 +533,118 @@ impl ModuleRegistry {
                 }
             }
 
-            // Inject trait impl entries with coherence checking
-            for entry in &interface.trait_impl_entries {
-                if let Some(trait_sym) = resolve_canonical(&entry.trait_id) {
-                    let new_self_ty =
-                        ctx.types
-                            .clone_type_from(entry.self_type, &interface.types, &lookup_sym);
-                    let new_gps: Vec<_> =
-                        entry.generic_params.iter().filter_map(resolve_canonical).collect();
+            // Inject impl heads into tables.impl_heads, tables.impl_buckets, tables.method_to_impl, and tables.trait_impl_entries
+            for head in &interface.impl_heads {
+                let new_trait_id = head.trait_id.as_ref().and_then(resolve_canonical);
+                let new_trait_args: Vec<_> = head
+                    .trait_args
+                    .iter()
+                    .map(|&a| ctx.types.clone_type_from(a, &interface.types, &lookup_sym))
+                    .collect();
+                let new_self_ty =
+                    ctx.types.clone_type_from(head.self_ty, &interface.types, &lookup_sym);
+                let new_gps: Vec<_> =
+                    head.generic_params.iter().filter_map(resolve_canonical).collect();
+                let new_methods: Vec<_> =
+                    head.methods.iter().filter_map(resolve_canonical).collect();
+
+                // If trait impl, run coherence check
+                if let Some(trait_sym) = new_trait_id {
                     let dummy_span = luna_common::Span::default();
                     if ctx
-                        .check_impl_coherence(trait_sym, new_self_ty, &new_gps, dummy_span)
+                        .check_impl_coherence(trait_sym, &new_trait_args, new_self_ty, &new_gps, dummy_span)
                         .is_err()
                     {
                         continue;
                     }
-                    let new_trait_args: Vec<_> = entry
-                        .trait_args
-                        .iter()
-                        .map(|&a| ctx.types.clone_type_from(a, &interface.types, &lookup_sym))
-                        .collect();
                     ctx.tables
                         .trait_impl_entries
                         .push(luna_semantic::semantic_tables::TraitImplEntry {
-                            decl_id: entry.decl_id,
+                            decl_id: None,
                             trait_id: trait_sym,
                             self_type: new_self_ty,
-                            generic_params: new_gps,
-                            trait_args: new_trait_args,
+                            generic_params: new_gps.clone(),
+                            trait_args: new_trait_args.clone(),
                         });
+                }
+
+                let impl_id = ctx.tables.allocate_impl_id();
+                for &m_sym in &new_methods {
+                    ctx.tables.method_to_impl.insert(m_sym, impl_id);
+                }
+
+                let trait_ref = new_trait_id.map(|trait_id| {
+                    luna_semantic::semantic_tables::TraitRefPattern {
+                        trait_id,
+                        args: new_trait_args.clone(),
+                    }
+                });
+
+                let impl_head = luna_semantic::semantic_tables::ImplHead {
+                    id: impl_id,
+                    trait_ref,
+                    self_ty: new_self_ty,
+                    generic_params: new_gps.clone(),
+                    decl_id: None,
+                    methods: new_methods.clone(),
+                };
+                ctx.tables.impl_heads.insert(impl_id, impl_head);
+
+                let bucket = luna_semantic::semantic_tables::ImplSelfBucket::from_semantic_type(
+                    new_self_ty,
+                    &ctx.types,
+                );
+                let bucket_key = luna_semantic::semantic_tables::ImplBucketKey {
+                    trait_sym: new_trait_id,
+                    self_bucket: bucket,
+                };
+                ctx.tables.impl_buckets.entry(bucket_key).or_default().push(impl_id);
+
+                if let Some(trait_sym) = new_trait_id {
+                    let is_drop = Some(trait_sym) == ctx.lang_items.get(luna_semantic::lang_item::LangItem::Drop)
+                        || ((trait_sym.0 as usize) < ctx.symbol_table.symbols.len()
+                            && ctx.symbol_table.symbols[trait_sym.0 as usize].name == "Drop");
+                    if is_drop {
+                        if let Some(&first_sym) = new_methods.first() {
+                            if let Some(nom_sym) = ctx.nominal_head(new_self_ty) {
+                                ctx.tables.drop_impls.insert(nom_sym, first_sym);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fallback for legacy artifacts lacking impl_heads
+            if interface.impl_heads.is_empty() {
+                for entry in &interface.trait_impl_entries {
+                    if let Some(trait_sym) = resolve_canonical(&entry.trait_id) {
+                        let new_self_ty =
+                            ctx.types
+                                .clone_type_from(entry.self_type, &interface.types, &lookup_sym);
+                        let new_gps: Vec<_> =
+                            entry.generic_params.iter().filter_map(resolve_canonical).collect();
+                        let new_trait_args: Vec<_> = entry
+                            .trait_args
+                            .iter()
+                            .map(|&a| ctx.types.clone_type_from(a, &interface.types, &lookup_sym))
+                            .collect();
+                        let dummy_span = luna_common::Span::default();
+                        if ctx
+                            .check_impl_coherence(trait_sym, &new_trait_args, new_self_ty, &new_gps, dummy_span)
+                            .is_err()
+                        {
+                            continue;
+                        }
+                        ctx.tables
+                            .trait_impl_entries
+                            .push(luna_semantic::semantic_tables::TraitImplEntry {
+                                decl_id: entry.decl_id,
+                                trait_id: trait_sym,
+                                self_type: new_self_ty,
+                                generic_params: new_gps,
+                                trait_args: new_trait_args,
+                            });
+                    }
                 }
             }
 
@@ -1091,6 +1184,38 @@ impl ModuleRegistry {
             }
         }
 
+        let mut impl_heads = Vec::new();
+        let mut sorted_heads: Vec<_> = ctx.tables.impl_heads.values().collect();
+        sorted_heads.sort_by_key(|h| h.id);
+        for head in sorted_heads {
+            let is_local = head.methods.iter().any(|&m| {
+                let sym = ctx.symbol_table.get_symbol(m);
+                sym.provider_id.is_none() || sym.provider_id == Some(provider_id)
+            }) || {
+                let is_local_trait = head.trait_ref.as_ref().map_or(false, |tr| {
+                    Self::get_canonical(tr.trait_id, ctx, provider_id).provider_id == provider_id
+                });
+                let head_sym = ctx.nominal_head(head.self_ty);
+                let is_local_head = head_sym.map_or(false, |s| {
+                    Self::get_canonical(s, ctx, provider_id).provider_id == provider_id
+                });
+                is_local_trait || is_local_head
+            };
+            if is_local {
+                let trait_id = head.trait_ref.as_ref().map(|tr| Self::get_canonical(tr.trait_id, ctx, provider_id));
+                let trait_args = head.trait_ref.as_ref().map(|tr| tr.args.clone()).unwrap_or_default();
+                let canon_gps = head.generic_params.iter().map(|&s| Self::get_canonical(s, ctx, provider_id)).collect();
+                let canon_methods = head.methods.iter().map(|&s| Self::get_canonical(s, ctx, provider_id)).collect();
+                impl_heads.push(ExternalImplHead {
+                    trait_id,
+                    trait_args,
+                    self_ty: head.self_ty,
+                    generic_params: canon_gps,
+                    methods: canon_methods,
+                });
+            }
+        }
+
         let mut internal_symbols = Vec::new();
         for sym in &ctx.symbol_table.symbols {
             if sym.provider_id == Some(provider_id) || sym.provider_id.is_none() {
@@ -1201,6 +1326,7 @@ impl ModuleRegistry {
             generic_param_symbols: final_generic_param_symbols,
             trait_impls,
             trait_impl_entries,
+            impl_heads,
             impl_methods,
             method_impls,
             impl_method_symbols,

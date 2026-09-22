@@ -51,16 +51,33 @@ impl Sysroot {
         &self.external_dir
     }
 
+    pub const RUNTIME_ABI_VERSION: u32 = 1;
+
     pub fn validate(&self) -> Result<(), SysrootError> {
         if !self.external_dir.exists() {
             return Err(SysrootError::ExternalRootMissing(self.external_dir.clone()));
+        }
+        match self.manifest.runtime_abi_version() {
+            Some(declared) if declared == Self::RUNTIME_ABI_VERSION => {}
+            Some(declared) => {
+                return Err(SysrootError::RuntimeAbiMismatch {
+                    declared,
+                    expected: Self::RUNTIME_ABI_VERSION,
+                });
+            }
+            None => {
+                return Err(SysrootError::RuntimeAbiMismatch {
+                    declared: 0,
+                    expected: Self::RUNTIME_ABI_VERSION,
+                });
+            }
         }
         Ok(())
     }
 
     /// Production sysroot discovery:
     /// 1. Explicit argument (`--sysroot`)
-    /// 2. `LUNA_SYSROOT` environment variable (legacy `MELLIS_SYSROOT` also accepted)
+    /// 2. `LUNA_SYSROOT` environment variable
     /// 3. Executable-relative path (`current_exe()` ancestor containing `libs/external`)
     pub fn discover(explicit: Option<&str>) -> Result<Self, SysrootError> {
         let mut searched_candidates = Vec::new();
@@ -75,7 +92,7 @@ impl Sysroot {
         }
 
         // 2. Environment variable
-        if let Ok(env_val) = std::env::var("LUNA_SYSROOT").or_else(|_| std::env::var("MELLIS_SYSROOT")) {
+        if let Ok(env_val) = std::env::var("LUNA_SYSROOT") {
             if !env_val.trim().is_empty() {
                 let root = PathBuf::from(env_val.trim());
                 if !root.exists() {

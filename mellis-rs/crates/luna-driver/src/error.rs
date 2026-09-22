@@ -8,6 +8,7 @@ pub enum SysrootError {
     DiscoveryFailed { searched: Vec<PathBuf> },
     ExternalRootMissing(PathBuf),
     ManifestLoadFailed { path: PathBuf, error: String },
+    RuntimeAbiMismatch { declared: u32, expected: u32 },
 }
 
 impl SysrootError {
@@ -17,7 +18,7 @@ impl SysrootError {
                 format!("specified sysroot path `{}` does not exist", p.display())
             }
             SysrootError::EnvVarPathNotFound(p) => {
-                format!("sysroot path specified by LUNA_SYSROOT (or legacy MELLIS_SYSROOT) `{}` does not exist", p.display())
+                format!("sysroot path specified by LUNA_SYSROOT `{}` does not exist", p.display())
             }
             SysrootError::DiscoveryFailed { searched } => {
                 let searched_str = searched
@@ -26,7 +27,7 @@ impl SysrootError {
                     .collect::<Vec<_>>()
                     .join("\n");
                 format!(
-                    "cannot locate Luna sysroot. Please set LUNA_SYSROOT (or legacy MELLIS_SYSROOT) or specify --sysroot <DIR>.\nSearched candidate locations:\n{}",
+                    "cannot locate Luna sysroot. Please set LUNA_SYSROOT or specify --sysroot <DIR>.\nSearched candidate locations:\n{}",
                     searched_str
                 )
             }
@@ -35,6 +36,9 @@ impl SysrootError {
             }
             SysrootError::ManifestLoadFailed { path, error } => {
                 format!("failed to load sysroot manifest `{}`: {}", path.display(), error)
+            }
+            SysrootError::RuntimeAbiMismatch { declared, expected } => {
+                format!("sysroot runtime ABI version mismatch: declared {}, expected {}", declared, expected)
             }
         };
         vec![Diagnostic::error(msg)]
