@@ -1,0 +1,9 @@
+// Slice Copy Alias Probe (SLICE-COPY-ALIAS)
+// Examines whether safe Luna can create aliased mutable and shared slices of the same allocation.
+
+fn main() -> i32 {
+    dec rw arr: [i32; 4] = [1, 2, 3, 4];
+    // In safe code, taking &rw arr grants exclusive access.
+    // An attempt to simultaneously take &arr or overlapping sub-slices must be evaluated by borrowck.
+    return 0;
+}

@@ -1,0 +1,9 @@
+import <string>;
+import <vec>;
+
+fn main() -> i32 {
+    // Attempting to split a string by delimiter
+    dec s = string_from_str("apple,banana,cherry");
+    dec parts = s.split(',');
+    return 0;
+}

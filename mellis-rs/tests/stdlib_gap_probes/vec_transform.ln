@@ -1,0 +1,21 @@
+import <vec>;
+import <iter_adapters>;
+import <iter_collect>;
+
+fn double_it(x: i32) -> i32 {
+    return x * 2;
+}
+
+fn main() -> i32 {
+    // Attempting collection mapping/transformation
+    dec rw v = vec_new<i32>();
+    v.push(1);
+    v.push(2);
+    dec it = v.into_iter();
+    dec mapped = iter_map(it, double_it);
+    dec out = iter_collect_vec(mapped);
+    if out.len() == (2 as u64) {
+        return 0;
+    }
+    return 1;
+}

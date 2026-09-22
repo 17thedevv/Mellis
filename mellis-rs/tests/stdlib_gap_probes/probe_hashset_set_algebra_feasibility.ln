@@ -1,0 +1,68 @@
+// probe_hashset_set_algebra_feasibility.ln
+// Phase 4A Probe 4: HashSet Set Algebra Feasibility
+//
+// Evaluates Candidate A (borrowed / lazy iterator over &T) vs Candidate B (owned / eager HashSet<T>).
+//
+// Candidate A touches LANGUAGE-GAP-04 (multi-lifetime lending iterator expressiveness).
+// Candidate B is soundly expressible and verified in pure Luna today with `T: Clone + Eq + Hash`.
+//
+// Canonical Disposition:
+// - Candidate B (Owned Set Algebra): IMPLEMENT-4B (SUPPORTED & VERIFIED ✅)
+// - Candidate A (Borrowed Set Algebra): DEFERRED (LANGUAGE-GAP-04)
+
+import <hashset>;
+import <clone>;
+
+export fn union_owned<T: Clone + Eq + Hash>(a: &HashSet<T>, b: &HashSet<T>) -> HashSet<T> {
+    dec rw result = hashset_new<T>();
+    dec rw iter_a = a.iter();
+    while true {
+        dec opt_a = iter_a.next();
+        match opt_a {
+            Option::Some(elem) -> {
+                result.insert((*elem).clone());
+            },
+            Option::None -> {
+                break;
+            },
+        }
+    }
+    dec rw iter_b = b.iter();
+    while true {
+        dec opt_b = iter_b.next();
+        match opt_b {
+            Option::Some(elem) -> {
+                result.insert((*elem).clone());
+            },
+            Option::None -> {
+                break;
+            },
+        }
+    }
+    return result;
+}
+
+fn main() -> i32 {
+    dec rw a = hashset_new<i32>();
+    a.insert(1);
+    a.insert(2);
+
+    dec rw b = hashset_new<i32>();
+    b.insert(2);
+    b.insert(3);
+
+    dec u = union_owned<i32>(&a, &b);
+    if u.len() != (3 as u64) {
+        return 1;
+    }
+    if u.contains(&1) == false {
+        return 2;
+    }
+    if u.contains(&2) == false {
+        return 3;
+    }
+    if u.contains(&3) == false {
+        return 4;
+    }
+    return 0;
+}

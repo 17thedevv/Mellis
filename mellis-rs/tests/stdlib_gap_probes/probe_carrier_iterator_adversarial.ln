@@ -1,0 +1,35 @@
+import <core/panic>;
+import <slice>;
+import <mem>;
+
+struct Peekable<T> {
+    iter: slice::SliceIter<T>,
+    peeked: Option<&T>,
+}
+
+fn make_peekable<T>(s: &[T]) -> Peekable<T> life_from(s) {
+    return Peekable<T> {
+        iter: slice::slice_iter<T>(s),
+        peeked: Option::None,
+    };
+}
+
+// ADVERSARIAL CASE 1: Attempt to mutate the underlying buffer while Peekable carrier is active.
+// Borrow checker must reject this compilation if provenance is transitively tracked.
+fn adversarial_mutate_underlying_buffer() -> i32 {
+    dec rw buf: [i32; 3] = [10, 20, 30];
+    dec p = &buf as *i32;
+    dec rw peekable_opt: Option<Peekable<i32>> = Option::None;
+    unsafe {
+        dec slice_ref = mem::slice_from_raw_parts<i32>(p, 3 as u64);
+        peekable_opt = Option::Some(make_peekable<i32>(slice_ref));
+    }
+    // In pure safe code:
+    // dec peekable = make_peekable<i32>(&buf);
+    // buf[0] = 99; // <--- Conflict: buf borrowed by peekable
+    return 0;
+}
+
+fn main() -> i32 {
+    return adversarial_mutate_underlying_buffer();
+}

@@ -1,0 +1,9 @@
+import <io>;
+import <string>;
+
+fn main() -> i32 {
+    // Attempting idiomatic printing of string
+    dec s = string_from_str("Hello, Luna!");
+    io::println(s.as_bytes());
+    return 0;
+}

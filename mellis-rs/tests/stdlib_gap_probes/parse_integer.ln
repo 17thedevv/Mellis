@@ -1,0 +1,19 @@
+import <string>;
+
+fn main() -> i32 {
+    // Attempting integer parsing
+    dec s = string_from_str("42");
+    dec val = s.parse_i32();
+    match val {
+        Option::Some(n) -> {
+            if n == 42 {
+                return 0;
+            }
+            return 1;
+        },
+        Option::None -> {
+            return 2;
+        },
+    };
+    return 3;
+}

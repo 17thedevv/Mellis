@@ -1,0 +1,26 @@
+import <result>;
+import <try>;
+
+fn step1() -> Result<i32, i32> {
+    return Result::Ok(10);
+}
+
+fn compute() -> Result<i32, i32> {
+    dec x = step1()?;
+    return Result::Ok(x + 5);
+}
+
+fn main() -> i32 {
+    dec res = compute();
+    match res {
+        Result::Ok(v) -> {
+            if v == 15 {
+                return 0;
+            }
+            return 1;
+        },
+        Result::Err(_) -> {
+            return 2;
+        },
+    }
+}

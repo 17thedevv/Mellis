@@ -1,0 +1,8 @@
+import <io>;
+import <string>;
+
+fn main() -> i32 {
+    // Attempting to read a line from stdin
+    dec line = io::read_line();
+    return 0;
+}
