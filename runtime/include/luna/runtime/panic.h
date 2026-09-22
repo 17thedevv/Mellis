@@ -1,7 +1,7 @@
 // =============================================================================
-// mellis/runtime/panic.h
+// luna/runtime/panic.h
 //
-// Mellis Runtime Panic / Trap ABI (FROZEN)
+// Luna Runtime Panic / Trap ABI (FROZEN)
 // =============================================================================
 
 #pragma once
@@ -14,8 +14,8 @@ extern "C" {
 
 // --- Tier 1: Public Stable ABI Contract ---------------------------------------
 
-// Primary public panic entrypoint
-MELLIS_NORETURN void __mellis_panic(
+// Primary public panic entrypoint with source location
+LUNA_NORETURN void __luna_panic(
     const uint8_t* msg_ptr,
     size_t         msg_len,
     const uint8_t* file_ptr,
@@ -24,8 +24,11 @@ MELLIS_NORETURN void __mellis_panic(
     uint32_t       col
 );
 
+// Zero-arg simple panic entrypoint (for stdlib / unwrap aborts)
+LUNA_NORETURN void __luna_panic_default(void);
+
 // Array/slice index out of bounds trap
-MELLIS_NORETURN void __mellis_bounds_fail(
+LUNA_NORETURN void __luna_bounds_fail(
     size_t         index,
     size_t         len,
     const uint8_t* file_ptr,
@@ -37,7 +40,7 @@ MELLIS_NORETURN void __mellis_bounds_fail(
 // --- Tier 2: Internal Runtime Implementation Symbols (Private) ----------------
 
 // Internal panic with explicit error code
-MELLIS_NORETURN void __mellis_panic_code(
+LUNA_NORETURN void __luna_panic_code(
     uint32_t       error_code,
     const uint8_t* msg_ptr,
     size_t         msg_len,
@@ -47,10 +50,10 @@ MELLIS_NORETURN void __mellis_panic_code(
     uint32_t       col
 );
 
-// Backward-compatible traps
-MELLIS_NORETURN void __mellis_div_zero_fail(const char* file, uint32_t line);
-MELLIS_NORETURN void __mellis_assert_fail(const char* msg, const char* file, uint32_t line);
-MELLIS_NORETURN void __mellis_overflow_fail(const char* file, uint32_t line);
+// Specific condition traps
+LUNA_NORETURN void __luna_div_zero_fail(const char* file, uint32_t line);
+LUNA_NORETURN void __luna_assert_fail(const char* msg, const char* file, uint32_t line);
+LUNA_NORETURN void __luna_overflow_fail(const char* file, uint32_t line);
 
 #ifdef __cplusplus
 } // extern "C"

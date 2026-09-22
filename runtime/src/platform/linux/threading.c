@@ -1,18 +1,18 @@
 // =============================================================================
 // runtime/src/platform/linux/threading.c
 //
-// Mellis Runtime — Thread ABI (Linux/POSIX Platform Implementation)
+// Luna Runtime — Thread ABI (Linux/POSIX Platform Implementation)
 // =============================================================================
 
-#include "mellis/runtime/threading.h"
+#include "luna/runtime/threading.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 
 typedef struct {
-    MellisThreadFn fn;
-    void*          arg;
+    LunaThreadFn fn;
+    void*        arg;
 } PosixThreadArgs;
 
 static void* posix_thread_trampoline(void* param) {
@@ -22,7 +22,7 @@ static void* posix_thread_trampoline(void* param) {
     return NULL;
 }
 
-MellisThreadHandle __mellis_thread_spawn(MellisThreadFn fn, void* arg) {
+LunaThreadHandle __luna_thread_spawn(LunaThreadFn fn, void* arg) {
     PosixThreadArgs* args = (PosixThreadArgs*)malloc(sizeof(PosixThreadArgs));
     if (!args) return NULL;
     args->fn  = fn;
@@ -32,25 +32,25 @@ MellisThreadHandle __mellis_thread_spawn(MellisThreadFn fn, void* arg) {
     if (pthread_create(t, NULL, posix_thread_trampoline, args) != 0) {
         free(args); free(t); return NULL;
     }
-    return (MellisThreadHandle)t;
+    return (LunaThreadHandle)t;
 }
 
-void __mellis_thread_join(MellisThreadHandle handle) {
+void __luna_thread_join(LunaThreadHandle handle) {
     pthread_join(*(pthread_t*)handle, NULL);
     free(handle);
 }
 
-void __mellis_thread_yield(void) {
+void __luna_thread_yield(void) {
     sched_yield();
 }
 
-void __mellis_thread_sleep(uint64_t nanoseconds) {
+void __luna_thread_sleep(uint64_t nanoseconds) {
     struct timespec ts;
     ts.tv_sec  = (time_t)(nanoseconds / 1000000000ULL);
     ts.tv_nsec = (long)(nanoseconds   % 1000000000ULL);
     nanosleep(&ts, NULL);
 }
 
-uint64_t __mellis_thread_current_id(void) {
+uint64_t __luna_thread_current_id(void) {
     return (uint64_t)pthread_self();
 }
