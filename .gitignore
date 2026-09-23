@@ -80,3 +80,4 @@ luna-rs/test_*.ln
 luna-rs/std.ln
 luna-rs/trait_lib.ln
 test_*.ln
+luna-cli-old-backup/
