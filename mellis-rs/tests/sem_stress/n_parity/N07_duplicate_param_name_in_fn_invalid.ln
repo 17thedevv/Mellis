@@ -1,8 +1,0 @@
-// [STRESS: COMPILE_REJECT: Duplicate]
-fn duplicate_params(a: i32, a: i32) -> i32 {
-    return a;
-}
-
-fn main() -> i32 {
-    return duplicate_params(1, 2);
-}

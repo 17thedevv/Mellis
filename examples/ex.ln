@@ -1,6 +1,6 @@
 /* =================================================================
    FILE: engine_core.fd
-   Mô phỏng toàn bộ sức mạnh ngữ pháp của ngôn ngữ mellis.
+   Mô phỏng toàn bộ sức mạnh ngữ pháp của ngôn ngữ Luna.
    Tác giả: Sếp & Trợ lý
 ================================================================= */
 
@@ -27,7 +27,7 @@ const MAGIC_HEX: u32    = 0xDEAD_BEEF;
 const OCTAL_VAL: u16    = 0o775;
 const BINARY_VAL: u8    = 0b1010_0101;
 const PI_APPROX: f32    = 3.14159f32;
-const APP_NAME: str     = "Mellis Engine\n";
+const APP_NAME: str     = "Luna Engine\n";
 const RAW_PATH: str     = r#"C:\Game\Assets"#;
 const BYTE_TAG: u8      = b'X';
 const MAGIC_BYTES       = b"FDLG";

@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_REJECT: E_CANNOT_MUTATE_IMMUTABLE_POINTER]
-fn main() -> i32 {
-    dec val = 42;
-    dec p: *i32 = &val as *i32;
-    unsafe {
-        *p = 100;
-    }
-    return val;
-}

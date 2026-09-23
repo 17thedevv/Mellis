@@ -32,7 +32,7 @@ def main():
     parser = argparse.ArgumentParser(description="Luna Snapshot Test Runner")
     parser.add_argument('--update', action='store_true', help='Update the expected snapshots')
     parser.add_argument('--test', action='store_true', help='Run tests and compare against snapshots')
-    parser.add_argument('--exe', default=r'..\mellis-rs\target\debug\luna.exe', help='Path to luna executable')
+    parser.add_argument('--exe', default=r'..\luna-rs\target\debug\luna.exe', help='Path to luna executable')
     
     args = parser.parse_args()
     
@@ -43,11 +43,9 @@ def main():
     luna_exe = os.path.abspath(args.exe)
     if not os.path.exists(luna_exe):
         for candidate in [
-            r'mellis-rs\target\debug\luna.exe',
+            r'luna-rs\target\debug\luna.exe',
             r'build\compiler\Release\luna.exe',
             r'build_release\compiler\Release\luna.exe',
-            r'build_release\compiler\Release\mellis.exe',
-            r'build\compiler\Release\mellis.exe',
         ]:
             if os.path.exists(os.path.abspath(candidate)):
                 luna_exe = os.path.abspath(candidate)

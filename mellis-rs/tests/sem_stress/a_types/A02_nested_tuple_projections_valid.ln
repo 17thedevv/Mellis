@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_ACCEPT]
-// [STRESS: EXEC_EXIT: 32]
-fn main() -> i32 {
-    dec t = ((10, 20), 12);
-    dec inner = t.0;
-    dec inner_val = inner.1;
-    dec outer_val = t.1;
-    return inner_val + outer_val;
-}

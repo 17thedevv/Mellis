@@ -1,8 +1,0 @@
-import <string>;
-
-fn main() -> i32 {
-    // Attempting primitive to string conversions
-    dec s_int = string_from_i32(42);
-    dec s_bool = string_from_bool(true);
-    return 0;
-}

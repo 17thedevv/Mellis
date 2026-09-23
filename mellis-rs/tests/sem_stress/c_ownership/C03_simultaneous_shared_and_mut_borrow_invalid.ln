@@ -1,8 +1,0 @@
-// [STRESS: COMPILE_REJECT: E3003]
-fn main() -> i32 {
-    dec rw x = 10;
-    dec shared_ref = &x;
-    dec mut_ref = &rw x;
-    *mut_ref = 20;
-    return *shared_ref;
-}

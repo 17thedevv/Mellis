@@ -1,9 +1,0 @@
-import <io>;
-import <string>;
-import <result>;
-
-fn main() -> i32 {
-    // Attempting to read a whole file into a String
-    dec res = io::read_to_string("input.txt");
-    return 0;
-}

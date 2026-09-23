@@ -1,8 +1,0 @@
-import <io>;
-import <result>;
-
-fn main() -> i32 {
-    // Attempting file streaming/copying
-    dec in_file = io::File::open("source.txt");
-    return 0;
-}

@@ -1,4 +1,4 @@
-# 📋 Trạng thái Dự án — freedomLanguage (mellis)
+# 📋 Trạng thái Dự án — freedomLanguage (Lịch sử Mellis / nay là Luna)
 
 | Hạng mục | Giá trị |
 |----------|---------|

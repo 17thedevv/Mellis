@@ -1,0 +1,7 @@
+// Alloc global: runtime allocation ABI
+// No source provider dependencies.
+
+export extern fn __luna_alloc(size: u64, align: u64) -> *rw u8;
+export extern fn __luna_dealloc(ptr: *rw u8, size: u64, align: u64);
+export extern fn __luna_realloc(ptr: *rw u8, old_size: u64, old_align: u64, new_size: u64) -> *rw u8;
+

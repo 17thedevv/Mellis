@@ -216,7 +216,7 @@ change lifetime syntax
 change borrow semantics
 redesign trait coherence
 introduce new runtime ABI symbols
-rename frozen __mellis_* runtime ABI symbols
+rename frozen __luna_* runtime ABI symbols
 preserve old and new compiler implementations in parallel
 
 There must be one canonical Luna implementation.

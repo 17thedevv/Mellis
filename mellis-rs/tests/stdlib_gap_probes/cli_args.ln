@@ -1,5 +1,0 @@
-// Inspect CLI arguments via canonical main entrypoint (C-GAP-11 resolved)
-fn main(args: [str]) -> i32 {
-    dec len = args.length;
-    return 0;
-}

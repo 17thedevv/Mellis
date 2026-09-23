@@ -1,8 +1,0 @@
-import <env>;
-import <string>;
-
-fn main() -> i32 {
-    // Attempting to read an environment variable
-    dec val = env::var("PATH");
-    return 0;
-}

@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_REJECT: mismatch]
-fn main() -> i32 {
-    dec a: i32 = 10;
-    dec b: bool = true;
-    if a == b {
-        return 1;
-    }
-    return 0;
-}

@@ -1,7 +1,7 @@
 {
-  "name": "mellis",
-  "displayName": "Mellis",
-  "description": "Mellis Language Support",
+  "name": "luna",
+  "displayName": "Luna",
+  "description": "Luna Language Support",
   "version": "0.1.0",
   "engines": {
     "vscode": "^1.75.0"
@@ -10,15 +10,15 @@
     "Programming Languages"
   ],
   "activationEvents": [
-    "onLanguage:mellis"
+    "onLanguage:luna"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "languages": [
       {
-        "id": "mellis",
-        "aliases": ["Mellis", "mellis"],
-        "extensions": [".ms"]
+        "id": "luna",
+        "aliases": ["Luna", "luna"],
+        "extensions": [".ln"]
       }
     ]
   },

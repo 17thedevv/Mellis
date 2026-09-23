@@ -378,11 +378,11 @@ The goal is NOT to imitate Rust's API surface. The goal is to create an API that
 > *Any future ownership abstraction must be expressible through existing generic ownership, drop, borrow, lifetime, and memory primitives unless a new language-level semantic contract is explicitly justified and frozen.*
 
 Following the freeze of **Stdlib-02B (Box Ownership Abstraction)**:
-1. **Library-Level Ownership**: `Box<T>`, `Rc<T>`, `Arc<T>`, and custom owning containers are ordinary Luna structs defined in libraries (`<alloc>` / `<core>`), governed solely by standard generic struct rules, traits (`Drop`), lifetime annotations (`life_from`), and raw memory primitives (`ptr`/`mem`/`__mellis_alloc`/`__mellis_dealloc`).
+1. **Library-Level Ownership**: `Box<T>`, `Rc<T>`, `Arc<T>`, and custom owning containers are ordinary Luna structs defined in libraries (`<alloc>` / `<core>`), governed solely by standard generic struct rules, traits (`Drop`), lifetime annotations (`life_from`), and raw memory primitives (`ptr`/`mem`/`__luna_alloc`/`__luna_dealloc`).
 2. **Strict Ban on Compiler Special-Casing**: The compiler must never re-introduce container-specific semantic types (e.g., `SemanticType::Box`), IR instructions (e.g., `BoxFree`, `BoxNew`), or dedicated compiler branches in borrowck, coherence, monomorphization, reflection, or backend lowering.
 3. **General Primitives over Magic**: Memory operations are expressed universally:
    - Destruction $\to$ `ptr::drop_in_place<T>` (generic drop glue).
-   - Deallocation $\to$ `Instruction::HeapFree` $\to$ `__mellis_dealloc`.
+   - Deallocation $\to$ `Instruction::HeapFree` $\to$ `__luna_dealloc`.
    - Consumption $\to$ Value extraction + explicit zero/sentinel disarming.
 
 ---

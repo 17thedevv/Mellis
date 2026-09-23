@@ -20,8 +20,8 @@ build/
 *.ll
 *.bc
 
-# Mellis generated artifacts — NOT source of truth
-# Source of truth is always the .ms file
+# Luna generated artifacts — NOT source of truth
+# Source of truth is always the .ln file
 *.mlib
 *.mlib.tmp
 lib/
@@ -64,19 +64,19 @@ err.txt
 llvm.ir
 
 target/
-mellis-rs/scratch/
+luna-rs/scratch/
 scratch/
 *.llib
 *.llib.tmp
 !libs/external/*.llib
-!mellis-rs/libs/external/*.llib
-mellis-rs/build_out.txt
-mellis-rs/recovered_edits*.txt
+!luna-rs/libs/external/*.llib
+luna-rs/build_out.txt
+luna-rs/recovered_edits*.txt
 scratch_*.txt
 mvir_audit_package.zip
 diff.patch
 temp_*.rs
-mellis-rs/test_*.ln
-mellis-rs/std.ln
-mellis-rs/trait_lib.ln
+luna-rs/test_*.ln
+luna-rs/std.ln
+luna-rs/trait_lib.ln
 test_*.ln

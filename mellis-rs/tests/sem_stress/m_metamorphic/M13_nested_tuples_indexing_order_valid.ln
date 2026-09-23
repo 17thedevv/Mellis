@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_ACCEPT]
-// [STRESS: EXEC_EXIT: 42]
-fn main() -> i32 {
-    dec t: ((i32, i32), (i32, i32)) = ((10, 20), (5, 7));
-    dec first = t.0;
-    dec second = t.1;
-    dec sum: i32 = first.0 + first.1 + second.0 + second.1;
-    return sum;
-}

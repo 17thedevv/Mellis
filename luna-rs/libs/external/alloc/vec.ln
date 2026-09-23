@@ -1,0 +1,468 @@
+import <__alloc_global>;
+import <slice>;
+import <ptr>;
+import <mem>;
+import <__lang_drop>;
+import <__lang_option>;
+import <__lang_iterator>;
+import <__lang_into_iterator>;
+
+export struct Vec<T> {
+    private ptr: *rw T,
+    private len: u64,
+    private cap: u64,
+};
+
+export fn vec_new<T>() -> Vec<T> {
+    return Vec<T> {
+        ptr: 0 as u64 as *rw T,
+        len: 0 as u64,
+        cap: 0 as u64,
+    };
+}
+
+export fn vec_with_capacity<T>(capacity: u64) -> Vec<T> {
+    if capacity == (0 as u64) {
+        return vec_new<T>();
+    }
+    dec size = capacity * (mem::size_of<T>() as u64);
+    dec align = mem::align_of<T>() as u64;
+    dec ptr = __luna_alloc(size, align) as u64 as *rw T;
+    return Vec<T> {
+        ptr: ptr,
+        len: 0 as u64,
+        cap: capacity,
+    };
+}
+
+export type VecIter<T> = SliceIter<T>;
+export type VecIterMut<T> = SliceIterMut<T>;
+
+// =========================================================================
+// VecIntoIter: Owned, consuming iterator over Vec<T>
+// =========================================================================
+export struct VecIntoIter<T> {
+    private ptr: *rw T,
+    private len: u64,
+    private cap: u64,
+    private index: u64,
+};
+
+impl<T> Iterator<T> for VecIntoIter<T> {
+    fn next(self: &rw Self) -> Option<T> {
+        if self.index >= self.len {
+            return Option::None;
+        }
+        unsafe {
+            dec item_ptr = ptr::add_mut<T>(self.ptr, self.index);
+            dec val = ptr::read<T>(item_ptr as *T);
+            self.index = self.index + (1 as u64);
+            return Option::Some(val);
+        }
+    }
+}
+
+impl<T> Drop for VecIntoIter<T> {
+    fn drop(self: &rw Self) {
+        while self.index < self.len {
+            unsafe {
+                dec item_ptr = ptr::add_mut<T>(self.ptr, self.index);
+                ptr::drop_in_place<T>(item_ptr);
+            }
+            self.index = self.index + (1 as u64);
+        }
+        if self.cap > (0 as u64) {
+            dec size = self.cap * (mem::size_of<T>() as u64);
+            dec align = mem::align_of<T>() as u64;
+            unsafe {
+                __luna_dealloc(self.ptr as *rw u8, size, align);
+            }
+            self.ptr = 0 as u64 as *rw T;
+            self.cap = 0 as u64;
+            self.len = 0 as u64;
+        }
+    }
+}
+
+// =========================================================================
+// IntoIterator implementations for Vec<T>
+// =========================================================================
+
+// Owned: consumes Vec
+impl<T> IntoIterator<T, VecIntoIter<T>> for Vec<T> {
+    fn into_iter(self: Self) -> VecIntoIter<T> {
+        dec rw result = VecIntoIter<T> {
+            ptr: self.ptr,
+            len: self.len,
+            cap: self.cap,
+            index: 0 as u64,
+        };
+        self.ptr = 0 as u64 as *rw T;
+        self.len = 0 as u64;
+        self.cap = 0 as u64;
+        return result;
+    }
+}
+
+impl<T> Vec<T> {
+    export fn push(self: &rw Self, item: T) {
+        if self.len == self.cap {
+            self.grow();
+        }
+        unsafe {
+            dec target_ptr = ptr::add_mut<T>(self.ptr, self.len);
+            ptr::write<T>(target_ptr, item);
+        }
+        self.len = self.len + (1 as u64);
+    }
+
+    export fn pop(self: &rw Self) -> Option<T> {
+        if self.len == (0 as u64) {
+            return Option::None;
+        }
+        self.len = self.len - (1 as u64);
+        unsafe {
+            dec target_ptr = ptr::add<T>(self.ptr as *T, self.len);
+            return Option::Some(ptr::read<T>(target_ptr));
+        }
+    }
+
+    export fn clear(self: &rw Self) {
+        dec rw i = self.len;
+        while i > (0 as u64) {
+            i = i - (1 as u64);
+            unsafe {
+                ptr::drop_in_place<T>(ptr::add_mut<T>(self.ptr, i));
+            }
+        }
+        self.len = 0 as u64;
+    }
+
+    export fn len(self: &Self) -> u64 {
+        return self.len;
+    }
+
+    export fn capacity(self: &Self) -> u64 {
+        return self.cap;
+    }
+
+    export fn is_empty(self: &Self) -> bool {
+        return self.len == (0 as u64);
+    }
+
+    export fn last(self: &Self) -> Option<&T> life_from(self) {
+        if self.len == (0 as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec offset_ptr = ptr::add<T>(self.ptr as *T, self.len - (1 as u64));
+            return Option::Some(&*offset_ptr);
+        }
+    }
+
+    export fn last_mut(self: &rw Self) -> Option<&rw T> life_from(self) {
+        if self.len == (0 as u64) {
+            return Option::None;
+        }
+        unsafe {
+            dec offset_ptr = ptr::add_mut<T>(self.ptr, self.len - (1 as u64));
+            return Option::Some(&rw *offset_ptr);
+        }
+    }
+
+    export fn truncate(self: &rw Self, new_len: u64) {
+        if new_len >= self.len {
+            return;
+        }
+        dec rw i = self.len;
+        while i > new_len {
+            i = i - (1 as u64);
+            unsafe {
+                ptr::drop_in_place<T>(ptr::add_mut<T>(self.ptr, i));
+            }
+        }
+        self.len = new_len;
+    }
+
+    export fn get(self: &Self, index: u64) -> Option<&T> life_from(self) {
+        if index >= self.len {
+            return Option::None;
+        }
+        unsafe {
+            dec offset_ptr = ptr::add<T>(self.ptr as *T, index);
+            return Option::Some(&*offset_ptr);
+        }
+    }
+
+    export fn get_mut(self: &rw Self, index: u64) -> Option<&rw T> life_from(self) {
+        if index >= self.len {
+            return Option::None;
+        }
+        unsafe {
+            dec offset_ptr = ptr::add_mut<T>(self.ptr, index);
+            return Option::Some(&rw *offset_ptr);
+        }
+    }
+
+    export fn as_slice(self: &Self) -> &[T] life_from(self) {
+        unsafe {
+            return slice_from_raw_parts<T>(self.ptr as *T, self.len);
+        }
+    }
+
+    export fn as_mut_slice(self: &rw Self) -> &rw [T] life_from(self) {
+        unsafe {
+            return slice_from_raw_parts_mut<T>(self.ptr, self.len);
+        }
+    }
+
+    export fn grow(self: &rw Self) {
+        dec rw new_cap: u64 = 0 as u64;
+        if self.cap == (0 as u64) {
+            new_cap = 4 as u64;
+        } else {
+            new_cap = self.cap * (2 as u64);
+        }
+        
+        dec new_size = new_cap * (mem::size_of<T>() as u64);
+        dec align = mem::align_of<T>() as u64;
+        dec new_ptr = __luna_alloc(new_size, align) as u64 as *rw T;
+
+        if self.cap > (0 as u64) {
+            unsafe {
+                ptr::copy<T>(self.ptr as *T, new_ptr, self.len);
+            }
+            dec old_size = self.cap * (mem::size_of<T>() as u64);
+            __luna_dealloc(self.ptr as *rw u8, old_size, align);
+        }
+
+        self.ptr = new_ptr;
+        self.cap = new_cap;
+    }
+
+    export fn iter(self: &Self) -> SliceIter<T> life_from(self) {
+        return slice_iter<T>(self.as_slice());
+    }
+
+    export fn iter_mut(self: &rw Self) -> SliceIterMut<T> life_from(self) {
+        return slice_iter_mut<T>(self.as_mut_slice());
+    }
+
+    // =========================================================================
+    // Phase 4B: Vec Depth Methods
+    // =========================================================================
+
+    // O(1) removal: swap element at index with last, pop, return removed value.
+    // Does NOT preserve ordering.
+    export fn swap_remove(self: &rw Self, index: u64) -> T {
+        if index >= self.len {
+            __luna_panic_default();
+        }
+        dec last_idx = self.len - (1 as u64);
+        if index != last_idx {
+            unsafe {
+                dec p_idx = ptr::add_mut<T>(self.ptr, index);
+                dec p_last = ptr::add_mut<T>(self.ptr, last_idx);
+                dec tmp = ptr::read<T>(p_idx as *T);
+                ptr::copy<T>(p_last as *T, p_idx, 1 as u64);
+                ptr::write<T>(p_last, tmp);
+            }
+        }
+        // Pop the last element (which is now the removed element)
+        self.len = self.len - (1 as u64);
+        unsafe {
+            dec target = ptr::add<T>(self.ptr as *T, self.len);
+            return ptr::read<T>(target);
+        }
+    }
+
+    // In-place filter: retain only elements where pred returns true.
+    // Elements for which pred returns false are dropped exactly once.
+    export fn retain(self: &rw Self, pred: fn(&T) -> bool) {
+        dec rw read: u64 = 0 as u64;
+        dec rw write: u64 = 0 as u64;
+        while read < self.len {
+            unsafe {
+                dec p_read = ptr::add<T>(self.ptr as *T, read);
+                dec p_fn = pred;
+                if p_fn(&*p_read) {
+                    // Keep element: move it to write position if needed
+                    if read != write {
+                        dec p_write = ptr::add_mut<T>(self.ptr, write);
+                        dec val = ptr::read<T>(p_read);
+                        ptr::write<T>(p_write, val);
+                    }
+                    write = write + (1 as u64);
+                } else {
+                    // Drop the element
+                    dec p_read_mut = ptr::add_mut<T>(self.ptr, read);
+                    ptr::drop_in_place<T>(p_read_mut);
+                }
+            }
+            read = read + (1 as u64);
+        }
+        self.len = write;
+    }
+
+    // Remove consecutive duplicate elements using comparator function.
+    // Duplicates are dropped exactly once.
+    export fn dedup_by(self: &rw Self, same_bucket: fn(&T, &T) -> bool) {
+        if self.len <= (1 as u64) { return; }
+        dec rw write: u64 = 1 as u64;
+        dec rw read: u64 = 1 as u64;
+        while read < self.len {
+            unsafe {
+                dec p_read = ptr::add<T>(self.ptr as *T, read);
+                dec p_prev = ptr::add<T>(self.ptr as *T, write - (1 as u64));
+                dec eq_fn = same_bucket;
+                if eq_fn(&*p_prev, &*p_read) {
+                    dec p_read_mut = ptr::add_mut<T>(self.ptr, read);
+                    ptr::drop_in_place<T>(p_read_mut);
+                } else {
+                    if read != write {
+                        dec p_write = ptr::add_mut<T>(self.ptr, write);
+                        dec val = ptr::read<T>(p_read);
+                        ptr::write<T>(p_write, val);
+                    }
+                    write = write + (1 as u64);
+                }
+            }
+            read = read + (1 as u64);
+        }
+        self.len = write;
+    }
+
+    // For primitive i32 vec dedup:
+    export fn dedup_i32(self: &rw Self) {
+        if self.len <= (1 as u64) { return; }
+        dec rw write: u64 = 1 as u64;
+        dec rw read: u64 = 1 as u64;
+        while read < self.len {
+            unsafe {
+                dec p_read = ptr::add<T>(self.ptr as *T, read) as *i32;
+                dec p_prev = ptr::add<T>(self.ptr as *T, write - (1 as u64)) as *i32;
+                if *p_prev == *p_read {
+                    dec p_read_mut = ptr::add_mut<T>(self.ptr, read);
+                    ptr::drop_in_place<T>(p_read_mut);
+                } else {
+                    if read != write {
+                        dec p_write = ptr::add_mut<T>(self.ptr, write);
+                        dec val = ptr::read<T>(p_read as *T);
+                        ptr::write<T>(p_write, val);
+                    }
+                    write = write + (1 as u64);
+                }
+            }
+            read = read + (1 as u64);
+        }
+        self.len = write;
+    }
+
+    // Resize Vec: if new_len < len, truncate and drop extras;
+    // if new_len > len, generate new elements using supplier function.
+    export fn resize_with(self: &rw Self, new_len: u64, f: fn() -> T) {
+        if new_len < self.len {
+            self.truncate(new_len);
+        } else {
+            dec rw count = new_len - self.len;
+            while count > (0 as u64) {
+                dec f_fn = f;
+                self.push(f_fn());
+                count = count - (1 as u64);
+            }
+        }
+    }
+
+    // Extend Vec from an Iterator
+    export fn extend_from_iter<I: Iterator<T>>(self: &rw Self, iter: I) {
+        dec rw it = iter;
+        dec rw running = true;
+        while running {
+            dec opt = it.next();
+            match opt {
+                Option::Some(val) -> {
+                    self.push(val);
+                },
+                Option::None -> {
+                    running = false;
+                },
+            }
+        }
+    }
+
+    // Insert element at position, shifting all elements after it to the right.
+    // Panics if index > len.
+    export fn insert(self: &rw Self, index: u64, item: T) {
+        if index > self.len {
+            __luna_panic_default();
+        }
+        if self.len == self.cap {
+            self.grow();
+        }
+        // Shift elements from [index..len) one position right
+        if index < self.len {
+            unsafe {
+                dec src = ptr::add<T>(self.ptr as *T, index);
+                dec dst = ptr::add_mut<T>(self.ptr, index + (1 as u64));
+                // Copy count elements (len - index) from src to dst
+                // Must copy from end to avoid overwrite
+                dec count = self.len - index;
+                dec rw k = count;
+                while k > (0 as u64) {
+                    k = k - (1 as u64);
+                    dec p_src = ptr::add<T>(self.ptr as *T, index + k);
+                    dec p_dst = ptr::add_mut<T>(self.ptr, index + k + (1 as u64));
+                    dec val = ptr::read<T>(p_src);
+                    ptr::write<T>(p_dst, val);
+                }
+            }
+        }
+        unsafe {
+            dec target = ptr::add_mut<T>(self.ptr, index);
+            ptr::write<T>(target, item);
+        }
+        self.len = self.len + (1 as u64);
+    }
+
+    // Remove element at position, shifting all elements after it to the left.
+    // Returns the removed element. Panics if index >= len.
+    export fn remove(self: &rw Self, index: u64) -> T {
+        if index >= self.len {
+            __luna_panic_default();
+        }
+        unsafe {
+            dec p_idx = ptr::add<T>(self.ptr as *T, index);
+            dec removed = ptr::read<T>(p_idx);
+            // Shift elements from [index+1..len) one position left
+            dec rw k: u64 = index;
+            dec last_idx = self.len - (1 as u64);
+            while k < last_idx {
+                dec p_src = ptr::add<T>(self.ptr as *T, k + (1 as u64));
+                dec p_dst = ptr::add_mut<T>(self.ptr, k);
+                dec val = ptr::read<T>(p_src);
+                ptr::write<T>(p_dst, val);
+                k = k + (1 as u64);
+            }
+            self.len = self.len - (1 as u64);
+            return removed;
+        }
+    }
+}
+
+extern fn __luna_panic_default();
+
+impl<T> Drop for Vec<T> {
+    fn drop(self: &rw Self) {
+        dec rw i = self.len;
+        while i > (0 as u64) {
+            i = i - (1 as u64);
+            unsafe {
+                ptr::drop_in_place<T>(ptr::add_mut<T>(self.ptr, i));
+            }
+        }
+        if self.cap > (0 as u64) {
+            dec old_size = self.cap * (mem::size_of<T>() as u64);
+            __luna_dealloc(self.ptr as *rw u8, old_size, mem::align_of<T>() as u64);
+        }
+    }
+}

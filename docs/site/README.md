@@ -1,4 +1,4 @@
-# Mellis docs site
+# Luna docs site
 
 This starter uses a lightweight bilingual static layout built around the documentation already present in the repo.
 

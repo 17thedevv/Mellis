@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_REJECT: Duplicate]
-struct Broken {
-    x: i32,
-    x: i32,
-};
-
-fn main() -> i32 {
-    return 0;
-}

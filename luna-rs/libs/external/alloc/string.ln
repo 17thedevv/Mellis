@@ -1,0 +1,269 @@
+import <vec>;
+import <core/panic>;
+import <ptr>;
+import <mem>;
+import <__lang_option>;
+import <__lang_drop>;
+
+module utf8 {
+    export fn validate(bytes: &[u8]) -> bool {
+        dec len = bytes.len as u64;
+        dec rw i: u64 = 0 as u64;
+        while i < len {
+            dec b0 = bytes[i];
+            if b0 <= (127 as u8) {
+                i = i + (1 as u64);
+            } else if (b0 >= (194 as u8)) && (b0 <= (223 as u8)) {
+                if (i + (1 as u64)) >= len {
+                    return false;
+                }
+                dec b1 = bytes[i + (1 as u64)];
+                if (b1 < (128 as u8)) || (b1 > (191 as u8)) {
+                    return false;
+                }
+                i = i + (2 as u64);
+            } else if (b0 >= (224 as u8)) && (b0 <= (239 as u8)) {
+                if (i + (2 as u64)) >= len {
+                    return false;
+                }
+                dec b1 = bytes[i + (1 as u64)];
+                dec b2 = bytes[i + (2 as u64)];
+                if b0 == (224 as u8) {
+                    if (b1 < (160 as u8)) || (b1 > (191 as u8)) {
+                        return false;
+                    }
+                } else if b0 == (237 as u8) {
+                    if (b1 < (128 as u8)) || (b1 > (159 as u8)) {
+                        return false;
+                    }
+                } else {
+                    if (b1 < (128 as u8)) || (b1 > (191 as u8)) {
+                        return false;
+                    }
+                }
+                if (b2 < (128 as u8)) || (b2 > (191 as u8)) {
+                    return false;
+                }
+                i = i + (3 as u64);
+            } else if (b0 >= (240 as u8)) && (b0 <= (244 as u8)) {
+                if (i + (3 as u64)) >= len {
+                    return false;
+                }
+                dec b1 = bytes[i + (1 as u64)];
+                dec b2 = bytes[i + (2 as u64)];
+                dec b3 = bytes[i + (3 as u64)];
+                if b0 == (240 as u8) {
+                    if (b1 < (144 as u8)) || (b1 > (191 as u8)) {
+                        return false;
+                    }
+                } else if b0 == (244 as u8) {
+                    if (b1 < (128 as u8)) || (b1 > (143 as u8)) {
+                        return false;
+                    }
+                } else {
+                    if (b1 < (128 as u8)) || (b1 > (191 as u8)) {
+                        return false;
+                    }
+                }
+                if (b2 < (128 as u8)) || (b2 > (191 as u8)) {
+                    return false;
+                }
+                if (b3 < (128 as u8)) || (b3 > (191 as u8)) {
+                    return false;
+                }
+                i = i + (4 as u64);
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    export fn is_char_boundary(bytes: &[u8], index: u64) -> bool {
+        dec len = bytes.len as u64;
+        if index == (0 as u64) || index == len {
+            return true;
+        }
+        if index > len {
+            return false;
+        }
+        dec b = bytes[index];
+        return (b & (192 as u8)) != (128 as u8);
+    }
+
+    export fn encode_char(ch: char, out_vec: &rw Vec<u8>) {
+        dec code = ch as u32;
+        if code <= (127 as u32) {
+            out_vec.push(code as u8);
+        } else if code <= (2047 as u32) {
+            out_vec.push(((192 as u32) | (code >> (6 as u32))) as u8);
+            out_vec.push(((128 as u32) | (code & (63 as u32))) as u8);
+        } else if code <= (65535 as u32) {
+            out_vec.push(((224 as u32) | (code >> (12 as u32))) as u8);
+            out_vec.push(((128 as u32) | ((code >> (6 as u32)) & (63 as u32))) as u8);
+            out_vec.push(((128 as u32) | (code & (63 as u32))) as u8);
+        } else {
+            out_vec.push(((240 as u32) | (code >> (18 as u32))) as u8);
+            out_vec.push(((128 as u32) | ((code >> (12 as u32)) & (63 as u32))) as u8);
+            out_vec.push(((128 as u32) | ((code >> (6 as u32)) & (63 as u32))) as u8);
+            out_vec.push(((128 as u32) | (code & (63 as u32))) as u8);
+        }
+    }
+}
+
+
+module std {
+    export struct String {
+        private vec: Vec<u8>,
+    };
+
+    export fn string_new() -> String {
+        return String {
+            vec: vec_new<u8>(),
+        };
+    }
+
+    export fn string_with_capacity(capacity: u64) -> String {
+        return String {
+            vec: vec_with_capacity<u8>(capacity),
+        };
+    }
+
+    export fn string_from_bytes(bytes: &[u8]) -> Option<String> {
+        if utf8::validate(bytes) == false {
+            return Option::None;
+        }
+        dec len = bytes.len as u64;
+        dec rw v = vec_with_capacity<u8>(len);
+        dec rw i: u64 = 0 as u64;
+        while i < len {
+            v.push(bytes[i]);
+            i = i + (1 as u64);
+        }
+        return Option::Some(String { vec: v });
+    }
+
+    export fn string_from_str(s: str) -> String {
+        dec s_ptr = s as *u8;
+        dec rw len: u64 = 0 as u64;
+        unsafe {
+            while (*(ptr::add<u8>(s_ptr, len))) != (0 as u8) {
+                len = len + (1 as u64);
+            }
+            dec slice = slice_from_raw_parts<u8>(s_ptr, len);
+            if utf8::validate(slice) == false {
+                __luna_panic();
+            }
+            dec rw v = vec_with_capacity<u8>(len);
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                v.push(*(ptr::add<u8>(s_ptr, i)));
+                i = i + (1 as u64);
+            }
+            return String { vec: v };
+        }
+    }
+
+    impl String {
+        export fn len(self: &Self) -> u64 {
+            return self.vec.len();
+        }
+
+        export fn capacity(self: &Self) -> u64 {
+            return self.vec.capacity();
+        }
+
+        export fn is_empty(self: &Self) -> bool {
+            return self.vec.is_empty();
+        }
+
+        export fn as_bytes(self: &Self) -> &[u8] life_from(self) {
+            return self.vec.as_slice();
+        }
+
+        export fn as_ptr(self: &Self) -> *u8 {
+            return self.vec.as_slice().data as *u8;
+        }
+
+        export fn push_char(self: &rw Self, ch: char) {
+            utf8::encode_char(ch, &rw self.vec);
+        }
+
+        export fn push_str(self: &rw Self, s: str) {
+            dec s_ptr = s as *u8;
+            dec rw len: u64 = 0 as u64;
+            unsafe {
+                while (*(ptr::add<u8>(s_ptr, len))) != (0 as u8) {
+                    len = len + (1 as u64);
+                }
+                dec slice = slice_from_raw_parts<u8>(s_ptr, len);
+                if utf8::validate(slice) == false {
+                    __luna_panic();
+                }
+                dec rw i: u64 = 0 as u64;
+                while i < len {
+                    self.vec.push(*(ptr::add<u8>(s_ptr, i)));
+                    i = i + (1 as u64);
+                }
+            }
+        }
+
+        export fn clear(self: &rw Self) {
+            self.vec.clear();
+        }
+
+        export fn truncate(self: &rw Self, new_len: u64) {
+            if new_len >= self.vec.len() {
+                return;
+            }
+            if utf8::is_char_boundary(self.as_bytes(), new_len) == false {
+                __luna_panic();
+            }
+            self.vec.truncate(new_len);
+        }
+
+        export fn clone(self: &Self) -> String {
+            dec bytes = self.as_bytes();
+            dec len = bytes.len as u64;
+            dec rw v = vec_with_capacity<u8>(len);
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                v.push(bytes[i]);
+                i = i + (1 as u64);
+            }
+            return String { vec: v };
+        }
+
+        export fn eq(self: &Self, other: &Self) -> bool {
+            if self.len() != other.len() {
+                return false;
+            }
+            dec b1 = self.as_bytes();
+            dec b2 = other.as_bytes();
+            dec len = b1.len as u64;
+            dec rw i: u64 = 0 as u64;
+            while i < len {
+                if b1[i] != b2[i] {
+                    return false;
+                }
+                i = i + (1 as u64);
+            }
+            return true;
+        }
+    }
+
+}
+
+export type String = std::String;
+export fn string_new() -> String {
+    return std::string_new();
+}
+export fn string_with_capacity(capacity: u64) -> String {
+    return std::string_with_capacity(capacity);
+}
+export fn string_from_str(s: str) -> String {
+    return std::string_from_str(s);
+}
+export fn string_from_bytes(bytes: &[u8]) -> Option<String> {
+    return std::string_from_bytes(bytes);
+}

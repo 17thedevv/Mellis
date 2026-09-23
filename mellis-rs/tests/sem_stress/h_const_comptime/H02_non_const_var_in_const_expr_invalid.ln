@@ -1,6 +1,0 @@
-// [STRESS: COMPILE_REJECT: not found in comptime context]
-fn main() -> i32 {
-    dec runtime_val = 10;
-    const DERIVED: i32 = runtime_val + 32;
-    return DERIVED;
-}

@@ -313,10 +313,10 @@ Layout-sensitive semantics MUST be expressed through generic language mechanisms
 Runtime ABI functions may be exposed through stdlib wrappers:
 
 ```text
-__mellis_alloc
-__mellis_dealloc
-__mellis_print
-__mellis_thread_*
+__luna_alloc
+__luna_dealloc
+__luna_print
+__luna_thread_*
 ...
 ```
 

@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_REJECT: Cannot]
-fn main() -> i32 {
-    dec a: i32 = 10;
-    dec mutate_a = || -> i32 {
-        a = 20;
-        return a;
-    };
-    return mutate_a();
-}

@@ -1,0 +1,45 @@
+module mem {
+    // NOTE: `slice_from_raw_parts` and `slice_from_raw_parts_mut` are unsafe intrinsic boundaries
+    // bridging raw pointers to fat-pointer slices. They must NOT be treated as a precedent for safe
+    // reference construction without explicit lifetime provenance contracts.
+    export unsafe fn slice_from_raw_parts<T>(ptr: *T, len: u64) -> &[T];
+    export unsafe fn slice_from_raw_parts_mut<T>(ptr: *rw T, len: u64) -> &rw [T];
+    
+    export unsafe fn copy(src: *u8, dst: *rw u8, bytes: u64) {
+        dec rw i: u64 = 0 as u64;
+        while i < bytes {
+            dec s = (src as u64 + i) as *u8;
+            dec d = (dst as u64 + i) as *rw u8;
+            *d = *s;
+            i = i + (1 as u64);
+        }
+    }
+    
+    export unsafe fn set(dst: *rw u8, val: u8, bytes: u64) {
+        dec rw i: u64 = 0 as u64;
+        while i < bytes {
+            dec d = (dst as u64 + i) as *rw u8;
+            *d = val;
+            i = i + (1 as u64);
+        }
+    }
+    
+    export unsafe fn zero(dst: *rw u8, bytes: u64) {
+        set(dst, 0 as u8, bytes);
+    }
+    
+    export fn size_of<T>() -> u64 {
+        return sizeof(T) as u64;
+    }
+    
+    export fn align_of<T>() -> u64 {
+        return alignof(T) as u64;
+    }
+    
+}
+
+// NOTE: `slice_from_raw_parts` and `slice_from_raw_parts_mut` are unsafe intrinsic boundaries
+// bridging raw pointers to fat-pointer slices. They must NOT be treated as a precedent for safe
+// reference construction without explicit lifetime provenance contracts.
+export unsafe fn slice_from_raw_parts<T>(ptr: *T, len: u64) -> &[T];
+export unsafe fn slice_from_raw_parts_mut<T>(ptr: *rw T, len: u64) -> &rw [T];

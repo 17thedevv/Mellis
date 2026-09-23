@@ -1,4 +1,4 @@
-# Mellis Compiler Architecture Rules
+# Luna Compiler Architecture Rules
 
 1. Every phase owns exactly one responsibility.
 2. Every phase communicates only through stable IR.
@@ -26,14 +26,14 @@
      - Namespace: A provider file can define namespaces via `module std { export struct Vec<T> ... }`.
      - Symbol usage: Symbols are accessed via their namespace (`std::Vec<int>`), not their provider. `import` does NOT bring symbols into scope.
      - Multiple providers can contribute to the same public namespace (e.g., `alloc.ms` -> `std::`, `core.ms` -> `std::`).
-   - **Compiler Boundary:** `mellis` is fully standalone. It resolves `import <foo>` using search paths and understands module semantics. It does not know about projects, versions, or caching.
+   - **Compiler Boundary:** `luna` is fully standalone. It resolves `import <foo>` using search paths and understands module semantics. It does not know about projects, versions, or caching.
    - **Project Boundary (MPM):** `mpm` manages packages, dependency graphs, versions, incremental rebuilds, and artifacts. It determines *which* providers/artifacts to feed to the compiler.
    - **Artifact Boundary:** `.mlib` is a compiler-defined artifact containing Manifest, ImplTable, GenericMVIR, ObjectCode, etc. It is functionally identical to a `.ms` source file from the language's perspective.
 
 8. Grammar Authority Rule (mellis-grammar):
    - **Single Source of Truth:** `mellis-grammar` skill is the canonical source of truth for source-level syntax.
    - **Enforcement:** Agents MUST read the `mellis-grammar` skill before modifying parser, AST, or semantic syntax.
-   - **No Inference:** Never infer Mellis syntax from Rust/C++ syntax (e.g., using `mut` instead of `rw`, `use` instead of `import`, `let` instead of `dec`).
+   - **No Inference:** Never infer Luna syntax from Rust/C++ syntax (e.g., using `mut` instead of `rw`, `use` instead of `import`, `let` instead of `dec`).
    - **No Unapproved Additions:** Never introduce a new keyword without updating the grammar in `grammar.ebnf` and the skill.
    - **Test Updates:** Add or update parser tests when changing grammar.
    - **Workflow:** When coding a new feature: (1) Search grammar skill. (2) Search parser tests. (3) Search existing accepted examples. (4) Only then propose changes. If syntax exists, reuse. If it doesn't, propose a grammar change before implementation.
@@ -65,18 +65,5 @@
 
 13. Stdlib Architecture Routing:
    - For any task involving splitting core.ln / alloc.ln, component-level stdlib providers, lang/ core/ alloc/ io/, logical std module composition, language-contract auto-loading, or stdlib provider/artifact migration.
-   - Agents MUST read `luna-stdlib-architecture`, `luna-stdlib-design`, `luna-lang-contracts`, `luna-stdlib-migration`, `luna-stdlib-compiler-boundary`, and `luna-testing-strategy`.
+   - Agents MUST read `luna-stdlib-architecture`, `luna-lang-contracts`, `luna-stdlib-migration`, `luna-stdlib-compiler-boundary`, and `luna-testing-strategy`.
    - Migration must start with a strict audit mapping declaration -> component -> dependency -> artifact before any implementation plan is drafted.
-
-14. Adversarial Validation & Permanent Reproducer Policy:
-   - **Feature Freeze Pipeline:** Every new feature must follow the mandatory verification progression:
-     $$\text{Feature semantics/design} \longrightarrow \text{Implementation} \longrightarrow \text{Focused acceptance tests} \longrightarrow \text{Adversarial Luna programs} \longrightarrow \text{Cross-feature interaction tests} \longrightarrow \text{Full workspace regression} \longrightarrow \text{Freeze}$$
-   - **Permanent User-Facing Reproducers:** Every compiler bug discovered after freeze MUST produce a permanent `.ln` reproducer fixture (in `tests/sem_stress/` or dedicated `C-GAP-*` test) demonstrating the defect from the user's perspective, rather than relying solely on internal Rust driver mocks.
-   - **Stress Corpus Extensibility:** The initial `SEM-STRESS-01` 100-case baseline is immutable and frozen (`COMPLETE & FROZEN ✅`), while `tests/sem_stress/` serves as a living, extensible, append-only permanent regression asset.
-
-15. Standard Library Design Protocol (luna-stdlib-design):
-   - **Mandatory Alignment:** Agents MUST read and follow `luna-stdlib-design` before modifying, designing, or implementing any code in `libs/external/`, `sysroot`, public `std::*` APIs, runtime wrappers, collections, I/O, formatting, or filesystem.
-   - **Outward from Luna Semantics:** Design standard library features outward from Luna's own semantics, type system, and borrowck rules, NEVER by translating Rust, C++, or Swift APIs inward.
-   - **Provider != Namespace:** Physical provider paths (e.g. `alloc/vec.ln`, `io/io.ln`) do not define public namespaces. Stdlib declarations contribute to `module std` (`std::Vec`, `std::read`).
-   - **Architectural Preflight:** Agents MUST output the 9-line architectural preflight before editing any stdlib source file.
-

@@ -1,8 +1,0 @@
-// [STRESS: COMPILE_REJECT: E_CALL_UNSAFE_FN_OUTSIDE_UNSAFE]
-unsafe fn dangerous() -> i32 {
-    return 42;
-}
-
-fn main() -> i32 {
-    return dangerous();
-}

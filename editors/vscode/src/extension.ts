@@ -10,9 +10,9 @@ import {
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
-  // Đường dẫn tới mellis.exe. 
-  // Vì thư mục extension nằm ở `editors/vscode`, ta lùi lại 2 cấp để lấy thư mục `bin` gốc.
-  const serverPath = context.asAbsolutePath(path.join('..', '..', 'bin', 'mellis.exe'));
+  // Path to luna.exe. 
+  // Extension directory is in `editors/vscode`, step back 2 levels to repo `bin`.
+  const serverPath = context.asAbsolutePath(path.join('..', '..', 'bin', 'luna.exe'));
 
   const run: Executable = {
     command: serverPath,
@@ -26,12 +26,12 @@ export function activate(context: ExtensionContext) {
   };
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: 'file', language: 'mellis' }],
+    documentSelector: [{ scheme: 'file', language: 'luna' }],
   };
 
   client = new LanguageClient(
-    'mellisLsp',
-    'Mellis Language Server',
+    'lunaLsp',
+    'Luna Language Server',
     serverOptions,
     clientOptions
   );

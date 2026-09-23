@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_ACCEPT]
-// [STRESS: EXEC_EXIT: 42]
-fn main() -> i32 {
-    dec rw sum = 0;
-    for (dec rw i = 1; i <= 6; i = i + 1) {
-        sum = sum + i;
-    }
-    return sum * 2;
-}

@@ -1,11 +1,11 @@
 ---
 name: mellis-grammar
-description: Canonical Single Source of Truth (SSOT) for Mellis Language Grammar and Syntax. Provides strict guidelines, forbidden syntax, and canonical examples for the language surface.
+description: Canonical Single Source of Truth (SSOT) for Luna Language Grammar and Syntax (formerly Mellis). Provides strict guidelines, forbidden syntax, and canonical examples for the language surface.
 ---
 
-# Mellis Grammar and Syntax Guidelines
+# Luna Grammar and Syntax Guidelines
 
-This skill is the **Single Source of Truth** for Mellis syntax. Do not infer Mellis syntax from Rust, C++, or any other language. Always refer to this document and the accompanying `grammar.ebnf` when modifying the parser, AST, or semantic analysis, or when writing `.ms` code.
+This skill is the **Single Source of Truth** for Luna syntax (formerly Mellis). Do not infer Luna syntax from Rust, C++, or any other language. Always refer to this document and the accompanying `grammar.ebnf` when modifying the parser, AST, or semantic analysis, or when writing `.ln` code.
 
 ## Grammar Authority Rule
 
@@ -13,21 +13,21 @@ Agents MUST adhere to the following rules at all times:
 1. **Read this skill** before modifying parser, AST, or semantic syntax.
 2. **Never introduce a new keyword** without first updating the grammar in `docs/grammar.md`, `grammar.ebnf`, and this skill.
 3. **Never reuse deprecated or removed keywords**.
-4. **Never infer Mellis syntax from Rust/C++ syntax**. (e.g., Do not use `mut`, `let`, `mod`, `use`).
+4. **Never infer Luna syntax from Rust/C++ syntax**. (e.g., Do not use `mut`, `let`, `mod`, `use`).
 5. **Add or update parser tests** when changing grammar.
 6. **Reuse, don't redesign**: If a syntax already exists, use it. If not, explicitly propose a grammar change to the user before implementation.
 
 ## Forbidden Syntax
 
-The following keywords and syntax constructs are strictly **FORBIDDEN** in Mellis:
-- `mut`: Mellis uses `rw` (rewritable) for mutability.
-- `let`: Mellis uses `dec` and `const` for variable bindings.
-- `use`: Mellis uses `import` for providers and `using ... as ...` for namespace aliases. The keyword `use` does not exist in Mellis.
-- `mod`: Mellis uses `module` for namespaces, or `import` for module providers. (Avoid Rust's `mod` assumptions).
-- `module foo;`: File-level module declarations without a body are forbidden. Mellis only allows inline `module foo { ... }`. Provider identity is determined by file name / artifact resolution.
-- `using namespace`: Mellis does NOT have `using namespace` (C++ style). Mellis requires `using <path> as <alias>`.
+The following keywords and syntax constructs are strictly **FORBIDDEN** in Luna:
+- `mut`: Luna uses `rw` (rewritable) for mutability.
+- `let`: Luna uses `dec` and `const` for variable bindings.
+- `use`: Luna uses `import` for providers and `using ... as ...` for namespace aliases. The keyword `use` does not exist in Luna.
+- `mod`: Luna uses `module` for namespaces, or `import` for module providers. (Avoid Rust's `mod` assumptions).
+- `module foo;`: File-level module declarations without a body are forbidden. Luna only allows inline `module foo { ... }`. Provider identity is determined by file name / artifact resolution.
+- `using namespace`: Luna does NOT have `using namespace` (C++ style). Luna requires `using <path> as <alias>`.
 - `using <path>;`: Bare `using` without `as <alias>` is rejected. Always use `using <path> as <alias>;`.
-- `export using` / `export import`: Mellis v1.0 does not support module re-export. Both are hard syntax errors.
+- `export using` / `export import`: Luna v1.0 does not support module re-export. Both are hard syntax errors.
 - `import <a::b>`: Mellis `import <...>` only accepts a single logical provider name. No `::`.
 - `import "foo.ms"` or `import "foo.mlib"`: File paths in local imports must not contain extensions (use `import "foo";`).
 - Prefix `await`: Mellis v1.0 strictly uses postfix `.await` (e.g. `fut.await`). Prefix `await fut` is forbidden.

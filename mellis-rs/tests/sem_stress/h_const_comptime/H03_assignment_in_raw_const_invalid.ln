@@ -1,6 +1,0 @@
-// [STRESS: COMPILE_REJECT: assignment is forbidden in const expressions]
-fn main() -> i32 {
-    dec rw a = 1;
-    const BAD: i32 = (a = 2);
-    return BAD;
-}

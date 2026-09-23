@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_ACCEPT]
-// [STRESS: EXEC_EXIT: 42]
-fn main() -> i32 {
-    dec base = 40;
-    dec add = |n: i32| -> i32 {
-        return base + n;
-    };
-    return add(2);
-}

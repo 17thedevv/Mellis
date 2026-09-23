@@ -1,4 +1,4 @@
-# Mellis Core Agent Rules
+# Luna Core Agent Rules
 
 RULE 1
 Skills define workflow, not repository truth.
@@ -10,7 +10,7 @@ RULE 3
 Inspect before modifying.
 
 RULE 4
-Never invent Mellis syntax.
+Never invent Luna syntax.
 
 RULE 5
 Never add stdlib-specific compiler hacks without evidence.

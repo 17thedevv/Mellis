@@ -1,9 +1,0 @@
-// [STRESS: COMPILE_REJECT: type mismatch]
-struct Box<T> {
-    item: T,
-};
-
-fn main() -> i32 {
-    dec b: Box<i32> = Box { item: 42 as i64 };
-    return b.item;
-}

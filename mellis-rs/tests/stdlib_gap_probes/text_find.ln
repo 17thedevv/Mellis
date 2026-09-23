@@ -1,8 +1,0 @@
-import <string>;
-
-fn main() -> i32 {
-    // Attempting to find a substring
-    dec s = string_from_str("hello world");
-    dec pos = s.find("world");
-    return 0;
-}

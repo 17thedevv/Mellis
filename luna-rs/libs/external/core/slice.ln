@@ -1,0 +1,464 @@
+import <__lang_option>;
+import <__lang_iterator>;
+import <ptr>;
+
+module slice {
+    // SliceIter: Borrowed iterator over slice
+    // ITER-4: A borrowed collection iterator MUST NOT transfer ownership
+    // ITER-9: SliceIter<T>::Item is &T
+    // ITER-10: SliceIter does not move/drop backing elements
+    // =========================================================================
+    export struct SliceIter<T> {
+        private ptr: *T,
+        private end: *T,
+    };
+    
+    impl<T> SliceIter<T> {
+        // Shared borrow iteration - returns reference to backing element
+        export fn next_ref(self: &rw Self) -> Option<&T> life_from(self) {
+            if (self.ptr as u64) >= (self.end as u64) {
+                return Option::None;
+            }
+            unsafe {
+                dec item_ptr = self.ptr;
+                self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
+                return Option::Some(&*item_ptr);
+            }
+        }
+    }
+    
+    // ITER-9: Item is &T (borrowed reference, not owned value)
+    impl<T> Iterator<&T> for SliceIter<T> {
+        fn next(self: &rw Self) -> Option<&T> {
+            if (self.ptr as u64) >= (self.end as u64) {
+                return Option::None;
+            }
+            unsafe {
+                dec item_ptr = self.ptr;
+                self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *T;
+                return Option::Some(&*item_ptr);
+            }
+        }
+    }
+    
+    export struct SliceIterMut<T> {
+        private ptr: *rw T,
+        private end: *rw T,
+    };
+    
+    impl<T> SliceIterMut<T> {
+        export fn next_mut(self: &rw Self) -> Option<&rw T> life_from(self) {
+            if (self.ptr as u64) >= (self.end as u64) {
+                return Option::None;
+            }
+            unsafe {
+                dec item_ptr = self.ptr;
+                self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *rw T;
+                return Option::Some(&rw *item_ptr);
+            }
+        }
+    }
+    
+    impl<T> Iterator<&rw T> for SliceIterMut<T> {
+        fn next(self: &rw Self) -> Option<&rw T> {
+            if (self.ptr as u64) >= (self.end as u64) {
+                return Option::None;
+            }
+            unsafe {
+                dec item_ptr = self.ptr;
+                self.ptr = (self.ptr as u64 + (sizeof(T) as u64)) as *rw T;
+                return Option::Some(&rw *item_ptr);
+            }
+        }
+    }
+    
+    export fn slice_iter<T>(s: &[T]) -> SliceIter<T> life_from(s) {
+        dec end_ptr = (s.data as u64 + (s.len as u64 * (sizeof(T) as u64))) as *T;
+        return SliceIter<T> {
+            ptr: s.data as *T,
+            end: end_ptr,
+        };
+    }
+    
+    export fn slice_iter_mut<T>(s: &rw [T]) -> SliceIterMut<T> life_from(s) {
+        dec end_ptr = (s.data as u64 + (s.len as u64 * (sizeof(T) as u64))) as *rw T;
+        return SliceIterMut<T> {
+            ptr: s.data as *rw T,
+            end: end_ptr,
+        };
+    }
+}
+
+export fn slice_iter<T>(s: &[T]) -> slice::SliceIter<T> life_from(s) {
+    return slice::slice_iter<T>(s);
+}
+
+export fn slice_iter_mut<T>(s: &rw [T]) -> slice::SliceIterMut<T> life_from(s) {
+    return slice::slice_iter_mut<T>(s);
+}
+
+export type SliceIter<T> = slice::SliceIter<T>;
+export type SliceIterMut<T> = slice::SliceIterMut<T>;
+
+// =========================================================================
+// Slice utility functions
+// =========================================================================
+
+export fn slice_len<T>(s: &[T]) -> u64 {
+    return s.len as u64;
+}
+
+export fn slice_get<T>(s: &[T], index: u64) -> Option<&T> life_from(s) {
+    if index >= (s.len as u64) {
+        return Option::None;
+    }
+    unsafe {
+        dec p = ptr::add<T>(s.data as *T, index);
+        return Option::Some(&*p);
+    }
+}
+
+export fn slice_get_mut<T>(s: &rw [T], index: u64) -> Option<&rw T> life_from(s) {
+    if index >= (s.len as u64) {
+        return Option::None;
+    }
+    unsafe {
+        dec p = ptr::add_mut<T>(s.data as *rw T, index);
+        return Option::Some(&rw *p);
+    }
+}
+
+export fn slice_reverse<T>(s: &rw [T]) {
+    dec slen = s.len as u64;
+    if slen <= (1 as u64) {
+        return;
+    }
+    dec rw lo: u64 = 0 as u64;
+    dec rw hi: u64 = slen - (1 as u64);
+    while lo < hi {
+        unsafe {
+            dec p_lo = ptr::add_mut<T>(s.data as *rw T, lo);
+            dec p_hi = ptr::add_mut<T>(s.data as *rw T, hi);
+            dec tmp = ptr::read<T>(p_lo as *T);
+            ptr::copy<T>(p_hi as *T, p_lo, 1 as u64);
+            ptr::write<T>(p_hi, tmp);
+        }
+        lo = lo + (1 as u64);
+        hi = hi - (1 as u64);
+    }
+}
+
+export fn slice_contains_i32(s: &[i32], value: i32) -> bool {
+    dec rw i: u64 = 0 as u64;
+    dec slen = s.len as u64;
+    while i < slen {
+        unsafe {
+            dec p = ptr::add<i32>(s.data as *i32, i);
+            if *p == value {
+                return true;
+            }
+        }
+        i = i + (1 as u64);
+    }
+    return false;
+}
+
+export fn slice_binary_search_i32(s: &[i32], value: i32) -> Option<u64> {
+    dec slen = s.len as u64;
+    if slen == (0 as u64) {
+        return Option::None;
+    }
+    dec rw lo: u64 = 0 as u64;
+    dec rw hi: u64 = slen;
+    while lo < hi {
+        dec mid = lo + ((hi - lo) / (2 as u64));
+        unsafe {
+            dec p = ptr::add<i32>(s.data as *i32, mid);
+            dec v = *p;
+            if v == value {
+                return Option::Some(mid);
+            }
+            if v < value {
+                lo = mid + (1 as u64);
+            } else {
+                hi = mid;
+            }
+        }
+    }
+    return Option::None;
+}
+
+// =========================================================================
+// Slice Sorting: Introsort — O(n log n) worst-case, O(log n) space
+// =========================================================================
+
+// Insertion sort for small subarrays (n <= 16)
+fn insertion_sort_by<T>(data: *rw T, lo: u64, hi: u64, compare: fn(&T, &T) -> i32) {
+    dec rw i = lo + (1 as u64);
+    while i < hi {
+        unsafe {
+            dec rw j = i;
+            dec tmp = ptr::read<T>(ptr::add<T>(data as *T, j) as *T);
+            dec rw cont = true;
+            while cont {
+                if j <= lo {
+                    cont = false;
+                } else {
+                    dec prev = ptr::add<T>(data as *T, j - (1 as u64));
+                    dec cmp_fn = compare;
+                    dec c = cmp_fn(&*prev, &tmp);
+                    if c > 0 {
+                        // Shift element right
+                        dec dest = ptr::add_mut<T>(data, j);
+                        ptr::copy<T>(prev, dest, 1 as u64);
+                        j = j - (1 as u64);
+                    } else {
+                        cont = false;
+                    }
+                }
+            }
+            ptr::write<T>(ptr::add_mut<T>(data, j), tmp);
+        }
+        i = i + (1 as u64);
+    }
+}
+
+// Heapsort fallback when recursion depth exceeded
+fn heapsort_by<T>(data: *rw T, lo: u64, hi: u64, compare: fn(&T, &T) -> i32) {
+    dec n = hi - lo;
+    if n <= (1 as u64) { return; }
+
+    // Build max-heap (sift down from last parent to root)
+    dec rw start_idx = n / (2 as u64);
+    while start_idx > (0 as u64) {
+        start_idx = start_idx - (1 as u64);
+        sift_down_by<T>(data, lo, start_idx, n, compare);
+    }
+
+    // Extract max elements
+    dec rw end_idx = n - (1 as u64);
+    while end_idx > (0 as u64) {
+        // Swap root (lo) with end
+        unsafe {
+            dec p_root = ptr::add_mut<T>(data, lo);
+            dec p_end = ptr::add_mut<T>(data, lo + end_idx);
+            dec tmp = ptr::read<T>(p_root as *T);
+            ptr::copy<T>(p_end as *T, p_root, 1 as u64);
+            ptr::write<T>(p_end, tmp);
+        }
+        sift_down_by<T>(data, lo, 0 as u64, end_idx, compare);
+        end_idx = end_idx - (1 as u64);
+    }
+}
+
+fn sift_down_by<T>(data: *rw T, base: u64, start: u64, heap_size: u64, compare: fn(&T, &T) -> i32) {
+    dec rw root = start;
+    dec rw running = true;
+    while running {
+        dec left = (2 as u64) * root + (1 as u64);
+        if left >= heap_size {
+            running = false;
+        } else {
+            dec rw largest = root;
+            // Compare left child
+            unsafe {
+                dec p_largest = ptr::add<T>(data as *T, base + largest);
+                dec p_left = ptr::add<T>(data as *T, base + left);
+                dec cmp_fn = compare;
+                if cmp_fn(&*p_left, &*p_largest) > 0 {
+                    largest = left;
+                }
+            }
+            // Compare right child if exists
+            dec right = left + (1 as u64);
+            if right < heap_size {
+                unsafe {
+                    dec p_largest2 = ptr::add<T>(data as *T, base + largest);
+                    dec p_right = ptr::add<T>(data as *T, base + right);
+                    dec cmp_fn2 = compare;
+                    if cmp_fn2(&*p_right, &*p_largest2) > 0 {
+                        largest = right;
+                    }
+                }
+            }
+            if largest == root {
+                running = false;
+            } else {
+                // Swap root with largest
+                unsafe {
+                    dec p_r = ptr::add_mut<T>(data, base + root);
+                    dec p_l = ptr::add_mut<T>(data, base + largest);
+                    dec tmp = ptr::read<T>(p_r as *T);
+                    ptr::copy<T>(p_l as *T, p_r, 1 as u64);
+                    ptr::write<T>(p_l, tmp);
+                }
+                root = largest;
+            }
+        }
+    }
+}
+
+// Compute floor(log2(n)) for depth limit
+fn floor_log2(n: u64) -> u64 {
+    dec rw result: u64 = 0 as u64;
+    dec rw val = n;
+    while val > (1 as u64) {
+        val = val / (2 as u64);
+        result = result + (1 as u64);
+    }
+    return result;
+}
+
+// Partition using median-of-three pivot
+fn partition_by<T>(data: *rw T, lo: u64, hi: u64, compare: fn(&T, &T) -> i32) -> u64 {
+    // hi is exclusive, so last element is at hi - 1
+    dec last = hi - (1 as u64);
+    dec mid = lo + ((last - lo) / (2 as u64));
+
+    // Sort lo, mid, last (median-of-three)
+    unsafe {
+        dec p_lo = ptr::add_mut<T>(data, lo);
+        dec p_mid = ptr::add_mut<T>(data, mid);
+        dec p_last = ptr::add_mut<T>(data, last);
+
+        dec cmp1 = compare;
+        if cmp1(&*(p_lo as *T), &*(p_mid as *T)) > 0 {
+            dec tmp = ptr::read<T>(p_lo as *T);
+            ptr::copy<T>(p_mid as *T, p_lo, 1 as u64);
+            ptr::write<T>(p_mid, tmp);
+        }
+        dec cmp2 = compare;
+        if cmp2(&*(p_lo as *T), &*(p_last as *T)) > 0 {
+            // Reload pointers after potential swap
+            dec p_lo2 = ptr::add_mut<T>(data, lo);
+            dec p_last2 = ptr::add_mut<T>(data, last);
+            dec tmp2 = ptr::read<T>(p_lo2 as *T);
+            ptr::copy<T>(p_last2 as *T, p_lo2, 1 as u64);
+            ptr::write<T>(p_last2, tmp2);
+        }
+        dec cmp3 = compare;
+        dec p_mid3 = ptr::add_mut<T>(data, mid);
+        dec p_last3 = ptr::add_mut<T>(data, last);
+        if cmp3(&*(p_mid3 as *T), &*(p_last3 as *T)) > 0 {
+            dec tmp3 = ptr::read<T>(p_mid3 as *T);
+            ptr::copy<T>(p_last3 as *T, p_mid3, 1 as u64);
+            ptr::write<T>(p_last3, tmp3);
+        }
+    }
+
+    // Pivot is at mid position, swap to lo
+    unsafe {
+        dec p_lo_swap = ptr::add_mut<T>(data, lo);
+        dec p_mid_swap = ptr::add_mut<T>(data, mid);
+        dec tmp_swap = ptr::read<T>(p_lo_swap as *T);
+        ptr::copy<T>(p_mid_swap as *T, p_lo_swap, 1 as u64);
+        ptr::write<T>(p_mid_swap, tmp_swap);
+    }
+
+    // Lomuto partition scheme
+    dec rw i = lo + (1 as u64);
+    dec rw store = lo + (1 as u64);
+    while i < hi {
+        unsafe {
+            dec p_i = ptr::add<T>(data as *T, i);
+            dec p_pivot = ptr::add<T>(data as *T, lo);
+            dec cmp_fn = compare;
+            if cmp_fn(&*p_i, &*p_pivot) < 0 {
+                if i != store {
+                    dec p_store = ptr::add_mut<T>(data, store);
+                    dec p_i_mut = ptr::add_mut<T>(data, i);
+                    dec tmp = ptr::read<T>(p_store as *T);
+                    ptr::copy<T>(p_i_mut as *T, p_store, 1 as u64);
+                    ptr::write<T>(p_i_mut, tmp);
+                }
+                store = store + (1 as u64);
+            }
+        }
+        i = i + (1 as u64);
+    }
+
+    // Move pivot into final position
+    dec pivot_final = store - (1 as u64);
+    if lo != pivot_final {
+        unsafe {
+            dec p_lo_final = ptr::add_mut<T>(data, lo);
+            dec p_pivot_final = ptr::add_mut<T>(data, pivot_final);
+            dec tmp_final = ptr::read<T>(p_lo_final as *T);
+            ptr::copy<T>(p_pivot_final as *T, p_lo_final, 1 as u64);
+            ptr::write<T>(p_pivot_final, tmp_final);
+        }
+    }
+    return pivot_final;
+}
+
+// Introsort recursive core
+fn introsort_by_rec<T>(data: *rw T, lo: u64, hi: u64, depth_limit: u64, compare: fn(&T, &T) -> i32) {
+    dec n = hi - lo;
+    if n <= (1 as u64) { return; }
+
+    // Small subarrays: insertion sort
+    if n <= (16 as u64) {
+        insertion_sort_by<T>(data, lo, hi, compare);
+        return;
+    }
+
+    // Depth limit exceeded: heapsort fallback
+    if depth_limit == (0 as u64) {
+        heapsort_by<T>(data, lo, hi, compare);
+        return;
+    }
+
+    // Partition and recurse
+    dec pivot = partition_by<T>(data, lo, hi, compare);
+    dec new_depth = depth_limit - (1 as u64);
+    introsort_by_rec<T>(data, lo, pivot, new_depth, compare);
+    introsort_by_rec<T>(data, pivot + (1 as u64), hi, new_depth, compare);
+}
+
+// Public sort_by: in-place introsort with O(n log n) worst-case guarantee
+export fn slice_sort_by<T>(s: &rw [T], compare: fn(&T, &T) -> i32) {
+    dec slen = s.len as u64;
+    if slen <= (1 as u64) { return; }
+    dec depth_limit = (2 as u64) * floor_log2(slen);
+    introsort_by_rec<T>(s.data as *rw T, 0 as u64, slen, depth_limit, compare);
+}
+
+// Helper: comparison function for i32 using Ord
+fn cmp_i32(a: &i32, b: &i32) -> i32 {
+    if *a < *b { return 0 - 1; }
+    if *a > *b { return 1; }
+    return 0;
+}
+
+// Public sort for i32 slices (delegates to sort_by)
+export fn slice_sort_i32(s: &rw [i32]) {
+    slice_sort_by<i32>(s, cmp_i32);
+}
+
+// Copy elements between equal-length slices
+export fn slice_copy_i32(dst: &rw [i32], src: &[i32]) {
+    dec dst_len = dst.len as u64;
+    dec src_len = src.len as u64;
+    if dst_len != src_len {
+        __luna_panic_default();
+    }
+    unsafe {
+        ptr::copy<i32>(src.data as *i32, dst.data as *rw i32, dst_len);
+    }
+}
+
+// Fill a slice with a value
+export fn slice_fill_i32(s: &rw [i32], value: i32) {
+    dec slen = s.len as u64;
+    dec rw i: u64 = 0 as u64;
+    while i < slen {
+        unsafe {
+            dec p = ptr::add_mut<i32>(s.data as *rw i32, i);
+            *p = value;
+        }
+        i = i + (1 as u64);
+    }
+}
+
+extern fn __luna_panic_default();
+

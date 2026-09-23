@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Design Decisions · Mellis Docs</title>
+    <title>Design Decisions · Luna Docs</title>
     <link rel="stylesheet" href="../styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div class="container nav-wrap">
-        <div class="brand">Mellis</div>
+        <div class="brand">Luna</div>
         <nav class="nav" aria-label="Main navigation">
           <a href="../index.html">Home</a>
           <a href="../language/index.html">Language</a>
@@ -27,7 +27,7 @@
         <div class="container">
           <div class="section-heading">
             <p class="eyebrow">Design Decisions</p>
-            <h1>Why Mellis is designed this way</h1>
+            <h1>Why Luna is designed this way</h1>
           </div>
 
           <div class="grid two-col">
@@ -86,9 +86,9 @@
             </article>
 
             <article class="card">
-              <h3>.mlib packages</h3>
+              <h3>.llib packages</h3>
               <p><strong>Context:</strong> Recompiling the full standard library on every change is costly and rigid.</p>
-              <p><strong>Decision:</strong> Package reusable library components into .mlib artifacts with metadata and loader support.</p>
+              <p><strong>Decision:</strong> Package reusable library components into .llib artifacts with metadata and loader support.</p>
               <p><strong>Alternatives:</strong> Source-only libraries or ad hoc linker scripts.</p>
               <p><strong>Trade-offs:</strong> Faster reuse and modularity, but more metadata and packaging discipline.</p>
               <p><strong>Status:</strong> Planned and partially implemented.</p>
@@ -118,7 +118,7 @@
 
     <footer class="footer">
       <div class="container footer-inner">
-        <span>Mellis Docs</span>
+        <span>Luna Docs</span>
         <span>Design Decisions</span>
       </div>
     </footer>

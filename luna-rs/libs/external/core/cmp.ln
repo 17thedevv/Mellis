@@ -1,0 +1,136 @@
+export trait Eq {
+    fn eq(self: &Self, other: &Self) -> bool;
+}
+
+export trait Ord {
+    fn cmp(self: &Self, other: &Self) -> i32;
+}
+
+// Eq implementations for primitive types
+impl Eq for bool { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for char { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for u8 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for u16 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for u32 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for u64 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for usize { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for i8 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for i16 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for i32 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for i64 { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+impl Eq for isize { fn eq(self: &Self, other: &Self) -> bool { return *self == *other; } }
+
+// Ord implementations for unsigned integer types
+// Convention: returns -1 if self < other, 0 if equal, 1 if self > other
+impl Ord for u8 {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+impl Ord for u16 {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+impl Ord for u32 {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+impl Ord for u64 {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+impl Ord for usize {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+
+// Ord implementations for signed integer types
+impl Ord for i8 {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+impl Ord for i16 {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+impl Ord for i32 {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+impl Ord for i64 {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+impl Ord for isize {
+    fn cmp(self: &Self, other: &Self) -> i32 {
+        if *self < *other { return 0 - 1; }
+        if *self > *other { return 1; }
+        return 0;
+    }
+}
+
+// =========================================================================
+// Generic comparison utilities
+// =========================================================================
+
+export fn min_i32(a: i32, b: i32) -> i32 {
+    if a <= b { return a; }
+    return b;
+}
+
+export fn max_i32(a: i32, b: i32) -> i32 {
+    if a >= b { return a; }
+    return b;
+}
+
+export fn min_u64(a: u64, b: u64) -> u64 {
+    if a <= b { return a; }
+    return b;
+}
+
+export fn max_u64(a: u64, b: u64) -> u64 {
+    if a >= b { return a; }
+    return b;
+}
+
+export fn clamp_i32(val: i32, lo: i32, hi: i32) -> i32 {
+    if hi < lo { __luna_panic_default(); }
+    if val < lo { return lo; }
+    if val > hi { return hi; }
+    return val;
+}
+
+export fn clamp_u64(val: u64, lo: u64, hi: u64) -> u64 {
+    if hi < lo { __luna_panic_default(); }
+    if val < lo { return lo; }
+    if val > hi { return hi; }
+    return val;
+}
+
+extern fn __luna_panic_default();

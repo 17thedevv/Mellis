@@ -1,8 +1,0 @@
-import <path>;
-import <string>;
-
-fn main() -> i32 {
-    // Attempting path manipulation
-    dec p = path::join("dir", "file.txt");
-    return 0;
-}

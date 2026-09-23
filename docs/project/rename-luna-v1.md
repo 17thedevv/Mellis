@@ -19,15 +19,17 @@
 
 ---
 
-## 2. Frozen Runtime ABI Contract (v1.0)
+## 2. Frozen Runtime ABI Contract (RUNTIME-RENAME-01)
 
-The underlying C runtime symbols and header macros are strictly **FROZEN** as the Runtime ABI v1.0 contract. They are historical ABI identifiers, NOT project branding:
+Under frozen RUNTIME-RENAME-01, runtime identity has been canonicalized to Luna:
 
-- **Symbol Namespace**: `__mellis_*` (e.g. `__mellis_alloc`, `__mellis_dealloc`, `__mellis_panic`, `__mellis_startup`, `__mellis_start`, `__mellis_shutdown`)
-- **Macros & Constants**: `MELLIS_*` (e.g. `MELLIS_ERR_*`, `MELLIS_MAX_ALIGN`)
-- **Runtime Library**: `luna-runtime.lib` (with CMake alias `mellis-runtime` and fallback lookup for `mellis-runtime.lib`)
+- **Symbol Namespace**: `__luna_*` (e.g. `__luna_alloc`, `__luna_dealloc`, `__luna_panic`, `__luna_startup`, `__luna_start`, `__luna_shutdown`)
+- **Macros & Constants**: `LUNA_*` (e.g. `LUNA_ERR_*`, `LUNA_MAX_ALIGN`)
+- **Runtime Library**: `luna-runtime.lib`
+- **Headers**: `luna/runtime/*` and umbrella header `luna_runtime.h`
+- **Environment Variables**: `LUNA_*` (e.g. `LUNA_HOME`, `LUNA_RUNTIME_LIB`, `LUNA_SYSROOT`)
 
-No phase may rename these symbols. They ensure zero breaking changes for existing compiled code and downstream runtime linking.
+All legacy `__mellis_*` ABI aliases and forwarders have been permanently removed. Active production code contains zero Mellis compatibility layers.
 
 ---
 
